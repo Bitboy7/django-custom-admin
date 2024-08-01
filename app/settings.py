@@ -28,7 +28,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 # Application definition
 
@@ -54,7 +54,7 @@ JAZZMIN_SETTINGS = {
 
     # Title on the brand (19 chars max) (defaults to current_admin_site.site_header if absent or None)
        # Logo to use for your site, must be present in static files, used for brand on top left
-    "site_logo": "/img/logo-sm.png",
+    "site_logo": "/img/logo-white.png",
     # Whether to display the side menu
     "show_sidebar": True,
     # Logo to use for your site, must be present in static files, used for login form logo (defaults to site_logo)
@@ -68,12 +68,11 @@ JAZZMIN_SETTINGS = {
     # Whether to aut expand the menu
     "navigation_expanded": True,
      # Welcome text on the login screen
-    "welcome_sign": "Sistema de gestion de Agricola de la Costa S.P.R. de R.L.",
      # List of model admins to search from the search bar, search bar omitted if excluded
     # If you want to use a single search field you dont need to use a list, you can use a simple string 
     "search_model": ["auth.User", "auth.Group"],
     # Field name on user model that contains avatar ImageField/URLField/Charfield or a callable that receives the user
-    "user_avatar": "/img/avatar.png",
+    "user_avatar": "/img/icon.png",
     
     "related_modal_active": True,
 
@@ -93,18 +92,12 @@ JAZZMIN_SETTINGS = {
     "default_icon_parents": "fas fa-chevron-circle-right",
     "default_icon_children": "fas fa-circle",
 
-    #################
-    # Related Modal #
-    #################
-    # Use modals instead of popups
-    "related_modal_active": False,
-
     #############
     # UI Tweaks #
     #############
     # Relative paths to custom CSS/JS scripts (must be present in static files)
-    "custom_css": "styles.css",
-    "custom_js": None,
+    "custom_css": "/css/custom.css",
+    "custom_js": "/js/scripts.js",
     # Whether to link font from fonts.googleapis.com (use custom_css to supply font otherwise)
     "use_google_fonts_cdn": True,
     # Whether to show the UI customizer on the sidebar
@@ -236,9 +229,19 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = "/static/"
-
+MEDIA_URL = '/media/'
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
+MEDIA_ROOT = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'media')
+STATIC_ROOT = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'static-only')
+
+STATICFILES_DIRS = (
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static'),
+)
+
+TEMPLATE_DIRS = (
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'templates'),
+)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -246,6 +249,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 COMPRESS_ROOT = BASE_DIR / 'static'
 
 COMPRESS_ENABLED = True
+
 
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
