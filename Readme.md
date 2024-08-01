@@ -1,8 +1,8 @@
-# Proyecto de Gestión Agrícola
+# Proyecto de gestión empresarial.
 
 ![Logo](static/img/logo-sm.png)
 
-Este proyecto es un sistema de gestión para Agricola de la Costa S.P.R. de R.L., desarrollado con Django.
+Este proyecto es un sistema de gestión para la empresa Agricola de la Costa San Luis S.P.R. de R.L., desarrollado con Django.
 
 ## Tabla de Contenidos
 
