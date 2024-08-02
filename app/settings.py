@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'compressor',
     'catalogo.apps.CatalogoConfig',
     'gastos.apps.GastosConfig',
+    'ventas.apps.VentasConfig',
+    'import_export',
 ]
 
 JAZZMIN_SETTINGS = {
@@ -50,11 +52,11 @@ JAZZMIN_SETTINGS = {
     "site_title": "Agricola de la Costa Admin",
 
     # Title on the login screen (19 chars max) (defaults to current_admin_site.site_header if absent or None)
-    "site_header": None,
+    "site_header": "Agricola de la Costa Admin",
 
     # Title on the brand (19 chars max) (defaults to current_admin_site.site_header if absent or None)
        # Logo to use for your site, must be present in static files, used for brand on top left
-    "site_logo": "/img/logo-white.png",
+    "site_logo": "/img/logo-sm.png",
     # Whether to display the side menu
     "show_sidebar": True,
     # Logo to use for your site, must be present in static files, used for login form logo (defaults to site_logo)
@@ -96,7 +98,7 @@ JAZZMIN_SETTINGS = {
     # UI Tweaks #
     #############
     # Relative paths to custom CSS/JS scripts (must be present in static files)
-    "custom_css": "/css/custom.css",
+    "custom_css": "/css/styles.css",
     "custom_js": "/js/scripts.js",
     # Whether to link font from fonts.googleapis.com (use custom_css to supply font otherwise)
     "use_google_fonts_cdn": True,
@@ -111,7 +113,7 @@ JAZZMIN_SETTINGS = {
     # - vertical_tabs
     # - collapsible
     # - carousel
-    "changeform_format": "vertical_tabs",
+    "changeform_format": "single",
     # override change forms on a per modeladmin basis
     "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs", "catalogo.Productor": "carousel"},
 }
@@ -122,14 +124,14 @@ JAZZMIN_UI_TWEAKS = {
     "body_small_text": False,
     "brand_small_text": False,
     "brand_colour": "navbar-white",
-    "accent": "accent-lightblue",
-    "navbar": "navbar-info navbar-dark",
+    "accent": "accent-navy",
+    "navbar": "navbar-navy navbar-dark",
     "no_navbar_border": False,
     "navbar_fixed": False,
     "layout_boxed": False,
     "footer_fixed": False,
     "sidebar_fixed": True,
-    "sidebar": "sidebar-light-info",
+    "sidebar": "sidebar-light-navy",
     "sidebar_nav_small_text": False,
     "sidebar_disable_expand": False,
     "sidebar_nav_child_indent": False,
@@ -219,7 +221,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "es-ES"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "America/Mexico_City"
 
 USE_I18N = True
 

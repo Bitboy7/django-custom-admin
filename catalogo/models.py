@@ -2,6 +2,17 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+class Pais(models.Model):
+    siglas = models.CharField(max_length=10)
+    nombre = models.CharField(max_length=50)
+    
+    def __str__(self):
+        return self.siglas
+    
+    class Meta:
+        verbose_name_plural = 'Paises'
+        ordering = ['siglas']
+
 class Estado(models.Model):
     id = models.CharField(max_length=25, primary_key=True)
     nombre = models.CharField(max_length=50)
@@ -10,6 +21,7 @@ class Estado(models.Model):
         return self.nombre
     
     class Meta:
+        verbose_name = "Estado"
         verbose_name_plural = "Estados"
         ordering = ["nombre"]
 
@@ -24,6 +36,7 @@ class Sucursal(models.Model):
         return self.nombre + " - " + self.direccion + " - " + self.id_estado.nombre
     
     class Meta:
+        verbose_name = "Sucursal"
         verbose_name_plural = "Sucursales"
         ordering = ["nombre"]
 
@@ -40,6 +53,7 @@ class Productor(models.Model):
         return self.nombre_completo + " - " + self.num_cuenta + " - " + self.clabe_interbancaria + " - " + self.id_sucursal.nombre + "-" + self.telefono + "- " + str(self.fecha_creacion)
     
     class Meta:
+        verbose_name = "Productor"
         verbose_name_plural = "Productores"
         ordering = ["nombre_completo"]
 

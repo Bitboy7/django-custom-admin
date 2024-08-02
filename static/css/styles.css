@@ -2,11 +2,13 @@
 
 /* Variable Declarations */
 :root {
-    --primary-color: #17a2b8;
-    --secondary-color: #161616;
-    --background-color: #ffffff;
-    --thead-color: #ececec;
-    --accent-color: #17a2b8;
+    --primary-color: #001f3f;
+    --secondary-color: #66b287;
+    --background-color: #d8d9e6;
+    --thead-color: #d7dfef;
+    --accent-color: #b08e08;
+    --success-color: #1b693d;
+    --info-color: #001f3f;
     --font-family: 'Montserrat', sans-serif;
     --font-size: 12px;
     --border-color: #515151;
@@ -126,10 +128,76 @@ div .input-group input {
     transition-timing-function: var(--transition-timing-function);
 }
 
+.btn-primary:hover {
+    background-color: #a6cdb7;
+    transition-duration: var(--transition-duration);
+    transition-property: var(--transition-property);
+    transition-timing-function: var(--transition-timing-function);
+}
+
+.btn-secondary {
+    display: inline-block;
+    outline: 0;
+    cursor: pointer;
+    border: 2px solid var(--secondary-color);
+    border-radius: 3px;
+    color: #fff;
+    background: var(--secondary-color);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 18px;
+    padding: 5px 10px;
+    text-align: center;
+    transition-duration: var(--transition-duration);
+    transition-property: var(--transition-property);
+    transition-timing-function: var(--transition-timing-function);
+}
+
+.btn-info {
+    display: inline-block;
+    outline: 0;
+    cursor: pointer;
+    border: 2px solid var(--info-color);
+    border-radius: 3px;
+    color: #fff;
+    background: var(--info-color);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 18px;
+    padding: 5px 10px;
+    text-align: center;
+    transition-duration: var(--transition-duration);
+    transition-property: var(--transition-property);
+    transition-timing-function: var(--transition-timing-function);
+}
+
+.btn-success {
+    display: inline-block;
+    outline: 0;
+    cursor: pointer;
+    border: 2px solid var(--success-color);
+    border-radius: 3px;
+    color: #fff;
+    background: var(--success-color);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 18px;
+    padding: 5px 10px;
+    text-align: center;
+    transition-duration: var(--transition-duration);
+    transition-property: var(--transition-property);
+    transition-timing-function: var(--transition-timing-function);
+}
+
+.card-body {
+    background-color: var(--background-color);
+}
+
 .btn-info:hover,
 .btn-primary:hover,
 .btn-success:hover {
-    background-color: rgb(39, 39, 39);
+    color: #17131b;
+    background-color: var(--secondary-color);
     transition-duration: var(--transition-duration);
     transition-property: var(--transition-property);
     transition-timing-function: var(--transition-timing-function);
