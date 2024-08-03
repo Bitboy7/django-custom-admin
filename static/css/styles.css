@@ -3,8 +3,8 @@
 /* Variable Declarations */
 :root {
     --primary-color: #001f3f;
-    --secondary-color: #35af4f;
-    --background-color: #c9c9c9;
+    --secondary-color: #43ac3b;
+    --background-color: #e3e6ef;
     --thead-color: #d7dfef;
     --accent-color: #b08e08;
     --success-color: #275332;
@@ -23,7 +23,7 @@ body {
     padding: 0;
     font-family: var(--font-family);
     font-size: var(--font-size);
-    background-color: var(--border-color);
+    background-color: var(--background-color);
 }
 
 /* Usage of Variables */
@@ -34,7 +34,6 @@ body .login-box {
     padding: 20px;
     border: 1px solid #ccc;
     border-radius: 5px;
-    box-shadow: var(--box-shadow);
     background-color: var(--background-color);
 }
 
@@ -67,7 +66,7 @@ thead {
 
 form .card-body {
     box-sizing: border-box;;
-    background-color: hsl(0, 0%, 100%);
+    background-color: var(--background-color);
     border: 4px solid hsl(0, 0%, 90%);
   }
 
@@ -90,6 +89,7 @@ input  .btn-primary{
 }
 
 div .input-group input {
+    color: var(--primary-color);
     box-sizing: border-box;
     font-family: var(--font-family);
     font-size: var(--font-size);
@@ -103,10 +103,8 @@ div .input-group input {
     width: 100%;
     height: 40px;
     border: none;
-    border-bottom: 1px solid var(--border-color);
     background-color: var(--background-color);
     padding: 0 16px;
-    color: var(--secondary-color);
     transition: background-color var(--transition-duration) var(--transition-timing-function), outline var(--transition-duration) var(--transition-timing-function);
 }
 
@@ -129,7 +127,7 @@ div .input-group input {
 }
 
 .btn-primary:hover {
-    background-color: #a6cdb7;
+    background-color: var(--success-color);
     transition-duration: var(--transition-duration);
     transition-property: var(--transition-property);
     transition-timing-function: var(--transition-timing-function);
