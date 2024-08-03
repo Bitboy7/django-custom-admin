@@ -7,7 +7,7 @@ class ProductoAdmin(admin.ModelAdmin):
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'telefono', 'correo', 'pais_id')
+    list_display = ('nombre', 'telefono', 'correo')
     
 @admin.register(Agente)
 class AgenteAdmin(admin.ModelAdmin):

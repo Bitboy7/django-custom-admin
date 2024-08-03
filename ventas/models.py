@@ -8,7 +8,7 @@ class Cliente(models.Model):
     pais_id = models.ForeignKey(Pais, on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.nombre + ' ' + self.pais_id
+        return self.nombre
 
 class Agente(models.Model):
     nombre = models.CharField(max_length=50)
@@ -26,7 +26,7 @@ class Producto(models.Model):
     precio = models.DecimalField(max_digits=10, decimal_places=2)
     
     def __str__(self):
-        return self.nombre
+        return self.variedad
     
     class Meta:
         verbose_name_plural = 'Productos'
@@ -52,7 +52,7 @@ class Ventas(models.Model):
     tipo_venta = models.CharField(max_length=50, choices=TipoVenta.choices)
 
     def __str__(self):
-        return self.descripcion
+        return self.carga
     
     class Meta:
         verbose_name_plural = 'Ventas'
