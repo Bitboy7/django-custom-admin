@@ -34,9 +34,11 @@ class Cuenta(models.Model):
     id_banco = models.ForeignKey(Banco, on_delete=models.CASCADE)
     id_sucursal = models.ForeignKey(Sucursal, on_delete=models.CASCADE)
     numero_cuenta = models.CharField(max_length=25)
-    saldo = models.FloatField()
+    numero_cliente = models.CharField(max_length=25, blank=True, null=True)
+    rfc = models.CharField(max_length=15, blank=True, null=True)
+    clabe = models.CharField(max_length=25, blank=True, null=True)
     fecha_registro = models.DateTimeField(default=timezone.now)
-
+    
     def __str__(self):
         return f"{self.id} - {self.id_banco.nombre} - {self.id_sucursal.nombre}"
     

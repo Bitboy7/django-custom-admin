@@ -31,12 +31,12 @@ class BancoAdmin(admin.ModelAdmin):
 @admin.register(Cuenta)
 class CuentaAdmin(admin.ModelAdmin):
     list_display = ('id', 'id_banco', 'id_sucursal',
-                    'numero_cuenta', 'saldo', 'fecha_registro')
-    search_fields = ('numero_cuenta', 'saldo',
+                    'numero_cuenta', 'fecha_registro')
+    search_fields = ('numero_cuenta',
                      'fecha_registro', 'id_banco', 'id_sucursal')
-    list_filter = ('id_banco', 'id_sucursal', 'saldo')
+    list_filter = ('id_banco', 'id_sucursal')
     fields = ('id_banco', 'id_sucursal',
-              'numero_cuenta', 'saldo', 'fecha_registro')
+              'numero_cuenta', 'fecha_registro')
 
 class GastosResource(resources.ModelResource):
     fields = ('id', 'id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', 'monto', 'descripcion', 'fecha')

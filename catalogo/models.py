@@ -34,7 +34,7 @@ class Sucursal(models.Model):
     id_estado = models.ForeignKey(Estado, on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.nombre + " - " + self.direccion + " - " + self.id_estado.nombre
+        return self.nombre + '-' + self.id_estado.nombre
     
     class Meta:
         verbose_name = "Sucursal"
@@ -51,7 +51,7 @@ class Productor(models.Model):
     fecha_creacion = models.DateTimeField(default=timezone.now)
     
     def __str__(self):
-        return self.nombre_completo + " - " + self.num_cuenta + " - " + self.clabe_interbancaria + " - " + self.id_sucursal.nombre + "-" + self.telefono + "- " + str(self.fecha_creacion)
+        return self.nombre_completo + self.num_cuenta 
     
     class Meta:
         verbose_name = "Productor"
