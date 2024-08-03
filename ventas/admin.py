@@ -1,9 +1,5 @@
 from django.contrib import admin
-from .models import Pais, Producto, Cliente, Agente, Ventas
-
-@admin.register(Pais)
-class PaisAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'siglas')
+from .models import Producto, Cliente, Agente, Ventas
 
 @admin.register(Producto)
 class ProductoAdmin(admin.ModelAdmin):

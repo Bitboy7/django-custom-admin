@@ -3,11 +3,11 @@
 /* Variable Declarations */
 :root {
     --primary-color: #001f3f;
-    --secondary-color: #66b287;
-    --background-color: #d8d9e6;
+    --secondary-color: #35af4f;
+    --background-color: #c9c9c9;
     --thead-color: #d7dfef;
     --accent-color: #b08e08;
-    --success-color: #1b693d;
+    --success-color: #275332;
     --info-color: #001f3f;
     --font-family: 'Montserrat', sans-serif;
     --font-size: 12px;
@@ -171,6 +171,17 @@ div .input-group input {
     transition-timing-function: var(--transition-timing-function);
 }
 
+.btn-info:hover {
+    color: #ffffff;
+    font-weight: 500;
+    background-color: var(--accent-color);
+    transition-duration: var(--transition-duration);
+    transition-property: var(--transition-property);
+    transition-timing-function: var(--transition-timing-function);
+    border: 2px solid var(--accent-color);
+    border-radius: 3px;
+}
+
 .btn-success {
     display: inline-block;
     outline: 0;
@@ -193,7 +204,7 @@ div .input-group input {
     background-color: var(--background-color);
 }
 
-.btn-info:hover,
+
 .btn-primary:hover,
 .btn-success:hover {
     color: #17131b;
