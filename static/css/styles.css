@@ -6,8 +6,8 @@
     --secondary-color: #3b6cac;
     --background-color: #e3e6ef;
     --thead-color: #d7dfef;
-    --accent-color: #19806d;
-    --success-color: #43ac6a;
+    --accent-color: #43ac6a;
+    --success-color: #19806d; 
     --info-color: #001f3f;
     --font-family: 'Montserrat', sans-serif;
     --font-size: 12px;
@@ -149,7 +149,7 @@ div .input-group input {
     outline: 0;
     cursor: pointer;
     border: 2px solid var(--info-color);
-    border-radius: 3px;
+    border-radius: 8px;
     color: #fff;
     background: var(--info-color);
     font-size: 12px;
@@ -178,7 +178,7 @@ div .input-group input {
     outline: 0;
     cursor: pointer;
     border: 2px solid var(--success-color);
-    border-radius: 3px;
+    border-radius: 8px;
     color: #fff;
     background: var(--success-color);
     font-size: 12px;
@@ -201,6 +201,7 @@ div .input-group input {
     font-weight: 700;
     color: #f1eff4;
     background-color: var(--accent-color);
+    border-color: #43ac6a;
     transition-duration: var(--transition-duration);
     transition-property: var(--transition-property);
     transition-timing-function: var(--transition-timing-function);

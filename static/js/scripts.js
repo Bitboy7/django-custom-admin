@@ -60,3 +60,35 @@ const loginBoxMsg = document.querySelector('.login-box-msg');
 if (loginBoxMsg) {
     loginBoxMsg.textContent = 'Bienvenido';
 }
+
+const footerElement = document.querySelector('footer');
+if (footerElement) {
+    footerElement.remove();
+}
+
+const jazzySidebar = document.getElementById('jazzy-sidebar');
+if (jazzySidebar) {
+    jazzySidebar.style.opacity = '0.85';
+}
+
+// Seleccionamos todas las tablas en el documento HTML
+const tablas = document.getElementsByTagName('table');
+
+// Recorremos cada tabla
+for (let i = 0; i < tablas.length; i++) {
+  // Obtenemos los elementos con la clase "field-monto" dentro de cada tabla
+  const camposMonto = tablas[i].querySelectorAll('.field-monto');
+  
+  // Recorremos cada elemento y le agregamos el formato de moneda
+  camposMonto.forEach(campo => {
+    // Obtenemos el valor actual del campo como un número flotante
+    let valor = parseFloat(campo.textContent);
+    
+    // Formateamos el valor con el símbolo de moneda y sin redondeo
+    let valorConFormato = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'MXN', maximumFractionDigits: 16 }).format(valor);
+    
+    // Actualizamos el contenido del campo con el valor formateado
+    campo.textContent = valorConFormato;
+  });
+}
+	

@@ -26,7 +26,6 @@ class Estado(models.Model):
         verbose_name_plural = "Estados"
         ordering = ["nombre"]
 
-
 class Sucursal(models.Model):
     nombre = models.CharField(max_length=50)
     direccion = models.CharField(max_length=100, blank=True, null=True)

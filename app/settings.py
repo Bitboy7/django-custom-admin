@@ -82,10 +82,10 @@ JAZZMIN_SETTINGS = {
         "auth": "fa fa-database",
         "auth.user": "fas fa-user",
         "auth.Group": "fas fa-users",
+        "catalogo.Pais": "fa fa-globe fa-fade",
         "catalogo.Estado": "fas fa-map-marked-alt fa-fade",
         "catalogo.Sucursal": "fas fa-store fa-fade",
         "catalogo.Productor": "fa fa-id-badge fa-fade",
-        "catalogo.Pais": "fa fa-globe fa-fade",
         "gastos.Banco": "fas fa-university",
         "gastos.Cuenta": "fas fa-credit-card",
         "gastos.CatGastos": "fa fa-tag",
@@ -118,7 +118,7 @@ JAZZMIN_SETTINGS = {
     # - vertical_tabs
     # - collapsible
     # - carousel
-    "changeform_format": "single",
+    "changeform_format": "horizontal_tabs",
     # override change forms on a per modeladmin basis
     "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs", "catalogo.Productor": "carousel"},
 }
@@ -218,7 +218,6 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/

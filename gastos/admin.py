@@ -4,8 +4,13 @@ from import_export.admin import ImportExportModelAdmin
 # Register your models here.
 from .models import CatGastos, Banco, Cuenta, Gastos
 
+class CatGastoResource(resources.ModelResource):
+    fields = ('id', 'nombre', 'fecha_registro')
+    class Meta:
+        model = CatGastos
+
 @admin.register(CatGastos)
-class CatGastosAdmin(admin.ModelAdmin):
+class CatGastosAdmin(ImportExportModelAdmin):
     list_display = ('id', 'nombre')
     search_fields = ('id', 'nombre', 'fecha_registro')
     list_filter = ('nombre', 'fecha_registro')
@@ -31,12 +36,12 @@ class BancoAdmin(admin.ModelAdmin):
 @admin.register(Cuenta)
 class CuentaAdmin(admin.ModelAdmin):
     list_display = ('id', 'id_banco', 'id_sucursal',
-                    'numero_cuenta', 'fecha_registro')
+                    'numero_cuenta', 'fecha_registro', 'numero_cliente', 'rfc', 'clabe')
     search_fields = ('numero_cuenta',
                      'fecha_registro', 'id_banco', 'id_sucursal')
     list_filter = ('id_banco', 'id_sucursal')
     fields = ('id_banco', 'id_sucursal',
-              'numero_cuenta', 'fecha_registro')
+              'numero_cuenta', 'fecha_registro', 'numero_cliente', 'rfc', 'clabe')
 
 class GastosResource(resources.ModelResource):
     fields = ('id', 'id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', 'monto', 'descripcion', 'fecha')
@@ -55,3 +60,4 @@ class GastosAdmin(ImportExportModelAdmin):
             'fields': ('id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', 'monto', 'descripcion', 'fecha')
         }),
     )
+    
