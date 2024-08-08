@@ -1,6 +1,10 @@
 from django.contrib import admin
 
-from .models import Productor, Estado, Sucursal
+from .models import Productor, Estado, Sucursal, Pais
+
+@admin.register(Pais)
+class PaisAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'siglas', 'moneda')
 
 @admin.register(Productor)
 class ProductorAdmin(admin.ModelAdmin):

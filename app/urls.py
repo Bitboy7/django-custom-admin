@@ -1,3 +1,8 @@
+from django.contrib import admin
+from django.urls import path, include
+from catalogo.views import index, data
+from gastos.views import registro_gasto
+
 """
 URL configuration for app project.
 
@@ -14,14 +19,8 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
-from django.urls import path, include
-from catalogo.views import index, data
-from gastos.views import registro_gasto
-
 urlpatterns = [
-    path("admin/", admin.site.urls),
-    path('', index, name='index'),
+    path("", admin.site.urls),  # Set /admin as the main URL
     path('data/', data, name='data'),
     path('gastos/', registro_gasto, name='gastos'),
     path('', include('catalogo.urls')),

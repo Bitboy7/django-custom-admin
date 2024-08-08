@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'compressor',
     'catalogo.apps.CatalogoConfig',
     'gastos.apps.GastosConfig',
+    'ventas.apps.VentasConfig',
+    'import_export',
 ]
 
 JAZZMIN_SETTINGS = {
@@ -50,11 +52,11 @@ JAZZMIN_SETTINGS = {
     "site_title": "Agricola de la Costa Admin",
 
     # Title on the login screen (19 chars max) (defaults to current_admin_site.site_header if absent or None)
-    "site_header": None,
+    "site_header": "Agricola de la Costa Admin",
 
     # Title on the brand (19 chars max) (defaults to current_admin_site.site_header if absent or None)
        # Logo to use for your site, must be present in static files, used for brand on top left
-    "site_logo": "/img/logo-white.png",
+    "site_logo": "/img/logo-sm.png",
     # Whether to display the side menu
     "show_sidebar": True,
     # Logo to use for your site, must be present in static files, used for login form logo (defaults to site_logo)
@@ -80,13 +82,18 @@ JAZZMIN_SETTINGS = {
         "auth": "fa fa-database",
         "auth.user": "fas fa-user",
         "auth.Group": "fas fa-users",
-        "catalogo.Estado": "fas fa-map-marked-alt",
-        "catalogo.Sucursal": "fas fa-store",
-        "catalogo.Productor": "fa fa-id-badge",
+        "catalogo.Pais": "fa fa-globe fa-fade",
+        "catalogo.Estado": "fas fa-map-marked-alt fa-fade",
+        "catalogo.Sucursal": "fas fa-store fa-fade",
+        "catalogo.Productor": "fa fa-id-badge fa-fade",
         "gastos.Banco": "fas fa-university",
         "gastos.Cuenta": "fas fa-credit-card",
-        "gastos.CatGastos": "fas fa-money-check-alt",
-        "gastos.Gastos": "fa fa-shopping-bag",
+        "gastos.CatGastos": "fa fa-tag",
+        "gastos.Gastos": "fas fa-money-check-alt",
+        "ventas.Cliente": "fa fa-user-tie",
+        "ventas.Ventas": "fa fa-shopping-cart",
+        "ventas.Agente": "fa fa-user-secret",
+        "ventas.Producto": "fa fa-barcode",
     },
         # Icons that are used when one is not manually specified
     "default_icon_parents": "fas fa-chevron-circle-right",
@@ -96,7 +103,7 @@ JAZZMIN_SETTINGS = {
     # UI Tweaks #
     #############
     # Relative paths to custom CSS/JS scripts (must be present in static files)
-    "custom_css": "/css/custom.css",
+    "custom_css": "/css/styles.css",
     "custom_js": "/js/scripts.js",
     # Whether to link font from fonts.googleapis.com (use custom_css to supply font otherwise)
     "use_google_fonts_cdn": True,
@@ -111,29 +118,29 @@ JAZZMIN_SETTINGS = {
     # - vertical_tabs
     # - collapsible
     # - carousel
-    "changeform_format": "vertical_tabs",
+    "changeform_format": "collapse",
     # override change forms on a per modeladmin basis
-    "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs", "catalogo.Productor": "carousel"},
+    "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs", "catalogo.Productor": "vertical_tabs", "catalogo.Pais": "vertical_tabs", "catalogo.Estado": "vertical_tabs", "catalogo.Sucursal": "vertical_tabs", "gastos.Banco": "vertical_tabs", "gastos.Cuenta": "vertical_tabs", "gastos.CatGastos": "vertical_tabs", "gastos.Gastos": "vertical_tabs", "ventas.Cliente": "vertical_tabs", "ventas.Ventas": "vertical_tabs", "ventas.Agente": "vertical_tabs", "ventas.Producto": "vertical_tabs"},
 }
 
 JAZZMIN_UI_TWEAKS = {
-    "navbar_small_text": True,
+    "navbar_small_text": False,
     "footer_small_text": False,
     "body_small_text": False,
     "brand_small_text": False,
-    "brand_colour": "navbar-white",
-    "accent": "accent-lightblue",
-    "navbar": "navbar-info navbar-dark",
-    "no_navbar_border": False,
-    "navbar_fixed": False,
+    "brand_colour": "navbar-dark",
+    "accent": "accent-navy",
+    "navbar": "navbar-dark",
+    "no_navbar_border": True,
+    "navbar_fixed": True,
     "layout_boxed": False,
     "footer_fixed": False,
     "sidebar_fixed": True,
-    "sidebar": "sidebar-light-info",
+    "sidebar": "sidebar-dark-lightblue",
     "sidebar_nav_small_text": False,
     "sidebar_disable_expand": False,
     "sidebar_nav_child_indent": False,
-    "sidebar_nav_compact_style": False,
+    "sidebar_nav_compact_style": True,
     "sidebar_nav_legacy_style": False,
     "sidebar_nav_flat_style": True,
     "theme": "yeti",
@@ -148,7 +155,6 @@ JAZZMIN_UI_TWEAKS = {
     },
     "actions_sticky_top": True
 }
-
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -213,13 +219,12 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
 LANGUAGE_CODE = "es-ES"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "America/Mexico_City"
 
 USE_I18N = True
 

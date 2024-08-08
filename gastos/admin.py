@@ -1,18 +1,25 @@
 from django.contrib import admin
-
+from import_export import resources
+from import_export.admin import ImportExportModelAdmin
 # Register your models here.
 from .models import CatGastos, Banco, Cuenta, Gastos
 
+class CatGastoResource(resources.ModelResource):
+    fields = ('id', 'nombre', 'fecha_registro')
+    class Meta:
+        model = CatGastos
+
 @admin.register(CatGastos)
-class CatGastosAdmin(admin.ModelAdmin):
+class CatGastosAdmin(ImportExportModelAdmin):
     list_display = ('id', 'nombre')
-    search_fields = ('nombre',)
-    list_filter = ('nombre',)
+    search_fields = ('id', 'nombre', 'fecha_registro')
+    list_filter = ('nombre', 'fecha_registro')
     fieldsets = (
         ('Datos del Registro', {
-            'fields': ('id','nombre',)
+            'fields': ('nombre', 'fecha_registro')
         }),
     )
+
 
 @admin.register(Banco)
 class BancoAdmin(admin.ModelAdmin):
@@ -25,21 +32,32 @@ class BancoAdmin(admin.ModelAdmin):
         }),
     )
 
+
 @admin.register(Cuenta)
 class CuentaAdmin(admin.ModelAdmin):
-    list_display = ('id', 'id_banco', 'id_sucursal', 'numero_cuenta', 'saldo', 'fecha_registro')
-    search_fields = ('numero_cuenta', 'saldo', 'fecha_registro', 'id_banco', 'id_sucursal')
-    list_filter = ('id_banco', 'id_sucursal', 'saldo')
-    fields = ('id_banco', 'id_sucursal', 'numero_cuenta', 'saldo', 'fecha_registro')
+    list_display = ('id', 'id_banco', 'id_sucursal',
+                    'numero_cuenta', 'fecha_registro', 'numero_cliente', 'rfc', 'clabe')
+    search_fields = ('numero_cuenta',
+                     'fecha_registro', 'id_banco', 'id_sucursal')
+    list_filter = ('id_banco', 'id_sucursal')
+    fields = ('id_banco', 'id_sucursal',
+              'numero_cuenta', 'fecha_registro', 'numero_cliente', 'rfc', 'clabe')
+
+class GastosResource(resources.ModelResource):
+    fields = ('id', 'id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', 'monto', 'descripcion', 'fecha')
+    class Meta:
+        model = Gastos
 
 @admin.register(Gastos)
-class GastosAdmin(admin.ModelAdmin):
-    list_display = ('id', 'id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', 'monto', 'descripcion', 'fecha')
+class GastosAdmin(ImportExportModelAdmin):
+    resorce_class = GastosResource
+    list_display = ('id', 'id_sucursal', 'id_cat_gastos',
+                    'id_cuenta_banco', 'monto', 'descripcion', 'fecha')
     search_fields = ('monto', 'fecha_registro', 'id_sucursal', 'id_cat_gastos')
-    list_filter = ('id_sucursal', 'id_cat_gastos', 'fecha_registro' , 'fecha')
+    list_filter = ('id_sucursal', 'id_cat_gastos', 'fecha')
     fieldsets = (
         ('Datos del Registro', {
             'fields': ('id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', 'monto', 'descripcion', 'fecha')
         }),
     )
-
+    
