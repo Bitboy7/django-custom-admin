@@ -39,7 +39,7 @@ class Ventas(models.Model):
     carga = models.CharField(max_length=50)
     PO = models.CharField(max_length=50, blank=True, null=True)
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
-    caja = models.CharField(max_length=50)
+    cantidad = models.CharField(max_length=50)
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     descripcion = models.CharField(max_length=100, blank=True, null=True)  
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
@@ -51,7 +51,6 @@ class Ventas(models.Model):
         EXPORTACION = 'Exportacion'
         
     tipo_venta = models.CharField(max_length=50, choices=TipoVenta.choices)
-
 
 
     def __str__(self):

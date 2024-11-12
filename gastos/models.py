@@ -23,7 +23,7 @@ class Banco(models.Model):
     fecha_registro = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return self.nombre
+        return f"{self.nombre} - {self.telefono}"
     
     class Meta:
         verbose_name = "Banco"
@@ -41,7 +41,7 @@ class Cuenta(models.Model):
     fecha_registro = models.DateTimeField(default=timezone.now)
     
     def __str__(self):
-        return f"{self.id} - {self.id_banco.nombre} - {self.id_sucursal.nombre}"
+        return f"{self.id} - {self.id_banco.nombre} - {self.id_sucursal.nombre} - {self.numero_cuenta}"
     
     class Meta:
         verbose_name = "Cuenta"
@@ -73,9 +73,11 @@ class Compra(models.Model):
         precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
         monto_total = models.DecimalField(max_digits=10, decimal_places=2)
         fecha_registro = models.DateTimeField(default=timezone.now)
-
+        
+        
         def __str__(self):
-            return f'{self.proveedor} - {self.producto.nombre}'
+            return f'{self.productor} - {self.producto.nombre}'
 
         class Meta:
-            verbose_name_plural = 'Compras'
+            verbose_name_plural = 'Compras',
+            ordering = ['-fecha_compra']

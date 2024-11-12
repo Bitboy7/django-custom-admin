@@ -70,7 +70,7 @@ class ComprasResource(resources.ModelResource):
 class ComprasAdmin(ImportExportModelAdmin):
         resource_class = ComprasResource
         list_display = ('id', 'fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total')
-        search_fields = ('fecha_compra', 'productor__nombre', 'producto__nombre', 'monto_total')
+        search_fields = ('fecha_compra',  'monto_total')
         list_filter = ('fecha_compra', 'productor', 'producto')
         fieldsets = (
             ('Datos del Registro', {
