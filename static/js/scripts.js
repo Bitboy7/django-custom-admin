@@ -1,4 +1,4 @@
-/*!
+     /*!
     * Start Bootstrap - SB Admin v7.0.5 (https://startbootstrap.com/template/sb-admin)
     * Copyright 2013-2022 Start Bootstrap
     * Licensed under MIT (https://github.com/StartBootstrap/startbootstrap-sb-admin/blob/master/LICENSE)
@@ -35,17 +35,19 @@ window.addEventListener('DOMContentLoaded', event => {
     }
 });
 
-// Remove the text from the element with class "brand-text"
+// Remueve el texto del elemento con la clase "brand-text"
 const brandText = document.querySelector('.brand-text');
 if (brandText) {
     brandText.textContent = '';
 }
 
+// Cambia la imagen del elemento con la clase "image img"
 const imgElement = document.querySelector('.image img');
 if (imgElement) {
     imgElement.src = '/static/img/avatar.jpg';
 }
 
+// Agrega una imagen al menú desplegable con el id "jazzy-usermenu"
 const dropdownMenu = document.getElementById('jazzy-usermenu');
 if (dropdownMenu) {
     const imgElement = document.createElement('img');
@@ -56,16 +58,19 @@ if (dropdownMenu) {
     dropdownMenu.insertBefore(imgElement, dropdownMenu.firstChild);
 }
 
+// Cambia el texto del elemento con la clase "login-box-msg"
 const loginBoxMsg = document.querySelector('.login-box-msg');
 if (loginBoxMsg) {
     loginBoxMsg.textContent = 'Bienvenido';
 }
 
+// Remueve el elemento del footer
 const footerElement = document.querySelector('footer');
 if (footerElement) {
     footerElement.remove();
 }
 
+// Cambia la opacidad del elemento con el id "jazzy-sidebar"
 const jazzySidebar = document.getElementById('jazzy-sidebar');
 if (jazzySidebar) {
     jazzySidebar.style.opacity = '0.85';
