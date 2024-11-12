@@ -2,7 +2,7 @@ from django.contrib import admin
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 # Register your models here.
-from .models import CatGastos, Banco, Cuenta, Gastos
+from .models import CatGastos, Banco, Cuenta, Gastos, Compra
 
 class CatGastoResource(resources.ModelResource):
     fields = ('id', 'nombre', 'fecha_registro')
@@ -61,3 +61,19 @@ class GastosAdmin(ImportExportModelAdmin):
         }),
     )
     
+class ComprasResource(resources.ModelResource):
+        fields = ('id', 'fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total', 'fecha_registro')
+        class Meta:
+            model = Compra
+
+@admin.register(Compra)
+class ComprasAdmin(ImportExportModelAdmin):
+        resource_class = ComprasResource
+        list_display = ('id', 'fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total')
+        search_fields = ('fecha_compra', 'productor__nombre', 'producto__nombre', 'monto_total')
+        list_filter = ('fecha_compra', 'productor', 'producto')
+        fieldsets = (
+            ('Datos del Registro', {
+                'fields': ('fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total')
+            }),
+        )

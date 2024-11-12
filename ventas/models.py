@@ -60,4 +60,3 @@ class Ventas(models.Model):
     class Meta:
         verbose_name_plural = 'Ventas'
     
-    

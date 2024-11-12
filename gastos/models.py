@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
-from catalogo.models import Sucursal
+from catalogo.models import Sucursal, Productor
+from ventas.models import Producto
 
 class CatGastos(models.Model):
     id = models.AutoField(primary_key=True)
@@ -47,7 +48,6 @@ class Cuenta(models.Model):
         verbose_name_plural = "Cuentas"
         ordering = ["-fecha_registro"]
 
-
 class Gastos(models.Model):
     id_sucursal = models.ForeignKey(Sucursal, on_delete=models.CASCADE)
     id_cat_gastos = models.ForeignKey(CatGastos, on_delete=models.CASCADE)
@@ -64,3 +64,18 @@ class Gastos(models.Model):
         verbose_name = "Gasto"
         verbose_name_plural = "Gastos"
         ordering = ["-fecha_registro"]
+
+class Compra(models.Model):
+        fecha_compra = models.DateField()
+        productor = models.ForeignKey(Productor, on_delete=models.CASCADE)
+        producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+        cantidad = models.PositiveIntegerField()
+        precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+        monto_total = models.DecimalField(max_digits=10, decimal_places=2)
+        fecha_registro = models.DateTimeField(default=timezone.now)
+
+        def __str__(self):
+            return f'{self.proveedor} - {self.producto.nombre}'
+
+        class Meta:
+            verbose_name_plural = 'Compras'
