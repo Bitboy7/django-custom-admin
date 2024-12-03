@@ -1,9 +1,18 @@
+<<<<<<< HEAD
 /*!
  * Start Bootstrap - SB Admin v7.0.5 (https://startbootstrap.com/template/sb-admin)
  * Copyright 2013-2022 Start Bootstrap
  * Licensed under MIT (https://github.com/StartBootstrap/startbootstrap-sb-admin/blob/master/LICENSE)
  */
 //
+=======
+     /*!
+    * Start Bootstrap - SB Admin v7.0.5 (https://startbootstrap.com/template/sb-admin)
+    * Copyright 2013-2022 Start Bootstrap
+    * Licensed under MIT (https://github.com/StartBootstrap/startbootstrap-sb-admin/blob/master/LICENSE)
+    */
+    // 
+>>>>>>> e36d22bf634f764dffac4100fb5b4d24b0dd40b7
 // Scripts
 //
 
@@ -36,18 +45,33 @@ window.addEventListener("DOMContentLoaded", (event) => {
   }
 });
 
+<<<<<<< HEAD
 // Remove the text from the element with class "brand-text"
 const brandText = document.querySelector(".brand-text");
+=======
+// Remueve el texto del elemento con la clase "brand-text"
+const brandText = document.querySelector('.brand-text');
+>>>>>>> e36d22bf634f764dffac4100fb5b4d24b0dd40b7
 if (brandText) {
   brandText.textContent = "";
 }
 
+<<<<<<< HEAD
 const imgElement = document.querySelector(".image img");
+=======
+// Cambia la imagen del elemento con la clase "image img"
+const imgElement = document.querySelector('.image img');
+>>>>>>> e36d22bf634f764dffac4100fb5b4d24b0dd40b7
 if (imgElement) {
   imgElement.src = "/static/img/avatar.jpg";
 }
 
+<<<<<<< HEAD
 const dropdownMenu = document.getElementById("jazzy-usermenu");
+=======
+// Agrega una imagen al menú desplegable con el id "jazzy-usermenu"
+const dropdownMenu = document.getElementById('jazzy-usermenu');
+>>>>>>> e36d22bf634f764dffac4100fb5b4d24b0dd40b7
 if (dropdownMenu) {
   const imgElement = document.createElement("img");
   imgElement.src =
@@ -58,17 +82,32 @@ if (dropdownMenu) {
   dropdownMenu.insertBefore(imgElement, dropdownMenu.firstChild);
 }
 
+<<<<<<< HEAD
 const loginBoxMsg = document.querySelector(".login-box-msg");
+=======
+// Cambia el texto del elemento con la clase "login-box-msg"
+const loginBoxMsg = document.querySelector('.login-box-msg');
+>>>>>>> e36d22bf634f764dffac4100fb5b4d24b0dd40b7
 if (loginBoxMsg) {
   loginBoxMsg.textContent = "Bienvenido";
 }
 
+<<<<<<< HEAD
 const footerElement = document.querySelector("footer");
+=======
+// Remueve el elemento del footer
+const footerElement = document.querySelector('footer');
+>>>>>>> e36d22bf634f764dffac4100fb5b4d24b0dd40b7
 if (footerElement) {
   footerElement.remove();
 }
 
+<<<<<<< HEAD
 const jazzySidebar = document.getElementById("jazzy-sidebar");
+=======
+// Cambia la opacidad del elemento con el id "jazzy-sidebar"
+const jazzySidebar = document.getElementById('jazzy-sidebar');
+>>>>>>> e36d22bf634f764dffac4100fb5b4d24b0dd40b7
 if (jazzySidebar) {
   jazzySidebar.style.opacity = "0.85";
 }

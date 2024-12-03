@@ -155,6 +155,7 @@ JAZZMIN_UI_TWEAKS = {
     },
     "actions_sticky_top": True
 }
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -196,7 +197,7 @@ DATABASES = {
           'USER': os.getenv("DB_USER"),
           'PASSWORD': os.getenv("DB_PASSWORD"),
           'HOST': os.getenv("DB_HOST"),
-          'PORT': int(os.getenv("DB_PORT")),
+          'PORT': os.getenv("DB_PORT"),
      }
 }
 
