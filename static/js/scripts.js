@@ -1,3 +1,11 @@
+/*!
+    * Start Bootstrap - SB Admin v7.0.5 (https://startbootstrap.com/template/sb-admin)
+    * Copyright 2013-2022 Start Bootstrap
+    * Licensed under MIT (https://github.com/StartBootstrap/startbootstrap-sb-admin/blob/master/LICENSE)
+    */
+    // 
+// Scripts
+// 
 
 window.addEventListener("DOMContentLoaded", () => {
   // Toggle the side navigation
@@ -29,7 +37,7 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 // Remove the text from the element with class "brand-text"
-const brandText = document.querySelector(".brand-text");
+const brandText = document.querySelector('.brand-text');
 if (brandText) {
   brandText.textContent = "";
 }
