@@ -1,22 +1,5 @@
-<<<<<<< HEAD
-/*!
- * Start Bootstrap - SB Admin v7.0.5 (https://startbootstrap.com/template/sb-admin)
- * Copyright 2013-2022 Start Bootstrap
- * Licensed under MIT (https://github.com/StartBootstrap/startbootstrap-sb-admin/blob/master/LICENSE)
- */
-//
-=======
-     /*!
-    * Start Bootstrap - SB Admin v7.0.5 (https://startbootstrap.com/template/sb-admin)
-    * Copyright 2013-2022 Start Bootstrap
-    * Licensed under MIT (https://github.com/StartBootstrap/startbootstrap-sb-admin/blob/master/LICENSE)
-    */
-    // 
->>>>>>> e36d22bf634f764dffac4100fb5b4d24b0dd40b7
-// Scripts
-//
 
-window.addEventListener("DOMContentLoaded", (event) => {
+window.addEventListener("DOMContentLoaded", () => {
   // Toggle the side navigation
   const sidebarToggle = document.body.querySelector("#sidebarToggle");
   if (sidebarToggle) {
@@ -35,7 +18,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
   }
 });
 
-window.addEventListener("DOMContentLoaded", (event) => {
+window.addEventListener("DOMContentLoaded", () => {
   // Simple-DataTables
   // https://github.com/fiduswriter/Simple-DataTables/wiki
 
@@ -45,33 +28,20 @@ window.addEventListener("DOMContentLoaded", (event) => {
   }
 });
 
-<<<<<<< HEAD
 // Remove the text from the element with class "brand-text"
 const brandText = document.querySelector(".brand-text");
-=======
-// Remueve el texto del elemento con la clase "brand-text"
-const brandText = document.querySelector('.brand-text');
->>>>>>> e36d22bf634f764dffac4100fb5b4d24b0dd40b7
 if (brandText) {
   brandText.textContent = "";
 }
 
-<<<<<<< HEAD
-const imgElement = document.querySelector(".image img");
-=======
 // Cambia la imagen del elemento con la clase "image img"
 const imgElement = document.querySelector('.image img');
->>>>>>> e36d22bf634f764dffac4100fb5b4d24b0dd40b7
 if (imgElement) {
   imgElement.src = "/static/img/avatar.jpg";
 }
 
-<<<<<<< HEAD
-const dropdownMenu = document.getElementById("jazzy-usermenu");
-=======
 // Agrega una imagen al menú desplegable con el id "jazzy-usermenu"
 const dropdownMenu = document.getElementById('jazzy-usermenu');
->>>>>>> e36d22bf634f764dffac4100fb5b4d24b0dd40b7
 if (dropdownMenu) {
   const imgElement = document.createElement("img");
   imgElement.src =
@@ -82,32 +52,20 @@ if (dropdownMenu) {
   dropdownMenu.insertBefore(imgElement, dropdownMenu.firstChild);
 }
 
-<<<<<<< HEAD
-const loginBoxMsg = document.querySelector(".login-box-msg");
-=======
 // Cambia el texto del elemento con la clase "login-box-msg"
 const loginBoxMsg = document.querySelector('.login-box-msg');
->>>>>>> e36d22bf634f764dffac4100fb5b4d24b0dd40b7
 if (loginBoxMsg) {
   loginBoxMsg.textContent = "Bienvenido";
 }
 
-<<<<<<< HEAD
-const footerElement = document.querySelector("footer");
-=======
 // Remueve el elemento del footer
 const footerElement = document.querySelector('footer');
->>>>>>> e36d22bf634f764dffac4100fb5b4d24b0dd40b7
 if (footerElement) {
   footerElement.remove();
 }
 
-<<<<<<< HEAD
-const jazzySidebar = document.getElementById("jazzy-sidebar");
-=======
 // Cambia la opacidad del elemento con el id "jazzy-sidebar"
 const jazzySidebar = document.getElementById('jazzy-sidebar');
->>>>>>> e36d22bf634f764dffac4100fb5b4d24b0dd40b7
 if (jazzySidebar) {
   jazzySidebar.style.opacity = "0.85";
 }
@@ -137,7 +95,29 @@ for (let i = 0; i < tablas.length; i++) {
   });
 }
 
+// Seleccionamos todos los elementos con la clase "field-fecha" en el documento HTML
 const cardBodyInputs = document.querySelectorAll(".card-body input");
 cardBodyInputs.forEach((input) => {
-  input.placeholder = "placeholder";
+  input.placeholder = "Ingresa un valor";
 });
+
+
+// Seleccionamos todos los elementos con la clase "field-fecha" en el documento HTML
+const cantidadInput = document.querySelector(".form-group.field-cantidad input");
+const precioUnitarioInput = document.querySelector(".form-group.field-precio_unitario input");
+const montoTotalInput = document.querySelector(".form-group.field-monto_total input");
+
+if (cantidadInput && precioUnitarioInput && montoTotalInput) {
+  const updateMontoTotal = () => {
+    const cantidad = parseFloat(cantidadInput.value) || 0;
+    const precioUnitario = parseFloat(precioUnitarioInput.value) || 0;
+    const montoTotal = cantidad * precioUnitario;
+    montoTotalInput.value = montoTotal.toFixed(2);
+  };
+
+  cantidadInput.addEventListener("input", updateMontoTotal);
+  precioUnitarioInput.addEventListener("input", updateMontoTotal);
+}
+
+updateMontoTotal();
+

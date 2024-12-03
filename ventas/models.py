@@ -49,9 +49,7 @@ class Ventas(models.Model):
     class TipoVenta(models.TextChoices):
         NACIONAL = 'Nacional'
         EXPORTACION = 'Exportacion'
-        
     tipo_venta = models.CharField(max_length=50, choices=TipoVenta.choices)
-
 
     def __str__(self):
         return self.carga

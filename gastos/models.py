@@ -1,7 +1,8 @@
 from django.db import models
 from django.utils import timezone
 from catalogo.models import Sucursal, Productor
-from ventas.models import Producto
+from ventas.models import Producto, Ventas
+from django.db.models import Sum
 
 class CatGastos(models.Model):
     id = models.AutoField(primary_key=True)
@@ -74,10 +75,12 @@ class Compra(models.Model):
         monto_total = models.DecimalField(max_digits=10, decimal_places=2)
         fecha_registro = models.DateTimeField(default=timezone.now)
         
-        
         def __str__(self):
             return f'{self.productor} - {self.producto.nombre}'
 
         class Meta:
             verbose_name_plural = 'Compras',
             ordering = ['-fecha_compra']
+            
+            
+            
