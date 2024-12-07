@@ -32,6 +32,8 @@ class Producto(models.Model):
         verbose_name_plural = 'Productos'
 
 class Ventas(models.Model):
+    from gastos.models import Cuenta
+    
     fecha_salida_manifiesto = models.DateField()
     agente_id = models.ForeignKey(Agente, on_delete=models.CASCADE, verbose_name='Agente aduanal')
     fecha_deposito = models.DateField()
@@ -45,6 +47,7 @@ class Ventas(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     fecha_registro = models.DateTimeField(auto_now_add=True)
     sucursal_id = models.ForeignKey(Sucursal, on_delete=models.CASCADE)
+    cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE, null=True, blank=True, default=2)
     
     class TipoVenta(models.TextChoices):
         NACIONAL = 'Nacional'

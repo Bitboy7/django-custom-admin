@@ -15,7 +15,7 @@ class AgenteAdmin(admin.ModelAdmin):
     
 @admin.register(Ventas)
 class VentasAdmin(admin.ModelAdmin):
-    list_display = ('fecha_salida_manifiesto', 'agente_id', 'fecha_deposito', 'carga', 'PO', 'producto', 'cantidad', 'monto', 'descripcion', 'cliente', 'fecha_registro', 'sucursal_id')
+    list_display = ('fecha_salida_manifiesto', 'agente_id', 'fecha_deposito', 'carga', 'PO', 'producto', 'cantidad', 'monto', 'descripcion', 'cliente', 'fecha_registro', 'sucursal_id','cuenta')
     
 
 

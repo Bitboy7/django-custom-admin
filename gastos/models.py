@@ -1,7 +1,6 @@
 from django.db import models
 from django.utils import timezone
 from catalogo.models import Sucursal, Productor
-from ventas.models import Producto, Ventas
 from django.db.models import Sum
 
 class CatGastos(models.Model):
@@ -16,7 +15,6 @@ class CatGastos(models.Model):
         verbose_name_plural = "Categorías de Gastos"
         ordering = ["nombre"]
 
-
 class Banco(models.Model):
     nombre = models.CharField(max_length=50)
     telefono = models.CharField(max_length=15, blank=True, null=True)
@@ -30,7 +28,6 @@ class Banco(models.Model):
         verbose_name = "Banco"
         verbose_name_plural = "Bancos"
         ordering = ["nombre"]
-
 
 class Cuenta(models.Model):
     id_banco = models.ForeignKey(Banco, on_delete=models.CASCADE)
@@ -67,6 +64,7 @@ class Gastos(models.Model):
         ordering = ["-fecha_registro"]
 
 class Compra(models.Model):
+        from ventas.models import Producto
         fecha_compra = models.DateField()
         productor = models.ForeignKey(Productor, on_delete=models.CASCADE)
         producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
@@ -79,7 +77,8 @@ class Compra(models.Model):
             return f'{self.productor} - {self.producto.nombre}'
 
         class Meta:
-            verbose_name_plural = 'Compras',
+            verbose_name = "Compra de fruta"
+            verbose_name_plural = "Compras de fruta"
             ordering = ['-fecha_compra']
             
             

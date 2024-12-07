@@ -11,8 +11,3 @@ def registro_gasto(request):
     else:
         form = GastoForm()
     return render(request, 'gastos/registro_gasto.html', {'form': form})
-
-def mostrar_balance_mensual(request, cuenta_id, year):
-    cuenta = Cuenta.objects.get(id=cuenta_id)
-    balances = cuenta.calcular_balance_mensual(year)
-    return render(request, 'balance.html', {'cuenta': cuenta, 'balances': balances})
