@@ -72,6 +72,7 @@ class Compra(models.Model):
         precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
         monto_total = models.DecimalField(max_digits=10, decimal_places=2)
         fecha_registro = models.DateTimeField(default=timezone.now)
+        cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE, null=True, blank=True, default=2)
         
         def __str__(self):
             return f'{self.productor} - {self.producto.nombre}'
@@ -80,6 +81,6 @@ class Compra(models.Model):
             verbose_name = "Compra de fruta"
             verbose_name_plural = "Compras de fruta"
             ordering = ['-fecha_compra']
-            
+            permissions = [("can_view_compras", "Can view compras")]
             
             

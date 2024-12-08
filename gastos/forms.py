@@ -25,17 +25,3 @@ class CatGastoForm(forms.ModelForm):
             'fecha_registro': forms.DateInput(attrs={'class': 'form-control', 'placeholder': 'YYYY-MM-DD'}),
         }
 
-class ComprasForm(forms.ModelForm):
-    class Meta:
-        model = Compra
-        fields = ['fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total', 'fecha_registro']
-
-        widgets = {
-            'fecha_compra': forms.DateInput(attrs={'class': 'form-control', 'placeholder': 'YYYY-MM-DD'}, format='%Y-%m-%d'),
-            'productor': forms.Select(attrs={'class': 'form-control', 'placeholder': 'Seleccione el productor'}, choices=Compra.objects.all()),
-            'producto': forms.Select(attrs={'class': 'form-control', 'placeholder': 'Seleccione el producto'}, choices=Compra.objects.all()),
-            'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ingrese la cantidad'}),
-            'precio_unitario': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ingrese el precio unitario'}),
-            'monto_total': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ingrese el monto total'}),
-            'fecha_registro': forms.DateTimeInput(attrs={'class': 'form-control', 'placeholder': 'YYYY-MM-DD HH:MM:SS'}),
-        }

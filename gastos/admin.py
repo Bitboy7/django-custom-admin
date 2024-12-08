@@ -66,19 +66,19 @@ class GastosAdmin(ImportExportModelAdmin):
     )
     
 class ComprasResource(resources.ModelResource):
-        fields = ('id', 'fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total', 'fecha_registro')
+        fields = ('id', 'fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total', 'fecha_registro', 'cuenta')
         class Meta:
             model = Compra
 
 @admin.register(Compra)
 class ComprasAdmin(ImportExportModelAdmin):
         resource_class = ComprasResource
-        list_display = ('id', 'fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total')
+        list_display = ('id', 'fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total', 'cuenta')
         search_fields = ('fecha_compra',  'monto_total')
-        list_filter = ('fecha_compra', 'productor', 'producto')
+        list_filter = ('fecha_compra', 'productor', 'producto', 'monto_total')
         list_per_page = 20
         fieldsets = (
             ('Datos del Registro', {
-                'fields': ('fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total')
+                'fields': ('fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total', 'cuenta')
             }),
         )
