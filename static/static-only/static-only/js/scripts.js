@@ -45,7 +45,7 @@ if (brandText) {
 // Cambia la imagen del elemento con la clase "image img"
 const imgElement = document.querySelector('.image img');
 if (imgElement) {
-  imgElement.src = "/static/img/avatar.jpg";
+  imgElement.src = "/static/img/avatar-female.png";
 }
 
 // Agrega una imagen al menú desplegable con el id "jazzy-usermenu"
@@ -55,8 +55,10 @@ if (dropdownMenu) {
   imgElement.src =
     "https://cdn-icons-png.freepik.com/256/9691/9691478.png?semt=ais_hybrid";
   imgElement.classList.add("dropdown-image");
-  imgElement.style.height = "36px";
-  imgElement.style.width = "36px";
+  imgElement.style.height = "72px"; // Aumenta el tamaño de la imagen
+  imgElement.style.width = "72px"; // Aumenta el tamaño de la imagen
+  imgElement.style.display = "block";
+  imgElement.style.margin = "0 auto"; // Centra la imagen
   dropdownMenu.insertBefore(imgElement, dropdownMenu.firstChild);
 }
 
@@ -103,11 +105,6 @@ for (let i = 0; i < tablas.length; i++) {
   });
 }
 
-// Seleccionamos todos los elementos con la clase "field-fecha" en el documento HTML
-const cardBodyInputs = document.querySelectorAll(".card-body input");
-cardBodyInputs.forEach((input) => {
-  input.placeholder = "Ingresa un valor";
-});
 
 
 // Seleccionamos todos los elementos con la clase "field-fecha" en el documento HTML
@@ -129,11 +126,3 @@ if (cantidadInput && precioUnitarioInput && montoTotalInput) {
 
 updateMontoTotal();
 
-// Añade un botón dentro del elemento con el id "jazzy-navbar"
-const jazzyNavbar = document.getElementById('jazzy-navbar');
-if (jazzyNavbar) {
-  const button = document.createElement("button");
-  button.textContent = "Nuevo Botón";
-  button.classList.add("btn", "btn-primary");
-  jazzyNavbar.appendChild(button);
-}

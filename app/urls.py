@@ -24,6 +24,6 @@ urlpatterns = [
     path('data/', data, name='data'),
     path('gastos/', gastos_views.registro_gasto, name='gastos'),
     path('', include('catalogo.urls')),
-    path('gastos/', include('gastos.urls')),
+    path('', include('gastos.urls')),
 ]
    

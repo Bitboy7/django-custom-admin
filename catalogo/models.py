@@ -8,8 +8,8 @@ class Pais(models.Model):
     moneda = models.CharField(max_length=20, default='MXN')
     
     def __str__(self):
-        return self.siglas
-    
+        return f'{self.siglas} - {self.nombre}'
+
     class Meta:
         verbose_name_plural = 'Paises'
         ordering = ['siglas']
@@ -19,7 +19,7 @@ class Estado(models.Model):
     nombre = models.CharField(max_length=50)
 
     def __str__(self):
-        return self.nombre
+        return f'{self.id} - {self.nombre}'
     
     class Meta:
         verbose_name = "Estado"
@@ -33,7 +33,7 @@ class Sucursal(models.Model):
     id_estado = models.ForeignKey(Estado, on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.nombre + '-' + self.id_estado.nombre
+        return f'{self.nombre} - {self.id_estado}'
     
     class Meta:
         verbose_name = "Sucursal"
@@ -50,7 +50,7 @@ class Productor(models.Model):
     fecha_creacion = models.DateTimeField(default=timezone.now)
     
     def __str__(self):
-        return self.nombre_completo + self.num_cuenta 
+        return f'{self.nombre_completo} - {self.num_cuenta} - {self.telefono}'
     
     class Meta:
         verbose_name = "Productor"

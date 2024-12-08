@@ -80,6 +80,15 @@ if (jazzySidebar) {
   jazzySidebar.style.opacity = "0.85";
 }
 
+// Add placeholders to vTextField inputs
+const vTextFields = document.querySelectorAll('.vTextField');
+vTextFields.forEach(input => {
+  const label = input.closest('.form-group').querySelector('label');
+  if (label) {
+    input.placeholder = label.textContent.trim();
+  }
+});
+
 // Seleccionamos todas las tablas en el documento HTML
 const tablas = document.getElementsByTagName("table");
 
@@ -105,11 +114,6 @@ for (let i = 0; i < tablas.length; i++) {
   });
 }
 
-// Seleccionamos todos los elementos con la clase "field-fecha" en el documento HTML
-const cardBodyInputs = document.querySelectorAll(".card-body input");
-cardBodyInputs.forEach((input) => {
-  input.placeholder = "Ingresa un valor";
-});
 
 
 // Seleccionamos todos los elementos con la clase "field-fecha" en el documento HTML
@@ -130,13 +134,4 @@ if (cantidadInput && precioUnitarioInput && montoTotalInput) {
 }
 
 updateMontoTotal();
-
-// Agrega un botón a la barra de navegación con el id "jazzy-navbar"
-const jazzyNavbar = document.getElementById('jazzy-navbar');
-if (jazzyNavbar) {
-  const button = document.createElement("button");
-  button.textContent = "Nuevo Botón";
-  button.classList.add("btn", "btn-primary", "ml-auto");
-  jazzyNavbar.appendChild(button);
-}
 

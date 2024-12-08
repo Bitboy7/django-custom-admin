@@ -142,3 +142,11 @@ input {
   border-bottom: 1px solid var(--border-color);
   font-weight: var(--font-weight-bold);
 }
+
+.jazzmin-login-page {
+  background-image: url(/static/img/bg-1.jpg);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
