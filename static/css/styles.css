@@ -135,6 +135,8 @@ input {
   border: 1px solid var(--border-color);
   border-radius: 0.25rem;
   box-shadow: var(--box-shadow);
+  margin: 1rem;
+  padding: 1rem;
 }
 
 .card-header {
@@ -144,7 +146,9 @@ input {
 }
 
 .jazzmin-login-page {
-  background-image: url(/static/img/bg-1.jpg);
+  background-image: url("https://static.vecteezy.com/system/resources/previews/007/740/940/non_2x/beach-cheerful-pattern-wallpaper-of-tropical-green-leaves-of-palm-trees-and-flowers-bird-of-paradise-on-a-light-background-free-vector.jpg");
+  background-size: cover;
+  background-attachment: fixed;
   display: flex;
   justify-content: center;
   align-items: center;
