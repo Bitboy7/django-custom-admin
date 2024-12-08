@@ -15,6 +15,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+from import_export.formats.base_formats import *
 from dotenv import load_dotenv
 import os
 
@@ -46,6 +47,8 @@ INSTALLED_APPS = [
     'ventas.apps.VentasConfig',
     'import_export',
 ]
+
+IMPORT_EXPORT_FORMATS = [XLSX, CSV, JSON, HTML]
 
 JAZZMIN_SETTINGS = {
     # title of the window (Will default to current_admin_site.site_title if absent or None)
@@ -199,7 +202,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "app.wsgi.application"
-
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases

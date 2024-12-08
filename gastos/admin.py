@@ -14,6 +14,7 @@ class CatGastosAdmin(ImportExportModelAdmin):
     list_display = ('id', 'nombre')
     search_fields = ('id', 'nombre', 'fecha_registro')
     list_filter = ('nombre', 'fecha_registro')
+    list_per_page = 12
     fieldsets = (
         ('Datos del Registro', {
             'fields': ('nombre', 'fecha_registro')
@@ -26,6 +27,7 @@ class BancoAdmin(admin.ModelAdmin):
     list_display = ('id', 'nombre', 'telefono', 'direccion')
     search_fields = ('nombre', 'telefono', 'direccion')
     list_filter = ('nombre', 'telefono', 'direccion', 'fecha_registro')
+    list_per_page = 12
     fieldsets = (
         ('Datos del Registro', {
             'fields': ('nombre', 'telefono', 'direccion', 'fecha_registro')
@@ -40,6 +42,7 @@ class CuentaAdmin(admin.ModelAdmin):
     search_fields = ('numero_cuenta',
                      'fecha_registro', 'id_banco', 'id_sucursal')
     list_filter = ('id_banco', 'id_sucursal')
+    list_per_page = 12
     fields = ('id_banco', 'id_sucursal',
               'numero_cuenta', 'fecha_registro', 'numero_cliente', 'rfc', 'clabe')
 
@@ -55,6 +58,7 @@ class GastosAdmin(ImportExportModelAdmin):
                     'id_cuenta_banco', 'monto', 'descripcion', 'fecha')
     search_fields = ('monto', 'fecha_registro', 'id_sucursal', 'id_cat_gastos')
     list_filter = ('id_sucursal', 'id_cat_gastos', 'fecha')
+    list_per_page = 20
     fieldsets = (
         ('Datos del Registro', {
             'fields': ('id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', 'monto', 'descripcion', 'fecha')
@@ -72,6 +76,7 @@ class ComprasAdmin(ImportExportModelAdmin):
         list_display = ('id', 'fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total')
         search_fields = ('fecha_compra',  'monto_total')
         list_filter = ('fecha_compra', 'productor', 'producto')
+        list_per_page = 20
         fieldsets = (
             ('Datos del Registro', {
                 'fields': ('fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total')

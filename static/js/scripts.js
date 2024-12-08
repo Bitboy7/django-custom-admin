@@ -135,3 +135,32 @@ if (cantidadInput && precioUnitarioInput && montoTotalInput) {
 
 updateMontoTotal();
 
+if (tablas.length > 0) {
+  // Obtener todos los elementos con la clase field-monto de esta tabla
+  const montos = tablas[0].querySelectorAll('.field-monto');
+  let sumaTotal = 0;
+
+  // Sumar los montos
+  montos.forEach(monto => {
+    // Limpiar el texto de símbolos de moneda y comas
+    const valor = parseFloat(monto.textContent.replace(/[^0-9.-]+/g, ''));
+    if (!isNaN(valor)) {
+      sumaTotal += valor;
+    }
+  });
+
+  // Crear una nueva fila para el total
+  const nuevaFila = tabla_monto_suma[0].insertRow(-1);
+  const celdaTotal = nuevaFila.insertCell(0);
+  celdaTotal.colSpan = tabla_monto_suma[0].rows[0].cells.length;
+  celdaTotal.style.textAlign = 'right';
+  celdaTotal.style.fontWeight = 'bold';
+  
+  // Formatear y mostrar el total
+  const totalFormateado = new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: 'MXN'
+  }).format(sumaTotal);
+  
+  celdaTotal.textContent = `Total: ${totalFormateado}`;
+}
