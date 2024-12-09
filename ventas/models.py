@@ -31,6 +31,28 @@ class Producto(models.Model):
     class Meta:
         verbose_name_plural = 'Productos'
 
+class Anticipo(models.Model):
+    from gastos.models import Cuenta
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.CASCADE)
+    cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE)
+    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    fecha = models.DateField()
+    descripcion = models.TextField(blank=True, null=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    class Estado_anticipo(models.TextChoices):
+        Pendiente = 'Pendiente'
+        Aplicado = 'Aplicado'
+        Cancelado = 'Cancelado'
+    estado_anticipo = models.CharField(max_length=20, choices=Estado_anticipo.choices, default=Estado_anticipo.Pendiente)
+    
+    def __str__(self):
+        return f"Anticipo de {self.cliente.nombre} - {self.monto}"
+
+    class Meta:
+        verbose_name_plural = 'Anticipos'
+        ordering = ['-fecha_registro']
+        
 class Ventas(models.Model):
     from gastos.models import Cuenta
     
@@ -48,6 +70,7 @@ class Ventas(models.Model):
     fecha_registro = models.DateTimeField(auto_now_add=True)
     sucursal_id = models.ForeignKey(Sucursal, on_delete=models.CASCADE)
     cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE, null=True, blank=True, default=2)
+    anticipo = models.ForeignKey(Anticipo, on_delete=models.SET_NULL, null=True, blank=True)
     
     class TipoVenta(models.TextChoices):
         NACIONAL = 'Nacional'
@@ -58,5 +81,4 @@ class Ventas(models.Model):
         return self.carga
     
     class Meta:
-        verbose_name_plural = 'Ventas'
-    
+        verbose_name_plural = 'Ventas'        

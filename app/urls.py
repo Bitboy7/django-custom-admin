@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from catalogo.views import index, data
 from gastos import views as gastos_views
+from ventas import views as ventas_views
 
 """
 URL configuration for app project.
@@ -25,5 +26,6 @@ urlpatterns = [
     path('gastos/', gastos_views.registro_gasto, name='gastos'),
     path('', include('catalogo.urls')),
     path('', include('gastos.urls')),
+    path('', include('ventas.urls')),
 ]
    

@@ -112,6 +112,7 @@ JAZZMIN_SETTINGS = {
         "ventas.Ventas": "fa fa-shopping-cart",
         "ventas.Agente": "fa fa-user-secret",
         "ventas.Producto": "fa fa-barcode",
+        "ventas.Anticipo": "fa fa-money-bill-wave",
     },
         # Icons that are used when one is not manually specified
     "default_icon_parents": "fas fa-chevron-circle-right",
