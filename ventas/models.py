@@ -26,10 +26,11 @@ class Producto(models.Model):
     precio = models.DecimalField(max_digits=10, decimal_places=2)
     
     def __str__(self):
-        return self.variedad
-    
+        return f"-{self.nombre} - {self.precio} - {self.variedad}"
+        
     class Meta:
         verbose_name_plural = 'Productos'
+        
 
 class Anticipo(models.Model):
     from gastos.models import Cuenta
@@ -78,7 +79,8 @@ class Ventas(models.Model):
     tipo_venta = models.CharField(max_length=50, choices=TipoVenta.choices)
 
     def __str__(self):
-        return self.carga
+        return f"-{self.carga} - {self.fecha_salida_manifiesto} - {self.monto} - {self.cliente.nombre}- {self.producto.nombre}"
+        
     
     class Meta:
         verbose_name_plural = 'Ventas'        
