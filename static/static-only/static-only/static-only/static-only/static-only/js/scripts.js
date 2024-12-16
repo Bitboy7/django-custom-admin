@@ -1,11 +1,11 @@
 /*!
- * Start Bootstrap - SB Admin v7.0.5 (https://startbootstrap.com/template/sb-admin)
- * Copyright 2013-2022 Start Bootstrap
- * Licensed under MIT (https://github.com/StartBootstrap/startbootstrap-sb-admin/blob/master/LICENSE)
- */
-//
+    * Start Bootstrap - SB Admin v7.0.5 (https://startbootstrap.com/template/sb-admin)
+    * Copyright 2013-2022 Start Bootstrap
+    * Licensed under MIT (https://github.com/StartBootstrap/startbootstrap-sb-admin/blob/master/LICENSE)
+    */
+    // 
 // Scripts
-//
+// 
 
 window.addEventListener("DOMContentLoaded", () => {
   // Toggle the side navigation
@@ -37,19 +37,19 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 // Remove the text from the element with class "brand-text"
-const brandText = document.querySelector(".brand-text");
+const brandText = document.querySelector('.brand-text');
 if (brandText) {
   brandText.textContent = "";
 }
 
 // Cambia la imagen del elemento con la clase "image img"
-const imgElement = document.querySelector(".image img");
+const imgElement = document.querySelector('.image img');
 if (imgElement) {
   imgElement.src = "/static/img/avatar-female.png";
 }
 
 // Agrega una imagen al menú desplegable con el id "jazzy-usermenu"
-const dropdownMenu = document.getElementById("jazzy-usermenu");
+const dropdownMenu = document.getElementById('jazzy-usermenu');
 if (dropdownMenu) {
   const imgElement = document.createElement("img");
   imgElement.src =
@@ -63,31 +63,22 @@ if (dropdownMenu) {
 }
 
 // Cambia el texto del elemento con la clase "login-box-msg"
-const loginBoxMsg = document.querySelector(".login-box-msg");
+const loginBoxMsg = document.querySelector('.login-box-msg');
 if (loginBoxMsg) {
   loginBoxMsg.textContent = "Bienvenido";
 }
 
 // Remueve el elemento del footer
-const footerElement = document.querySelector("footer");
+const footerElement = document.querySelector('footer');
 if (footerElement) {
   footerElement.remove();
 }
 
 // Cambia la opacidad del elemento con el id "jazzy-sidebar"
-const jazzySidebar = document.getElementById("jazzy-sidebar");
+const jazzySidebar = document.getElementById('jazzy-sidebar');
 if (jazzySidebar) {
   jazzySidebar.style.opacity = "0.85";
 }
-
-// Add placeholders to vTextField inputs
-const vTextFields = document.querySelectorAll(".vTextField");
-vTextFields.forEach((input) => {
-  const label = input.closest(".form-group").querySelector("label");
-  if (label) {
-    input.placeholder = label.textContent.trim();
-  }
-});
 
 // Seleccionamos todas las tablas en el documento HTML
 const tablas = document.getElementsByTagName("table");
@@ -114,16 +105,12 @@ for (let i = 0; i < tablas.length; i++) {
   });
 }
 
+
+
 // Seleccionamos todos los elementos con la clase "field-fecha" en el documento HTML
-const cantidadInput = document.querySelector(
-  ".form-group.field-cantidad input"
-);
-const precioUnitarioInput = document.querySelector(
-  ".form-group.field-precio_unitario input"
-);
-const montoTotalInput = document.querySelector(
-  ".form-group.field-monto_total input"
-);
+const cantidadInput = document.querySelector(".form-group.field-cantidad input");
+const precioUnitarioInput = document.querySelector(".form-group.field-precio_unitario input");
+const montoTotalInput = document.querySelector(".form-group.field-monto_total input");
 
 if (cantidadInput && precioUnitarioInput && montoTotalInput) {
   const updateMontoTotal = () => {
@@ -139,32 +126,3 @@ if (cantidadInput && precioUnitarioInput && montoTotalInput) {
 
 updateMontoTotal();
 
-if (tablas.length > 0) {
-  // Obtener todos los elementos con la clase field-monto de esta tabla
-  const montos = tablas[0].querySelectorAll(".field-monto");
-  let sumaTotal = 0;
-
-  // Sumar los montos
-  montos.forEach((monto) => {
-    // Limpiar el texto de símbolos de moneda y comas
-    const valor = parseFloat(monto.textContent.replace(/[^0-9.-]+/g, ""));
-    if (!isNaN(valor)) {
-      sumaTotal += valor;
-    }
-  });
-
-  // Crear una nueva fila para el total
-  const nuevaFila = tabla_monto_suma[0].insertRow(-1);
-  const celdaTotal = nuevaFila.insertCell(0);
-  celdaTotal.colSpan = tabla_monto_suma[0].rows[0].cells.length;
-  celdaTotal.style.textAlign = "right";
-  celdaTotal.style.fontWeight = "bold";
-
-  // Formatear y mostrar el total
-  const totalFormateado = new Intl.NumberFormat("es-ES", {
-    style: "currency",
-    currency: "MXN",
-  }).format(sumaTotal);
-
-  celdaTotal.textContent = `Total: ${totalFormateado}`;
-}
