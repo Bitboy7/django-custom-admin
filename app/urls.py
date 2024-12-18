@@ -3,7 +3,7 @@ from django.urls import path, include
 from catalogo.views import index, data
 from gastos import views as gastos_views
 from ventas import views as ventas_views
-
+from . import views
 """
 URL configuration for app project.
 
@@ -22,10 +22,10 @@ Including another URLconf
 """
 urlpatterns = [
     path("", admin.site.urls),  # Set /admin as the main URL
-    path('data/', data, name='data'),
-    path('gastos/', gastos_views.registro_gasto, name='gastos'),
+    path('reportes/', views.reportes, name='reportes'),  # Nueva ruta para reportes
     path('', include('catalogo.urls')),
     path('', include('gastos.urls')),
     path('', include('ventas.urls')),
 ]
+
    

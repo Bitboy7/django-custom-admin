@@ -168,3 +168,15 @@ if (tablas.length > 0) {
 
   celdaTotal.textContent = `Total: ${totalFormateado}`;
 }
+
+// Resalta el cursor sobre los elementos tipo <a/> y cambia el color del texto
+const anchorElements = document.querySelectorAll("a");
+anchorElements.forEach((anchor) => {
+  anchor.addEventListener("mouseover", () => {
+    anchor.style.cursor = "pointer";
+    anchor.style.color = "red"; // Cambia el color del texto a rojo
+  });
+  anchor.addEventListener("mouseout", () => {
+    anchor.style.color = ""; // Restaura el color original del texto
+  });
+});
