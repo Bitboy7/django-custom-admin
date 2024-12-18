@@ -15,6 +15,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+from import_export.formats.base_formats import *
 from dotenv import load_dotenv
 import os
 
@@ -47,6 +48,8 @@ INSTALLED_APPS = [
     'import_export',
 ]
 
+IMPORT_EXPORT_FORMATS = [XLSX, CSV, JSON, HTML]
+
 JAZZMIN_SETTINGS = {
     # title of the window (Will default to current_admin_site.site_title if absent or None)
     "site_title": "Agricola de la Costa Admin",
@@ -72,9 +75,23 @@ JAZZMIN_SETTINGS = {
      # Welcome text on the login screen
      # List of model admins to search from the search bar, search bar omitted if excluded
     # If you want to use a single search field you dont need to use a list, you can use a simple string 
-    "search_model": ["auth.User", "auth.Group"],
+    "search_model": ["gastos.gastos", "ventas.ventas"],
     # Field name on user model that contains avatar ImageField/URLField/Charfield or a callable that receives the user
     "user_avatar": "/img/icon.png",
+    
+      ############
+    # Top Menu #
+    ############
+
+    # Links to put along the top menu
+    "topmenu_links": [
+
+        # external url that opens in a new window (Permissions can be added)
+        {"name": "Reportes", "url": "", "new_window": True},
+
+    ],
+    # Order the auth app before the books app, other apps will be alphabetically placed after these
+    "order_with_respect_to": ["gastos", "ventas", "catalogo", "auth"],
     
     "related_modal_active": True,
 
@@ -82,18 +99,20 @@ JAZZMIN_SETTINGS = {
         "auth": "fa fa-database",
         "auth.user": "fas fa-user",
         "auth.Group": "fas fa-users",
-        "catalogo.Pais": "fa fa-globe fa-fade",
-        "catalogo.Estado": "fas fa-map-marked-alt fa-fade",
-        "catalogo.Sucursal": "fas fa-store fa-fade",
-        "catalogo.Productor": "fa fa-id-badge fa-fade",
+        "catalogo.Pais": "fa fa-globe",
+        "catalogo.Estado": "fas fa-map-marked-alt",
+        "catalogo.Sucursal": "fas fa-store",
+        "catalogo.Productor": "fa fa-id-badge",
         "gastos.Banco": "fas fa-university",
         "gastos.Cuenta": "fas fa-credit-card",
         "gastos.CatGastos": "fa fa-tag",
         "gastos.Gastos": "fas fa-money-check-alt",
+        "gastos.Compra": "fa fa-shopping-basket",
         "ventas.Cliente": "fa fa-user-tie",
         "ventas.Ventas": "fa fa-shopping-cart",
         "ventas.Agente": "fa fa-user-secret",
         "ventas.Producto": "fa fa-barcode",
+        "ventas.Anticipo": "fa fa-money-bill-wave",
     },
         # Icons that are used when one is not manually specified
     "default_icon_parents": "fas fa-chevron-circle-right",
@@ -122,32 +141,31 @@ JAZZMIN_SETTINGS = {
     # override change forms on a per modeladmin basis
     "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs", "catalogo.Productor": "vertical_tabs", "catalogo.Pais": "vertical_tabs", "catalogo.Estado": "vertical_tabs", "catalogo.Sucursal": "vertical_tabs", "gastos.Banco": "vertical_tabs", "gastos.Cuenta": "vertical_tabs", "gastos.CatGastos": "vertical_tabs", "gastos.Gastos": "vertical_tabs", "ventas.Cliente": "vertical_tabs", "ventas.Ventas": "vertical_tabs", "ventas.Agente": "vertical_tabs", "ventas.Producto": "vertical_tabs"},
 }
-
 JAZZMIN_UI_TWEAKS = {
-    "navbar_small_text": False,
+    "navbar_small_text": True,
     "footer_small_text": False,
     "body_small_text": False,
     "brand_small_text": False,
-    "brand_colour": "navbar-dark",
+    "brand_colour": "navbar-white",
     "accent": "accent-navy",
-    "navbar": "navbar-dark",
+    "navbar": "navbar-gray navbar-dark",
     "no_navbar_border": True,
     "navbar_fixed": True,
     "layout_boxed": False,
     "footer_fixed": False,
     "sidebar_fixed": True,
-    "sidebar": "sidebar-dark-lightblue",
+    "sidebar": "sidebar-light-olive",
     "sidebar_nav_small_text": False,
     "sidebar_disable_expand": False,
     "sidebar_nav_child_indent": False,
     "sidebar_nav_compact_style": True,
     "sidebar_nav_legacy_style": False,
     "sidebar_nav_flat_style": True,
-    "theme": "yeti",
+    "theme": "litera",
     "dark_mode_theme": None,
     "button_classes": {
-        "primary": "btn-primary",
-        "secondary": "btn-secondary",
+        "primary": "btn-outline-primary",
+        "secondary": "btn-outline-secondary",
         "info": "btn-info",
         "warning": "btn-warning",
         "danger": "btn-danger",
@@ -185,7 +203,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "app.wsgi.application"
-
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases

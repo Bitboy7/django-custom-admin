@@ -1,13 +1,19 @@
 from django.contrib import admin
-
+from import_export import resources
+from import_export.admin import ImportExportModelAdmin
 from .models import Productor, Estado, Sucursal, Pais
 
 @admin.register(Pais)
 class PaisAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'siglas', 'moneda')
 
+class ProductorResource(resources.ModelResource):
+    fields = ('id', 'nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal', 'fecha_creacion')
+    class Meta:
+        model = Productor
+        
 @admin.register(Productor)
-class ProductorAdmin(admin.ModelAdmin):
+class ProductorAdmin(ImportExportModelAdmin):
     list_display = ('id', 'nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal', 'fecha_creacion')
     search_fields = ('nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal', 'fecha_creacion')
     list_filter = ('id_sucursal',)
