@@ -20,7 +20,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 urlpatterns = [
-    path("admin", admin.site.urls),  # Set /admin as the main URL
+    path("", admin.site.urls),  # Set /admin as the main URL
     path('data/', data, name='data'),
     path('gastos/', registro_gasto, name='gastos'),
     path('', include('catalogo.urls')),
