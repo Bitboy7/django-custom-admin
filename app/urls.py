@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from catalogo.views import index, data
 from gastos.views import registro_gasto
-
+from .views import balances_view, reportes, export_to_excel
 """
 URL configuration for app project.
 
@@ -20,9 +20,12 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 urlpatterns = [
-    path("", admin.site.urls),  # Set /admin as the main URL
+    path("admin", admin.site.urls),  # Set /admin as the main URL
     path('data/', data, name='data'),
     path('gastos/', registro_gasto, name='gastos'),
+    path('balances/', balances_view, name='balances'),
+    path('reportes/', reportes, name='reportes'),
+    path('excel/', export_to_excel, name='excel'),
     path('', include('catalogo.urls')),
     path('', include('gastos.urls')),
 ]

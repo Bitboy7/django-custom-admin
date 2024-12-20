@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Saldos Iniciales por Cuenta y Mes</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      .highlight {
+        background-color: #ffeb3b !important;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 font-sans">
+    <!-- Navbar -->
+    <nav class="bg-gray-800 p-4">
+      <div class="container mx-auto flex justify-between items-center">
+        <a href="{% url 'gastos' %}" class="text-white text-lg font-semibold"
+          >Inicio</a
+        >
+        <div class="space-x-4">
+          <a href="{% url 'balances' %}" class="text-gray-300 hover:text-white"
+            >Balances</a
+          >
+          <a
+            href="{% url 'excel' %}"
+            class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-700"
+            >Reporte excel</a
+          >
+          <a
+            href="{% url 'reportes' %}"
+            class="bg-orange-500 text-white px-4 py-2 rounded hover:bg-red-500"
+            >Reporte PDF</a
+          >
+        </div>
+      </div>
+    </nav>
+
+    <div class="container mx-auto p-6">
+      <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
+        Saldos Iniciales por Cuenta y Mes
+      </h1>
+
+      <!-- Tabla de datos -->
+      <div class="overflow-x-auto">
+        <table class="min-w-full table-auto border-collapse bg-white shadow-md">
+          <thead>
+            <tr class="bg-gray-200 text-gray-700">
+              <th class="px-4 py-2">Cuenta</th>
+              <th class="px-4 py-2">Numero de la Cuenta</th>
+              <th class="px-4 py-2">Mes</th>
+              <th class="px-4 py-2">Total Gastos</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for balance in balances %}
+            <tr
+              class="text-gray-700 hover:bg-gray-100 cursor-pointer"
+              onclick="highlightRow(this)"
+            >
+              <td class="border px-4 py-2">
+                {{ balance.id_cuenta_banco__id }}
+              </td>
+              <td class="border px-4 py-2">
+                {{ balance.id_cuenta_banco__numero_cuenta }}
+              </td>
+              <td class="border px-4 py-2">{{ balance.month|date:"F Y" }}</td>
+              <td class="border px-4 py-2">${{ balance.total_gastos }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Gráfico -->
+      <div class="mt-10">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Gráfico de Gastos</h2>
+        <canvas id="expenseChart" class="w-full h-64"></canvas>
+      </div>
+    </div>
+
+    <script>
+      // Función para resaltar la fila seleccionada
+      function highlightRow(row) {
+        var rows = document.querySelectorAll("tbody tr");
+        rows.forEach(function (r) {
+          r.classList.remove("highlight");
+        });
+        row.classList.add("highlight");
+      }
+
+      // Datos para el gráfico
+      const data = {
+        labels: [{% for balance in balances %}"{{ balance.month|date:"F Y" }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+        datasets: [
+          {
+            label: "Total Gastos",
+            data: [{% for balance in balances %}{{ balance.total_gastos }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: ["#3498db", "#2ecc71", "#f1c40f"],
+            borderColor: ["#2980b9", "#27ae60", "#f39c12"],
+            borderWidth: 1,
+          },
+        ],
+      };
+
+      // Configuración del gráfico
+      const config = {
+        type: "bar",
+        data: data,
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: "top",
+            },
+            title: {
+              display: true,
+              text: "Gastos por Mes",
+            },
+          },
+        },
+      };
+
+      // Inicializar el gráfico
+      const ctx = document.getElementById("expenseChart").getContext("2d");
+      new Chart(ctx, config);
+    </script>
+  </body>
+</html>
