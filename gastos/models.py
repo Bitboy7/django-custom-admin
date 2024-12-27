@@ -78,7 +78,7 @@ class Compra(models.Model):
             return f'{self.productor} - {self.producto.nombre}'
 
         class Meta:
-            verbose_name = "Compra de fruta"
+            verbose_name = "Compra"
             verbose_name_plural = "Compras de fruta"
             ordering = ['-fecha_compra']
             permissions = [("can_view_compras", "Can view compras")]

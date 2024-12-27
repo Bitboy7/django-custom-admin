@@ -18,31 +18,42 @@
     <!-- Navbar -->
     <nav class="bg-gray-800 p-4">
       <div class="container mx-auto flex justify-between items-center">
-        <a href="{% url 'gastos' %}" class="text-white text-lg font-semibold"
-          >Inicio</a
-        >
+        <a href="{% url 'gastos' %}" class="text-white text-lg font-semibold">Inicio</a>
         <div class="space-x-4">
-          <a href="{% url 'balances' %}" class="text-gray-300 hover:text-white"
-            >Balances</a
-          >
-          <a
-            href="{% url 'excel' %}"
-            class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-700"
-            >Reporte excel</a
-          >
-          <a
-            href="{% url 'reportes' %}"
-            class="bg-orange-500 text-white px-4 py-2 rounded hover:bg-red-500"
-            >Reporte PDF</a
-          >
+          <a href="{% url 'balances' %}" class="text-gray-300 hover:text-white">Balances</a>
+          <a href="{% url 'exportar_gastos_excel' %}" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-700">Reporte excel</a>
+          <a href="{% url 'reportes' %}" class="bg-orange-500 text-white px-4 py-2 rounded hover:bg-red-500">Reporte PDF</a>
         </div>
       </div>
     </nav>
 
+    <!-- Contenido -->
+    <form method="get" action="{% url 'balances' %}" class="bg-white p-6 rounded shadow-md">
+      <div class="mb-4">
+        <label for="cuenta_id" class="block text-gray-700 font-bold mb-2">Seleccione la Cuenta:</label>
+        <select name="cuenta_id" id="cuenta_id" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
+          {% for cuenta in cuentas %}
+          <option value="{{ cuenta.id }}" {% if cuenta.id == selected_cuenta_id %}selected{% endif %}>{{ cuenta.numero_cuenta }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="mb-4">
+        <label for="periodo" class="block text-gray-700 font-bold mb-2">Seleccione el Periodo:</label>
+        <select name="periodo" id="periodo" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
+          <option value="diario" {% if selected_periodo == 'diario' %}selected{% endif %}>Diario</option>
+          <option value="semanal" {% if selected_periodo == 'semanal' %}selected{% endif %}>Semanal</option>
+          <option value="mensual" {% if selected_periodo == 'mensual' %}selected{% endif %}>Mensual</option>
+        </select>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Filtrar</button>
+      </div>
+    </form>
+
     <div class="container mx-auto p-6">
-      <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
-        Saldos Iniciales por Cuenta y Mes
-      </h1>
+      <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Saldos Iniciales por Cuenta y Mes</h1>
 
       <!-- Tabla de datos -->
       <div class="overflow-x-auto">
@@ -51,23 +62,24 @@
             <tr class="bg-gray-200 text-gray-700">
               <th class="px-4 py-2">Cuenta</th>
               <th class="px-4 py-2">Numero de la Cuenta</th>
-              <th class="px-4 py-2">Mes</th>
+              <th class="px-4 py-2">Periodo</th>
               <th class="px-4 py-2">Total Gastos</th>
             </tr>
           </thead>
           <tbody>
             {% for balance in balances %}
-            <tr
-              class="text-gray-700 hover:bg-gray-100 cursor-pointer"
-              onclick="highlightRow(this)"
-            >
+            <tr class="text-gray-700 hover:bg-gray-100 cursor-pointer" onclick="highlightRow(this)">
+              <td class="border px-4 py-2">{{ balance.id_cuenta_banco__id }}</td>
+              <td class="border px-4 py-2">{{ balance.id_cuenta_banco__numero_cuenta }}</td>
               <td class="border px-4 py-2">
-                {{ balance.id_cuenta_banco__id }}
+                {% if selected_periodo == 'diario' %}
+                  {{ balance.periodo|date:"Y-m-d" }}
+                {% elif selected_periodo == 'semanal' %}
+                  {{ balance.periodo|date:"W, Y" }}
+                {% else %}
+                  {{ balance.periodo|date:"F Y" }}
+                {% endif %}
               </td>
-              <td class="border px-4 py-2">
-                {{ balance.id_cuenta_banco__numero_cuenta }}
-              </td>
-              <td class="border px-4 py-2">{{ balance.month|date:"F Y" }}</td>
               <td class="border px-4 py-2">${{ balance.total_gastos }}</td>
             </tr>
             {% endfor %}
@@ -94,7 +106,18 @@
 
       // Datos para el gráfico
       const data = {
-        labels: [{% for balance in balances %}"{{ balance.month|date:"F Y" }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+        labels: [
+          {% for balance in balances %}
+            {% if selected_periodo == 'diario' %}
+              "{{ balance.periodo|date:'Y-m-d' }}"
+            {% elif selected_periodo == 'semanal' %}
+              "{{ balance.periodo|date:'W, Y' }}"
+            {% else %}
+              "{{ balance.periodo|date:'F Y' }}"
+            {% endif %}
+            {% if not forloop.last %}, {% endif %}
+          {% endfor %}
+        ],
         datasets: [
           {
             label: "Total Gastos",
@@ -118,7 +141,7 @@
             },
             title: {
               display: true,
-              text: "Gastos por Mes",
+              text: "Gastos por Periodo",
             },
           },
         },
