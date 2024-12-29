@@ -68,10 +68,25 @@
         </select>
       </div>
       </div>
-      <div class="flex items-center justify-between">
-      <button type="submit" class="bg-blue-800 hover:bg-orange-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Filtrar</button>
+      <div class="flex flex-row gap-4 mb-4" id="dia-container" style="display: {% if selected_periodo == 'diario' %}flex{% else %}none{% endif %};">
+        <div class="flex-1">
+          <label for="dia" class="block text-white font-bold mb-2">Seleccione el Día:</label>
+          <input type="date" name="dia" id="dia" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline" value="{{ selected_dia }}">
+        </div>
+        <div class="flex-1">
+          <label for="fecha_inicio" class="block text-white font-bold mb-2">Fecha Inicio:</label>
+          <input type="date" name="fecha_inicio" id="fecha_inicio" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline" value="{{ selected_fecha_inicio }}">
+        </div>
+        <div class="flex-1">
+          <label for="fecha_fin" class="block text-white font-bold mb-2">Fecha Fin:</label>
+          <input type="date" name="fecha_fin" id="fecha_fin" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline" value="{{ selected_fecha_fin }}">
+        </div>
+      </div>
+      <div class="flex items-center justify-between pt-4">
+        <button type="submit" class="bg-blue-800 hover:bg-orange-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Filtrar</button>
       </div>
     </form>
+
     <div class="container mx-auto p-6">
       <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Acumulado de gastos </h1>
 
@@ -123,6 +138,21 @@
       </div>
 
       <script>
+        document.getElementById('periodo').addEventListener('change', function() {
+          const periodo = this.value;
+          const diaContainer = document.getElementById('dia-container');
+          const rangoDiasContainer = document.getElementById('rango-dias-container');
+          if (periodo === 'diario') {
+            diaContainer.style.display = 'block';
+            rangoDiasContainer.style.display = 'block';
+          } else {
+            diaContainer.style.display = 'none';
+            rangoDiasContainer.style.display = 'none';
+          }
+        });
+      </script>
+
+      <script>
       function highlightRow(row) {
         // Remove highlight from all rows
         document.querySelectorAll('tr').forEach(tr => {
@@ -131,6 +161,45 @@
         // Add highlight to clicked row
         row.classList.add('highlight');
       }
+      </script>
+
+      <!-- jsPDF and jsPDF-AutoTable CDN -->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+      <script>
+        function exportPDF() {
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF();
+
+          doc.autoTable({ 
+            html: 'table',
+            startY: 20,
+            theme: 'grid',
+            headStyles: { fillColor: [22, 160, 133] },
+            styles: { fontSize: 8 }
+          });
+
+          doc.save('reporte.pdf');
+        }
+
+        $(document).ready(function() {
+          // Add Export PDF button
+          new $.fn.dataTable.Buttons( $('table').DataTable(), {
+            buttons: [
+              {
+                text: 'Exportar PDF',
+                action: function ( e, dt, node, config ) {
+                  exportPDF();
+                }
+              }
+            ]
+          });
+
+          $('table').DataTable().buttons(0, null).container().appendTo(
+            $('div.dataTables_wrapper')
+          );
+        });
       </script>
 
       <!-- DataTables CSS -->

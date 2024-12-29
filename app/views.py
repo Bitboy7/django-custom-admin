@@ -113,6 +113,9 @@ def balances_view(request):
     year = request.GET.get('year')
     month = request.GET.get('month')
     periodo = request.GET.get('periodo', 'diario')  # 'diario', 'semanal' o 'mensual'
+    dia = request.GET.get('dia')
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
 
     # Obtener los años disponibles
     available_years = Gastos.objects.dates('fecha', 'year')
@@ -126,6 +129,10 @@ def balances_view(request):
         filters['fecha__month'] = month
 
     if periodo == 'diario':
+        if dia:
+            filters['fecha'] = dia
+        elif fecha_inicio and fecha_fin:
+            filters['fecha__range'] = [fecha_inicio, fecha_fin]
         balances = Gastos.objects.filter(**filters).values(
             'id_cuenta_banco__id', 
             'id_cuenta_banco__numero_cuenta',
@@ -181,6 +188,9 @@ def balances_view(request):
         'selected_year': year,
         'selected_month': month,
         'selected_periodo': periodo,
+        'selected_dia': dia,
+        'selected_fecha_inicio': fecha_inicio,
+        'selected_fecha_fin': fecha_fin,
         'available_years': available_years,
         'months': months,
         'total_gastos': total_gastos
