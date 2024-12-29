@@ -4,10 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Saldos Iniciales por Cuenta y Mes</title>
+    {% load static %}
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{% static 'js/table.js' %}"></script>
     <style>
       .highlight {
         background-color: #ffeb3b !important;
@@ -18,138 +20,161 @@
     <!-- Navbar -->
     <nav class="bg-gray-800 p-4">
       <div class="container mx-auto flex justify-between items-center">
-        <a href="{% url 'gastos' %}" class="text-white text-lg font-semibold">Inicio</a>
+        <a href="{% url 'admin:index' %}" class="text-white text-lg font-semibold">Admin</a>
         <div class="space-x-4">
           <a href="{% url 'balances' %}" class="text-gray-300 hover:text-white">Balances</a>
           <a href="{% url 'exportar_gastos_excel' %}" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-700">Reporte excel</a>
-          <a href="{% url 'reportes' %}" class="bg-orange-500 text-white px-4 py-2 rounded hover:bg-red-500">Reporte PDF</a>
         </div>
       </div>
     </nav>
 
     <!-- Contenido -->
-    <form method="get" action="{% url 'balances' %}" class="bg-white p-6 rounded shadow-md">
-      <div class="mb-4">
-        <label for="cuenta_id" class="block text-gray-700 font-bold mb-2">Seleccione la Cuenta:</label>
+    <form method="get" action="{% url 'balances' %}" class="bg-gray-800 p-6 rounded shadow-md">
+      <div class="flex flex-row gap-4 mb-4">
+      <div class="flex-1">
+        <label for="cuenta_id" class="block text-white font-bold mb-2">Seleccione la Cuenta:</label>
         <select name="cuenta_id" id="cuenta_id" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
-          {% for cuenta in cuentas %}
-          <option value="{{ cuenta.id }}" {% if cuenta.id == selected_cuenta_id %}selected{% endif %}>{{ cuenta.numero_cuenta }}</option>
-          {% endfor %}
+        {% for cuenta in cuentas %}
+        <option value="{{ cuenta.id }}" {% if cuenta.id|stringformat:"s" == selected_cuenta_id %}selected{% endif %}>{{ cuenta.numero_cuenta }}</option>
+        {% endfor %}
         </select>
       </div>
 
-      <div class="mb-4">
-        <label for="periodo" class="block text-gray-700 font-bold mb-2">Seleccione el Periodo:</label>
+      <div class="flex-1">
+        <label for="year" class="block text-white font-bold mb-2">Seleccione el Año:</label>
+        <select name="year" id="year" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
+        {% for year in available_years %}
+        <option value="{{ year.year }}" {% if year.year|stringformat:"s" == selected_year %}selected{% endif %}>{{ year.year }}</option>
+        {% endfor %}
+        </select>
+      </div>
+
+      <div class="flex-1">
+        <label for="month" class="block text-white font-bold mb-2">Seleccione el Mes:</label>
+        <select name="month" id="month" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
+        <option value="">Todos</option>
+        {% for month in months %}
+        <option value="{{ forloop.counter }}" {% if forloop.counter|stringformat:"s" == selected_month %}selected{% endif %}>{{ month }}</option>
+        {% endfor %}
+        </select>
+      </div>
+
+      <div class="flex-1">
+        <label for="periodo" class="block text-white font-bold mb-2">Seleccione el Periodo:</label>
         <select name="periodo" id="periodo" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
-          <option value="diario" {% if selected_periodo == 'diario' %}selected{% endif %}>Diario</option>
-          <option value="semanal" {% if selected_periodo == 'semanal' %}selected{% endif %}>Semanal</option>
-          <option value="mensual" {% if selected_periodo == 'mensual' %}selected{% endif %}>Mensual</option>
+        <option value="diario" {% if selected_periodo == 'diario' %}selected{% endif %}>Diario</option>
+        <option value="semanal" {% if selected_periodo == 'semanal' %}selected{% endif %}>Semanal</option>
+        <option value="mensual" {% if selected_periodo == 'mensual' %}selected{% endif %}>Mensual</option>
         </select>
       </div>
-
+      </div>
       <div class="flex items-center justify-between">
-        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Filtrar</button>
+      <button type="submit" class="bg-blue-800 hover:bg-orange-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Filtrar</button>
       </div>
     </form>
-
     <div class="container mx-auto p-6">
-      <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Saldos Iniciales por Cuenta y Mes</h1>
+      <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Acumulado de gastos </h1>
 
       <!-- Tabla de datos -->
       <div class="overflow-x-auto">
-        <table class="min-w-full table-auto border-collapse bg-white shadow-md">
-          <thead>
-            <tr class="bg-gray-200 text-gray-700">
-              <th class="px-4 py-2">Cuenta</th>
-              <th class="px-4 py-2">Numero de la Cuenta</th>
-              <th class="px-4 py-2">Periodo</th>
-              <th class="px-4 py-2">Total Gastos</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for balance in balances %}
-            <tr class="text-gray-700 hover:bg-gray-100 cursor-pointer" onclick="highlightRow(this)">
-              <td class="border px-4 py-2">{{ balance.id_cuenta_banco__id }}</td>
-              <td class="border px-4 py-2">{{ balance.id_cuenta_banco__numero_cuenta }}</td>
-              <td class="border px-4 py-2">
-                {% if selected_periodo == 'diario' %}
-                  {{ balance.periodo|date:"Y-m-d" }}
-                {% elif selected_periodo == 'semanal' %}
-                  {{ balance.periodo|date:"W, Y" }}
-                {% else %}
-                  {{ balance.periodo|date:"F Y" }}
-                {% endif %}
-              </td>
-              <td class="border px-4 py-2">${{ balance.total_gastos }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      {% if balances %}
+      <table>
+        <thead>
+        <tr class="bg-gray-200 text-gray-700">
+          <th class="px-4 py-2">Cuenta</th>
+          <th class="px-4 py-2">Numero de la Cuenta</th>
+          <th class="px-4 py-2">Banco</th>
+          <th class="px-4 py-2">Sucursal</th>
+          <th class="px-4 py-2">Categoría</th>
+          <th class="px-4 py-2">Fecha</th>
+          <th class="px-4 py-2">Total Gastos</th>
+          <th class="px-4 py-2">Acumulado</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for balance in balances %}
+        <tr class="text-gray-700 hover:bg-gray-100 cursor-pointer" onclick="highlightRow(this)">
+          <td class="border px-4 py-2">{{ balance.id_cuenta_banco__id }}</td>
+          <td class="border px-4 py-2">{{ balance.id_cuenta_banco__numero_cuenta }}</td>
+          <td class="border px-4 py-2">{{ balance.id_cuenta_banco__id_banco__nombre }}</td>
+          <td class="border px-4 py-2">{{ balance.id_cuenta_banco__id_sucursal__nombre }}</td>
+          <td class="border px-4 py-2">{{ balance.id_cat_gastos__nombre }}</td>
+          <td class="border px-4 py-2">
+          {% if selected_periodo == 'diario' %}
+            {{ balance.fecha|date:"Y-m-d" }}
+          {% elif selected_periodo == 'semanal' %}
+            {{ balance.semana|date:"Y-m-d" }}
+          {% elif selected_periodo == 'mensual' %}
+            {{ balance.mes|date:"Y-m" }}
+          {% endif %}
+          </td>
+          <td class="border px-4 py-2">${{ balance.total_gastos }}</td>
+          <td class="border px-4 py-2">${{ balance.acumulado }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-8 bg-white shadow-md rounded">
+        <i class="fas fa-exclamation-circle text-gray-400 text-4xl mb-4"></i>
+        <p class="text-gray-600 text-lg">No hay datos disponibles para mostrar</p>
+      </div>
+      {% endif %}
       </div>
 
-      <!-- Gráfico -->
-      <div class="mt-10">
-        <h2 class="text-2xl font-bold text-gray-800 mb-4">Gráfico de Gastos</h2>
-        <canvas id="expenseChart" class="w-full h-64"></canvas>
+      <script>
+      function highlightRow(row) {
+        // Remove highlight from all rows
+        document.querySelectorAll('tr').forEach(tr => {
+        tr.classList.remove('highlight');
+        });
+        // Add highlight to clicked row
+        row.classList.add('highlight');
+      }
+      </script>
+
+      <!-- DataTables CSS -->
+      <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css">
+      <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+      <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+
+      <!-- jQuery and DataTables JS -->
+      <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+      <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+      <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+      <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+
+      <script>
+      $(document).ready(function() {
+        $('table').DataTable({
+        pageLength: 10,
+        responsive: true,
+        dom: 'Bfrtip',
+        buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
+        language: {
+          url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+        },
+        animation: true,
+        "initComplete": function() {
+          $(this).fadeIn(1000);
+        },
+        "drawCallback": function() {
+          $('tbody tr').hover(
+          function() { $(this).addClass('bg-yellow-200'); },
+          function() { $(this).removeClass('bg-yellow-200'); }
+          );
+        },
+        "searching": false // Disable the search bar
+        });
+      });
+      </script>
+      <!-- Card para mostrar el total -->
+      <div class="mt-6 bg-white rounded-lg shadow-md p-6">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-semibold text-gray-800">Total de Gastos</h2>
+          <span class="text-2xl font-bold text-green-600">${{ total_gastos|floatformat:2 }}</span>
+        </div>
       </div>
     </div>
-
-    <script>
-      // Función para resaltar la fila seleccionada
-      function highlightRow(row) {
-        var rows = document.querySelectorAll("tbody tr");
-        rows.forEach(function (r) {
-          r.classList.remove("highlight");
-        });
-        row.classList.add("highlight");
-      }
-
-      // Datos para el gráfico
-      const data = {
-        labels: [
-          {% for balance in balances %}
-            {% if selected_periodo == 'diario' %}
-              "{{ balance.periodo|date:'Y-m-d' }}"
-            {% elif selected_periodo == 'semanal' %}
-              "{{ balance.periodo|date:'W, Y' }}"
-            {% else %}
-              "{{ balance.periodo|date:'F Y' }}"
-            {% endif %}
-            {% if not forloop.last %}, {% endif %}
-          {% endfor %}
-        ],
-        datasets: [
-          {
-            label: "Total Gastos",
-            data: [{% for balance in balances %}{{ balance.total_gastos }}{% if not forloop.last %}, {% endif %}{% endfor %}],
-            backgroundColor: ["#3498db", "#2ecc71", "#f1c40f"],
-            borderColor: ["#2980b9", "#27ae60", "#f39c12"],
-            borderWidth: 1,
-          },
-        ],
-      };
-
-      // Configuración del gráfico
-      const config = {
-        type: "bar",
-        data: data,
-        options: {
-          responsive: true,
-          plugins: {
-            legend: {
-              position: "top",
-            },
-            title: {
-              display: true,
-              text: "Gastos por Periodo",
-            },
-          },
-        },
-      };
-
-      // Inicializar el gráfico
-      const ctx = document.getElementById("expenseChart").getContext("2d");
-      new Chart(ctx, config);
-    </script>
   </body>
 </html>

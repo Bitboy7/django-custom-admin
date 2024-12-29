@@ -1,10 +1,14 @@
 from django.contrib import admin
+from django.http import HttpResponse
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from import_export.admin import ImportExportModelAdmin
 # Register your models here.
 from .models import CatGastos, Banco, Cuenta, Gastos, Compra
 from catalogo.models import Sucursal
+import openpyxl
+from openpyxl.styles import NamedStyle, Font
+from openpyxl.worksheet.table import Table, TableStyleInfo
 
 class CatGastoResource(resources.ModelResource):
     fields = ('id', 'nombre', 'fecha_registro')
@@ -79,16 +83,73 @@ class GastosResource(resources.ModelResource):
 @admin.register(Gastos)
 class GastosAdmin(ImportExportModelAdmin):
     resource_class = GastosResource
-    list_display = ('id', 'id_sucursal__nombre', 'id_cat_gastos__nombre',
+    list_display = ('id', 'id_sucursal', 'id_cat_gastos',
                     'id_cuenta_banco', 'monto', 'descripcion', 'fecha')
-    search_fields = ('monto', 'fecha_registro', 'id_sucursal', 'id_cat_gastos')
-    list_filter = ('id_sucursal', 'id_cat_gastos', 'fecha')
+    search_fields = ('monto', 'fecha_registro', 'id_sucursal', 'id_cat_gastos', 'id_cuenta_banco')
+    list_filter = ('id_sucursal', 'id_cat_gastos','id_cuenta_banco', 'fecha')
     list_per_page = 20
     fieldsets = (
         ('Datos del Registro', {
             'fields': ('id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', 'monto', 'descripcion', 'fecha')
         }),
     )
+    
+    actions = ['export_to_excel']
+
+    def export_to_excel(self, request, queryset):
+        # Crear un libro de trabajo y una hoja
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Reporte de Gastos"
+
+        # Escribir encabezados
+        headers = ["ID", "Sucursal", "Categoría", "Cuenta", "Monto", "Descripción", "Fecha"]
+        ws.append(headers)
+
+        # Escribir los datos en la hoja
+        for gasto in queryset:
+            ws.append([
+                gasto.id,
+                gasto.id_sucursal.nombre,
+                gasto.id_cat_gastos.nombre,
+                gasto.id_cuenta_banco.numero_cuenta,
+                gasto.monto,
+                gasto.descripcion,
+                gasto.fecha.strftime('%Y-%m-%d')
+            ])
+
+        # Aplicar formato contable a la columna 'Monto'
+        contable_style = NamedStyle(name="contable_style", number_format="#,##0.00")
+        for row in ws.iter_rows(min_row=2, min_col=5, max_col=5):
+            for cell in row:
+                cell.style = contable_style
+
+        # Calcular la suma de los montos y agregar una celda 'Total'
+        total_monto = sum(gasto.monto for gasto in queryset)
+        ws.append(["", "", "", "Total", total_monto])
+
+        # Aplicar formato contable a la celda 'Total'
+        total_cell = ws.cell(row=ws.max_row, column=5)
+        total_cell.style = contable_style
+        total_cell.font = Font(bold=True)
+
+        # Aplicar formato de tabla
+        tab = Table(displayName="GastosTable", ref=f"A1:G{ws.max_row}")
+        style = TableStyleInfo(name="TableStyleMedium9", showFirstColumn=False,
+                               showLastColumn=False, showRowStripes=True, showColumnStripes=True)
+        tab.tableStyleInfo = style
+        ws.add_table(tab)
+
+        # Crear una respuesta HTTP con el tipo de contenido Excel
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="reporte_gastos.xlsx"'
+
+        # Guardar el libro de trabajo en la respuesta
+        wb.save(response)
+
+        return response
+
+    export_to_excel.short_description = "Exportar a Excel"
     
 class ComprasResource(resources.ModelResource):
     productor = fields.Field(

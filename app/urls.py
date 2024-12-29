@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from catalogo.views import index, data
 from gastos.views import registro_gasto
-from .views import balances_view, reportes, export_to_excel, exportar_gastos_excel
+from .views import balances_view, export_to_excel
 """
 URL configuration for app project.
 
@@ -24,9 +24,7 @@ urlpatterns = [
     path('data/', data, name='data'),
     path('gastos/', registro_gasto, name='gastos'),
     path('balances/', balances_view, name='balances'),
-    path('reportes/', reportes, name='reportes'),
-    path('excel/', export_to_excel, name='excel'),
-     path('exportar_gastos_excel/', exportar_gastos_excel, name='exportar_gastos_excel'),
+    path('exportar_gastos_excel/', export_to_excel, name='exportar_gastos_excel'),
     path('', include('catalogo.urls')),
     path('', include('gastos.urls')),
 ]

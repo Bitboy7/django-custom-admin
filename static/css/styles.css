@@ -141,8 +141,6 @@ input {
   border: 1px solid var(--border-color);
   border-radius: 0.25rem;
   box-shadow: var(--box-shadow);
-  margin: 1rem;
-  padding: 1rem;
   font-family: var(--font-family);
   font-size: var(--font-size);
   font-weight: 400;
