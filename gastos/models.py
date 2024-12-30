@@ -12,8 +12,9 @@ class CatGastos(models.Model):
         return self.nombre
     
     class Meta:
+        verbose_name = "Categoría de Gasto"
         verbose_name_plural = "Categorías de Gastos"
-        ordering = ["nombre"]
+        ordering = ["id"]
 
 class Banco(models.Model):
     nombre = models.CharField(max_length=50)
@@ -78,9 +79,30 @@ class Compra(models.Model):
             return f'{self.productor} - {self.producto.nombre}'
 
         class Meta:
-            verbose_name = "Compra de fruta"
+            verbose_name = "Compra"
             verbose_name_plural = "Compras de fruta"
             ordering = ['-fecha_compra']
             permissions = [("can_view_compras", "Can view compras")]
-            
+           
+class SaldoMensual(models.Model):
+    cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE)
+    año = models.PositiveIntegerField(choices=[(r, r) for r in range(1999, timezone.now().year + 1)])
+    mes = models.PositiveIntegerField(choices=[(i, i) for i in range(1, 13)])
+    saldo_inicial = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    saldo_final = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
+    fecha_registro = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ('cuenta', 'año', 'mes')
+        verbose_name = "Saldo inicial"
+        verbose_name_plural = "Saldos iniciales"
+
+    def __str__(self):
+        return f"{self.cuenta} - {self.año}/{self.mes} - {self.saldo_inicial}"
+
+    def calcular_saldo_final(self):
+        gastos = Gastos.objects.filter(id_cuenta_banco=self.cuenta, fecha__year=self.año, fecha__month=self.mes).aggregate(total_gastos=Sum('monto'))['total_gastos'] or 0
+        compras = Compra.objects.filter(cuenta=self.cuenta, fecha_compra__year=self.año, fecha_compra__month=self.mes).aggregate(total_compras=Sum('monto_total'))['total_compras'] or 0
+        self.saldo_final = self.saldo_inicial - gastos + compras
+        self.save()
             

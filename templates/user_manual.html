@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manual de Usuario</title>
+  </head>
+  <body>
+    <h1>Manual de Usuario</h1>
+
+    <h2>Introducción</h2>
+    <p>
+      Este manual está diseñado para guiarte en el uso del sistema de gestión
+      para la empresa Agricola de la Costa San Luis S.P.R. de R.L., desarrollado
+      con Django. Aquí encontrarás instrucciones detalladas sobre cómo utilizar
+      las diferentes funciones de la aplicación.
+    </p>
+
+    <h2>Tabla de Contenidos</h2>
+    <ul>
+      <li><a href="#acceso-al-sistema">Acceso al Sistema</a></li>
+      <li><a href="#gestion-de-catalogos">Gestión de Catálogos</a></li>
+      <li><a href="#registro-de-gastos">Registro de Gastos</a></li>
+      <li><a href="#balances-y-reportes">Balances y Reportes</a></li>
+      <li><a href="#configuracion">Configuración</a></li>
+      <li><a href="#soporte-tecnico">Soporte Técnico</a></li>
+    </ul>
+
+    <h2 id="acceso-al-sistema">Acceso al Sistema</h2>
+    <p>
+      Para acceder al sistema, abre tu navegador web y dirígete a la URL del
+      servidor de la aplicación. Si estás utilizando el servidor de desarrollo,
+      la URL será:
+    </p>
+    <pre>http://localhost:8000</pre>
+
+    <h3>Inicio de Sesión</h3>
+    <ol>
+      <li>
+        Ingresa tu nombre de usuario y contraseña en la página de inicio de
+        sesión.
+      </li>
+      <li>Haz clic en el botón "Iniciar Sesión".</li>
+    </ol>
+
+    <h2 id="gestion-de-catalogos">Gestión de Catálogos</h2>
+    <p>
+      La gestión de catálogos te permite administrar los diferentes catálogos de
+      productos y servicios de la empresa.
+    </p>
+
+    <h3>Ver Catálogos</h3>
+    <ol>
+      <li>Navega a la sección de catálogos desde el menú principal.</li>
+      <li>Verás una lista de todos los catálogos disponibles.</li>
+    </ol>
+
+    <h3>Agregar un Nuevo Catálogo</h3>
+    <ol>
+      <li>Haz clic en el botón "Agregar Catálogo".</li>
+      <li>Completa el formulario con la información del nuevo catálogo.</li>
+      <li>Haz clic en "Guardar" para agregar el catálogo.</li>
+    </ol>
+
+    <h3>Editar un Catálogo</h3>
+    <ol>
+      <li>
+        En la lista de catálogos, haz clic en el botón "Editar" junto al
+        catálogo que deseas modificar.
+      </li>
+      <li>Realiza los cambios necesarios en el formulario.</li>
+      <li>Haz clic en "Guardar" para actualizar el catálogo.</li>
+    </ol>
+
+    <h3>Eliminar un Catálogo</h3>
+    <ol>
+      <li>
+        En la lista de catálogos, haz clic en el botón "Eliminar" junto al
+        catálogo que deseas eliminar.
+      </li>
+      <li>Confirma la eliminación en el cuadro de diálogo que aparece.</li>
+    </ol>
+
+    <h2 id="registro-de-gastos">Registro de Gastos</h2>
+    <p>
+      El registro de gastos te permite llevar un control detallado de los gastos
+      de la empresa.
+    </p>
+
+    <h3>Ver Gastos</h3>
+    <ol>
+      <li>Navega a la sección de gastos desde el menú principal.</li>
+      <li>Verás una lista de todos los gastos registrados.</li>
+    </ol>
+
+    <h3>Registrar un Nuevo Gasto</h3>
+    <ol>
+      <li>Haz clic en el botón "Registrar Gasto".</li>
+      <li>Completa el formulario con la información del nuevo gasto.</li>
+      <li>Haz clic en "Guardar" para registrar el gasto.</li>
+    </ol>
+
+    <h3>Editar un Gasto</h3>
+    <ol>
+      <li>
+        En la lista de gastos, haz clic en el botón "Editar" junto al gasto que
+        deseas modificar.
+      </li>
+      <li>Realiza los cambios necesarios en el formulario.</li>
+      <li>Haz clic en "Guardar" para actualizar el gasto.</li>
+    </ol>
+
+    <h3>Eliminar un Gasto</h3>
+    <ol>
+      <li>
+        En la lista de gastos, haz clic en el botón "Eliminar" junto al gasto
+        que deseas eliminar.
+      </li>
+      <li>Confirma la eliminación en el cuadro de diálogo que aparece.</li>
+    </ol>
+
+    <h2 id="balances-y-reportes">Balances y Reportes</h2>
+    <p>
+      La sección de balances y reportes te permite generar informes financieros
+      y ver el estado de las finanzas de la empresa.
+    </p>
+
+    <h3>Ver Balances</h3>
+    <ol>
+      <li>Navega a la sección de balances desde el menú principal.</li>
+      <li>Verás un resumen de los balances financieros.</li>
+    </ol>
+
+    <h3>Generar Reportes</h3>
+    <ol>
+      <li>Haz clic en el botón "Generar Reporte".</li>
+      <li>Selecciona el tipo de reporte y el rango de fechas.</li>
+      <li>Haz clic en "Generar" para ver el reporte.</li>
+    </ol>
+
+    <h2 id="configuracion">Configuración</h2>
+    <p>
+      Para configurar la aplicación, asegúrate de que las siguientes variables
+      estén correctamente definidas en tu archivo <code>.env</code>:
+    </p>
+    <ul>
+      <li><code>SECRET_KEY</code>: La clave secreta de Django.</li>
+      <li>
+        <code>DEBUG</code>: Define si el modo debug está activado (<code
+          >True</code
+        >
+        o <code>False</code>).
+      </li>
+      <li><code>ALLOWED_HOSTS</code>: Lista de hosts permitidos.</li>
+    </ul>
+
+    <h2 id="soporte-tecnico">Soporte Técnico</h2>
+    <p>
+      Si necesitas ayuda adicional, por favor contacta al soporte técnico de la
+      empresa.
+    </p>
+
+    <hr />
+
+    <p>
+      Este manual cubre las funciones principales de la aplicación. Si tienes
+      alguna pregunta o necesitas más información, no dudes en contactar al
+      equipo de soporte.
+    </p>
+  </body>
+</html>

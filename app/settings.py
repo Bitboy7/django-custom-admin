@@ -87,9 +87,10 @@ JAZZMIN_SETTINGS = {
     "topmenu_links": [
 
         # external url that opens in a new window (Permissions can be added)
-        {"name": "Reportes", "url": "", "new_window": True},
+        {"name": "Reportes", "url": "balances", "new_window": True},
 
     ],
+    
     # Order the auth app before the books app, other apps will be alphabetically placed after these
     "order_with_respect_to": ["gastos", "ventas", "catalogo", "auth"],
     
@@ -127,7 +128,7 @@ JAZZMIN_SETTINGS = {
     # Whether to link font from fonts.googleapis.com (use custom_css to supply font otherwise)
     "use_google_fonts_cdn": True,
     # Whether to show the UI customizer on the sidebar
-    "show_ui_builder": True,
+    "show_ui_builder": False,
         ###############
     # Change view #
     ###############
@@ -137,7 +138,7 @@ JAZZMIN_SETTINGS = {
     # - vertical_tabs
     # - collapsible
     # - carousel
-    "changeform_format": "collapse",
+    "changeform_format": "collapsible",
     # override change forms on a per modeladmin basis
     "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs", "catalogo.Productor": "vertical_tabs", "catalogo.Pais": "vertical_tabs", "catalogo.Estado": "vertical_tabs", "catalogo.Sucursal": "vertical_tabs", "gastos.Banco": "vertical_tabs", "gastos.Cuenta": "vertical_tabs", "gastos.CatGastos": "vertical_tabs", "gastos.Gastos": "vertical_tabs", "ventas.Cliente": "vertical_tabs", "ventas.Ventas": "vertical_tabs", "ventas.Agente": "vertical_tabs", "ventas.Producto": "vertical_tabs"},
 }

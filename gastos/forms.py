@@ -1,5 +1,5 @@
 from django import forms
-from .models import Gastos, CatGastos, Compra
+from .models import Gastos, CatGastos, SaldoMensual
 
 class GastoForm(forms.ModelForm):
     class Meta:
@@ -25,3 +25,14 @@ class CatGastoForm(forms.ModelForm):
             'fecha_registro': forms.DateInput(attrs={'class': 'form-control', 'placeholder': 'YYYY-MM-DD'}),
         }
 
+
+class SaldoMensualForm(forms.ModelForm):
+    class Meta:
+        model = SaldoMensual
+        fields = ['cuenta', 'año', 'mes', 'saldo_inicial']
+        widgets = {
+            'cuenta': forms.Select(attrs={'class': 'form-control'}),
+            'año': forms.NumberInput(attrs={'class': 'form-control'}),
+            'mes': forms.NumberInput(attrs={'class': 'form-control'}),
+            'saldo_inicial': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
