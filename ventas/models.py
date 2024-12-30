@@ -6,32 +6,42 @@ class Cliente(models.Model):
     telefono = models.CharField(max_length=15)
     correo = models.EmailField(blank=True)
     pais_id = models.ForeignKey(Pais, on_delete=models.CASCADE)
+    fecha_registro = models.DateTimeField(auto_now_add=True, blank=True, null=True)
 
     def __str__(self):
-        return self.nombre
+        return f"-{self.nombre} - {self.correo}"
+    
+    class Meta:
+        verbose_name = 'Cliente'
+        verbose_name_plural = 'Clientes'
 
 class Agente(models.Model):
     nombre = models.CharField(max_length=50)
-    fecha = models.DateField(auto_now_add=True)
-    
+    telefono = models.CharField(max_length=15, blank=True, null=True, default='Sin teléfono')
+    correo = models.EmailField(blank=True, null=True)
+    pais = models.ForeignKey(Pais, on_delete=models.CASCADE, default=1)
+    fecha_registro = models.DateField(auto_now_add=True)
+   
     def __str__(self):
         return self.nombre
     
     class Meta:
+        verbose_name = 'Agente aduanal'
         verbose_name_plural = 'Agentes aduanales'
 
 class Producto(models.Model):
     nombre = models.CharField(max_length=100)
     variedad = models.CharField(max_length=50)
     precio = models.DecimalField(max_digits=10, decimal_places=2)
+    fecha_registro = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     
     def __str__(self):
         return f"-{self.nombre} - {self.precio} - {self.variedad}"
         
     class Meta:
+        verbose_name = 'Producto'
         verbose_name_plural = 'Productos'
         
-
 class Anticipo(models.Model):
     from gastos.models import Cuenta
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
@@ -51,6 +61,7 @@ class Anticipo(models.Model):
         return f"Anticipo de {self.cliente.nombre} - {self.monto}"
 
     class Meta:
+        verbose_name = 'Anticipo'
         verbose_name_plural = 'Anticipos'
         ordering = ['-fecha_registro']
         
@@ -75,12 +86,12 @@ class Ventas(models.Model):
     
     class TipoVenta(models.TextChoices):
         NACIONAL = 'Nacional'
-        EXPORTACION = 'Exportacion'
+        EXPORTACION = 'Exportación'
     tipo_venta = models.CharField(max_length=50, choices=TipoVenta.choices)
 
     def __str__(self):
         return f"-{self.carga} - {self.fecha_salida_manifiesto} - {self.monto} - {self.cliente.nombre}- {self.producto.nombre}"
         
-    
     class Meta:
+        verbose_name = 'Venta'
         verbose_name_plural = 'Ventas'        

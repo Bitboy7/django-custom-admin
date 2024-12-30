@@ -20,7 +20,7 @@ class ClienteAdmin(admin.ModelAdmin):
     
 @admin.register(Agente)
 class AgenteAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'fecha')
+    list_display = ('nombre', 'fecha_registro')
     list_per_page = 12
    
 class VentasResource(resources.ModelResource):

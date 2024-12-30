@@ -3,12 +3,8 @@ from django.http import HttpResponse
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from import_export.admin import ImportExportModelAdmin
-# Register your models here.
 from .models import CatGastos, Banco, Cuenta, Gastos, Compra, SaldoMensual
 from catalogo.models import Sucursal
-import openpyxl
-from openpyxl.styles import NamedStyle, Font
-from openpyxl.worksheet.table import Table, TableStyleInfo
 
 class CatGastoResource(resources.ModelResource):
     fields = ('id', 'nombre', 'fecha_registro')

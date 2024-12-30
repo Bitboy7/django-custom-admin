@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.db.models import Sum, Avg, Max, Min
 from django.db.models.functions import TruncDay, TruncWeek, TruncMonth
-from gastos.models import Gastos, Cuenta
+from gastos.models import Gastos, Cuenta, Compra
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
@@ -15,6 +15,7 @@ from openpyxl import Workbook
 import pandas as pd
 import numpy as np
 from datetime import datetime
+import decimal
 
 def export_to_excel(request):
     # Obtener parámetros de filtro
@@ -108,121 +109,208 @@ def export_to_excel(request):
     
     ws.add_table(tab)
 
-    # Aplicar formato condicional
-    red_fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
-    dxf = openpyxl.styles.differential.DifferentialStyle(fill=red_fill)
-    rule = openpyxl.formatting.rule.Rule(type="expression", dxf=dxf, stopIfTrue=True)
-    rule.formula = ["$D2>1000"]
-    ws.conditional_formatting.add(f"D2:D{ws.max_row}", rule)
-
-    # Ajustar ancho de columnas
+    # Ajustar el ancho de las columnas
     for col in ws.columns:
         max_length = 0
+        column = col[0].column_letter
         for cell in col:
             try:
                 if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
+                    max_length = len(cell.value)
             except:
                 pass
-        ws.column_dimensions[col[0].column_letter].width = max_length + 2
+        adjusted_width = (max_length + 2)
+        ws.column_dimensions[column].width = adjusted_width
 
-    # Añadir nueva hoja para resumen mensual
-    ws_monthly = wb.create_sheet("Resumen Mensual")
+    # Create purchases sheet
+    ws_purchases = wb.create_sheet("Reporte de Compras")
     
-    # Obtener totales mensuales
-    monthly_totals = Gastos.objects.annotate(
-        month=TruncMonth('fecha')
-    ).values('month').annotate(
-        total=Sum('monto')
-    ).order_by('month')
+    # Headers for purchases
+    purchase_headers = ["Fecha", "Productor", "Producto", "Cantidad", "Precio Unitario", "Monto Total", "Cuenta"]
+    ws_purchases.append(purchase_headers)
 
-    # Escribir encabezados
-    ws_monthly.append(["Mes", "Total Gastos", "Acumulado"])
+    # Get purchases data
+    purchases = Compra.objects.all().order_by('fecha_compra')
+    
+    # Write purchases data
+    for purchase in purchases:
+        ws_purchases.append([
+            purchase.fecha_compra,
+            str(purchase.productor),
+            str(purchase.producto),
+            purchase.cantidad,
+            purchase.precio_unitario,
+            purchase.monto_total,
+            str(purchase.cuenta)
+        ])
 
-    # Escribir datos mensuales
-    accumulated = 0
-    monthly_data = []
-    for entry in monthly_totals:
-        accumulated += entry['total']
-        month_str = entry['month'].strftime('%B %Y')
-        ws_monthly.append([month_str, entry['total'], accumulated])
-        monthly_data.append([month_str, entry['total']])
-
-    # Aplicar formato contable
-    for row in ws_monthly.iter_rows(min_row=2, min_col=2, max_col=3):
+    # Format purchases table
+    for row in ws_purchases.iter_rows(min_row=2, min_col=5, max_col=6):
         for cell in row:
             cell.style = contable_style
 
-    # Formato condicional para los 3 meses con más gastos
-    sorted_months = sorted(monthly_data, key=lambda x: x[1], reverse=True)[:3]
-    top_3_values = [item[1] for item in sorted_months]
-
-    red_fill = PatternFill(start_color="FFE2B7", end_color="FFE2B7", fill_type="solid")
-    dxf = openpyxl.styles.differential.DifferentialStyle(fill=red_fill)
-    rule = openpyxl.formatting.rule.Rule(type="expression", dxf=dxf, stopIfTrue=True)
-    rule.formula = [f"OR(B2>={top_3_values[0]}, B2>={top_3_values[1]}, B2>={top_3_values[2]})"]
-    ws_monthly.conditional_formatting.add(f"A2:C{ws_monthly.max_row}", rule)
-
-    # Crear gráfico de barras
-    bar_chart = openpyxl.chart.BarChart()
-    bar_chart.title = "Gastos Mensuales"
-    bar_chart.x_axis.title = "Mes"
-    bar_chart.y_axis.title = "Total Gastos"
-
-    # Añadir datos al gráfico de barras
-    data = openpyxl.chart.Reference(ws_monthly, min_col=2, min_row=1, max_row=ws_monthly.max_row, max_col=2)
-    cats = openpyxl.chart.Reference(ws_monthly, min_col=1, min_row=2, max_row=ws_monthly.max_row)
-    bar_chart.add_data(data, titles_from_data=True)
-    bar_chart.set_categories(cats)
-
-    # Añadir el gráfico de barras a la hoja
-    ws_monthly.add_chart(bar_chart, "E2")
-
-    # Crear gráfico de pastel
-    pie_chart = openpyxl.chart.PieChart()
-    pie_chart.title = "Distribución de Gastos Mensuales"
-
-    # Añadir datos al gráfico de pastel
-    pie_data = openpyxl.chart.Reference(ws_monthly, min_col=2, min_row=1, max_row=ws_monthly.max_row)
-    pie_labels = openpyxl.chart.Reference(ws_monthly, min_col=1, min_row=2, max_row=ws_monthly.max_row)
-    pie_chart.add_data(pie_data, titles_from_data=True)
-    pie_chart.set_categories(pie_labels)
-
-    # Añadir el gráfico de pastel a la hoja
-    ws_monthly.add_chart(pie_chart, "E20")
-
-    # Ajustar ancho de columnas
-    for col in ws_monthly.columns:
-        max_length = 0
-        for cell in col:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except:
-                pass
-        ws_monthly.column_dimensions[col[0].column_letter].width = max_length + 2
-        
-    # Aplicar estilo claro a la tabla
-    tab = openpyxl.worksheet.table.Table(
-        displayName="GastosTableStyled", 
-        ref=f"A1:E{ws.max_row-totales_cuenta.count()-3}",
+    # Crear una tabla dinámica para compras
+    purchases_table_name = f"PurchasesTableStyled_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    purchases_tab = openpyxl.worksheet.table.Table(
+        displayName=purchases_table_name, 
+        ref=f"A1:G{ws_purchases.max_row}",
         tableStyleInfo=openpyxl.worksheet.table.TableStyleInfo(
-            name="TableStyleLight3",
+            name="TableStyleLight1",
             showFirstColumn=False,
             showLastColumn=False,
             showRowStripes=True,
             showColumnStripes=True
         )
     )
-    ws.add_table(tab)
+    
+    ws_purchases.add_table(purchases_tab)
+
+    # Ajustar el ancho de las columnas en la hoja de compras
+    for col in ws_purchases.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(cell.value)
+            except:
+                pass
+        adjusted_width = (max_length + 2)
+        ws_purchases.column_dimensions[column].width = adjusted_width
+
+    # Modify monthly summary sheet to include both expenses and purchases
+    ws_monthly = wb.create_sheet("Resumen Mensual")
+    
+    # Get monthly totals for both expenses and purchases
+    monthly_totals = (Gastos.objects
+        .annotate(month=TruncMonth('fecha'))
+        .values('month')
+        .annotate(gastos_total=Sum('monto'))
+        .order_by('month'))
+
+    monthly_purchases = (Compra.objects
+        .annotate(month=TruncMonth('fecha_compra'))
+        .values('month')
+        .annotate(compras_total=Sum('monto_total'))
+        .order_by('month'))
+
+    # Combine data by month
+    monthly_combined = {}
+    for entry in monthly_totals:
+        month = entry['month']
+        monthly_combined[month] = {
+            'gastos': entry['gastos_total'],
+            'compras': 0,
+            'total': 0
+        }
+
+    for entry in monthly_purchases:
+        month = entry['month']
+        if month not in monthly_combined:
+            monthly_combined[month] = {
+                'gastos': 0,
+                'compras': entry['compras_total'],
+                'total': 0
+            }
+        else:
+            monthly_combined[month]['compras'] = entry['compras_total']
+
+    # Calculate totals
+    for month in monthly_combined:
+        # Convert gastos to Decimal if it's a float
+        gastos = decimal.Decimal(str(monthly_combined[month]['gastos'])) if monthly_combined[month]['gastos'] else decimal.Decimal('0')
+        compras = decimal.Decimal(str(monthly_combined[month]['compras'])) if monthly_combined[month]['compras'] else decimal.Decimal('0')
+        
+        monthly_combined[month]['total'] = compras - gastos
+
+    # Write headers
+    ws_monthly.append(["Mes", "Gastos", "Compras", "Balance", "Acumulado", "Saldo Inicial"])
+
+    # Write monthly data
+    accumulated = decimal.Decimal('0')
+    saldo_inicial = decimal.Decimal('0')
+    monthly_data = []
+    for month, data in sorted(monthly_combined.items()):
+        accumulated += data['total']
+        month_str = month.strftime('%B %Y')
+        ws_monthly.append([
+            month_str,
+            data['gastos'],
+            data['compras'], 
+            data['total'],
+            accumulated,
+            saldo_inicial
+        ])
+        saldo_inicial = accumulated
+        monthly_data.append([month_str, data['total']])
+
+    # Apply accounting format
+    for row in ws_monthly.iter_rows(min_row=2, min_col=2, max_col=6):
+        for cell in row:
+            cell.style = contable_style
+
+    # Add total accumulated sum at the end
+    total_accumulated_sum = sum(row[0] for row in ws_monthly.iter_rows(min_row=2, min_col=5, max_col=5, values_only=True))
+    ws_monthly.append(["", "", "", "Total Acumulado", total_accumulated_sum, ""])
+    for cell in ws_monthly[ws_monthly.max_row][4:5]:
+        cell.style = contable_style
+        cell.font = Font(bold=True)
+
+    # Crear una tabla dinámica para el resumen mensual
+    monthly_table_name = f"MonthlySummaryTableStyled_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    monthly_tab = openpyxl.worksheet.table.Table(
+        displayName=monthly_table_name, 
+        ref=f"A1:F{ws_monthly.max_row}",
+        tableStyleInfo=openpyxl.worksheet.table.TableStyleInfo(
+            name="TableStyleLight13",
+            showFirstColumn=False,
+            showLastColumn=False,
+            showRowStripes=True,
+            showColumnStripes=True
+        )
+    )
+    
+    ws_monthly.add_table(monthly_tab)
+
+    # Ajustar el ancho de las columnas en la hoja de resumen mensual
+    for col in ws_monthly.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(cell.value)
+            except:
+                pass
+        adjusted_width = (max_length + 2)
+        ws_monthly.column_dimensions[column].width = adjusted_width
+
+    # Update bar chart to show expenses and purchases
+    bar_chart = openpyxl.chart.BarChart()
+    bar_chart.title = "Gastos y Compras Mensuales"
+    bar_chart.type = "col"
+    bar_chart.grouping = "stacked"
+    bar_chart.overlap = 100
+    
+    # Add data series for expenses and purchases
+    expenses_data = openpyxl.chart.Reference(ws_monthly, min_col=2, min_row=1, max_row=ws_monthly.max_row)
+    purchases_data = openpyxl.chart.Reference(ws_monthly, min_col=3, min_row=1, max_row=ws_monthly.max_row)
+    categories = openpyxl.chart.Reference(ws_monthly, min_col=1, min_row=2, max_row=ws_monthly.max_row)
+    
+    bar_chart.add_data(expenses_data, titles_from_data=True)
+    bar_chart.add_data(purchases_data, titles_from_data=True)
+    bar_chart.set_categories(categories)
+
+    ws_monthly.add_chart(bar_chart, "G2")
 
     current_date = datetime.now().strftime("%Y%m%d")
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = f'attachment; filename="reporte_gastos_{current_date}.xlsx"'
 
+    # Save workbook
     wb.save(response)
     return response
-
+    
 def balances_view(request):
     cuenta_id = request.GET.get('cuenta_id', '')
     year = request.GET.get('year', datetime.now().year)
