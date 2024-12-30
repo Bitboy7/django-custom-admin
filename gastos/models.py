@@ -75,6 +75,14 @@ class Compra(models.Model):
         fecha_registro = models.DateTimeField(default=timezone.now)
         cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE, null=True, blank=True, default=2)
         
+        class TipoPago(models.TextChoices):
+            Efectivo = 'Efectivo'
+            Deposito = 'Deposito'
+            Transferencia = 'Transferencia'
+            Cheque = 'Cheque'
+            
+        tipo_pago = models.CharField(max_length=50, blank=True, null=True, choices=TipoPago.choices)
+        
         def __str__(self):
             return f'{self.productor} - {self.producto.nombre}'
 
