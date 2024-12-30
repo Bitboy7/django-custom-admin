@@ -82,5 +82,19 @@ class Compra(models.Model):
             verbose_name_plural = "Compras de fruta"
             ordering = ['-fecha_compra']
             permissions = [("can_view_compras", "Can view compras")]
+           
+class SaldoMensual(models.Model):
+    cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE)
+    año = models.PositiveIntegerField(choices=[(r, r) for r in range(1999, timezone.now().year + 1)])
+    mes = models.PositiveIntegerField(choices=[(i, i) for i in range(1, 13)])
+    saldo_inicial = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        unique_together = ('cuenta', 'año', 'mes')
+        verbose_name = "Saldo inicial"
+        verbose_name_plural = "Saldos iniciales"
+
+    def __str__(self):
+        return f"{self.cuenta} - {self.año}/{self.mes} - {self.saldo_inicial}"            
             
             
