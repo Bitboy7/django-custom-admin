@@ -10,6 +10,12 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{% static 'js/table.js' %}"></script>
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
       .highlight {
         background-color: #ffeb3b !important;
@@ -17,78 +23,96 @@
     </style>
   </head>
   <body class="bg-gray-100 font-sans">
+    
     <!-- Navbar -->
-    <nav class="bg-gray-800 p-4">
+    <nav class="bg-gray-800 p-4 sticky top-0 shadow z-30">
       <div class="container mx-auto flex justify-between items-center">
-        <a href="{% url 'admin:index' %}" class="text-white text-lg font-semibold">Admin</a>
+        <a href="{% url 'admin:index' %}" class="text-white text-lg font-semibold">
+          <i class="fas fa-cog"></i> Admin
+        </a>
+        <h1 class="text-white text-xl font-bold">Gestión de Saldos</h1>
         <div class="space-x-4">
           <a href="{% url 'balances' %}" class="text-gray-300 hover:text-white">Balances</a>
-          <a href="{% url 'exportar_gastos_excel' %}" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-700">Reporte excel</a>
+          <a href="{% url 'exportar_gastos_excel' %}" class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-500">
+            Exportar acumulado general
+          </a>
         </div>
       </div>
     </nav>
 
-    <!-- Contenido -->
+    <!-- Warning -->
+    <div id="warning-message" class="bg-yellow-200 border-l-4 border-yellow-500 text-yellow-700 p-2" role="alert">
+      <p class="font-bold">Atención</p>
+      <p>El filtro por defecto es diario. Por favor, seleccione el periodo deseado.</p>
+    </div>
+
+    <script>
+      // Hide the warning message after 5 seconds
+      setTimeout(function() {
+      document.getElementById('warning-message').style.display = 'none';
+      }, 5000);
+    </script>
+
     <form method="get" action="{% url 'balances' %}" class="bg-gray-800 p-6 rounded shadow-md">
-      <div class="flex flex-row gap-4 mb-4">
-      <div class="flex-1">
-        <label for="cuenta_id" class="block text-white font-bold mb-2">Seleccione la Cuenta:</label>
-        <select name="cuenta_id" id="cuenta_id" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
-        {% for cuenta in cuentas %}
-        <option value="{{ cuenta.id }}" {% if cuenta.id|stringformat:"s" == selected_cuenta_id %}selected{% endif %}>{{ cuenta.numero_cuenta }}</option>
-        {% endfor %}
-        </select>
+      <div class="flex flex-wrap gap-4 mb-4">
+        <div class="flex-1 min-w-[200px]">
+          <label for="cuenta_id" class="block text-white font-bold mb-2">Seleccione la Cuenta:</label>
+          <select name="cuenta_id" id="cuenta_id" class="block appearance-none forced-colors:appearance-auto w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
+            <option value="">Todas</option>
+            {% for cuenta in cuentas %}
+            <option value="{{ cuenta.id }}" {% if cuenta.id|stringformat:"s" == selected_cuenta_id %}selected{% endif %}>{{ cuenta.numero_cuenta }}</option>
+            {% endfor %}
+          </select>
+        </div>
+    
+        <div class="flex-1 min-w-[200px]">
+          <label for="year" class="block text-white font-bold mb-2">Seleccione el Año:</label>
+          <select name="year" id="year" class="block appearance-none forced-colors:appearance-auto w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
+            {% for year in available_years %}
+            <option value="{{ year.year }}" {% if year.year|stringformat:"s" == selected_year %}selected{% endif %}>{{ year.year }}</option>
+            {% endfor %}
+          </select>
+        </div>
+    
+        <div class="flex-1 min-w-[200px]">
+          <label for="month" class="block text-white font-bold mb-2">Seleccione el Mes:</label>
+          <select name="month" id="month" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
+            <option value="">Todos</option>
+            {% for month in months %}
+            <option value="{{ forloop.counter }}" {% if forloop.counter|stringformat:"s" == selected_month %}selected{% endif %}>{{ month }}</option>
+            {% endfor %}
+          </select>
+        </div>
+    
+        <div class="flex-1 min-w-[200px]">
+          <label for="periodo" class="block text-white font-bold mb-2">Seleccione el Periodo:</label>
+          <select name="periodo" id="periodo" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
+            <option value="diario" {% if selected_periodo == 'diario' %}selected{% endif %}>Diario</option>
+            <option value="semanal" {% if selected_periodo == 'semanal' %}selected{% endif %}>Semanal</option>
+            <option value="mensual" {% if selected_periodo == 'mensual' %}selected{% endif %}>Mensual</option>
+          </select>
+        </div>
       </div>
-
-      <div class="flex-1">
-        <label for="year" class="block text-white font-bold mb-2">Seleccione el Año:</label>
-        <select name="year" id="year" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
-        {% for year in available_years %}
-        <option value="{{ year.year }}" {% if year.year|stringformat:"s" == selected_year %}selected{% endif %}>{{ year.year }}</option>
-        {% endfor %}
-        </select>
-      </div>
-
-      <div class="flex-1">
-        <label for="month" class="block text-white font-bold mb-2">Seleccione el Mes:</label>
-        <select name="month" id="month" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
-        <option value="">Todos</option>
-        {% for month in months %}
-        <option value="{{ forloop.counter }}" {% if forloop.counter|stringformat:"s" == selected_month %}selected{% endif %}>{{ month }}</option>
-        {% endfor %}
-        </select>
-      </div>
-
-      <div class="flex-1">
-        <label for="periodo" class="block text-white font-bold mb-2">Seleccione el Periodo:</label>
-        <select name="periodo" id="periodo" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
-        <option value="diario" {% if selected_periodo == 'diario' %}selected{% endif %}>Diario</option>
-        <option value="semanal" {% if selected_periodo == 'semanal' %}selected{% endif %}>Semanal</option>
-        <option value="mensual" {% if selected_periodo == 'mensual' %}selected{% endif %}>Mensual</option>
-        </select>
-      </div>
-      </div>
-      <div class="flex flex-row gap-4 mb-4" id="dia-container" style="display: {% if selected_periodo == 'diario' %}flex{% else %}none{% endif %};">
-        <div class="flex-1">
+      <div class="flex flex-wrap gap-4 mb-4" id="dia-container" style="display: {% if selected_periodo == 'diario' %}flex{% else %}none{% endif %};">
+        <div class="flex-1 min-w-[200px]">
           <label for="dia" class="block text-white font-bold mb-2">Seleccione el Día:</label>
           <input type="date" name="dia" id="dia" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline" value="{{ selected_dia }}">
         </div>
-        <div class="flex-1">
+        <div class="flex-1 min-w-[200px]">
           <label for="fecha_inicio" class="block text-white font-bold mb-2">Fecha Inicio:</label>
           <input type="date" name="fecha_inicio" id="fecha_inicio" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline" value="{{ selected_fecha_inicio }}">
         </div>
-        <div class="flex-1">
+        <div class="flex-1 min-w-[200px]">
           <label for="fecha_fin" class="block text-white font-bold mb-2">Fecha Fin:</label>
           <input type="date" name="fecha_fin" id="fecha_fin" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline" value="{{ selected_fecha_fin }}">
         </div>
       </div>
       <div class="flex items-center justify-between pt-4">
-        <button type="submit" class="bg-blue-800 hover:bg-orange-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Filtrar</button>
+        <button type="submit" class="bg-blue-800 hover:bg-orange-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+          <i class="fas fa-filter mr-2"></i>Filtrar
+        </button>
       </div>
     </form>
-
-    <div class="container mx-auto p-6">
-      <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Acumulado de gastos </h1>
 
       <!-- Tabla de datos -->
       <div class="overflow-x-auto">
@@ -202,11 +226,6 @@
         });
       </script>
 
-      <!-- DataTables CSS -->
-      <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css">
-      <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-      <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
-
       <!-- jQuery and DataTables JS -->
       <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
       <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
@@ -237,13 +256,47 @@
         });
       });
       </script>
+    </div>
+    
+    <div class="container mx-auto p-3 mb-4">
       <!-- Card para mostrar el total -->
-      <div class="mt-6 bg-white rounded-lg shadow-md p-6">
+      <div class="mt-4 bg-white rounded-lg shadow-md p-3">
         <div class="flex justify-between items-center">
-          <h2 class="text-xl font-semibold text-gray-800">Total de Gastos</h2>
-          <span class="text-2xl font-bold text-green-600">${{ total_gastos|floatformat:2 }}</span>
+          <h2 class="text-xl font-semibold text-gray-800">Acumulado total</h2>
+          <span class="text-3xl font-bold text-green-600">${{ total_gastos|floatformat:2 }}</span>
         </div>
       </div>
-    </div>
+    
+     <!-- Cards para mostrar métricas importantes -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+  <div class="bg-white rounded-lg shadow-md p-3">
+    <h2 class="text-xl font-semibold text-gray-800">Total de Gastos</h2>
+    <span class="text-2xl font-bold text-green-600">${{ total_gastos|floatformat:2 }}</span>
+  </div>
+  <div class="bg-white rounded-lg shadow-md p-3">
+    <h2 class="text-xl font-semibold text-gray-800">Promedio de Gastos</h2>
+    <span class="text-2xl font-bold text-green-600">${{ promedio_gastos|floatformat:2 }}</span>
+  </div>
+  <div class="bg-white rounded-lg shadow-md p-3">
+    <h2 class="text-xl font-semibold text-gray-800">Número de Transacciones</h2>
+    <span class="text-2xl font-bold text-green-600">{{ numero_transacciones }}</span>
+  </div>
+  <div class="bg-white rounded-lg shadow-md p-3">
+    <h2 class="text-xl font-semibold text-gray-800">Gasto Máximo</h2>
+    <span class="text-2xl font-bold text-green-600">${{ gasto_maximo|floatformat:2 }}</span>
+    <p class="text-gray-600">Categoría: {{ categoria_gasto_maximo }}</p>
+  </div>
+  <div class="bg-white rounded-lg shadow-md p-3">
+    <h2 class="text-xl font-semibold text-gray-800">Gasto Mínimo</h2>
+    <span class="text-2xl font-bold text-green-600">${{ gasto_minimo|floatformat:2 }}</span>
+    <p class="text-gray-600">Categoría: {{ categoria_gasto_minimo }}</p>
+  </div>
+  <div class="bg-white rounded-lg shadow-md p-3">
+    <h2 class="text-xl font-semibold text-gray-800">Gasto Mediano</h2>
+    <span class="text-2xl font-bold text-green-600">${{ gasto_mediano|floatformat:2 }}</span>
+  </div>
+</div>
+      </div>
+    
   </body>
 </html>

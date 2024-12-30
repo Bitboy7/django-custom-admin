@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import HttpResponse
-from django.db.models import Sum
+from django.db.models import Sum, Avg, Max, Min
 from django.db.models.functions import TruncDay, TruncWeek, TruncMonth
 from gastos.models import Gastos, Cuenta
 from reportlab.lib.pagesizes import letter
@@ -13,6 +13,8 @@ import openpyxl
 from openpyxl.styles import PatternFill, NamedStyle, Font
 from openpyxl import Workbook
 import pandas as pd
+import numpy as np
+from datetime import datetime
 
 def export_to_excel(request):
     # Obtener parámetros de filtro
@@ -91,7 +93,19 @@ def export_to_excel(request):
             cell.font = Font(bold=True)
 
     # Crear una tabla dinámica
-    tab = openpyxl.worksheet.table.Table(displayName="GastosTable", ref=f"A1:E{ws.max_row-totales_cuenta.count()-3}")
+    unique_table_name = f"GastosTableStyled_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    tab = openpyxl.worksheet.table.Table(
+        displayName=unique_table_name, 
+        ref=f"A1:E{ws.max_row-totales_cuenta.count()-3}",
+        tableStyleInfo=openpyxl.worksheet.table.TableStyleInfo(
+            name="TableStyleLight13",
+            showFirstColumn=False,
+            showLastColumn=False,
+            showRowStripes=True,
+            showColumnStripes=True
+        )
+    )
+    
     ws.add_table(tab)
 
     # Aplicar formato condicional
@@ -101,21 +115,122 @@ def export_to_excel(request):
     rule.formula = ["$D2>1000"]
     ws.conditional_formatting.add(f"D2:D{ws.max_row}", rule)
 
-    # Crear respuesta HTTP
+    # Ajustar ancho de columnas
+    for col in ws.columns:
+        max_length = 0
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        ws.column_dimensions[col[0].column_letter].width = max_length + 2
+
+    # Añadir nueva hoja para resumen mensual
+    ws_monthly = wb.create_sheet("Resumen Mensual")
+    
+    # Obtener totales mensuales
+    monthly_totals = Gastos.objects.annotate(
+        month=TruncMonth('fecha')
+    ).values('month').annotate(
+        total=Sum('monto')
+    ).order_by('month')
+
+    # Escribir encabezados
+    ws_monthly.append(["Mes", "Total Gastos", "Acumulado"])
+
+    # Escribir datos mensuales
+    accumulated = 0
+    monthly_data = []
+    for entry in monthly_totals:
+        accumulated += entry['total']
+        month_str = entry['month'].strftime('%B %Y')
+        ws_monthly.append([month_str, entry['total'], accumulated])
+        monthly_data.append([month_str, entry['total']])
+
+    # Aplicar formato contable
+    for row in ws_monthly.iter_rows(min_row=2, min_col=2, max_col=3):
+        for cell in row:
+            cell.style = contable_style
+
+    # Formato condicional para los 3 meses con más gastos
+    sorted_months = sorted(monthly_data, key=lambda x: x[1], reverse=True)[:3]
+    top_3_values = [item[1] for item in sorted_months]
+
+    red_fill = PatternFill(start_color="FFE2B7", end_color="FFE2B7", fill_type="solid")
+    dxf = openpyxl.styles.differential.DifferentialStyle(fill=red_fill)
+    rule = openpyxl.formatting.rule.Rule(type="expression", dxf=dxf, stopIfTrue=True)
+    rule.formula = [f"OR(B2>={top_3_values[0]}, B2>={top_3_values[1]}, B2>={top_3_values[2]})"]
+    ws_monthly.conditional_formatting.add(f"A2:C{ws_monthly.max_row}", rule)
+
+    # Crear gráfico de barras
+    bar_chart = openpyxl.chart.BarChart()
+    bar_chart.title = "Gastos Mensuales"
+    bar_chart.x_axis.title = "Mes"
+    bar_chart.y_axis.title = "Total Gastos"
+
+    # Añadir datos al gráfico de barras
+    data = openpyxl.chart.Reference(ws_monthly, min_col=2, min_row=1, max_row=ws_monthly.max_row, max_col=2)
+    cats = openpyxl.chart.Reference(ws_monthly, min_col=1, min_row=2, max_row=ws_monthly.max_row)
+    bar_chart.add_data(data, titles_from_data=True)
+    bar_chart.set_categories(cats)
+
+    # Añadir el gráfico de barras a la hoja
+    ws_monthly.add_chart(bar_chart, "E2")
+
+    # Crear gráfico de pastel
+    pie_chart = openpyxl.chart.PieChart()
+    pie_chart.title = "Distribución de Gastos Mensuales"
+
+    # Añadir datos al gráfico de pastel
+    pie_data = openpyxl.chart.Reference(ws_monthly, min_col=2, min_row=1, max_row=ws_monthly.max_row)
+    pie_labels = openpyxl.chart.Reference(ws_monthly, min_col=1, min_row=2, max_row=ws_monthly.max_row)
+    pie_chart.add_data(pie_data, titles_from_data=True)
+    pie_chart.set_categories(pie_labels)
+
+    # Añadir el gráfico de pastel a la hoja
+    ws_monthly.add_chart(pie_chart, "E20")
+
+    # Ajustar ancho de columnas
+    for col in ws_monthly.columns:
+        max_length = 0
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        ws_monthly.column_dimensions[col[0].column_letter].width = max_length + 2
+        
+    # Aplicar estilo claro a la tabla
+    tab = openpyxl.worksheet.table.Table(
+        displayName="GastosTableStyled", 
+        ref=f"A1:E{ws.max_row-totales_cuenta.count()-3}",
+        tableStyleInfo=openpyxl.worksheet.table.TableStyleInfo(
+            name="TableStyleLight3",
+            showFirstColumn=False,
+            showLastColumn=False,
+            showRowStripes=True,
+            showColumnStripes=True
+        )
+    )
+    ws.add_table(tab)
+
+    current_date = datetime.now().strftime("%Y%m%d")
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename="reporte_gastos.xlsx"'
+    response['Content-Disposition'] = f'attachment; filename="reporte_gastos_{current_date}.xlsx"'
 
     wb.save(response)
     return response
 
 def balances_view(request):
-    cuenta_id = request.GET.get('cuenta_id')
-    year = request.GET.get('year')
-    month = request.GET.get('month')
+    cuenta_id = request.GET.get('cuenta_id', '')
+    year = request.GET.get('year', datetime.now().year)
+    month = request.GET.get('month', datetime.now().month)
     periodo = request.GET.get('periodo', 'diario')  # 'diario', 'semanal' o 'mensual'
-    dia = request.GET.get('dia')
-    fecha_inicio = request.GET.get('fecha_inicio')
-    fecha_fin = request.GET.get('fecha_fin')
+    dia = request.GET.get('dia', datetime.now().strftime('%Y-%m-%d'))
+    fecha_inicio = request.GET.get('fecha_inicio', '')
+    fecha_fin = request.GET.get('fecha_fin', '')
 
     # Obtener los años disponibles
     available_years = Gastos.objects.dates('fecha', 'year')
@@ -124,7 +239,9 @@ def balances_view(request):
     months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
     # Filtrar y agrupar los datos de los gastos según el periodo seleccionado
-    filters = {'id_cuenta_banco_id': cuenta_id, 'fecha__year': year}
+    filters = {'fecha__year': year}
+    if cuenta_id:
+        filters['id_cuenta_banco_id'] = cuenta_id
     if month:
         filters['fecha__month'] = month
 
@@ -179,6 +296,16 @@ def balances_view(request):
         balance['acumulado'] = acumulado
 
     total_gastos = sum(balance['total_gastos'] for balance in balances)
+    promedio_gastos = Gastos.objects.filter(**filters).aggregate(promedio=Avg('monto'))['promedio']
+    numero_transacciones = Gastos.objects.filter(**filters).count()
+    gasto_maximo = Gastos.objects.filter(**filters).aggregate(maximo=Max('monto'))['maximo']
+    gasto_minimo = Gastos.objects.filter(**filters).aggregate(minimo=Min('monto'))['minimo']
+    gastos = list(Gastos.objects.filter(**filters).values_list('monto', flat=True))
+    gasto_mediano = np.median(gastos) if gastos else 0
+
+    # Obtener las categorías de gasto máximo y mínimo
+    categoria_gasto_maximo = Gastos.objects.filter(monto=gasto_maximo).values('id_cat_gastos__nombre').first()
+    categoria_gasto_minimo = Gastos.objects.filter(monto=gasto_minimo).values('id_cat_gastos__nombre').first()
 
     cuentas = Cuenta.objects.all()
     context = {
@@ -193,6 +320,13 @@ def balances_view(request):
         'selected_fecha_fin': fecha_fin,
         'available_years': available_years,
         'months': months,
-        'total_gastos': total_gastos
+        'total_gastos': total_gastos,
+        'promedio_gastos': promedio_gastos,
+        'numero_transacciones': numero_transacciones,
+        'gasto_maximo': gasto_maximo,
+        'gasto_minimo': gasto_minimo,
+        'gasto_mediano': gasto_mediano,
+        'categoria_gasto_maximo': categoria_gasto_maximo['id_cat_gastos__nombre'] if categoria_gasto_maximo else None,
+        'categoria_gasto_minimo': categoria_gasto_minimo['id_cat_gastos__nombre'] if categoria_gasto_minimo else None
     }
     return render(request, 'balances.html', context)
