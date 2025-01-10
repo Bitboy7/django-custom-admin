@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 from catalogo.models import Sucursal, Productor
 from django.db.models import Sum
+from django.utils.html import format_html
 
 class CatGastos(models.Model):
     id = models.AutoField(primary_key=True)
@@ -28,8 +29,14 @@ class Banco(models.Model):
         verbose_name='Logotipo del Banco'
     )
 
+    def mostrar_logotipo(self):
+        if self.logotipo:
+            return format_html('<img src="{}" style="width: 70px; height: 70px;" />', self.logotipo.url)
+        return "No Image"
+    mostrar_logotipo.short_description = 'Logotipo'
+
     def __str__(self):
-        return f"{self.nombre} - {self.direccion}"
+        return f"{self.nombre}"
     
     class Meta:
         verbose_name = "Banco"
@@ -71,7 +78,7 @@ class Gastos(models.Model):
         ordering = ["-fecha_registro"]
 
 class Compra(models.Model):
-        from ventas.models import Producto
+        from catalogo.models import Producto
         fecha_compra = models.DateField()
         productor = models.ForeignKey(Productor, on_delete=models.CASCADE)
         producto = models.ForeignKey(Producto, on_delete=models.CASCADE)

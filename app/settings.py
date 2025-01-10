@@ -105,6 +105,7 @@ JAZZMIN_SETTINGS = {
         "catalogo.Estado": "fas fa-map-marked-alt",
         "catalogo.Sucursal": "fas fa-store",
         "catalogo.Productor": "fa fa-id-badge",
+        "catalogo.Producto": "fa fa-barcode",
         "gastos.Banco": "fas fa-university",
         "gastos.Cuenta": "fas fa-credit-card",
         "gastos.CatGastos": "fa fa-tag",
@@ -114,7 +115,6 @@ JAZZMIN_SETTINGS = {
         "ventas.Cliente": "fa fa-user-tie",
         "ventas.Ventas": "fa fa-shopping-cart",
         "ventas.Agente": "fa fa-user-secret",
-        "ventas.Producto": "fa fa-barcode",
         "ventas.Anticipo": "fa fa-money-bill-wave",
     },
         # Icons that are used when one is not manually specified

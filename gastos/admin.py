@@ -1,11 +1,11 @@
 from django.contrib import admin
-from django.http import HttpResponse
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from import_export.admin import ImportExportModelAdmin
 from .models import CatGastos, Banco, Cuenta, Gastos, Compra, SaldoMensual
 from django.utils.html import format_html
 from catalogo.models import Sucursal
+from django.contrib import admin
 
 class CatGastoResource(resources.ModelResource):
     fields = ('id', 'nombre', 'fecha_registro')
@@ -24,10 +24,6 @@ class CatGastosAdmin(ImportExportModelAdmin):
             'fields': ('nombre', 'fecha_registro')
         }),
     )
-
-from django.utils.html import format_html
-from django.contrib import admin
-from .models import Banco
 
 @admin.register(Banco)
 class BancoAdmin(admin.ModelAdmin):
@@ -49,23 +45,26 @@ class BancoAdmin(admin.ModelAdmin):
         })
     )
 
-    def mostrar_logotipo(self, obj):
-        if obj.logotipo:
-            return format_html('<img src="{}" style="width: 70px; height: 70px;" />', obj.logotipo.url)
-        return "No Image"
-    mostrar_logotipo.short_description = 'Logotipo'
-
 @admin.register(Cuenta)
 class CuentaAdmin(admin.ModelAdmin):
-    list_display = ('id', 'id_banco', 'id_sucursal',
-                    'numero_cuenta', 'fecha_registro', 'numero_cliente', 'rfc', 'clabe')
-    search_fields = ('numero_cuenta',
-                     'fecha_registro', 'id_banco', 'id_sucursal')
-    list_filter = ('id_banco', 'id_sucursal')
+    list_display = ('id', 'mostrar_logotipo_banco', 'id_sucursal', 'numero_cuenta')
+    search_fields = ('id_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente',)
+    list_filter = ('id_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente', 'rfc')
     list_per_page = 12
-    fields = ('id_banco', 'id_sucursal',
-              'numero_cuenta', 'fecha_registro', 'numero_cliente', 'rfc', 'clabe')
-
+    fieldsets = (
+        ('Datos de la Cuenta', {
+            'fields': ('id_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente', 'rfc', 'clabe')
+        }),
+        ('Metadatos', {
+            'fields': ('fecha_registro',),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def mostrar_logotipo_banco(self, obj):
+        return obj.id_banco.mostrar_logotipo()
+    mostrar_logotipo_banco.short_description = 'Banco'
+    
 class GastosResource(resources.ModelResource):
     sucursal = fields.Field(
         column_name='sucursal',
