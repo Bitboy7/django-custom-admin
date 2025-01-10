@@ -100,8 +100,8 @@ class Compra(models.Model):
            
 class SaldoMensual(models.Model):
     cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE)
-    año = models.PositiveIntegerField(choices=[(r, r) for r in range(1999, timezone.now().year + 1)])
-    mes = models.PositiveIntegerField(choices=[(i, i) for i in range(1, 13)])
+    año = models.PositiveIntegerField(choices=[(r, r) for r in range(1999, timezone.now().year + 1)], default=timezone.now().year)
+    mes = models.PositiveIntegerField(choices=[(i, i) for i in range(1, 13)], default=timezone.now().month)
     saldo_inicial = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     saldo_final = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
     fecha_registro = models.DateTimeField(default=timezone.now)

@@ -180,3 +180,11 @@ anchorElements.forEach((anchor) => {
     anchor.style.color = ""; // Restaura el color original del texto
   });
 });
+
+// Elimina todos los elementos <li> con la clase "nav-header" y el texto "Gastos"
+const navHeaders = document.querySelectorAll("li.nav-header");
+navHeaders.forEach((header) => {
+  if (header.textContent.trim() === "Gastos") {
+    header.remove();
+  }
+});
