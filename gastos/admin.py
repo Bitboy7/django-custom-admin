@@ -4,6 +4,7 @@ from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from import_export.admin import ImportExportModelAdmin
 from .models import CatGastos, Banco, Cuenta, Gastos, Compra, SaldoMensual
+from django.utils.html import format_html
 from catalogo.models import Sucursal
 
 class CatGastoResource(resources.ModelResource):
@@ -24,17 +25,35 @@ class CatGastosAdmin(ImportExportModelAdmin):
         }),
     )
 
+from django.utils.html import format_html
+from django.contrib import admin
+from .models import Banco
+
 @admin.register(Banco)
 class BancoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nombre', 'telefono', 'direccion')
+    list_display = ('id', 'nombre', 'telefono', 'direccion', 'fecha_registro', 'mostrar_logotipo')
     search_fields = ('nombre', 'telefono', 'direccion')
     list_filter = ('nombre', 'telefono', 'direccion', 'fecha_registro')
     list_per_page = 12
     fieldsets = (
-        ('Datos del Registro', {
-            'fields': ('nombre', 'telefono', 'direccion', 'fecha_registro')
+        ('Información General', {
+            'fields': ('nombre', 'telefono', 'direccion')
         }),
+        ('Imagen', {
+            'fields': ('logotipo',),
+            'classes': ('collapse',)
+        }),
+        ('Metadatos', {
+            'fields': ('fecha_registro',),
+            'classes': ('collapse',)
+        })
     )
+
+    def mostrar_logotipo(self, obj):
+        if obj.logotipo:
+            return format_html('<img src="{}" style="width: 70px; height: 70px;" />', obj.logotipo.url)
+        return "No Image"
+    mostrar_logotipo.short_description = 'Logotipo'
 
 @admin.register(Cuenta)
 class CuentaAdmin(admin.ModelAdmin):

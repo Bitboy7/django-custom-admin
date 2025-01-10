@@ -21,9 +21,15 @@ class Banco(models.Model):
     telefono = models.CharField(max_length=15, blank=True, null=True)
     direccion = models.CharField(max_length=100, blank=True, null=True)
     fecha_registro = models.DateTimeField(default=timezone.now)
+    logotipo = models.ImageField(
+        upload_to='bancos/logos/',
+        null=True,
+        blank=True,
+        verbose_name='Logotipo del Banco'
+    )
 
     def __str__(self):
-        return f"{self.nombre} - {self.telefono}"
+        return f"{self.nombre} - {self.direccion}"
     
     class Meta:
         verbose_name = "Banco"
