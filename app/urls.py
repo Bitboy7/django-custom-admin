@@ -3,6 +3,8 @@ from django.urls import path, include
 from catalogo.views import index, data
 from gastos.views import registro_gasto
 from .views import balances_view, export_to_excel
+from django.conf import settings
+from django.conf.urls.static import static
 """
 URL configuration for app project.
 
@@ -27,4 +29,4 @@ urlpatterns = [
     path('exportar_gastos_excel/', export_to_excel, name='exportar_gastos_excel'),
     path('', include('catalogo.urls')),
     path('', include('gastos.urls')),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

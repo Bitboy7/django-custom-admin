@@ -1,5 +1,5 @@
 from django.db import models
-from catalogo.models import Sucursal, Pais
+from catalogo.models import Sucursal, Pais, Producto
 
 class Cliente(models.Model):
     nombre = models.CharField(max_length=50)
@@ -28,19 +28,6 @@ class Agente(models.Model):
     class Meta:
         verbose_name = 'Agente aduanal'
         verbose_name_plural = 'Agentes aduanales'
-
-class Producto(models.Model):
-    nombre = models.CharField(max_length=100)
-    variedad = models.CharField(max_length=50)
-    precio = models.DecimalField(max_digits=10, decimal_places=2)
-    fecha_registro = models.DateTimeField(auto_now_add=True, blank=True, null=True)
-    
-    def __str__(self):
-        return f"-{self.nombre} - {self.precio} - {self.variedad}"
-        
-    class Meta:
-        verbose_name = 'Producto'
-        verbose_name_plural = 'Productos'
         
 class Anticipo(models.Model):
     from gastos.models import Cuenta

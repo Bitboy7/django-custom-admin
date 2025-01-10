@@ -64,7 +64,7 @@ JAZZMIN_SETTINGS = {
     # Whether to display the side menu
     "show_sidebar": True,
     # Logo to use for your site, must be present in static files, used for login form logo (defaults to site_logo)
-    "login_logo": None,
+    "login_logo": "/img/logo-sm.png",
      # CSS classes that are applied to the logo above
     "site_logo_classes": "img-circle",
 
@@ -88,7 +88,7 @@ JAZZMIN_SETTINGS = {
     "topmenu_links": [
 
         # external url that opens in a new window (Permissions can be added)
-        {"name": "Reportes", "url": "balances", "new_window": True},
+        {"name": "Saldos", "url": "balances", "new_window": True},
 
     ],
     
@@ -105,21 +105,22 @@ JAZZMIN_SETTINGS = {
         "catalogo.Estado": "fas fa-map-marked-alt",
         "catalogo.Sucursal": "fas fa-store",
         "catalogo.Productor": "fa fa-id-badge",
+        "catalogo.Producto": "fa fa-barcode",
         "gastos.Banco": "fas fa-university",
         "gastos.Cuenta": "fas fa-credit-card",
         "gastos.CatGastos": "fa fa-tag",
         "gastos.Gastos": "fas fa-money-check-alt",
         "gastos.Compra": "fa fa-shopping-basket",
+        "gastos.SaldoMensual": "fa fa-chart-line",
         "ventas.Cliente": "fa fa-user-tie",
         "ventas.Ventas": "fa fa-shopping-cart",
         "ventas.Agente": "fa fa-user-secret",
-        "ventas.Producto": "fa fa-barcode",
         "ventas.Anticipo": "fa fa-money-bill-wave",
     },
         # Icons that are used when one is not manually specified
     "default_icon_parents": "fas fa-chevron-circle-right",
     "default_icon_children": "fas fa-circle",
-
+    "related_modal_active": True,
     #############
     # UI Tweaks #
     #############
@@ -143,6 +144,7 @@ JAZZMIN_SETTINGS = {
     # override change forms on a per modeladmin basis
     "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs", "catalogo.Productor": "vertical_tabs", "catalogo.Pais": "vertical_tabs", "catalogo.Estado": "vertical_tabs", "catalogo.Sucursal": "vertical_tabs", "gastos.Banco": "vertical_tabs", "gastos.Cuenta": "vertical_tabs", "gastos.CatGastos": "vertical_tabs", "gastos.Gastos": "vertical_tabs", "ventas.Cliente": "vertical_tabs", "ventas.Ventas": "vertical_tabs", "ventas.Agente": "vertical_tabs", "ventas.Producto": "vertical_tabs"},
 }
+
 JAZZMIN_UI_TWEAKS = {
     "navbar_small_text": True,
     "footer_small_text": False,
@@ -255,9 +257,7 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 MEDIA_URL = '/media/'
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
-MEDIA_ROOT = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'media')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 STATIC_ROOT = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'static-only')
 
 STATICFILES_DIRS = (
@@ -275,9 +275,9 @@ COMPRESS_ROOT = BASE_DIR / 'static'
 
 COMPRESS_ENABLED = True
 
-
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
     'compressor.finders.CompressorFinder',
 ]
+

@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 from catalogo.models import Sucursal, Productor
 from django.db.models import Sum
+from django.utils.html import format_html
 
 class CatGastos(models.Model):
     id = models.AutoField(primary_key=True)
@@ -21,9 +22,21 @@ class Banco(models.Model):
     telefono = models.CharField(max_length=15, blank=True, null=True)
     direccion = models.CharField(max_length=100, blank=True, null=True)
     fecha_registro = models.DateTimeField(default=timezone.now)
+    logotipo = models.ImageField(
+        upload_to='bancos/logos/',
+        null=True,
+        blank=True,
+        verbose_name='Logotipo del Banco'
+    )
+
+    def mostrar_logotipo(self):
+        if self.logotipo:
+            return format_html('<img src="{}" style="width: 70px; height: 70px;" />', self.logotipo.url)
+        return "No Image"
+    mostrar_logotipo.short_description = 'Logotipo'
 
     def __str__(self):
-        return f"{self.nombre} - {self.telefono}"
+        return f"{self.nombre}"
     
     class Meta:
         verbose_name = "Banco"
@@ -65,7 +78,7 @@ class Gastos(models.Model):
         ordering = ["-fecha_registro"]
 
 class Compra(models.Model):
-        from ventas.models import Producto
+        from catalogo.models import Producto
         fecha_compra = models.DateField()
         productor = models.ForeignKey(Productor, on_delete=models.CASCADE)
         producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
@@ -94,8 +107,8 @@ class Compra(models.Model):
            
 class SaldoMensual(models.Model):
     cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE)
-    año = models.PositiveIntegerField(choices=[(r, r) for r in range(1999, timezone.now().year + 1)])
-    mes = models.PositiveIntegerField(choices=[(i, i) for i in range(1, 13)])
+    año = models.PositiveIntegerField(choices=[(r, r) for r in range(1999, timezone.now().year + 1)], default=timezone.now().year)
+    mes = models.PositiveIntegerField(choices=[(i, i) for i in range(1, 13)], default=timezone.now().month)
     saldo_inicial = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     saldo_final = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
     fecha_registro = models.DateTimeField(default=timezone.now)

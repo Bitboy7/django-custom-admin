@@ -33,11 +33,11 @@
 :root {
   --primary-color: #007bff;
   --secondary-color: #6c757d;
-  --background-color: #f8f9fa;
+  --background-color: #657280;
   --thead-color: #dee2e6;
-  --accent-color: #2c2c2c;
-  --success-color: #28a745;
-  --info-color: #17a2b8;
+  --accent-color: #343434;
+  --success-color: #155323;
+  --info-color: #147483;
   --font-family: "Hind Mysuru", sans-serif;
   --font-weight: 400;
   --font-style: normal;
@@ -74,15 +74,17 @@ body {
   font-size: var(--font-size);
   font-weight: 400;
   line-height: 1.5;
-  color: #212529;
-  text-align: left;
-  background-color: var(--background-color);
   margin: 0;
   padding: 0;
 }
 
 .border-bottom {
   border-bottom: 1px solid var(--border-color) !important;
+}
+
+div .wrapper {
+  background-color: var(--background-color);
+  display: flex;
 }
 
 html {
@@ -171,4 +173,27 @@ p {
   font-family: var(--font-family);
   font-weight: 400;
   line-height: 1.5;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-family: var(--font-family);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.btn .btn-succes {
+  background-color: var(--success-color);
+  color: white;
+  border: none;
+  font-size: var(--font-size);
+  cursor: pointer;
+  transition: background-color var(--transition-duration)
+      var(--transition-timing-function),
+    transform var(--transition-duration) var(--transition-timing-function);
+}
+
+.btn-succes:hover {
+  background-color: darken(var(--info-color), 10%);
+  transform: scale(1.05);
 }
