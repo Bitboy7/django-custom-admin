@@ -8,17 +8,32 @@ class Pais(models.Model):
     siglas = models.CharField(max_length=10)
     nombre = models.CharField(max_length=50)
     moneda = models.CharField(max_length=20, default='MXN')
+    bandera = models.ImageField(
+        upload_to='paises/banderas/',
+        null=True,
+        blank=True,
+        verbose_name='Bandera del País', 
+        editable=True
+    )
+    
+    def mostrar_bandera(self):
+        if self.bandera:
+            return format_html('<img src="{}" style="width: 40px; height: 40px;" />', self.bandera.url)
+        return "No Image"
+    mostrar_bandera.short_description = 'Bandera'
     
     def __str__(self):
-        return f'{self.siglas} - {self.nombre}'
+        return f'{self.id} - {self.siglas} - {self.nombre}'
 
     class Meta:
+        verbose_name = 'Pais'
         verbose_name_plural = 'Paises'
         ordering = ['siglas']
 
 class Estado(models.Model):
     id = models.CharField(max_length=25, primary_key=True)
     nombre = models.CharField(max_length=50)
+    pais = models.ForeignKey(Pais, on_delete=models.CASCADE, blank=True, null=True, default=3)
 
     def __str__(self):
         return f'{self.id} - {self.nombre}'
@@ -56,11 +71,14 @@ class Productor(models.Model):
         upload_to='productores/imagenes/',
         null=True,
         blank=True,
-        verbose_name='Imagen del Productor'
+        verbose_name='Imagen del Productor', 
+        editable=True, 
+        default='productores/imagenes/default.svg',
+        help_text='Subir imagen con formato .jpg, .jpeg o .png'
     )
-    
+
     def __str__(self):
-        return f'{self.nombre_completo} - {self.num_cuenta} - {self.telefono}'
+        return f'{self.nombre_completo}- {self.telefono}'
     
     class Meta:
         verbose_name = "Productor"
@@ -78,11 +96,13 @@ class Producto(models.Model):
                 upload_to='catalogo/productos/',
                 null=True,
                 blank=True,
-                verbose_name='Imagen del Producto'
+                verbose_name='Imagen del Producto',
+                editable=True,
+                help_text='Subir imagen con formato .jpg, .jpeg o .png'
             )
     
     def __str__(self):
-            return f"{self.precio_unitario} - {self.variedad} - {self.disponible}"
+            return f"{self.variedad} - {self.disponible}"    
                 
     class Meta:
             verbose_name = 'Producto'

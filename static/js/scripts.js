@@ -65,7 +65,20 @@ if (dropdownMenu) {
 // Cambia el texto del elemento con la clase "login-box-msg"
 const loginBoxMsg = document.querySelector(".login-box-msg");
 if (loginBoxMsg) {
-  loginBoxMsg.textContent = "Bienvenido";
+  loginBoxMsg.textContent = "Ingresa tus credenciales";
+
+  // Añade un icono al mensaje
+  const icon = document.createElement("i");
+  icon.classList.add("fas", "fa-key"); // Cambia el icono a una llave
+  icon.style.marginRight = "8px";
+  loginBoxMsg.prepend(icon);
+
+  // Añade una animación suave
+  loginBoxMsg.style.transition = "opacity 0.5s ease-in-out";
+  loginBoxMsg.style.opacity = "0";
+  setTimeout(() => {
+    loginBoxMsg.style.opacity = "1";
+  }, 100);
 }
 
 // Remueve el elemento del footer
@@ -77,7 +90,7 @@ if (footerElement) {
 // Cambia la opacidad del elemento con el id "jazzy-sidebar"
 const jazzySidebar = document.getElementById("jazzy-sidebar");
 if (jazzySidebar) {
-  jazzySidebar.style.opacity = "0.85";
+  jazzySidebar.style.opacity = "0.80";
 }
 
 // Add placeholders to vTextField inputs
@@ -179,12 +192,4 @@ anchorElements.forEach((anchor) => {
   anchor.addEventListener("mouseout", () => {
     anchor.style.color = ""; // Restaura el color original del texto
   });
-});
-
-// Elimina todos los elementos <li> con la clase "nav-header" y el texto "Gastos"
-const navHeaders = document.querySelectorAll("li.nav-header");
-navHeaders.forEach((header) => {
-  if (header.textContent.trim() === "Gastos") {
-    header.remove();
-  }
 });

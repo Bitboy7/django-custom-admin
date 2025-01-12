@@ -47,7 +47,7 @@ class BancoAdmin(admin.ModelAdmin):
 
 @admin.register(Cuenta)
 class CuentaAdmin(admin.ModelAdmin):
-    list_display = ('id', 'mostrar_logotipo_banco', 'id_sucursal', 'numero_cuenta')
+    list_display = ('id', 'mostrar_logotipo_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente', 'rfc', 'clabe')
     search_fields = ('id_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente',)
     list_filter = ('id_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente', 'rfc')
     list_per_page = 12

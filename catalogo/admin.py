@@ -7,9 +7,18 @@ from django.utils.html import format_html
 
 @admin.register(Pais)
 class PaisAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'siglas', 'moneda')
-    search_fields = ('nombre', 'siglas', 'moneda')
-
+    list_display = ('id', 'siglas', 'nombre', 'moneda', 'mostrar_bandera')
+    search_fields = ('nombre', 'siglas')    
+    fieldsets = (
+        ('Datos del País', {
+            'fields': ('siglas', 'nombre', 'moneda')
+        }),
+        ('Bandera', { 
+            'fields': ('bandera',),
+            'classes': ('collapse',)
+        })
+    )
+    
 class ProductorResource(resources.ModelResource):
     sucursal = fields.Field(
         column_name='sucursal',
@@ -18,18 +27,26 @@ class ProductorResource(resources.ModelResource):
     
     class Meta:
         model = Productor
-        fields = ('id', 'nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'sucursal', 'fecha_creacion')
+        fields = ('id', 'nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'sucursal', 'fecha_creacion', 'nacimiento', 'nacionalidad')
         
     def dehydrate_sucursal(self, productor):
         return productor.sucursal.nombre   
+    
+    def before_import_row(self, row, **kwargs):
+        # Asigna un ID específico basado en un rango disponible
+        if not row['id']:
+            last_productor = Productor.objects.order_by('-id').first()
+            next_id = last_productor.id + 1 if last_productor else 1
+            row['id'] = next_id
+    
     
 @admin.register(Productor)
 class ProductorAdmin(ImportExportModelAdmin):
     resource_class = ProductorResource
     list_display = ('id', 'nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal', 'fecha_creacion', 'mostrar_imagen', 'nacimiento', 'nacionalidad')
-    search_fields = ('nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal', 'fecha_creacion')
-    list_filter = ('id_sucursal', 'fecha_creacion')
-    list_per_page = 12
+    search_fields = ('nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal__nombre', 'fecha_creacion')
+    list_filter = ('id_sucursal', 'nombre_completo', 'nacionalidad')
+    list_per_page = 30
     fieldsets = (
         ('Datos del Productor', {
             'fields': ('nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal')
@@ -46,20 +63,24 @@ class ProductorAdmin(ImportExportModelAdmin):
 
     def mostrar_imagen(self, obj):
         if obj.imagen:
-            return format_html('<img src="{}" style="width: 70px; height: 70px;" />', obj.imagen.url)
+            return format_html('<img src="{}" style="width: 40px; height: 40px;" />', obj.imagen.url)
         return "No Image"
-    mostrar_imagen.short_description = 'Imagen del Productor'
+    mostrar_imagen.short_description = 'Foto'
     
 @admin.register(Estado)
 class EstadoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nombre')
+    list_display = ('id', 'nombre', 'mostrar_bandera_pais')
     search_fields = ('nombre',)
     list_filter = ('nombre',)
     fieldsets = (
         ('Datos del Estado', {
-            'fields': ('id', 'nombre',)
+            'fields': ('id', 'nombre', 'pais')
         }),
     )
+
+    def mostrar_bandera_pais(self, obj):
+        return obj.pais.mostrar_bandera()
+    mostrar_bandera_pais.short_description = 'Bandera del País'
 
 @admin.register(Sucursal)
 class SucursalAdmin(admin.ModelAdmin):

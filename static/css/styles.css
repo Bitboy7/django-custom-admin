@@ -33,7 +33,7 @@
 :root {
   --primary-color: #007bff;
   --secondary-color: #6c757d;
-  --background-color: #657280;
+  --background-color: #f2f5f2;
   --thead-color: #dee2e6;
   --accent-color: #343434;
   --success-color: #155323;
@@ -196,4 +196,9 @@ h1 {
 .btn-succes:hover {
   background-color: darken(var(--info-color), 10%);
   transform: scale(1.05);
+}
+
+.card-body {
+  padding: 1rem;
+  background-color: var(--background-color);
 }
