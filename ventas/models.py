@@ -1,15 +1,24 @@
 from django.db import models
 from catalogo.models import Sucursal, Pais, Producto
+from django.utils.html import format_html
 
 class Cliente(models.Model):
     nombre = models.CharField(max_length=50)
-    telefono = models.CharField(max_length=15)
-    correo = models.EmailField(blank=True)
-    pais_id = models.ForeignKey(Pais, on_delete=models.CASCADE)
+    telefono = models.CharField(max_length=15, blank=True, null=True, default='-')
+    correo = models.EmailField(blank=True, null=True, default='-')
+    direccion = models.CharField(max_length=250, blank=True, null=True, default='Desconocida')
+    pais = models.ForeignKey(Pais, on_delete=models.CASCADE, default=3)
     fecha_registro = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    imagen = models.ImageField(upload_to='clientes', blank=True, null=True, default='clientes/default.png', editable=True)
 
     def __str__(self):
-        return f"-{self.nombre} - {self.correo}"
+        return f"-{self.nombre} - {self.telefono}"
+
+    def mostrar_logotipo(self):
+        if self.imagen:
+            return format_html('<img src="{}" style="width: 70px; height: 70px;" />', self.imagen.url)
+        return "No Image"
+    mostrar_logotipo.short_description = "Logotipo"
     
     class Meta:
         verbose_name = 'Cliente'
@@ -36,7 +45,7 @@ class Anticipo(models.Model):
     cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE)
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     fecha = models.DateField()
-    descripcion = models.TextField(blank=True, null=True)
+    descripcion = models.TextField(blank=True, null=True, default='Sin descripción')
     fecha_registro = models.DateTimeField(auto_now_add=True)
     class Estado_anticipo(models.TextChoices):
         Pendiente = 'Pendiente'
@@ -59,7 +68,7 @@ class Ventas(models.Model):
     agente_id = models.ForeignKey(Agente, on_delete=models.CASCADE, verbose_name='Agente aduanal')
     fecha_deposito = models.DateField()
     pedimento = models.CharField(max_length=50, blank=True, null=True)
-    carga = models.CharField(max_length=50)
+    carga = models.CharField(max_length=50, blank=True, null=True)
     PO = models.CharField(max_length=50, blank=True, null=True)
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
     cantidad = models.CharField(max_length=50)

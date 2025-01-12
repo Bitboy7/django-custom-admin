@@ -26,12 +26,14 @@ class Banco(models.Model):
         upload_to='bancos/logos/',
         null=True,
         blank=True,
-        verbose_name='Logotipo del Banco'
+        verbose_name='Logotipo del Banco',
+        help_text='Subir imagen con formato .jpg, .jpeg o .png',
+        editable=True
     )
 
     def mostrar_logotipo(self):
         if self.logotipo:
-            return format_html('<img src="{}" style="width: 70px; height: 70px;" />', self.logotipo.url)
+            return format_html('<img src="{}" style="width: 50px; height: 50px;" />', self.logotipo.url)
         return "No Image"
     mostrar_logotipo.short_description = 'Logotipo'
 
