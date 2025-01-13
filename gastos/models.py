@@ -13,8 +13,8 @@ class CatGastos(models.Model):
         return self.nombre
     
     class Meta:
-        verbose_name = "Categoría de Gasto"
-        verbose_name_plural = "Categorías de Gastos"
+        verbose_name = "Categoria"
+        verbose_name_plural = "Categorías"
         ordering = ["id"]
 
 class Banco(models.Model):
@@ -66,10 +66,10 @@ class Gastos(models.Model):
     id_sucursal = models.ForeignKey(Sucursal, on_delete=models.CASCADE)
     id_cat_gastos = models.ForeignKey(CatGastos, on_delete=models.CASCADE)
     id_cuenta_banco = models.ForeignKey(Cuenta, on_delete=models.CASCADE)
-    monto = models.FloatField()
+    monto = models.FloatField(default=0)
     fecha_registro = models.DateTimeField(default=timezone.now)
     descripcion = models.TextField(blank=True, null=True)
-    fecha = models.DateField()
+    fecha = models.DateField(default=timezone.now)
 
     def __str__(self):
         return f"Registro {self.id_sucursal.nombre} - {self.id_cat_gastos.nombre} - {self.monto}"

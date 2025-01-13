@@ -39,11 +39,10 @@ class ProductorResource(resources.ModelResource):
             next_id = last_productor.id + 1 if last_productor else 1
             row['id'] = next_id
     
-    
 @admin.register(Productor)
 class ProductorAdmin(ImportExportModelAdmin):
     resource_class = ProductorResource
-    list_display = ('id', 'nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal', 'fecha_creacion', 'mostrar_imagen', 'nacimiento', 'nacionalidad')
+    list_display = ('id', 'nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal', 'fecha_creacion', 'mostrar_imagen', 'nacimiento', 'mostrar_bandera_nacionalidad')
     search_fields = ('nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal__nombre', 'fecha_creacion')
     list_filter = ('id_sucursal', 'nombre_completo', 'nacionalidad')
     list_per_page = 30
@@ -63,9 +62,13 @@ class ProductorAdmin(ImportExportModelAdmin):
 
     def mostrar_imagen(self, obj):
         if obj.imagen:
-            return format_html('<img src="{}" style="width: 40px; height: 40px;" />', obj.imagen.url)
+            return format_html('<img src="{}" style="width: 57px; height: 57px;" />', obj.imagen.url)
         return "No Image"
     mostrar_imagen.short_description = 'Foto'
+
+    def mostrar_bandera_nacionalidad(self, obj):
+        return obj.nacionalidad.mostrar_bandera()
+    mostrar_bandera_nacionalidad.short_description = 'Nacionalidad'
     
 @admin.register(Estado)
 class EstadoAdmin(admin.ModelAdmin):
@@ -95,22 +98,18 @@ class SucursalAdmin(admin.ModelAdmin):
 
 @admin.register(Producto)
 class ProductoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nombre', 'variedad', 'precio_unitario', 'disponible', 'mostrar_imagen')
+    list_display = ('id', 'nombre', 'variedad', 'precio_unitario', 'disponible', 'mostrar_imagen', 'descripcion')
     search_fields = ('nombre', 'variedad', 'descripcion')
     list_filter = ('disponible', 'variedad')
     list_per_page = 12
     fieldsets = (
         ('Datos del Producto', {
-            'fields': ('nombre', 'variedad', 'precio_unitario', 'disponible', 'descripcion')
-        }),
-        ('Imagen', {
-            'fields': ('imagen',),
-            'classes': ('collapse',)
+            'fields': ('nombre', 'variedad', 'precio_unitario', 'disponible', 'descripcion', 'imagen')
         }),
     )
     
     def mostrar_imagen(self, obj):
         if obj.imagen:
-            return format_html('<img src="{}" style="width: 70px; height: 70px;" />', obj.imagen.url)
+            return format_html('<img src="{}" style="width: 60px; height: 58px;" />', obj.imagen.url)
         return "No Image"
-    mostrar_imagen.short_description = 'Imagen del Producto'
+    mostrar_imagen.short_description = 'Foto'

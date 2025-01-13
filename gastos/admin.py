@@ -98,7 +98,7 @@ class GastosResource(resources.ModelResource):
 class GastosAdmin(ImportExportModelAdmin):
     resource_class = GastosResource
     list_display = ('id', 'id_sucursal', 'id_cat_gastos',
-                    'id_cuenta_banco', 'monto', 'descripcion', 'fecha')
+                    'id_cuenta_banco', 'monto', 'descripcion', 'fecha', 'fecha_registro')
     search_fields = ('monto', 'fecha_registro', 'id_sucursal', 'id_cat_gastos', 'id_cuenta_banco')
     list_filter = ('id_sucursal', 'id_cat_gastos','id_cuenta_banco', 'fecha')
     list_per_page = 20
