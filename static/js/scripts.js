@@ -193,3 +193,25 @@ anchorElements.forEach((anchor) => {
     anchor.style.color = ""; // Restaura el color original del texto
   });
 });
+
+// Selecciona todas las imágenes
+const images = document.querySelectorAll("img");
+
+images.forEach((img) => {
+  // Resalta la imagen cuando el ratón pase por encima
+  img.addEventListener("mouseover", () => {
+    img.style.cursor = "pointer";
+    img.style.transform = "scale(1.1)"; // Agranda la imagen
+    img.style.transition = "transform 0.2s"; // Añade una transición suave
+  });
+
+  // Restaura el tamaño original cuando el ratón salga de la imagen
+  img.addEventListener("mouseout", () => {
+    img.style.transform = "scale(1)"; // Restaura el tamaño original
+  });
+
+  // Agranda la imagen cuando se haga clic en ella
+  img.addEventListener("click", () => {
+    img.style.transform = "scale(1.5)"; // Agranda la imagen aún más
+  });
+});

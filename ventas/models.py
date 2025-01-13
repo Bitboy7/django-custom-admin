@@ -12,7 +12,7 @@ class Cliente(models.Model):
     imagen = models.ImageField(upload_to='clientes', blank=True, null=True, default='clientes/default.png', editable=True)
 
     def __str__(self):
-        return f"-{self.nombre} - {self.telefono}"
+        return f"{self.nombre} - {self.pais}"
 
     def mostrar_logotipo(self):
         if self.imagen:
@@ -63,10 +63,11 @@ class Anticipo(models.Model):
         
 class Ventas(models.Model):
     from gastos.models import Cuenta
+    from django.utils import timezone
     
     fecha_salida_manifiesto = models.DateField()
     agente_id = models.ForeignKey(Agente, on_delete=models.CASCADE, verbose_name='Agente aduanal')
-    fecha_deposito = models.DateField()
+    fecha_deposito = models.DateField(default=timezone.now)
     pedimento = models.CharField(max_length=50, blank=True, null=True)
     carga = models.CharField(max_length=50, blank=True, null=True)
     PO = models.CharField(max_length=50, blank=True, null=True)
