@@ -43,7 +43,7 @@ class ProductorResource(resources.ModelResource):
 class ProductorAdmin(ImportExportModelAdmin):
     resource_class = ProductorResource
     list_display = ('id', 'nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal', 'fecha_creacion', 'mostrar_imagen', 'nacimiento', 'mostrar_bandera_nacionalidad')
-    search_fields = ('nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal__nombre', 'fecha_creacion')
+    search_fields = ('id', 'nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal__nombre', 'fecha_creacion')
     list_filter = ('id_sucursal', 'nombre_completo', 'nacionalidad')
     list_per_page = 30
     fieldsets = (

@@ -114,6 +114,7 @@ class SaldoMensual(models.Model):
     saldo_inicial = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     saldo_final = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
     fecha_registro = models.DateTimeField(default=timezone.now)
+    ultima_modificacion = models.DateTimeField(auto_now=True, editable=True)
 
     class Meta:
         unique_together = ('cuenta', 'año', 'mes')

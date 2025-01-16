@@ -99,7 +99,7 @@ class GastosAdmin(ImportExportModelAdmin):
     resource_class = GastosResource
     list_display = ('id', 'id_sucursal', 'id_cat_gastos',
                     'id_cuenta_banco', 'monto', 'descripcion', 'fecha', 'fecha_registro')
-    search_fields = ('monto', 'fecha_registro', 'id_sucursal', 'id_cat_gastos', 'id_cuenta_banco')
+    search_fields = ('id' ,'monto', 'fecha_registro', 'id_sucursal', 'id_cat_gastos', 'id_cuenta_banco')
     list_filter = ('id_sucursal', 'id_cat_gastos','id_cuenta_banco', 'fecha')
     list_per_page = 20
     fieldsets = (
@@ -151,11 +151,29 @@ class ComprasAdmin(ImportExportModelAdmin):
                 'fields': ('fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total', 'cuenta', 'tipo_pago')
             }),
         )
+ 
+class SaldoMensualResource(resources.ModelResource):
+    cuenta = fields.Field(
+            column_name='cuenta',
+            attribute='cuenta',
+            widget=ForeignKeyWidget(Cuenta, field='numero_cuenta'))
+    
+    class Meta:
+        model = SaldoMensual
+        fields = ('id', 'cuenta', 'año', 'mes', 'saldo_inicial', 'saldo_final', 'fecha_registro', 'ultima_modificacion')
         
+    def dehydrate_cuenta(self, saldo):
+        return saldo.cuenta.numero_cuenta
+          
 @admin.register(SaldoMensual)
-class SaldoMensualAdmin(admin.ModelAdmin):
-    list_display = ('cuenta', 'año', 'mes', 'saldo_inicial')
+class SaldoMensualAdmin(ImportExportModelAdmin):
+    list_display = ('cuenta', 'año', 'mes', 'saldo_inicial', 'saldo_final', 'fecha_registro', 'ultima_modificacion')
     search_fields = ('cuenta__numero_cuenta', 'año', 'mes')
     list_filter = ('cuenta', 'año', 'mes')
     list_per_page = 12
-    fields = ('cuenta', 'año', 'mes', 'saldo_inicial')        
+    fieldsets = (
+        ('Datos del Registro', {
+            'fields': ('cuenta', 'año', 'mes', 'saldo_inicial', 'saldo_final')
+        }),
+    )     
+     

@@ -72,11 +72,11 @@ JAZZMIN_SETTINGS = {
     "site_icon": "/img/icon.png",
 
     # Whether to aut expand the menu
-    "navigation_expanded": True,
+    "navigation_expanded": False,
      # Welcome text on the login screen
      # List of model admins to search from the search bar, search bar omitted if excluded
     # If you want to use a single search field you dont need to use a list, you can use a simple string 
-    "search_model": ["gastos.gastos","catalogo.Productores", "ventas.ventas"],
+    "search_model": ["catalogo.productor", "ventas.cliente"],
     # Field name on user model that contains avatar ImageField/URLField/Charfield or a callable that receives the user
     "user_avatar": "/img/icon.png",
     
@@ -142,7 +142,7 @@ JAZZMIN_SETTINGS = {
     # - carousel
     "changeform_format": "collapsible",
     # override change forms on a per modeladmin basis
-    "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs", "catalogo.Productor": "vertical_tabs", "catalogo.Pais": "vertical_tabs", "catalogo.Estado": "vertical_tabs", "catalogo.Sucursal": "vertical_tabs", "gastos.Banco": "vertical_tabs", "gastos.Cuenta": "vertical_tabs", "gastos.CatGastos": "vertical_tabs", "gastos.Gastos": "vertical_tabs", "ventas.Cliente": "vertical_tabs", "ventas.Ventas": "vertical_tabs", "ventas.Agente": "vertical_tabs", "ventas.Producto": "vertical_tabs"},
+    "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs", "catalogo.Productor": "vertical_tabs", "catalogo.Pais": "vertical_tabs", "catalogo.Estado": "vertical_tabs", "catalogo.Sucursal": "vertical_tabs", "gastos.Banco": "vertical_tabs", "gastos.Cuenta": "vertical_tabs", "gastos.CatGastos": "vertical_tabs", "gastos.Gastos": "vertical_tabs", "gastos.Compra": "vertical_tabs" ,"gastos.SaldoMensual": "vertical_tabs",  "ventas.Cliente": "vertical_tabs", "ventas.Ventas": "vertical_tabs", "ventas.Agente": "vertical_tabs", "catalogo.Producto": "vertical_tabs"},
 }
 
 JAZZMIN_UI_TWEAKS = {
