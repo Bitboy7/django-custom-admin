@@ -1,3 +1,16 @@
+/* Color Palette */
+:root {
+  --font-family: "Arial, sans-serif";
+  --font-size: 16px;
+  --background-color: #f8f9fa;
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+  --border-color: #dee2e6;
+  --box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  --transition-duration: 0.3s;
+  --transition-timing-function: ease-in-out;
+}
+
 /* Typography Enhancements */
 body {
   font-family: var(--font-family);
@@ -20,6 +33,7 @@ h6 {
   font-weight: 600;
   line-height: 1.2;
   margin-bottom: 1rem;
+  color: #333;
 }
 
 p {
@@ -41,7 +55,7 @@ p {
 }
 
 .button-primary:hover {
-  background-color: darken(var(--primary-color), 10%);
+  background-color: #0056b3;
   transform: scale(1.05);
 }
 
@@ -51,7 +65,6 @@ p {
   border-radius: 0.5rem;
   box-shadow: var(--box-shadow);
   padding: 1.5rem;
-  background-color: white;
   margin-bottom: 1.5rem;
 }
 
@@ -60,7 +73,7 @@ p {
   border-bottom: 1px solid var(--border-color);
   font-weight: 600;
   background-color: var(--primary-color);
-  color: white;
+  color: var(--secondary-color);
   border-top-left-radius: 0.5rem;
   border-top-right-radius: 0.5rem;
 }
@@ -105,7 +118,7 @@ a {
 }
 
 a:hover {
-  color: darken(var(--primary-color), 10%);
+  color: #0056b3;
 }
 
 /* Utility Classes */
@@ -172,7 +185,7 @@ td a {
   text-decoration: none;
 }
 
-form labek {
+form label {
   display: block;
   margin-bottom: 0.5rem;
   text-decoration: none;
