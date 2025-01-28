@@ -70,9 +70,8 @@ JAZZMIN_SETTINGS = {
 
     # Relative path to a favicon for your site, will default to site_logo if absent (ideally 32x32 px)
     "site_icon": "/img/icon.png",
-
     # Whether to aut expand the menu
-    "navigation_expanded": False,
+    "navigation_expanded": True,
      # Welcome text on the login screen
      # List of model admins to search from the search bar, search bar omitted if excluded
     # If you want to use a single search field you dont need to use a list, you can use a simple string 

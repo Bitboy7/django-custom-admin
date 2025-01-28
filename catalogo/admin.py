@@ -45,6 +45,7 @@ class ProductorAdmin(ImportExportModelAdmin):
     list_display = ('id', 'nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal', 'fecha_creacion', 'mostrar_imagen', 'nacimiento', 'mostrar_bandera_nacionalidad')
     search_fields = ('id', 'nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal__nombre', 'fecha_creacion')
     list_filter = ('id_sucursal', 'nombre_completo', 'nacionalidad')
+    list_editable = ('telefono', 'correo')
     list_per_page = 30
     fieldsets = (
         ('Datos del Productor', {
@@ -89,7 +90,9 @@ class EstadoAdmin(admin.ModelAdmin):
 class SucursalAdmin(admin.ModelAdmin):
     list_display = ('id', 'nombre', 'direccion', 'telefono', 'id_estado')
     search_fields = ('nombre', 'direccion', 'telefono')
+    list_editable = ('direccion', 'telefono')
     list_filter = ('id_estado',)
+    list_per_page = 20
     fieldsets = (
         ('Datos de la Sucursal', {
             'fields': ('nombre', 'direccion', 'telefono', 'id_estado')
@@ -101,6 +104,7 @@ class ProductoAdmin(admin.ModelAdmin):
     list_display = ('id', 'nombre', 'variedad', 'precio_unitario', 'disponible', 'mostrar_imagen', 'descripcion')
     search_fields = ('nombre', 'variedad', 'descripcion')
     list_filter = ('disponible', 'variedad')
+    list_editable = ('precio_unitario', 'disponible')
     list_per_page = 12
     fieldsets = (
         ('Datos del Producto', {

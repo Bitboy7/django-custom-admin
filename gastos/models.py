@@ -8,6 +8,7 @@ class CatGastos(models.Model):
     id = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=50)
     fecha_registro = models.DateTimeField(default=timezone.now)
+    fecha_modificacion = models.DateTimeField(auto_now=True, editable=True, blank=True, null=True)
 
     def __str__(self):
         return self.nombre
@@ -129,4 +130,19 @@ class SaldoMensual(models.Model):
         compras = Compra.objects.filter(cuenta=self.cuenta, fecha_compra__year=self.año, fecha_compra__month=self.mes).aggregate(total_compras=Sum('monto_total'))['total_compras'] or 0
         self.saldo_final = self.saldo_inicial - gastos + compras
         self.save()
-            
+
+    def calcular_saldo_acumulado(self):
+        # Obtener el saldo acumulado del mes anterior
+        mes_anterior = self.mes - 1
+        año_anterior = self.año
+        if mes_anterior == 0:
+            mes_anterior = 12
+            año_anterior -= 1
+
+        saldo_anterior = SaldoMensual.objects.filter(cuenta=self.cuenta, año=año_anterior, mes=mes_anterior).first()
+        saldo_acumulado_inicial = saldo_anterior.saldo_final if saldo_anterior else 0
+
+        # Calcular el saldo final del mes actual
+        self.saldo_inicial = saldo_acumulado_inicial
+        self.calcular_saldo_final()
+        self.save()

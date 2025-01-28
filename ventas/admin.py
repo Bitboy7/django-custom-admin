@@ -33,6 +33,8 @@ class ClienteAdmin(ImportExportModelAdmin):
     resource_class = ClienteResource
     list_display = ('id', 'nombre', 'telefono', 'correo', 'direccion', 'get_pais', 'get_bandera', 'mostrar_logotipo', 'fecha_registro')
     list_per_page = 20
+    list_display_links = ('nombre',)
+    list_editable = ('telefono', 'correo', 'direccion')
     search_fields = ('nombre',)
 
     def get_pais(self, obj):
@@ -45,8 +47,13 @@ class ClienteAdmin(ImportExportModelAdmin):
     
 @admin.register(Agente)
 class AgenteAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'fecha_registro')
+    list_display = ('nombre', 'fecha_registro', 'telefono', 'correo', 'mostrar_bandera_pais')
+    list_editable = ('telefono', 'correo')
     list_per_page = 12
+
+    def mostrar_bandera_pais(self, obj):
+        return obj.pais.mostrar_bandera()
+    mostrar_bandera_pais.short_description = 'Bandera del País'
    
 class VentasResource(resources.ModelResource):
     agente = fields.Field(

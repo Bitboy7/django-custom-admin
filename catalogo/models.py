@@ -18,7 +18,7 @@ class Pais(models.Model):
     
     def mostrar_bandera(self):
         if self.bandera:
-            return format_html('<img src="{}" style="width: 40px; height: 40px;" />', self.bandera.url)
+            return format_html('<img src="{}" style="width: 44px; height: 44px;" />', self.bandera.url)
         return "No Image"
     mostrar_bandera.short_description = 'Bandera'
     

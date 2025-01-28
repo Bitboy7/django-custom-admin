@@ -1,3 +1,6 @@
+{% load static %}
+{% load humanize %}
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -57,14 +60,17 @@
     <form method="get" action="{% url 'balances' %}" class="bg-gray-800 p-6 rounded shadow-md">
       <div class="flex flex-wrap gap-4 mb-4">
         <div class="flex-1 min-w-[200px]">
-          <label for="cuenta_id" class="block text-white font-bold mb-2">Seleccione la Cuenta:</label>
-          <select name="cuenta_id" id="cuenta_id" class="block appearance-none forced-colors:appearance-auto w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
-            <option value="">Todas</option>
-            {% for cuenta in cuentas %}
-            <option value="{{ cuenta.id }}" {% if cuenta.id|stringformat:"s" == selected_cuenta_id %}selected{% endif %}>{{ cuenta.numero_cuenta }}</option>
-            {% endfor %}
-          </select>
-        </div>
+          
+  <label for="cuenta_id" class="block text-white font-bold mb-2">Seleccione la Cuenta:</label>
+  <select name="cuenta_id" id="cuenta_id" class="block appearance-none forced-colors:appearance-auto w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
+    <option value="">Todas</option>
+    {% for cuenta in cuentas %}
+    <option value="{{ cuenta.id }}" {% if cuenta.id|stringformat:"s" == selected_cuenta_id %}selected{% endif %}>
+      {{ cuenta.numero_cuenta }} - {{ cuenta.id_banco.nombre }}
+    </option>
+    {% endfor %}
+  </select>
+</div>
     
         <div class="flex-1 min-w-[200px]">
           <label for="year" class="block text-white font-bold mb-2">Seleccione el Año:</label>
@@ -110,59 +116,60 @@
       </div>
       <div class="flex items-center justify-between pt-4">
         <button type="submit" class="bg-blue-800 hover:bg-orange-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-          <i class="fas fa-filter mr-2"></i>Filtrar
+          <i class="fas fa-filter mr-2"></i>Aplicar Filtros
         </button>
+        <a href="{% url 'balances' %}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-700">Restablecer Filtros</a>
       </div>
     </form>
+    
+    <!-- Tabla de datos -->
+    <div class="overflow-x-auto">
+    {% if balances %}
+    <table>
+      <thead>
+      <tr class="bg-gray-200 text-gray-700">
+        <th class="px-4 py-2">Cuenta</th>
+        <th class="px-4 py-2">Numero de la Cuenta</th>
+        <th class="px-4 py-2">Banco</th>
+        <th class="px-4 py-2">Sucursal</th>
+        <th class="px-4 py-2">Categoría</th>
+        <th class="px-4 py-2">Fecha</th>
+        <th class="px-4 py-2">Total Gastos</th>
+        <th class="px-4 py-2">Acumulado</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for balance in balances %}
+      <tr class="text-gray-700 hover:bg-gray-100 cursor-pointer" onclick="highlightRow(this)">
+        <td class="border px-4 py-2">{{ balance.id_cuenta_banco__id }}</td>
+        <td class="border px-4 py-2">{{ balance.id_cuenta_banco__numero_cuenta }}</td>
+        <td class="border px-4 py-2">{{ balance.id_cuenta_banco__id_banco__nombre }}</td>
+        <td class="border px-4 py-2">{{ balance.id_cuenta_banco__id_sucursal__nombre }}</td>
+        <td class="border px-4 py-2">{{ balance.id_cat_gastos__nombre }}</td>
+        <td class="border px-4 py-2">
+        {% if selected_periodo == 'diario' %}
+          {{ balance.fecha|date:"Y-m-d" }}
+        {% elif selected_periodo == 'semanal' %}
+          {{ balance.semana|date:"Y-m-d" }}
+        {% elif selected_periodo == 'mensual' %}
+          {{ balance.mes|date:"Y-m" }}
+        {% endif %}
+        </td>
+        <td class="border px-4 py-2">${{ balance.total_gastos|floatformat:2|intcomma }}</td>
+        <td class="border px-4 py-2">${{ balance.acumulado|floatformat:2|intcomma }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-8 bg-white shadow-md rounded">
+      <i class="fas fa-exclamation-circle text-gray-400 text-4xl mb-4"></i>
+      <p class="text-gray-600 text-lg">No hay datos disponibles para mostrar</p>
+    </div>
+    {% endif %}
+    </div>
 
-      <!-- Tabla de datos -->
-      <div class="overflow-x-auto">
-      {% if balances %}
-      <table>
-        <thead>
-        <tr class="bg-gray-200 text-gray-700">
-          <th class="px-4 py-2">Cuenta</th>
-          <th class="px-4 py-2">Numero de la Cuenta</th>
-          <th class="px-4 py-2">Banco</th>
-          <th class="px-4 py-2">Sucursal</th>
-          <th class="px-4 py-2">Categoría</th>
-          <th class="px-4 py-2">Fecha</th>
-          <th class="px-4 py-2">Total Gastos</th>
-          <th class="px-4 py-2">Acumulado</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for balance in balances %}
-        <tr class="text-gray-700 hover:bg-gray-100 cursor-pointer" onclick="highlightRow(this)">
-          <td class="border px-4 py-2">{{ balance.id_cuenta_banco__id }}</td>
-          <td class="border px-4 py-2">{{ balance.id_cuenta_banco__numero_cuenta }}</td>
-          <td class="border px-4 py-2">{{ balance.id_cuenta_banco__id_banco__nombre }}</td>
-          <td class="border px-4 py-2">{{ balance.id_cuenta_banco__id_sucursal__nombre }}</td>
-          <td class="border px-4 py-2">{{ balance.id_cat_gastos__nombre }}</td>
-          <td class="border px-4 py-2">
-          {% if selected_periodo == 'diario' %}
-            {{ balance.fecha|date:"Y-m-d" }}
-          {% elif selected_periodo == 'semanal' %}
-            {{ balance.semana|date:"Y-m-d" }}
-          {% elif selected_periodo == 'mensual' %}
-            {{ balance.mes|date:"Y-m" }}
-          {% endif %}
-          </td>
-          <td class="border px-4 py-2">${{ balance.total_gastos }}</td>
-          <td class="border px-4 py-2">${{ balance.acumulado }}</td>
-        </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <div class="text-center py-8 bg-white shadow-md rounded">
-        <i class="fas fa-exclamation-circle text-gray-400 text-4xl mb-4"></i>
-        <p class="text-gray-600 text-lg">No hay datos disponibles para mostrar</p>
-      </div>
-      {% endif %}
-      </div>
-
-      <script>
+    <script>
         document.getElementById('periodo').addEventListener('change', function() {
           const periodo = this.value;
           const diaContainer = document.getElementById('dia-container');
@@ -264,7 +271,7 @@
       <div class="mt-4 bg-white rounded-lg shadow-md p-3">
         <div class="flex justify-between items-center">
           <h2 class="text-xl font-semibold text-gray-800">Acumulado total</h2>
-          <span class="text-3xl font-bold text-green-600">${{ total_gastos|floatformat:2 }}</span>
+          <span class="text-3xl font-bold text-green-600">${{ total_gastos|floatformat:2|intcomma }}</span>
         </div>
       </div>
     
@@ -272,32 +279,31 @@
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
   <div class="bg-white rounded-lg shadow-md p-3">
     <h2 class="text-xl font-semibold text-gray-800">Total de Gastos</h2>
-    <span class="text-2xl font-bold text-green-600">${{ total_gastos|floatformat:2 }}</span>
+    <span class="text-2xl font-bold text-green-600">${{ total_gastos|floatformat:2|intcomma }}</span>
   </div>
   <div class="bg-white rounded-lg shadow-md p-3">
     <h2 class="text-xl font-semibold text-gray-800">Promedio de Gastos</h2>
-    <span class="text-2xl font-bold text-green-600">${{ promedio_gastos|floatformat:2 }}</span>
+    <span class="text-2xl font-bold text-green-600">${{ promedio_gastos|floatformat:2|intcomma }}</span>
   </div>
   <div class="bg-white rounded-lg shadow-md p-3">
     <h2 class="text-xl font-semibold text-gray-800">Número de Transacciones</h2>
     <span class="text-2xl font-bold text-green-600">{{ numero_transacciones }}</span>
   </div>
   <div class="bg-white rounded-lg shadow-md p-3">
-    <h2 class="text-xl font-semibold text-gray-800">Gasto Máximo</h2>
-    <span class="text-2xl font-bold text-green-600">${{ gasto_maximo|floatformat:2 }}</span>
+    <h2 class="text-xl font-semibold text-gray-800">Máximo</h2>
+    <span class="text-2xl font-bold text-green-600">${{ gasto_maximo|floatformat:2|intcomma }}</span>
     <p class="text-gray-600">Categoría: {{ categoria_gasto_maximo }}</p>
   </div>
   <div class="bg-white rounded-lg shadow-md p-3">
-    <h2 class="text-xl font-semibold text-gray-800">Gasto Mínimo</h2>
-    <span class="text-2xl font-bold text-green-600">${{ gasto_minimo|floatformat:2 }}</span>
+    <h2 class="text-xl font-semibold text-gray-800">Mínimo</h2>
+    <span class="text-2xl font-bold text-green-600">${{ gasto_minimo|floatformat:2|intcomma }}</span>
     <p class="text-gray-600">Categoría: {{ categoria_gasto_minimo }}</p>
   </div>
   <div class="bg-white rounded-lg shadow-md p-3">
-    <h2 class="text-xl font-semibold text-gray-800">Gasto Mediano</h2>
-    <span class="text-2xl font-bold text-green-600">${{ gasto_mediano|floatformat:2 }}</span>
+    <h2 class="text-xl font-semibold text-gray-800">Media</h2>
+    <span class="text-2xl font-bold text-green-600">${{ gasto_mediano|floatformat:2|intcomma }}</span>
   </div>
 </div>
-      </div>
     
   </body>
 </html>

@@ -15,10 +15,10 @@ class CatGastoResource(resources.ModelResource):
 @admin.register(CatGastos)
 class CatGastosAdmin(ImportExportModelAdmin):
     resource_class = CatGastoResource
-    list_display = ('id', 'nombre')
-    search_fields = ('id', 'nombre', 'fecha_registro')
+    list_display = ('id', 'nombre', 'fecha_registro', 'fecha_modificacion')
+    search_fields = ('id', 'nombre')
     list_filter = ('nombre', 'fecha_registro')
-    list_per_page = 12
+    list_per_page = 20
     fieldsets = (
         ('Datos del Registro', {
             'fields': ('nombre', 'fecha_registro')
@@ -61,9 +61,19 @@ class CuentaAdmin(admin.ModelAdmin):
         })
     )
     
+    actions = ['calcular_saldo_acumulado']
+
     def mostrar_logotipo_banco(self, obj):
         return obj.id_banco.mostrar_logotipo()
     mostrar_logotipo_banco.short_description = 'Banco'
+
+    def calcular_saldo_acumulado(self, request, queryset):
+        for cuenta in queryset:
+            saldos_mensuales = SaldoMensual.objects.filter(cuenta=cuenta).order_by('año', 'mes')
+            for saldo in saldos_mensuales:
+                saldo.calcular_saldo_acumulado()
+        self.message_user(request, "Saldo acumulado calculado para las cuentas seleccionadas.")
+    calcular_saldo_acumulado.short_description = 'Calcular saldo acumulado para las cuentas seleccionadas'
     
 class GastosResource(resources.ModelResource):
     sucursal = fields.Field(
@@ -109,6 +119,7 @@ class GastosAdmin(ImportExportModelAdmin):
     )
     
     actions = ['export_to_excel']
+    
     
 class ComprasResource(resources.ModelResource):
     productor = fields.Field(
