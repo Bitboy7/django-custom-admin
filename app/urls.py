@@ -5,6 +5,11 @@ from gastos.views import registro_gasto
 from .views import balances_view, export_to_excel
 from django.conf import settings
 from django.conf.urls.static import static
+from django_otp.admin import OTPAdminSite
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from django.contrib.auth.models import User
+from django_otp.plugins.otp_totp.admin import TOTPDeviceAdmin
+
 """
 URL configuration for app project.
 
@@ -21,6 +26,15 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+# Otp admin site
+class OTPAdmin(OTPAdminSite):
+    pass
+
+admin_site = OTPAdmin(name='OTPAdmin')
+admin_site.register(User)
+admin_site.register(TOTPDevice, TOTPDeviceAdmin)
+
+# Urls for the app
 urlpatterns = [
     path("admin", admin.site.urls),  # Set /admin as the main URL
     path('data/', data, name='data'),

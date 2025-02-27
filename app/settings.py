@@ -47,6 +47,11 @@ INSTALLED_APPS = [
     'gastos.apps.GastosConfig',
     'ventas.apps.VentasConfig',
     'import_export',
+   
+    'django_otp',
+    'django_otp.plugins.otp_totp',
+    'django_otp.plugins.otp_hotp',
+    'django_otp.plugins.otp_static',
 ]
 
 IMPORT_EXPORT_FORMATS = [XLSX, CSV, JSON, HTML]
@@ -185,6 +190,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_otp.middleware.OTPMiddleware",
 ]
 
 ROOT_URLCONF = "app.urls"

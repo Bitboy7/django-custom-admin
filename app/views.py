@@ -16,7 +16,12 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import decimal
+from django.contrib.auth.decorators import user_passes_test
 
+def is_admin(user):
+    return user.is_superuser
+
+@user_passes_test(is_admin)
 def export_to_excel(request):
     # Obtener parámetros de filtro
     categoria_id = request.GET.get('categoria_id')
@@ -322,6 +327,7 @@ def export_to_excel(request):
     wb.save(response)
     return response
     
+@user_passes_test(is_admin)    
 def balances_view(request):
     cuenta_id = request.GET.get('cuenta_id', '')
     year = request.GET.get('year', datetime.now().year)
