@@ -33,6 +33,8 @@ ALLOWED_HOSTS = ["*"]
 
 # Application definition
 
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
+
 INSTALLED_APPS = [
     'jazzmin',
     "django.contrib.admin",
@@ -47,6 +49,7 @@ INSTALLED_APPS = [
     'gastos.apps.GastosConfig',
     'ventas.apps.VentasConfig',
     'import_export',
+    'widget_tweaks',
    
     'django_otp',
     'django_otp.plugins.otp_totp',
@@ -182,15 +185,16 @@ JAZZMIN_UI_TWEAKS = {
     "actions_sticky_top": True
 }
 
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "django_otp.middleware.OTPMiddleware",
 ]
 
 ROOT_URLCONF = "app.urls"

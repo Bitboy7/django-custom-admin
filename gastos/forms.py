@@ -1,5 +1,27 @@
 from django import forms
-from .models import Gastos, CatGastos, SaldoMensual
+from .models import Gastos, CatGastos, SaldoMensual, Compra
+
+class CompraForm(forms.ModelForm):
+    class Meta:
+        model = Compra
+        fields = ['fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 
+                 'monto_total', 'cuenta', 'tipo_pago', 'observaciones']
+
+        widgets = {
+            'fecha_compra': forms.DateInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500', 
+                'placeholder': 'YYYY-MM-DD',
+                'required': True,
+            }),
+            'productor': forms.Select(attrs={'class': 'form-control', 'placeholder': 'Seleccione el productor'}),
+            'producto': forms.Select(attrs={'class': 'form-control', 'placeholder': 'Seleccione el producto'}),
+            'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ingrese la cantidad'}),
+            'precio_unitario': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ingrese el precio unitario'}),
+            'monto_total': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Monto total'}),
+            'cuenta': forms.Select(attrs={'class': 'form-control', 'placeholder': 'Seleccione la cuenta'}),
+            'tipo_pago': forms.Select(attrs={'class': 'form-control', 'placeholder': 'Seleccione el tipo de pago'}),
+            'observaciones': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Ingrese observaciones'}),
+        }
 
 class GastoForm(forms.ModelForm):
     class Meta:

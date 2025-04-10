@@ -98,6 +98,7 @@ class Compra(models.Model):
             Cheque = 'Cheque'
             
         tipo_pago = models.CharField(max_length=50, blank=True, null=True, choices=TipoPago.choices)
+        observaciones = models.TextField(blank=True, null=True, verbose_name="Observaciones")
         
         def __str__(self):
             return f'{self.productor} - {self.producto.nombre}'

@@ -34,13 +34,23 @@ admin_site = OTPAdmin(name='OTPAdmin')
 admin_site.register(User)
 admin_site.register(TOTPDevice, TOTPDeviceAdmin)
 
+if User not in admin_site._registry:
+    admin_site.register(User)
+if TOTPDevice not in admin_site._registry:
+    admin_site.register(TOTPDevice, TOTPDeviceAdmin)
+    
+for model_cls, model_admin in admin.site._registry.items():
+    if model_cls not in admin_site._registry:
+        admin_site.register(model_cls, model_admin.__class__)
+
 # Urls for the app
 urlpatterns = [
-    path("admin", admin.site.urls),  # Set /admin as the main URL
+    #path("admin", admin.site.urls),  # Set /admin as the main URL
+    path("admin/", admin_site.urls),  # Set /admin as the main URL
     path('data/', data, name='data'),
     path('gastos/', registro_gasto, name='gastos'),
     path('balances/', balances_view, name='balances'),
     path('exportar_gastos_excel/', export_to_excel, name='exportar_gastos_excel'),
     path('', include('catalogo.urls')),
-    path('', include('gastos.urls')),
+    path('gastos/', include('gastos.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
