@@ -111,34 +111,36 @@ class GastosAdmin(ImportExportModelAdmin):
     actions = ['export_to_excel']
     
 class ComprasResource(resources.ModelResource):
+    from catalogo.models import Productor, Producto  # Add this import at the top
+    
     productor = fields.Field(
-            column_name='productor',
-            attribute='productor',
-            widget=ForeignKeyWidget(Sucursal, field='nombre'))
-        
+        column_name='productor',
+        attribute='productor',
+        widget=ForeignKeyWidget(Productor, field='nombre_completo'))
+    
     producto = fields.Field(
-            column_name='producto',
-            attribute='producto',
-            widget=ForeignKeyWidget(CatGastos, field='nombre'))
-        
+        column_name='producto',
+        attribute='producto',
+        widget=ForeignKeyWidget(Producto, field='nombre'))
+    
     cuenta = fields.Field(
-            column_name='cuenta',
-            attribute='cuenta',
-            widget=ForeignKeyWidget(Cuenta, field='numero_cuenta'))
+        column_name='cuenta',
+        attribute='cuenta',
+        widget=ForeignKeyWidget(Cuenta, field='numero_cuenta'))
     
     class Meta:
-         model = Compra
-         fields = ('id', 'fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total', 'fecha_registro', 'cuenta')
-         
+        model = Compra
+        fields = ('id', 'fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total', 'fecha_registro', 'cuenta', 'tipo_pago')
+        
     def dehydrate_productor(self, compra):
-         return compra.productor.nombre
-     
+        return compra.productor.nombre_completo
+    
     def dehydrate_producto(self, compra):
-         return compra.producto.nombre
-     
+        return compra.producto.nombre
+    
     def dehydrate_cuenta(self, compra):
-         return compra.cuenta.numero_cuenta    
-
+        return compra.cuenta.numero_cuenta
+    
 @admin.register(Compra)
 class ComprasAdmin(ImportExportModelAdmin):
         resource_class = ComprasResource
