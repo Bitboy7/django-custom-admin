@@ -22,7 +22,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 urlpatterns = [
-    path("admin", admin.site.urls),  # Set /admin as the main URL
+    path("admin/", admin.site.urls),  # Added trailing slash
     path('data/', data, name='data'),
     path('gastos/', registro_gasto, name='gastos'),
     path('balances/', balances_view, name='balances'),
