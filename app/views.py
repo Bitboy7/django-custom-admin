@@ -16,7 +16,12 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import decimal
+from django.contrib.auth.decorators import user_passes_test
 
+def is_admin(user):
+    return user.is_superuser
+
+@user_passes_test(is_admin)
 def export_to_excel(request):
     # Obtener parámetros de filtro
     categoria_id = request.GET.get('categoria_id')
@@ -285,23 +290,34 @@ def export_to_excel(request):
         adjusted_width = (max_length + 2)
         ws_monthly.column_dimensions[column].width = adjusted_width
 
-    # Update bar chart to show expenses and purchases
-    bar_chart = openpyxl.chart.BarChart()
-    bar_chart.title = "Gastos y Compras Mensuales"
-    bar_chart.type = "col"
-    bar_chart.grouping = "stacked"
-    bar_chart.overlap = 100
+    # Crear gráfica de gastos por categoría
+    ws_chart = wb.create_sheet("Gráfica de Gastos por Categoría")
     
-    # Add data series for expenses and purchases
-    expenses_data = openpyxl.chart.Reference(ws_monthly, min_col=2, min_row=1, max_row=ws_monthly.max_row)
-    purchases_data = openpyxl.chart.Reference(ws_monthly, min_col=3, min_row=1, max_row=ws_monthly.max_row)
-    categories = openpyxl.chart.Reference(ws_monthly, min_col=1, min_row=2, max_row=ws_monthly.max_row)
-    
-    bar_chart.add_data(expenses_data, titles_from_data=True)
-    bar_chart.add_data(purchases_data, titles_from_data=True)
-    bar_chart.set_categories(categories)
+    # Obtener datos de gastos por categoría
+    gastos_por_categoria = (Gastos.objects
+        .values('id_cat_gastos__nombre')
+        .annotate(total_gastos=Sum('monto'))
+        .order_by('-total_gastos'))
 
-    ws_monthly.add_chart(bar_chart, "G2")
+    # Escribir encabezados
+    ws_chart.append(["Categoría", "Total Gastos"])
+
+    # Escribir datos
+    for gasto in gastos_por_categoria:
+        ws_chart.append([gasto['id_cat_gastos__nombre'], gasto['total_gastos']])
+
+    # Crear gráfica de barras
+    bar_chart = openpyxl.chart.BarChart()
+    bar_chart.title = "Gastos por Categoría"
+    bar_chart.x_axis.title = "Categoría"
+    bar_chart.y_axis.title = "Total Gastos"
+    
+    data = openpyxl.chart.Reference(ws_chart, min_col=2, min_row=1, max_row=ws_chart.max_row)
+    categories = openpyxl.chart.Reference(ws_chart, min_col=1, min_row=2, max_row=ws_chart.max_row)
+    bar_chart.add_data(data, titles_from_data=True)
+    bar_chart.set_categories(categories)
+    
+    ws_chart.add_chart(bar_chart, "E5")
 
     current_date = datetime.now().strftime("%Y%m%d")
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -311,6 +327,7 @@ def export_to_excel(request):
     wb.save(response)
     return response
     
+@user_passes_test(is_admin)    
 def balances_view(request):
     cuenta_id = request.GET.get('cuenta_id', '')
     year = request.GET.get('year', datetime.now().year)

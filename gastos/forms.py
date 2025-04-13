@@ -1,5 +1,24 @@
 from django import forms
-from .models import Gastos, CatGastos, SaldoMensual
+from .models import Gastos, CatGastos, SaldoMensual, Compra
+from catalogo.models import Productor
+
+class CompraForm(forms.ModelForm):
+    class Meta:
+        model = Compra
+        fields = ['fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 
+                  'monto_total', 'cuenta', 'tipo_pago']
+        
+        widgets = {
+            'fecha_compra': forms.DateInput(attrs={'class': 'form-control', 'placeholder': 'YYYY-MM-DD'}),
+            'productor': forms.Select(attrs={'class': 'form-control'}),
+            'producto': forms.Select(attrs={'class': 'form-control'}),
+            'cantidad': forms.NumberInput(attrs={'class': 'form-control'}),
+            'precio_unitario': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'monto_total': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'cuenta': forms.Select(attrs={'class': 'form-control'}),
+            'tipo_pago': forms.Select(attrs={'class': 'form-control'}),
+        }
+    
 
 class GastoForm(forms.ModelForm):
     class Meta:

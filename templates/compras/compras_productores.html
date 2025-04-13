@@ -5,126 +5,246 @@
 {% block title %}Gestión de Compras a Productores{% endblock %}
 
 {% block extra_css %}
-<!-- DataTables CSS -->
-<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
-<!-- DateRangePicker -->
-<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-<style>
-    .filter-btn {
-        transition: all 0.3s ease;
-    }
-
-    .filter-btn.active {
-        background-color: #065f46;
-        color: white;
-    }
-
-    .daterangepicker {
-        z-index: 1050 !important;
-    }
-</style>
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+    <!-- DateRangePicker -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <style>
+        .filter-btn {
+            transition: all 0.3s ease;
+        }
+        .filter-btn.active {
+            background-color: #065f46;
+            color: white;
+        }
+        .daterangepicker {
+            z-index: 1050 !important;
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto p-4">
-    <!-- Resumen general - Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div class="bg-white rounded-lg shadow-md p-4">
-            <h2 class="text-xl font-semibold text-gray-800 mb-2">
-                <i class="fas fa-money-bill-wave text-green-600 mr-2"></i>Total Compras
+    <div class="container mx-auto p-4">
+        <!-- Resumen general - Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <h2 class="text-xl font-semibold text-gray-800 mb-2">
+                    <i class="fas fa-money-bill-wave text-green-600 mr-2"></i>Total Compras
+                </h2>
+                <p id="total-compras" class="text-3xl font-bold text-green-600">${{ total_compras|floatformat:2|intcomma }}</p>
+                <p id="total-compras-label" class="text-gray-500 mt-2">Acumulado histórico</p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <h2 class="text-xl font-semibold text-gray-800 mb-2"><i
+                        class="fas fa-calendar text-blue-600 mr-2"></i>Compras del Mes</h2>
+                <p class="text-3xl font-bold text-blue-600">${{ compras_mes_actual|floatformat:2|intcomma }}</p>
+                <p class="text-gray-500 mt-2">{{ now|date:"F Y" }}</p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <h2 class="text-xl font-semibold text-gray-800 mb-2"><i
+                        class="fas fa-users text-purple-600 mr-2"></i>Total Productores</h2>
+                <p class="text-3xl font-bold text-purple-600">{{ productores.count }}</p>
+                <p class="text-gray-500 mt-2">Activos en el sistema</p>
+            </div>
+        </div>
+
+        <!-- Gráfico de compras mensuales -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4"><i
+                    class="fas fa-chart-bar text-indigo-600 mr-2"></i>Tendencia de Compras (Últimos 6 meses)</h2>
+            <div class="h-64">
+                <canvas id="comprasMensualesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Top Productores y Productos Comprados -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Top Productores -->
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4"><i
+                        class="fas fa-medal text-yellow-600 mr-2"></i>Top 5 Productores</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="py-2 px-3 text-left">Productor</th>
+                                <th class="py-2 px-3 text-right">Total Compras</th>
+                                <th class="py-2 px-3 text-right">Cantidad</th>
+                                <th class="py-2 px-3 text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for productor in top_productores %}
+                            <tr class="border-t hover:bg-gray-50">
+                                <td class="py-2 px-3">{{ productor.productor__nombre_completo }}</td>
+                                <td class="py-2 px-3 text-right">${{ productor.total_compras|floatformat:2|intcomma }}</td>
+                                <td class="py-2 px-3 text-right">{{ productor.cantidad_compras }}</td>
+                                <td class="py-2 px-3 text-center">
+                                    <a href="{% url 'detalle_productor_compras' productor.productor__id %}"
+                                        class="text-blue-600 hover:text-blue-800">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="py-4 text-center text-gray-500">No hay datos disponibles</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Productos más Comprados -->
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4"><i
+                        class="fas fa-shopping-basket text-orange-600 mr-2"></i>Productos más Comprados</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="py-2 px-3 text-left">Producto</th>
+                                <th class="py-2 px-3 text-right">Cantidad</th>
+                                <th class="py-2 px-3 text-right">Monto Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for producto in productos_comprados %}
+                            <tr class="border-t hover:bg-gray-50">
+                                <td class="py-2 px-3">{{ producto.producto__nombre }} {{ producto.producto__variedad }}</td>
+                                <td class="py-2 px-3 text-right">{{ producto.cantidad }}</td>
+                                <td class="py-2 px-3 text-right">${{ producto.total|floatformat:2|intcomma }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="py-4 text-center text-gray-500">No hay datos disponibles</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compras por tipo de pago -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                <i class="fas fa-credit-card text-green-600 mr-2"></i>Compras por Tipo de Pago
+                <span id="filtro-indicador" class="text-sm font-normal text-gray-500 ml-2 hidden">(Filtrado)</span>
             </h2>
-            <p id="total-compras" class="text-3xl font-bold text-green-600">${{ total_compras|floatformat:2|intcomma }}
-            </p>
-            <p id="total-compras-label" class="text-gray-500 mt-2">Acumulado histórico</p>
+            <div id="compras-tipo-pago-container" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {% for tipo in compras_por_tipo %}
+                <div class="bg-gray-50 p-3 rounded-md border border-gray-200"
+                    data-tipo-pago="{{ tipo.tipo_pago|default:'No definido' }}">
+                    <h3 class="font-semibold text-lg">{{ tipo.tipo_pago|default:"No definido" }}</h3>
+                    <p class="text-xl font-bold text-green-600 monto-tipo-pago">${{ tipo.total|floatformat:2|intcomma }}</p>
+                    <p class="text-sm text-gray-500"><span class="cantidad-transacciones">{{ tipo.cantidad }}</span>
+                        transacciones</p>
+                </div>
+                {% empty %}
+                <div class="col-span-4 text-center py-4 text-gray-500">
+                    No hay datos disponibles
+                </div>
+                {% endfor %}
+            </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow-md p-4">
-            <h2 class="text-xl font-semibold text-gray-800 mb-2"><i
-                    class="fas fa-calendar text-blue-600 mr-2"></i>Compras del Mes</h2>
-            <p class="text-3xl font-bold text-blue-600">${{ compras_mes_actual|floatformat:2|intcomma }}</p>
-            <p class="text-gray-500 mt-2">{{ now|date:"F Y" }}</p>
-        </div>
-
-        <div class="bg-white rounded-lg shadow-md p-4">
-            <h2 class="text-xl font-semibold text-gray-800 mb-2"><i class="fas fa-users text-purple-600 mr-2"></i>Total
-                Productores</h2>
-            <p class="text-3xl font-bold text-purple-600">{{ productores.count }}</p>
-            <p class="text-gray-500 mt-2">Activos en el sistema</p>
-        </div>
-    </div>
-
-    <!-- Gráfico de compras mensuales -->
-    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4"><i
-                class="fas fa-chart-bar text-indigo-600 mr-2"></i>Tendencia de Compras (Últimos 6 meses)</h2>
-        <div class="h-64">
-            <canvas id="comprasMensualesChart"></canvas>
-        </div>
-    </div>
-
-    <!-- Top Productores y Productos Comprados -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <!-- Top Productores -->
-        <div class="bg-white rounded-lg shadow-md p-4">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4"><i class="fas fa-medal text-yellow-600 mr-2"></i>Top 5
-                Productores</h2>
+        <!-- Historial de compras con filtros -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+            <div class="flex flex-col md:flex-row md:justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-800">
+                    <i class="fas fa-history text-purple-600 mr-2"></i>Historial de Compras
+                </h2>
+                
+                <!-- Panel de filtros de fecha -->
+                <div class="w-full md:w-auto mt-3 md:mt-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="relative">
+                            <input type="text" id="daterange" class="border border-gray-300 rounded-md px-3 py-2 text-sm w-60" 
+                                placeholder="Seleccionar rango de fechas">
+                            <button id="clearDateFilter" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700" title="Limpiar filtro">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="flex space-x-1">
+                            <button id="filterToday" class="filter-btn px-3 py-2 text-xs border border-green-600 text-green-600 rounded-md hover:bg-green-600 hover:text-white">
+                                Hoy
+                            </button>
+                            <button id="filterWeek" class="filter-btn px-3 py-2 text-xs border border-green-600 text-green-600 rounded-md hover:bg-green-600 hover:text-white">
+                                Esta semana
+                            </button>
+                            <button id="filterMonth" class="filter-btn px-3 py-2 text-xs border border-green-600 text-green-600 rounded-md hover:bg-green-600 hover:text-white">
+                                Este mes
+                            </button>
+                            <button id="filterYear" class="filter-btn px-3 py-2 text-xs border border-green-600 text-green-600 rounded-md hover:bg-green-600 hover:text-white">
+                                Este año
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        
             <div class="overflow-x-auto">
-                <table class="min-w-full bg-white">
+                <table id="tablaCompras" class="min-w-full bg-white">
                     <thead class="bg-gray-100">
                         <tr>
+                            <th class="py-2 px-3 text-left">ID</th>
+                            <th class="py-2 px-3 text-left">Fecha</th>
                             <th class="py-2 px-3 text-left">Productor</th>
-                            <th class="py-2 px-3 text-right">Total Compras</th>
+                            <th class="py-2 px-3 text-left">Producto</th>
                             <th class="py-2 px-3 text-right">Cantidad</th>
-                            <th class="py-2 px-3 text-center">Acción</th>
+                            <th class="py-2 px-3 text-right">Precio Unit.</th>
+                            <th class="py-2 px-3 text-right">Total</th>
+                            <th class="py-2 px-3 text-center">Tipo Pago</th>
+                            <th class="py-2 px-3 text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for productor in top_productores %}
+                        {% for compra in compras %}
                         <tr class="border-t hover:bg-gray-50">
-                            <td class="py-2 px-3">{{ productor.productor__nombre_completo }}</td>
-                            <td class="py-2 px-3 text-right">${{ productor.total_compras|floatformat:2|intcomma }}</td>
-                            <td class="py-2 px-3 text-right">{{ productor.cantidad_compras }}</td>
+                            <td class="py-2 px-3">{{ compra.id }}</td>
+                            <td class="py-2 px-3">{{ compra.fecha_compra|date:"d/m/Y" }}</td>
+                            <td class="py-2 px-3">{{ compra.productor.nombre_completo }}</td>
+                            <td class="py-2 px-3">{{ compra.producto.nombre }} - {{ compra.producto.variedad }}</td>
+                            <td class="py-2 px-3 text-right">{{ compra.cantidad }}</td>
+                            <td class="py-2 px-3 text-right">${{ compra.precio_unitario|floatformat:2|intcomma }}</td>
+                            <td class="py-2 px-3 text-right font-semibold">${{ compra.monto_total|floatformat:2|intcomma }}</td>
                             <td class="py-2 px-3 text-center">
-                                <a href="{% url 'detalle_productor_compras' productor.productor__id %}"
-                                    class="text-blue-600 hover:text-blue-800">
+                                {% if compra.tipo_pago == 'Efectivo' %}
+                                <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Efectivo</span>
+                                {% elif compra.tipo_pago == 'Deposito' %}
+                                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">Depósito</span>
+                                {% elif compra.tipo_pago == 'Transferencia' %}
+                                <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">Transferencia</span>
+                                {% elif compra.tipo_pago == 'Cheque' %}
+                                <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">Cheque</span>
+                                {% else %}
+                                <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">No definido</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-2 px-3 text-center">
+                                <a href="#" class="text-blue-600 hover:text-blue-800 mx-1" title="Ver detalles"
+                                    data-id="{{ compra.id }}">
                                     <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="#" class="text-green-600 hover:text-green-800 mx-1" title="Editar"
+                                    data-id="{{ compra.id }}">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="#" class="text-red-600 hover:text-red-800 mx-1" title="Eliminar"
+                                    data-id="{{ compra.id }}">
+                                    <i class="fas fa-trash-alt"></i>
                                 </a>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" class="py-4 text-center text-gray-500">No hay datos disponibles</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Productos más Comprados -->
-        <div class="bg-white rounded-lg shadow-md p-4">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4"><i
-                    class="fas fa-shopping-basket text-orange-600 mr-2"></i>Productos más Comprados</h2>
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="py-2 px-3 text-left">Producto</th>
-                            <th class="py-2 px-3 text-right">Cantidad</th>
-                            <th class="py-2 px-3 text-right">Monto Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for producto in productos_comprados %}
-                        <tr class="border-t hover:bg-gray-50">
-                            <td class="py-2 px-3">{{ producto.producto__nombre }} {{ producto.producto__variedad }}</td>
-                            <td class="py-2 px-3 text-right">{{ producto.cantidad }}</td>
-                            <td class="py-2 px-3 text-right">${{ producto.total|floatformat:2|intcomma }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="3" class="py-4 text-center text-gray-500">No hay datos disponibles</td>
+                            <td colspan="9" class="py-4 text-center text-gray-500">No hay compras registradas</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -132,376 +252,243 @@
             </div>
         </div>
     </div>
-
-    <!-- Compras por tipo de pago -->
-    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">
-            <i class="fas fa-credit-card text-green-600 mr-2"></i>Compras por Tipo de Pago
-            <span id="filtro-indicador" class="text-sm font-normal text-gray-500 ml-2 hidden">(Filtrado)</span>
-        </h2>
-        <div id="compras-tipo-pago-container" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {% for tipo in compras_por_tipo %}
-            <div class="bg-gray-50 p-3 rounded-md border border-gray-200"
-                data-tipo-pago="{{ tipo.tipo_pago|default:'No definido' }}">
-                <h3 class="font-semibold text-lg">{{ tipo.tipo_pago|default:"No definido" }}</h3>
-                <p class="text-xl font-bold text-green-600 monto-tipo-pago">${{ tipo.total|floatformat:2|intcomma }}</p>
-                <p class="text-sm text-gray-500"><span class="cantidad-transacciones">{{ tipo.cantidad }}</span>
-                    transacciones</p>
-            </div>
-            {% empty %}
-            <div class="col-span-4 text-center py-4 text-gray-500">
-                No hay datos disponibles
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Historial de compras con filtros -->
-    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div class="flex flex-col md:flex-row md:justify-between items-center mb-4">
-            <h2 class="text-xl font-semibold text-gray-800">
-                <i class="fas fa-history text-purple-600 mr-2"></i>Historial de Compras
-            </h2>
-
-            <!-- Panel de filtros de fecha -->
-            <div class="w-full md:w-auto mt-3 md:mt-0">
-                <div class="flex flex-wrap items-center gap-2">
-                    <div class="relative">
-                        <input type="text" id="daterange"
-                            class="border border-gray-300 rounded-md px-3 py-2 text-sm w-60"
-                            placeholder="Seleccionar rango de fechas">
-                        <button id="clearDateFilter"
-                            class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                            title="Limpiar filtro">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-
-                    <div class="flex space-x-1">
-                        <button id="filterToday"
-                            class="filter-btn px-3 py-2 text-xs border border-green-600 text-green-600 rounded-md hover:bg-green-600 hover:text-white">
-                            Hoy
-                        </button>
-                        <button id="filterWeek"
-                            class="filter-btn px-3 py-2 text-xs border border-green-600 text-green-600 rounded-md hover:bg-green-600 hover:text-white">
-                            Esta semana
-                        </button>
-                        <button id="filterMonth"
-                            class="filter-btn px-3 py-2 text-xs border border-green-600 text-green-600 rounded-md hover:bg-green-600 hover:text-white">
-                            Este mes
-                        </button>
-                        <button id="filterYear"
-                            class="filter-btn px-3 py-2 text-xs border border-green-600 text-green-600 rounded-md hover:bg-green-600 hover:text-white">
-                            Este año
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="overflow-x-auto">
-            <table id="tablaCompras" class="min-w-full bg-white">
-                <thead class="bg-gray-100">
-                    <tr>
-                        <th class="py-2 px-3 text-left">ID</th>
-                        <th class="py-2 px-3 text-left">Fecha</th>
-                        <th class="py-2 px-3 text-left">Productor</th>
-                        <th class="py-2 px-3 text-left">Producto</th>
-                        <th class="py-2 px-3 text-right">Cantidad</th>
-                        <th class="py-2 px-3 text-right">Precio Unit.</th>
-                        <th class="py-2 px-3 text-right">Total</th>
-                        <th class="py-2 px-3 text-center">Tipo Pago</th>
-                        <th class="py-2 px-3 text-center">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for compra in compras %}
-                    <tr class="border-t hover:bg-gray-50">
-                        <td class="py-2 px-3">{{ compra.id }}</td>
-                        <td class="py-2 px-3">{{ compra.fecha_compra|date:"d/m/Y" }}</td>
-                        <td class="py-2 px-3">{{ compra.productor.nombre_completo }}</td>
-                        <td class="py-2 px-3">{{ compra.producto.nombre }} - {{ compra.producto.variedad }}</td>
-                        <td class="py-2 px-3 text-right">{{ compra.cantidad }}</td>
-                        <td class="py-2 px-3 text-right">${{ compra.precio_unitario|floatformat:2|intcomma }}</td>
-                        <td class="py-2 px-3 text-right font-semibold">${{ compra.monto_total|floatformat:2|intcomma }}
-                        </td>
-                        <td class="py-2 px-3 text-center">
-                            {% if compra.tipo_pago == 'Efectivo' %}
-                            <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Efectivo</span>
-                            {% elif compra.tipo_pago == 'Deposito' %}
-                            <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">Depósito</span>
-                            {% elif compra.tipo_pago == 'Transferencia' %}
-                            <span
-                                class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">Transferencia</span>
-                            {% elif compra.tipo_pago == 'Cheque' %}
-                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">Cheque</span>
-                            {% else %}
-                            <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">No definido</span>
-                            {% endif %}
-                        </td>
-                        <td class="py-2 px-3 text-center">
-                            <a href="#" class="text-blue-600 hover:text-blue-800 mx-1" title="Ver detalles"
-                                data-id="{{ compra.id }}">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <a href="#" class="text-green-600 hover:text-green-800 mx-1" title="Editar"
-                                data-id="{{ compra.id }}">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <a href="#" class="text-red-600 hover:text-red-800 mx-1" title="Eliminar"
-                                data-id="{{ compra.id }}">
-                                <i class="fas fa-trash-alt"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="9" class="py-4 text-center text-gray-500">No hay compras registradas</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- jQuery y DataTables -->
-<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<!-- Moment.js y DateRangePicker -->
-<script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-<script>
-    // Inicializar DataTables con filtrado de fechas
-    $(document).ready(function () {
-        // Añadir el método de filtro para rango de fechas
-        $.fn.dataTable.ext.search.push(
-            function (settings, data, dataIndex) {
-                if (window.startDate === undefined || window.endDate === undefined) return true;
-
-                // La fecha está en la segunda columna (índice 1) en formato dd/mm/yyyy
-                var dateStr = data[1];
-                if (!dateStr) return false;
-
-                // Convertir la fecha de la fila a un objeto Date
-                var parts = dateStr.split('/');
-                var rowDate = new Date(parts[2], parts[1] - 1, parts[0]);
-                rowDate.setHours(0, 0, 0, 0);
-
-                // Comparar si está dentro del rango
-                if (rowDate >= window.startDate && rowDate <= window.endDate) {
-                    return true;
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jQuery y DataTables -->
+    <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <!-- Moment.js y DateRangePicker -->
+    <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script>
+        // Inicializar DataTables con filtrado de fechas
+        $(document).ready(function() {
+            // Añadir el método de filtro para rango de fechas
+            $.fn.dataTable.ext.search.push(
+                function(settings, data, dataIndex) {
+                    if (window.startDate === undefined || window.endDate === undefined) return true;
+                    
+                    // La fecha está en la segunda columna (índice 1) en formato dd/mm/yyyy
+                    var dateStr = data[1];
+                    if (!dateStr) return false;
+                    
+                    // Convertir la fecha de la fila a un objeto Date
+                    var parts = dateStr.split('/');
+                    var rowDate = new Date(parts[2], parts[1]-1, parts[0]);
+                    rowDate.setHours(0,0,0,0);
+                    
+                    // Comparar si está dentro del rango
+                    if (rowDate >= window.startDate && rowDate <= window.endDate) {
+                        return true;
+                    }
+                    return false;
                 }
-                return false;
-            }
-        );
-
-        // Inicializar DataTables
-        const tabla = $('#tablaCompras').DataTable({
-            responsive: true,
-            language: {
-                "processing": "Procesando...",
-                "lengthMenu": "Mostrar _MENU_ registros",
-                "zeroRecords": "No se encontraron resultados",
-                "emptyTable": "Ningún dato disponible en esta tabla",
-                "info": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
-                "infoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
-                "infoFiltered": "(filtrado de un total de _MAX_ registros)",
-                "search": "Buscar:",
-                "infoThousands": ",",
-                "loadingRecords": "Cargando...",
-                "paginate": {
-                    "first": "Primero",
-                    "last": "Último",
-                    "next": "Siguiente",
-                    "previous": "Anterior"
+            );
+            
+            // Inicializar DataTables
+            const tabla = $('#tablaCompras').DataTable({
+                responsive: true,
+                language: {
+                    "processing": "Procesando...",
+                    "lengthMenu": "Mostrar _MENU_ registros",
+                    "zeroRecords": "No se encontraron resultados",
+                    "emptyTable": "Ningún dato disponible en esta tabla",
+                    "info": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+                    "infoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
+                    "infoFiltered": "(filtrado de un total de _MAX_ registros)",
+                    "search": "Buscar:",
+                    "infoThousands": ",",
+                    "loadingRecords": "Cargando...",
+                    "paginate": {
+                        "first": "Primero",
+                        "last": "Último",
+                        "next": "Siguiente",
+                        "previous": "Anterior"
+                    }
+                },
+                order: [[1, 'desc']],
+                columnDefs: [
+                    { responsivePriority: 1, targets: [1, 2, 3, 4] },
+                    { responsivePriority: 2, targets: [8] },
+                    { orderable: false, targets: [8] }
+                ]
+            });
+            
+            // Establecer variable global
+            window.tablaCompras = tabla;
+            
+            // Inicializar DateRangePicker
+            $('#daterange').daterangepicker({
+                autoUpdateInput: false,
+                locale: {
+                    format: 'DD/MM/YYYY',
+                    cancelLabel: 'Limpiar',
+                    applyLabel: 'Aplicar',
+                    daysOfWeek: ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'],
+                    monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+                    firstDay: 1
                 }
-            },
-            order: [[1, 'desc']],
-            columnDefs: [
-                { responsivePriority: 1, targets: [1, 2, 3, 4] },
-                { responsivePriority: 2, targets: [8] },
-                { orderable: false, targets: [8] }
-            ]
+            });
+            
+            // Cuando se aplica un rango de fechas
+            $('#daterange').on('apply.daterangepicker', function(ev, picker) {
+                // Actualizar el texto del input
+                $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
+                
+                // Guardar las fechas para el filtro
+                window.startDate = picker.startDate.toDate();
+                window.startDate.setHours(0,0,0,0);
+                window.endDate = picker.endDate.toDate();
+                window.endDate.setHours(23,59,59,999);
+                
+                // Aplicar el filtro
+                tabla.draw();
+                
+                // Resetear los botones
+                $('.filter-btn').removeClass('active');
+            });
+            
+            // Cuando se limpia el rango de fechas desde el picker
+            $('#daterange').on('cancel.daterangepicker', function(ev, picker) {
+                $(this).val('');
+                window.startDate = undefined;
+                window.endDate = undefined;
+                tabla.draw();
+                $('.filter-btn').removeClass('active');
+            });
+            
+            // Limpiar filtro con el botón X
+            $('#clearDateFilter').on('click', function() {
+                $('#daterange').val('');
+                window.startDate = undefined;
+                window.endDate = undefined;
+                tabla.draw();
+                $('.filter-btn').removeClass('active');
+            });
+            
+            // Filtros predefinidos
+            $('#filterToday').on('click', function() {
+                $('.filter-btn').removeClass('active');
+                $(this).addClass('active');
+                
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                window.startDate = today;
+                window.endDate = new Date();
+                window.endDate.setHours(23,59,59,999);
+                
+                $('#daterange').val(moment(today).format('DD/MM/YYYY') + ' - ' + moment(today).format('DD/MM/YYYY'));
+                tabla.draw();
+            });
+            
+            $('#filterWeek').on('click', function() {
+                $('.filter-btn').removeClass('active');
+                $(this).addClass('active');
+                
+                const today = new Date();
+                const dayOfWeek = today.getDay();
+                const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Ajuste para comenzar en lunes
+                
+                const startOfWeek = new Date(today.setDate(diff));
+                startOfWeek.setHours(0,0,0,0);
+                
+                const endOfWeek = new Date();
+                endOfWeek.setHours(23,59,59,999);
+                
+                window.startDate = startOfWeek;
+                window.endDate = endOfWeek;
+                
+                $('#daterange').val(moment(startOfWeek).format('DD/MM/YYYY') + ' - ' + moment(endOfWeek).format('DD/MM/YYYY'));
+                tabla.draw();
+            });
+            
+            $('#filterMonth').on('click', function() {
+                $('.filter-btn').removeClass('active');
+                $(this).addClass('active');
+                
+                const date = new Date();
+                const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+                startOfMonth.setHours(0,0,0,0);
+                
+                const endOfMonth = new Date();
+                endOfMonth.setHours(23,59,59,999);
+                
+                window.startDate = startOfMonth;
+                window.endDate = endOfMonth;
+                
+                $('#daterange').val(moment(startOfMonth).format('DD/MM/YYYY') + ' - ' + moment(endOfMonth).format('DD/MM/YYYY'));
+                tabla.draw();
+            });
+            
+            $('#filterYear').on('click', function() {
+                $('.filter-btn').removeClass('active');
+                $(this).addClass('active');
+                
+                const date = new Date();
+                const startOfYear = new Date(date.getFullYear(), 0, 1);
+                startOfYear.setHours(0,0,0,0);
+                
+                const endOfYear = new Date();
+                endOfYear.setHours(23,59,59,999);
+                
+                window.startDate = startOfYear;
+                window.endDate = endOfYear;
+                
+                $('#daterange').val(moment(startOfYear).format('DD/MM/YYYY') + ' - ' + moment(endOfYear).format('DD/MM/YYYY'));
+                tabla.draw();
+            });
         });
 
-        // Establecer variable global
-        window.tablaCompras = tabla;
-
-        // Inicializar DateRangePicker
-        $('#daterange').daterangepicker({
-            autoUpdateInput: false,
-            locale: {
-                format: 'DD/MM/YYYY',
-                cancelLabel: 'Limpiar',
-                applyLabel: 'Aplicar',
-                daysOfWeek: ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'],
-                monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
-                firstDay: 1
-            }
-        });
-
-        // Cuando se aplica un rango de fechas
-        $('#daterange').on('apply.daterangepicker', function (ev, picker) {
-            // Actualizar el texto del input
-            $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
-
-            // Guardar las fechas para el filtro
-            window.startDate = picker.startDate.toDate();
-            window.startDate.setHours(0, 0, 0, 0);
-            window.endDate = picker.endDate.toDate();
-            window.endDate.setHours(23, 59, 59, 999);
-
-            // Aplicar el filtro
-            tabla.draw();
-
-            // Resetear los botones
-            $('.filter-btn').removeClass('active');
-        });
-
-        // Cuando se limpia el rango de fechas desde el picker
-        $('#daterange').on('cancel.daterangepicker', function (ev, picker) {
-            $(this).val('');
-            window.startDate = undefined;
-            window.endDate = undefined;
-            tabla.draw();
-            $('.filter-btn').removeClass('active');
-        });
-
-        // Limpiar filtro con el botón X
-        $('#clearDateFilter').on('click', function () {
-            $('#daterange').val('');
-            window.startDate = undefined;
-            window.endDate = undefined;
-            tabla.draw();
-            $('.filter-btn').removeClass('active');
-        });
-
-        // Filtros predefinidos
-        $('#filterToday').on('click', function () {
-            $('.filter-btn').removeClass('active');
-            $(this).addClass('active');
-
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            window.startDate = today;
-            window.endDate = new Date();
-            window.endDate.setHours(23, 59, 59, 999);
-
-            $('#daterange').val(moment(today).format('DD/MM/YYYY') + ' - ' + moment(today).format('DD/MM/YYYY'));
-            tabla.draw();
-        });
-
-        $('#filterWeek').on('click', function () {
-            $('.filter-btn').removeClass('active');
-            $(this).addClass('active');
-
-            const today = new Date();
-            const dayOfWeek = today.getDay();
-            const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Ajuste para comenzar en lunes
-
-            const startOfWeek = new Date(today.setDate(diff));
-            startOfWeek.setHours(0, 0, 0, 0);
-
-            const endOfWeek = new Date();
-            endOfWeek.setHours(23, 59, 59, 999);
-
-            window.startDate = startOfWeek;
-            window.endDate = endOfWeek;
-
-            $('#daterange').val(moment(startOfWeek).format('DD/MM/YYYY') + ' - ' + moment(endOfWeek).format('DD/MM/YYYY'));
-            tabla.draw();
-        });
-
-        $('#filterMonth').on('click', function () {
-            $('.filter-btn').removeClass('active');
-            $(this).addClass('active');
-
-            const date = new Date();
-            const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-            startOfMonth.setHours(0, 0, 0, 0);
-
-            const endOfMonth = new Date();
-            endOfMonth.setHours(23, 59, 59, 999);
-
-            window.startDate = startOfMonth;
-            window.endDate = endOfMonth;
-
-            $('#daterange').val(moment(startOfMonth).format('DD/MM/YYYY') + ' - ' + moment(endOfMonth).format('DD/MM/YYYY'));
-            tabla.draw();
-        });
-
-        $('#filterYear').on('click', function () {
-            $('.filter-btn').removeClass('active');
-            $(this).addClass('active');
-
-            const date = new Date();
-            const startOfYear = new Date(date.getFullYear(), 0, 1);
-            startOfYear.setHours(0, 0, 0, 0);
-
-            const endOfYear = new Date();
-            endOfYear.setHours(23, 59, 59, 999);
-
-            window.startDate = startOfYear;
-            window.endDate = endOfYear;
-
-            $('#daterange').val(moment(startOfYear).format('DD/MM/YYYY') + ' - ' + moment(endOfYear).format('DD/MM/YYYY'));
-            tabla.draw();
-        });
-    });
-
-    // Gráfico de compras mensuales
-    document.addEventListener('DOMContentLoaded', function () {
-        const ctx = document.getElementById('comprasMensualesChart').getContext('2d');
-        const meses = {{ meses| safe
-    }};
-    const datosCompras = {{ datos_meses| safe }};
-
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: meses,
-            datasets: [{
-                label: 'Total de Compras ($)',
-                data: datosCompras,
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 2,
-                tension: 0.4,
-                pointBackgroundColor: 'rgba(75, 192, 192, 1)'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function (value) {
-                            return '$' + value.toLocaleString();
+        // Gráfico de compras mensuales
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('comprasMensualesChart').getContext('2d');
+            const meses = {{ meses|safe }};
+            const datosCompras = {{ datos_meses|safe }};
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: meses,
+                    datasets: [{
+                        label: 'Total de Compras ($)',
+                        data: datosCompras,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        pointBackgroundColor: 'rgba(75, 192, 192, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Total: $' + context.raw.toLocaleString();
+                                }
+                            }
                         }
                     }
                 }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            return 'Total: $' + context.raw.toLocaleString();
-                        }
-                    }
-                }
-            }
-        }
-    });
+            });
         });
-</script>
-<script>
+    </script>
+  <script>
     // Función corregida para actualizar las tarjetas de compras por tipo de pago según el filtro aplicado
     function actualizarTarjetasTipoPago() {
         // Verificar si la tabla está definida
