@@ -1,0 +1,287 @@
+{% extends "_base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Detalle de Compras - {{ productor.nombre_completo }}{% endblock %}
+
+{% block content %}
+
+<div class="container mx-auto p-4">
+    <!-- Información del Productor -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex flex-wrap items-center">
+            <div class="w-full md:w-1/4 mb-4 md:mb-0 flex justify-center">
+                {% if productor.imagen %}
+                <img src="{{ productor.imagen.url }}" alt="{{ productor.nombre_completo }}"
+                    class="w-32 h-32 rounded-full object-cover border-4 border-green-600">
+                {% else %}
+                <div class="w-32 h-32 rounded-full bg-gray-300 flex items-center justify-center text-gray-500 text-4xl">
+                    <i class="fas fa-user"></i>
+                </div>
+                {% endif %}
+            </div>
+            <div class="w-full md:w-3/4">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">{{ productor.nombre_completo }}</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-gray-600">
+                            <i class="fas fa-phone text-green-600 mr-2"></i> {{ productor.telefono|default:"No
+                            registrado" }}
+                        </p>
+                        <p class="text-gray-600">
+                            <i class="fas fa-envelope text-green-600 mr-2"></i> {{ productor.correo|default:"No
+                            registrado" }}
+                        </p>
+                        <p class="text-gray-600">
+                            <i class="fas fa-building text-green-600 mr-2"></i> Sucursal: {{
+                            productor.id_sucursal.nombre }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600">
+                            <i class="fas fa-university text-green-600 mr-2"></i> Cuenta: {{ productor.num_cuenta }}
+                        </p>
+                        <p class="text-gray-600">
+                            <i class="fas fa-key text-green-600 mr-2"></i> CLABE: {{ productor.clabe_interbancaria }}
+                        </p>
+                        <p class="text-gray-600">
+                            <i class="fas fa-calendar-alt text-green-600 mr-2"></i> Registrado: {{
+                            productor.fecha_creacion|date:"d/m/Y" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumen de Compras -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <h2 class="text-xl font-semibold text-gray-800 mb-2">
+                <i class="fas fa-money-bill-wave text-green-600 mr-2"></i>Total Compras
+            </h2>
+            <p class="text-3xl font-bold text-green-600">${{ total_compras|floatformat:2|intcomma }}</p>
+            <p class="text-gray-500 mt-2">Acumulado histórico</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <h2 class="text-xl font-semibold text-gray-800 mb-2">
+                <i class="fas fa-box text-blue-600 mr-2"></i>Cantidad Total
+            </h2>
+            <p class="text-3xl font-bold text-blue-600">{{ cantidad_productos|intcomma }}</p>
+            <p class="text-gray-500 mt-2">Productos comprados</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <h2 class="text-xl font-semibold text-gray-800 mb-2">
+                <i class="fas fa-calculator text-purple-600 mr-2"></i>Promedio
+            </h2>
+            <p class="text-3xl font-bold text-purple-600">${{ promedio_compra|floatformat:2|intcomma }}</p>
+            <p class="text-gray-500 mt-2">Por compra</p>
+        </div>
+    </div>
+
+    <!-- Gráfico y Compras por Producto -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <!-- Gráfico de compras -->
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                <i class="fas fa-chart-pie text-indigo-600 mr-2"></i>Distribución de Compras
+            </h2>
+            <div class="h-64">
+                <canvas id="comprasProductosChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Compras por Producto -->
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                <i class="fas fa-list-ul text-orange-600 mr-2"></i>Compras por Producto
+            </h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="py-2 px-3 text-left">Producto</th>
+                            <th class="py-2 px-3 text-right">Cantidad</th>
+                            <th class="py-2 px-3 text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for producto in compras_por_producto %}
+                        <tr class="border-t hover:bg-gray-50">
+                            <td class="py-2 px-3">{{ producto.producto__nombre }} {{ producto.producto__variedad }}</td>
+                            <td class="py-2 px-3 text-right">{{ producto.cantidad|intcomma }}</td>
+                            <td class="py-2 px-3 text-right font-semibold">${{ producto.total|floatformat:2|intcomma }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="py-4 text-center text-gray-500">No hay datos disponibles</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historial de compras -->
+    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">
+            <i class="fas fa-history text-purple-600 mr-2"></i>Historial de Compras
+        </h2>
+
+        <div class="overflow-x-auto">
+            <table id="tablaCompras" class="min-w-full bg-white">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="py-2 px-3 text-left">ID</th>
+                        <th class="py-2 px-3 text-left">Fecha</th>
+                        <th class="py-2 px-3 text-left">Producto</th>
+                        <th class="py-2 px-3 text-right">Cantidad</th>
+                        <th class="py-2 px-3 text-right">Precio Unit.</th>
+                        <th class="py-2 px-3 text-right">Total</th>
+                        <th class="py-2 px-3 text-center">Tipo Pago</th>
+                        <th class="py-2 px-3 text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for compra in compras %}
+                    <tr class="border-t hover:bg-gray-50">
+                        <td class="py-2 px-3">{{ compra.id }}</td>
+                        <td class="py-2 px-3">{{ compra.fecha_compra|date:"d/m/Y" }}</td>
+                        <td class="py-2 px-3">{{ compra.producto.nombre }} - {{ compra.producto.variedad }}</td>
+                        <td class="py-2 px-3 text-right">{{ compra.cantidad }}</td>
+                        <td class="py-2 px-3 text-right">${{ compra.precio_unitario|floatformat:2|intcomma }}</td>
+                        <td class="py-2 px-3 text-right font-semibold">${{ compra.monto_total|floatformat:2|intcomma }}
+                        </td>
+                        <td class="py-2 px-3 text-center">
+                            {% if compra.tipo_pago == 'Efectivo' %}
+                            <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Efectivo</span>
+                            {% elif compra.tipo_pago == 'Deposito' %}
+                            <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">Depósito</span>
+                            {% elif compra.tipo_pago == 'Transferencia' %}
+                            <span
+                                class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">Transferencia</span>
+                            {% elif compra.tipo_pago == 'Cheque' %}
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">Cheque</span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">No definido</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-2 px-3 text-center">
+                            <div class="flex justify-center space-x-2">
+                                <a href="#" class="text-green-600 hover:text-green-800" title="Editar"
+                                    data-id="{{ compra.id }}">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="#" class="text-red-600 hover:text-red-800" title="Eliminar"
+                                    data-id="{{ compra.id }}">
+                                    <i class="fas fa-trash-alt"></i>
+                                </a>
+                                <a href="#" class="text-blue-600 hover:text-blue-800" title="Imprimir recibo"
+                                    data-id="{{ compra.id }}">
+                                    <i class="fas fa-receipt"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="py-4 text-center text-gray-500">No hay compras registradas para este
+                            productor</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- DataTables -->
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // Inicializar DataTables
+    $(document).ready(function () {
+        $('#tablaCompras').DataTable({
+            responsive: true,
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+            },
+            order: [[1, 'desc']], // Ordenar por fecha descendente
+            columnDefs: [
+                { responsivePriority: 1, targets: [1, 2, 5] }, // Columnas prioritarias
+                { responsivePriority: 2, targets: [7] } // Acciones siempre visibles
+            ]
+        });
+    });
+
+    // Gráfico de distribución de compras por producto
+    document.addEventListener('DOMContentLoaded', function () {
+        const ctx = document.getElementById('comprasProductosChart').getContext('2d');
+
+        // Preparar datos para el gráfico
+        const productosLabels = [];
+        const productosData = [];
+        const backgroundColors = [
+            'rgba(54, 162, 235, 0.6)',
+            'rgba(255, 99, 132, 0.6)',
+            'rgba(255, 206, 86, 0.6)',
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(153, 102, 255, 0.6)',
+            'rgba(255, 159, 64, 0.6)',
+            'rgba(199, 199, 199, 0.6)'
+        ];
+
+        {% for producto in compras_por_producto %}
+        productosLabels.push('{{ producto.producto__nombre }} {{ producto.producto__variedad }}');
+        productosData.push({{ producto.total }});
+    {% endfor %}
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: productosLabels,
+            datasets: [{
+                data: productosData,
+                backgroundColor: backgroundColors,
+                borderColor: backgroundColors.map(color => color.replace('0.6', '1')),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        boxWidth: 15,
+                        font: {
+                            size: 11
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            const value = context.raw;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            return `$${value.toLocaleString()} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+        });
+</script>
+{% endblock %}
