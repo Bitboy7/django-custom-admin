@@ -1,45 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Saldos Iniciales por Cuenta y Mes</title>
-    {% load static %}
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="{% static 'js/table.js' %}"></script>
-    <!-- DataTables CSS -->
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css">
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
-    <!-- Font Awesome CDN -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-      .highlight {
-        background-color: #ffeb3b !important;
-      }
-    </style>
-  </head>
-  <body class="bg-gray-100 font-sans">
-    
-    <!-- Navbar -->
-    <nav class="bg-gray-800 p-4 sticky top-0 shadow z-30">
-      <div class="container mx-auto flex justify-between items-center">
-        <a href="{% url 'admin:index' %}" class="text-white text-lg font-semibold">
-          <i class="fas fa-cog"></i> Admin
-        </a>
-        <h1 class="text-white text-xl font-bold">Gestión de Saldos</h1>
-        <div class="space-x-4">
-          <a href="{% url 'balances' %}" class="text-gray-300 hover:text-white">Balances</a>
-          <a href="{% url 'exportar_gastos_excel' %}" class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-500">
-            Exportar acumulado general
-          </a>
-          </div>
-        </div>
-      </div>
-    </nav>
+{% extends "_base.html" %}
+{% load static %}
+
 
     <!-- Warning -->
     <div id="warning-message" class="bg-yellow-200 border-l-4 border-yellow-500 text-yellow-700 p-2" role="alert">
@@ -227,12 +188,6 @@
         });
       </script>
 
-      <!-- jQuery and DataTables JS -->
-      <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
-      <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-      <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-      <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-
       <script>
       $(document).ready(function() {
         $('table').DataTable({
@@ -297,7 +252,5 @@
     <span class="text-2xl font-bold text-green-600">${{ gasto_mediano|floatformat:2 }}</span>
   </div>
 </div>
-      </div>
     
-  </body>
-</html>
+ 

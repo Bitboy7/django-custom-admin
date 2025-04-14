@@ -56,11 +56,6 @@
             </a>
           </li>
           <li>
-            <a href="{% url 'catalogo' %}" class="text-gray-300 hover:text-white flex items-center py-2">
-              <i class="fas fa-users mr-1"></i> Productores
-            </a>
-          </li>
-          <li>
             <a href="{% url 'gastos' %}" class="text-gray-300 hover:text-white flex items-center py-2">
               <i class="fas fa-file-invoice-dollar mr-1"></i> Gastos
             </a>
@@ -71,8 +66,8 @@
             </a>
           </li>
           <li>
-            <a href="{% url 'balances' %}" class="text-gray-300 hover:text-white flex items-center py-2">
-              <i class="fas fa-chart-line mr-1"></i> Balances
+            <a href="{% url 'exportar_gastos_excel' %}" class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-500">
+              Exportar acumulado general
             </a>
           </li>
         </ul>
@@ -107,6 +102,11 @@
       }
     });
   </script>
+  <!-- jQuery and DataTables JS -->
+  <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 </body>
 
 </html>
