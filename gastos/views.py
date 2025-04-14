@@ -57,11 +57,20 @@ def compras_productores(request):
     compras_por_tipo = Compra.objects.values('tipo_pago').annotate(
         total=Sum('monto_total'),
         cantidad=Count('id')
-    ).order_by('-total')
+    ).order_by('-total')    # En la función compras_productores en gastos/views.py, añade esto:
+    
+    # Calcular compras de hoy
+    compras_hoy = Compra.objects.filter(
+        fecha_compra=date.today()
+    ).aggregate(total=Sum('monto_total'))['total'] or 0
     
     # Histórico mensual (últimos 6 meses)
     meses = []
     datos_meses = []
+    acumulados_meses = []
+    porcentajes_meses = []
+    total_periodo = 0
+    
     for i in range(5, -1, -1):
         fecha = datetime.now() - timedelta(days=30*i)
         mes = fecha.month
@@ -70,8 +79,18 @@ def compras_productores(request):
             fecha_compra__year=anio, 
             fecha_compra__month=mes
         ).aggregate(total=Sum('monto_total'))['total'] or 0
+        
         meses.append(f"{fecha.strftime('%b')} {anio}")
         datos_meses.append(float(compras_mes))
+        total_periodo += float(compras_mes)
+    
+    # Calcular acumulados y porcentajes
+    acumulado = 0
+    for valor in datos_meses:
+        acumulado += valor
+        acumulados_meses.append(acumulado)
+        
+    porcentajes_meses = [valor / total_periodo * 100 if total_periodo > 0 else 0 for valor in datos_meses]
     
     # Productos más comprados
     productos_comprados = Compra.objects.values(
@@ -95,7 +114,11 @@ def compras_productores(request):
         'compras_por_tipo': compras_por_tipo,
         'meses': json.dumps(meses),
         'datos_meses': json.dumps(datos_meses),
+        'acumulados_meses': json.dumps(acumulados_meses),
+        'porcentajes_meses': json.dumps(porcentajes_meses),
+        'total_periodo': total_periodo,
         'productos_comprados': productos_comprados,
+        'compras_hoy': compras_hoy,
     }
     
     return render(request, 'compras/compras_productores.html', context)

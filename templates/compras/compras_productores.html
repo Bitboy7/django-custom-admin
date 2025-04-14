@@ -26,110 +26,36 @@
 
 {% block content %}
     <div class="container mx-auto p-4">
-        <!-- Resumen general - Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <h2 class="text-xl font-semibold text-gray-800 mb-2">
-                    <i class="fas fa-money-bill-wave text-green-600 mr-2"></i>Total Compras
-                </h2>
-                <p id="total-compras" class="text-3xl font-bold text-green-600">${{ total_compras|floatformat:2|intcomma }}</p>
-                <p id="total-compras-label" class="text-gray-500 mt-2">Acumulado histórico</p>
-            </div>
 
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <h2 class="text-xl font-semibold text-gray-800 mb-2"><i
-                        class="fas fa-calendar text-blue-600 mr-2"></i>Compras del Mes</h2>
-                <p class="text-3xl font-bold text-blue-600">${{ compras_mes_actual|floatformat:2|intcomma }}</p>
-                <p class="text-gray-500 mt-2">{{ now|date:"F Y" }}</p>
-            </div>
-
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <h2 class="text-xl font-semibold text-gray-800 mb-2"><i
-                        class="fas fa-users text-purple-600 mr-2"></i>Total Productores</h2>
-                <p class="text-3xl font-bold text-purple-600">{{ productores.count }}</p>
-                <p class="text-gray-500 mt-2">Activos en el sistema</p>
-            </div>
-        </div>
-
-        <!-- Gráfico de compras mensuales -->
+        <!-- Tarjetas de acumulados -->
         <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4"><i
-                    class="fas fa-chart-bar text-indigo-600 mr-2"></i>Tendencia de Compras (Últimos 6 meses)</h2>
-            <div class="h-64">
-                <canvas id="comprasMensualesChart"></canvas>
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">
+            <i class="fas fa-chart-line text-blue-600 mr-2"></i>Acumulados de Compras
+            <span id="acumulados-filtro-indicador" class="text-sm font-normal text-gray-500 ml-2 hidden">(Filtrado)</span>
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
+                <h3 class="font-semibold text-lg">Total Compras</h3>
+                <p id="total-compras" class="text-xl font-bold text-green-600">${{ total_compras|floatformat:2|intcomma }}</p>
+                <p id="total-compras-label" class="text-sm text-gray-500">Acumulado histórico</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
+                <h3 class="font-semibold text-lg">Acumulado Diario</h3>
+                <p id="acumulado-diario" class="text-xl font-bold text-blue-600">${{ compras_hoy|default:"0.00"|floatformat:2|intcomma }}</p>
+                <p class="text-sm text-gray-500">Compras del día</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
+                <h3 class="font-semibold text-lg">Compras del Mes</h3>
+                <p id="acumulado-mensual" class="text-xl font-bold text-indigo-600">${{ compras_mes_actual|floatformat:2|intcomma }}</p>
+                <p class="text-sm text-gray-500">{{ now|date:"F Y" }}</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
+                <h3 class="font-semibold text-lg">Total Productores</h3>
+                <p class="text-xl font-bold text-purple-600">{{ productores.count }}</p>
+                <p class="text-sm text-gray-500">Activos en el sistema</p>
             </div>
         </div>
-
-        <!-- Top Productores y Productos Comprados -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <!-- Top Productores -->
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <h2 class="text-xl font-semibold text-gray-800 mb-4"><i
-                        class="fas fa-medal text-yellow-600 mr-2"></i>Top 5 Productores</h2>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full bg-white">
-                        <thead class="bg-gray-100">
-                            <tr>
-                                <th class="py-2 px-3 text-left">Productor</th>
-                                <th class="py-2 px-3 text-right">Total Compras</th>
-                                <th class="py-2 px-3 text-right">Cantidad</th>
-                                <th class="py-2 px-3 text-center">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for productor in top_productores %}
-                            <tr class="border-t hover:bg-gray-50">
-                                <td class="py-2 px-3">{{ productor.productor__nombre_completo }}</td>
-                                <td class="py-2 px-3 text-right">${{ productor.total_compras|floatformat:2|intcomma }}</td>
-                                <td class="py-2 px-3 text-right">{{ productor.cantidad_compras }}</td>
-                                <td class="py-2 px-3 text-center">
-                                    <a href="{% url 'detalle_productor_compras' productor.productor__id %}"
-                                        class="text-blue-600 hover:text-blue-800">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="4" class="py-4 text-center text-gray-500">No hay datos disponibles</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Productos más Comprados -->
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <h2 class="text-xl font-semibold text-gray-800 mb-4"><i
-                        class="fas fa-shopping-basket text-orange-600 mr-2"></i>Productos más Comprados</h2>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full bg-white">
-                        <thead class="bg-gray-100">
-                            <tr>
-                                <th class="py-2 px-3 text-left">Producto</th>
-                                <th class="py-2 px-3 text-right">Cantidad</th>
-                                <th class="py-2 px-3 text-right">Monto Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for producto in productos_comprados %}
-                            <tr class="border-t hover:bg-gray-50">
-                                <td class="py-2 px-3">{{ producto.producto__nombre }} {{ producto.producto__variedad }}</td>
-                                <td class="py-2 px-3 text-right">{{ producto.cantidad }}</td>
-                                <td class="py-2 px-3 text-right">${{ producto.total|floatformat:2|intcomma }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="3" class="py-4 text-center text-gray-500">No hay datos disponibles</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
+        
         <!-- Compras por tipo de pago -->
         <div class="bg-white rounded-lg shadow-md p-4 mb-6">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">
@@ -250,6 +176,87 @@
                     </tbody>
                 </table>
             </div>
+
+                <!-- Gráfico de compras mensuales -->
+                <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4"><i class="fas fa-chart-bar text-indigo-600 mr-2"></i>Tendencia
+                        de Compras (Últimos 6 meses)</h2>
+                    <div class="h-64">
+                        <canvas id="comprasMensualesChart"></canvas>
+                    </div>
+                </div>
+
+
+            <!-- Top Productores y Productos Comprados -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- Top Productores -->
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4"><i class="fas fa-medal text-yellow-600 mr-2"></i>Top 5
+                        Productores</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="py-2 px-3 text-left">Productor</th>
+                                    <th class="py-2 px-3 text-right">Total Compras</th>
+                                    <th class="py-2 px-3 text-right">Cantidad</th>
+                                    <th class="py-2 px-3 text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for productor in top_productores %}
+                                <tr class="border-t hover:bg-gray-50">
+                                    <td class="py-2 px-3">{{ productor.productor__nombre_completo }}</td>
+                                    <td class="py-2 px-3 text-right">${{ productor.total_compras|floatformat:2|intcomma }}</td>
+                                    <td class="py-2 px-3 text-right">{{ productor.cantidad_compras }}</td>
+                                    <td class="py-2 px-3 text-center">
+                                        <a href="{% url 'detalle_productor_compras' productor.productor__id %}"
+                                            class="text-blue-600 hover:text-blue-800">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="py-4 text-center text-gray-500">No hay datos disponibles</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            
+                <!-- Productos más Comprados -->
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4"><i
+                            class="fas fa-shopping-basket text-orange-600 mr-2"></i>Productos más Comprados</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="py-2 px-3 text-left">Producto</th>
+                                    <th class="py-2 px-3 text-right">Cantidad</th>
+                                    <th class="py-2 px-3 text-right">Monto Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for producto in productos_comprados %}
+                                <tr class="border-t hover:bg-gray-50">
+                                    <td class="py-2 px-3">{{ producto.producto__nombre }} {{ producto.producto__variedad }}</td>
+                                    <td class="py-2 px-3 text-right">{{ producto.cantidad }}</td>
+                                    <td class="py-2 px-3 text-right">${{ producto.total|floatformat:2|intcomma }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="py-4 text-center text-gray-500">No hay datos disponibles</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 {% endblock %}
@@ -489,7 +496,7 @@
         });
     </script>
   <script>
-    // Función corregida para actualizar las tarjetas de compras por tipo de pago según el filtro aplicado
+    // Función para actualizar las tarjetas de compras por tipo de pago y acumulados según el filtro aplicado
     function actualizarTarjetasTipoPago() {
         // Verificar si la tabla está definida
         if (!window.tablaCompras) {
@@ -500,6 +507,7 @@
         // Mostrar indicador de filtrado
         const hayFiltro = window.startDate !== undefined || $('#tablaCompras_filter input').val() !== '';
         $('#filtro-indicador').toggleClass('hidden', !hayFiltro);
+        $('#acumulados-filtro-indicador').toggleClass('hidden', !hayFiltro);
 
         // Inicializar contadores por tipo de pago
         const tiposPago = {
@@ -509,6 +517,17 @@
             'Cheque': { total: 0, cantidad: 0, color: 'yellow' },
             'No definido': { total: 0, cantidad: 0, color: 'gray' }
         };
+        
+        // Variables para acumulados
+        let totalGeneral = 0;
+        let totalHoy = 0;
+        let totalMes = 0;
+        
+        // Fecha actual para comparaciones
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
 
         // Recorrer todas las filas visibles después de aplicar el filtro
         tablaCompras.rows({ search: 'applied' }).every(function (rowIdx) {
@@ -529,10 +548,55 @@
             if (!isNaN(monto)) {
                 tiposPago[tipoPago].total += monto;
                 tiposPago[tipoPago].cantidad++;
+                totalGeneral += monto;
+                
+                // Comprobar si es de hoy o de este mes para acumulados
+                const fechaStr = data[1]; // La fecha está en la segunda columna (índice 1)
+                if (fechaStr) {
+                    try {
+                        // Formato dd/mm/yyyy
+                        const parts = fechaStr.split('/');
+                        if (parts.length === 3) {
+                            const day = parseInt(parts[0], 10);
+                            const month = parseInt(parts[1], 10) - 1; // Los meses en JS van de 0-11
+                            const year = parseInt(parts[2], 10);
+                            
+                            const rowDate = new Date(year, month, day);
+                            
+                            // Si es hoy
+                            if (rowDate.getDate() === today.getDate() && 
+                                rowDate.getMonth() === today.getMonth() && 
+                                rowDate.getFullYear() === today.getFullYear()) {
+                                totalHoy += monto;
+                            }
+                            
+                            // Si es de este mes
+                            if (rowDate.getMonth() === currentMonth && 
+                                rowDate.getFullYear() === currentYear) {
+                                totalMes += monto;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error al parsear la fecha:', fechaStr, e);
+                    }
+                }
             }
         });
 
-        // Vaciar y reconstruir el contenedor
+        // Actualizar tarjetas de acumulados
+        if (hayFiltro) {
+            $('#acumulado-diario').html(`$${totalHoy.toFixed(2)}`);
+            $('#acumulado-mensual').html(`$${totalMes.toFixed(2)}`);
+            $('#acumulado-filtrado').html(`$${totalGeneral.toFixed(2)}`);
+        }
+        
+        if (hayFiltro) {
+            $('#acumulado-filtrado-label').html(`${tablaCompras.rows({ search: 'applied' }).count()} registros filtrados`);
+        } else {
+            $('#acumulado-filtrado-label').html('Total sin filtros');
+        }
+
+        // Vaciar y reconstruir el contenedor de tipos de pago
         const container = $('#compras-tipo-pago-container');
         container.empty();
 
@@ -561,7 +625,7 @@
                 const tarjeta = $(`
                     <div class="bg-gray-50 p-3 rounded-md border border-gray-200" data-tipo-pago="${tipo}">
                         <h3 class="font-semibold text-lg">${tipo}</h3>
-                        <p class="text-xl font-bold text-${tiposPago[tipo].color}-600">$${tiposPago[tipo].total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <p class="text-xl font-bold text-${tiposPago[tipo].color}-600">$${tiposPago[tipo].total.toFixed(2)}</p>
                         <p class="text-sm text-gray-500">${tiposPago[tipo].cantidad} transacciones</p>
                     </div>
                 `);
@@ -569,21 +633,13 @@
             }
         }
 
-        // Actualizar también el total general filtrado
-        let totalGeneral = 0;
-        for (const tipo in tiposPago) {
-            totalGeneral += tiposPago[tipo].total;
-        }
-
         // Si hay un filtro aplicado, actualizar la tarjeta de total
         if (hayFiltro) {
-            const totalFormateado = totalGeneral.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            $('#total-compras').html(`$${totalFormateado}`);
+            $('#total-compras').html(`$${totalGeneral.toFixed(2)}`);
             $('#total-compras-label').html('Total Filtrado');
         } else {
             // Restaurar el valor original
-            $('#total-compras').html(`${{ total_compras| floatformat: 2 | intcomma }
-    }`);
+            $('#total-compras').html(`${{ total_compras|floatformat:2|intcomma }}`);
             $('#total-compras-label').html('Acumulado histórico');
         }
         

@@ -1,6 +1,8 @@
 {% extends "_base.html" %}
-{% load static %}
 
+{% load static %}
+{% load humanize %}
+{% block content %}
 
     <!-- Warning -->
     <div id="warning-message" class="bg-yellow-200 border-l-4 border-yellow-500 text-yellow-700 p-2" role="alert">
@@ -109,8 +111,8 @@
             {{ balance.mes|date:"Y-m" }}
           {% endif %}
           </td>
-          <td class="border px-4 py-2">${{ balance.total_gastos }}</td>
-          <td class="border px-4 py-2">${{ balance.acumulado }}</td>
+          <td class="border px-4 py-2">${{ balance.total_gastos|floatformat:2|intcomma }}</td>
+          <td class="border px-4 py-2">${{ balance.acumulado|floatformat:2|intcomma }}</td>
         </tr>
         {% endfor %}
         </tbody>
@@ -123,8 +125,51 @@
       {% endif %}
       </div>
 
+    
+    </div>
+    
+    <div class="container mx-auto p-3 mb-4">
+      <!-- Card para mostrar el total -->
+      <div class="mt-4 bg-white rounded-lg shadow-md p-3">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-semibold text-gray-800">Acumulado total</h2>
+          <span class="text-3xl font-bold text-green-600">${{ total_gastos|floatformat:2|intcomma }}</span>
+        </div>
+      </div>
+    
+     <!-- Cards para mostrar métricas importantes -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+  <div class="bg-white rounded-lg shadow-md p-3">
+    <h2 class="text-xl font-semibold text-gray-800">Total de Gastos</h2>
+    <span class="text-2xl font-bold text-green-600">${{ total_gastos|floatformat:2|intcomma }}</span>
+  </div>
+  <div class="bg-white rounded-lg shadow-md p-3">
+    <h2 class="text-xl font-semibold text-gray-800">Promedio de Gastos</h2>
+    <span class="text-2xl font-bold text-green-600">${{ promedio_gastos|floatformat:2|intcomma }}</span>
+  </div>
+  <div class="bg-white rounded-lg shadow-md p-3">
+    <h2 class="text-xl font-semibold text-gray-800">Número de Transacciones</h2>
+    <span class="text-2xl font-bold text-green-600">{{ numero_transacciones }}</span>
+  </div>
+  <div class="bg-white rounded-lg shadow-md p-3">
+    <h2 class="text-xl font-semibold text-gray-800">Gasto Máximo</h2>
+    <span class="text-2xl font-bold text-green-600">${{ gasto_maximo|floatformat:2|intcomma }}</span>
+    <p class="text-gray-600">Categoría: {{ categoria_gasto_maximo }}</p>
+  </div>
+  <div class="bg-white rounded-lg shadow-md p-3">
+    <h2 class="text-xl font-semibold text-gray-800">Gasto Mínimo</h2>
+    <span class="text-2xl font-bold text-green-600">${{ gasto_minimo|floatformat:2|intcomma }}</span>
+    <p class="text-gray-600">Categoría: {{ categoria_gasto_minimo }}</p>
+  </div>
+  <div class="bg-white rounded-lg shadow-md p-3">
+    <h2 class="text-xl font-semibold text-gray-800">Gasto Mediano</h2>
+    <span class="text-2xl font-bold text-green-600">${{ gasto_mediano|floatformat:2|intcomma }}</span>
+  </div>
+</div>
+
+    </div>
       <script>
-        document.getElementById('periodo').addEventListener('change', function() {
+        document.getElementById('periodo').addEventListener('change', function () {
           const periodo = this.value;
           const diaContainer = document.getElementById('dia-container');
           const rangoDiasContainer = document.getElementById('rango-dias-container');
@@ -137,28 +182,28 @@
           }
         });
       </script>
-
+      
       <script>
-      function highlightRow(row) {
-        // Remove highlight from all rows
-        document.querySelectorAll('tr').forEach(tr => {
-        tr.classList.remove('highlight');
-        });
-        // Add highlight to clicked row
-        row.classList.add('highlight');
-      }
+        function highlightRow(row) {
+          // Remove highlight from all rows
+          document.querySelectorAll('tr').forEach(tr => {
+            tr.classList.remove('highlight');
+          });
+          // Add highlight to clicked row
+          row.classList.add('highlight');
+        }
       </script>
-
+      
       <!-- jsPDF and jsPDF-AutoTable CDN -->
       <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-
+      
       <script>
         function exportPDF() {
           const { jsPDF } = window.jspdf;
           const doc = new jsPDF();
 
-          doc.autoTable({ 
+          doc.autoTable({
             html: 'table',
             startY: 20,
             theme: 'grid',
@@ -169,13 +214,13 @@
           doc.save('reporte.pdf');
         }
 
-        $(document).ready(function() {
+        $(document).ready(function () {
           // Add Export PDF button
-          new $.fn.dataTable.Buttons( $('table').DataTable(), {
+          new $.fn.dataTable.Buttons($('table').DataTable(), {
             buttons: [
               {
                 text: 'Exportar PDF',
-                action: function ( e, dt, node, config ) {
+                action: function (e, dt, node, config) {
                   exportPDF();
                 }
               }
@@ -187,70 +232,36 @@
           );
         });
       </script>
-
+      
+      <!-- jQuery and DataTables JS -->
+      <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+      <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+      <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+      <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+      
       <script>
-      $(document).ready(function() {
-        $('table').DataTable({
-        pageLength: 10,
-        responsive: true,
-        dom: 'Bfrtip',
-        buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
-        language: {
-          url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
-        },
-        animation: true,
-        "initComplete": function() {
-          $(this).fadeIn(1000);
-        },
-        "drawCallback": function() {
-          $('tbody tr').hover(
-          function() { $(this).addClass('bg-yellow-200'); },
-          function() { $(this).removeClass('bg-yellow-200'); }
-          );
-        },
-        "searching": false // Disable the search bar
+        $(document).ready(function () {
+          $('table').DataTable({
+            pageLength: 10,
+            responsive: true,
+            dom: 'Bfrtip',
+            buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
+            language: {
+              url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+            },
+            animation: true,
+            "initComplete": function () {
+              $(this).fadeIn(1000);
+            },
+            "drawCallback": function () {
+              $('tbody tr').hover(
+                function () { $(this).addClass('bg-yellow-200'); },
+                function () { $(this).removeClass('bg-yellow-200'); }
+              );
+            },
+            "searching": false // Disable the search bar
+          });
         });
-      });
       </script>
-    </div>
-    
-    <div class="container mx-auto p-3 mb-4">
-      <!-- Card para mostrar el total -->
-      <div class="mt-4 bg-white rounded-lg shadow-md p-3">
-        <div class="flex justify-between items-center">
-          <h2 class="text-xl font-semibold text-gray-800">Acumulado total</h2>
-          <span class="text-3xl font-bold text-green-600">${{ total_gastos|floatformat:2 }}</span>
-        </div>
-      </div>
-    
-     <!-- Cards para mostrar métricas importantes -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-  <div class="bg-white rounded-lg shadow-md p-3">
-    <h2 class="text-xl font-semibold text-gray-800">Total de Gastos</h2>
-    <span class="text-2xl font-bold text-green-600">${{ total_gastos|floatformat:2 }}</span>
-  </div>
-  <div class="bg-white rounded-lg shadow-md p-3">
-    <h2 class="text-xl font-semibold text-gray-800">Promedio de Gastos</h2>
-    <span class="text-2xl font-bold text-green-600">${{ promedio_gastos|floatformat:2 }}</span>
-  </div>
-  <div class="bg-white rounded-lg shadow-md p-3">
-    <h2 class="text-xl font-semibold text-gray-800">Número de Transacciones</h2>
-    <span class="text-2xl font-bold text-green-600">{{ numero_transacciones }}</span>
-  </div>
-  <div class="bg-white rounded-lg shadow-md p-3">
-    <h2 class="text-xl font-semibold text-gray-800">Gasto Máximo</h2>
-    <span class="text-2xl font-bold text-green-600">${{ gasto_maximo|floatformat:2 }}</span>
-    <p class="text-gray-600">Categoría: {{ categoria_gasto_maximo }}</p>
-  </div>
-  <div class="bg-white rounded-lg shadow-md p-3">
-    <h2 class="text-xl font-semibold text-gray-800">Gasto Mínimo</h2>
-    <span class="text-2xl font-bold text-green-600">${{ gasto_minimo|floatformat:2 }}</span>
-    <p class="text-gray-600">Categoría: {{ categoria_gasto_minimo }}</p>
-  </div>
-  <div class="bg-white rounded-lg shadow-md p-3">
-    <h2 class="text-xl font-semibold text-gray-800">Gasto Mediano</h2>
-    <span class="text-2xl font-bold text-green-600">${{ gasto_mediano|floatformat:2 }}</span>
-  </div>
-</div>
-    
- 
+
+{% endblock content %}

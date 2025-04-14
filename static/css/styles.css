@@ -60,7 +60,6 @@ p {
   border-bottom: 1px solid var(--border-color);
   font-weight: 600;
   background-color: var(--primary-color);
-  color: white;
   border-top-left-radius: 0.5rem;
   border-top-right-radius: 0.5rem;
 }
