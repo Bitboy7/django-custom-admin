@@ -33,7 +33,7 @@
           <label for="year" class="block text-white font-bold mb-2">Seleccione el Año:</label>
           <select name="year" id="year" class="block appearance-none forced-colors:appearance-auto w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
             {% for year in available_years %}
-            <option value="{{ year.year }}" {% if year.year|stringformat:"s" == selected_year %}selected{% endif %}>{{ year.year }}</option>
+            <option value="{{ year.year }}" {% if year.year|stringformat:"s" == selected_year or not selected_year and year.year == current_year %}selected{% endif %}>{{ year.year }}</option>
             {% endfor %}
           </select>
         </div>

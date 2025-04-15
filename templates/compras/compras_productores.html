@@ -27,26 +27,32 @@
 {% block content %}
     <div class="container mx-auto p-4">
 
-        <!-- Tarjetas de acumulados -->
-        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">
+           <!-- Tarjetas de acumulados -->
+    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">
             <i class="fas fa-chart-line text-blue-600 mr-2"></i>Acumulados de Compras
             <span id="acumulados-filtro-indicador" class="text-sm font-normal text-gray-500 ml-2 hidden">(Filtrado)</span>
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
                 <h3 class="font-semibold text-lg">Total Compras</h3>
-                <p id="total-compras" class="text-xl font-bold text-green-600">${{ total_compras|floatformat:2|intcomma }}</p>
+                <p id="total-compras" class="text-xl font-bold text-green-600" data-total="{{ total_compras|default:0 }}">
+                    ${{ total_compras|floatformat:2|intcomma }}
+                </p>
                 <p id="total-compras-label" class="text-sm text-gray-500">Acumulado histórico</p>
             </div>
             <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
                 <h3 class="font-semibold text-lg">Acumulado Diario</h3>
-                <p id="acumulado-diario" class="text-xl font-bold text-blue-600">${{ compras_hoy|default:"0.00"|floatformat:2|intcomma }}</p>
+                <p id="acumulado-diario" class="text-xl font-bold text-blue-600" data-total="{{ compras_hoy|default:0 }}">
+                    ${{ compras_hoy|default:"0.00"|floatformat:2|intcomma }}
+                </p>
                 <p class="text-sm text-gray-500">Compras del día</p>
             </div>
             <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
                 <h3 class="font-semibold text-lg">Compras del Mes</h3>
-                <p id="acumulado-mensual" class="text-xl font-bold text-indigo-600">${{ compras_mes_actual|floatformat:2|intcomma }}</p>
+                <p id="acumulado-mensual" class="text-xl font-bold text-indigo-600" data-total="{{ compras_mes_actual|default:0 }}">
+                    ${{ compras_mes_actual|floatformat:2|intcomma }}
+                </p>
                 <p class="text-sm text-gray-500">{{ now|date:"F Y" }}</p>
             </div>
             <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
@@ -55,6 +61,7 @@
                 <p class="text-sm text-gray-500">Activos en el sistema</p>
             </div>
         </div>
+    </div>
         
         <!-- Compras por tipo de pago -->
         <div class="bg-white rounded-lg shadow-md p-4 mb-6">
@@ -542,7 +549,9 @@
             else tipoPago = 'No definido';
 
             // Extraer el monto (eliminar $ y comas)
+            // Esto es crítico: debemos eliminar correctamente el símbolo $ y las comas
             const montoStr = data[6].replace(/[$,]/g, '');
+            console.log('Monto extraído:', data[6], '→', montoStr); // Debug
             const monto = parseFloat(montoStr);
 
             if (!isNaN(monto)) {
@@ -583,11 +592,37 @@
             }
         });
 
-        // Actualizar tarjetas de acumulados
+        // Función para formatear números como moneda sin afectar el valor
+        function formatearMoneda(valor) {
+            // Asegurar que sea un número y redondearlo a 2 decimales
+            valor = parseFloat(valor.toFixed(2));
+            
+            // Separar la parte entera y decimal
+            let partes = valor.toString().split('.');
+            let parteEntera = partes[0];
+            let parteDecimal = partes.length > 1 ? '.' + partes[1] : '.00';
+            
+            // Añadir comas como separadores de miles
+            parteEntera = parteEntera.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            
+            return '$' + parteEntera + parteDecimal;
+        }
+
+        console.log('Totales calculados:'); // Debug
+        console.log('Total General:', totalGeneral); 
+        console.log('Total Hoy:', totalHoy);
+        console.log('Total Mes:', totalMes);
+
+        // Actualizar tarjetas de acumulados con números formateados correctamente
+        $('#total-compras').data('total', totalGeneral);
+        $('#acumulado-diario').data('total', totalHoy);
+        $('#acumulado-mensual').data('total', totalMes);
+        
+        // Actualizar HTML con el formato correcto
         if (hayFiltro) {
-            $('#acumulado-diario').html(`$${totalHoy.toFixed(2)}`);
-            $('#acumulado-mensual').html(`$${totalMes.toFixed(2)}`);
-            $('#acumulado-filtrado').html(`$${totalGeneral.toFixed(2)}`);
+            $('#total-compras').html(formatearMoneda(totalGeneral));
+            $('#acumulado-diario').html(formatearMoneda(totalHoy));
+            $('#acumulado-mensual').html(formatearMoneda(totalMes));
         }
         
         if (hayFiltro) {
@@ -625,7 +660,7 @@
                 const tarjeta = $(`
                     <div class="bg-gray-50 p-3 rounded-md border border-gray-200" data-tipo-pago="${tipo}">
                         <h3 class="font-semibold text-lg">${tipo}</h3>
-                        <p class="text-xl font-bold text-${tiposPago[tipo].color}-600">$${tiposPago[tipo].total.toFixed(2)}</p>
+                        <p class="text-xl font-bold text-${tiposPago[tipo].color}-600">${formatearMoneda(tiposPago[tipo].total)}</p>
                         <p class="text-sm text-gray-500">${tiposPago[tipo].cantidad} transacciones</p>
                     </div>
                 `);
@@ -635,7 +670,7 @@
 
         // Si hay un filtro aplicado, actualizar la tarjeta de total
         if (hayFiltro) {
-            $('#total-compras').html(`$${totalGeneral.toFixed(2)}`);
+            // Usar nuestra función de formateo personalizada
             $('#total-compras-label').html('Total Filtrado');
         } else {
             // Restaurar el valor original
@@ -680,6 +715,13 @@
             // Ejecutar la primera vez para inicializar
             actualizarTarjetasTipoPago();
         }, 1000);
+    });
+</script>
+<script>
+    // Trigger a refresh of the formatted values
+    $('#total-compras, #acumulado-diario, #acumulado-mensual').each(function() {
+        const total = $(this).data('total');
+        $(this).html(`$${parseFloat(total).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`);
     });
 </script>
 {% endblock %}

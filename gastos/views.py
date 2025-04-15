@@ -100,26 +100,26 @@ def compras_productores(request):
         total=Sum('monto_total'),
         cantidad=Sum('cantidad')
     ).order_by('-cantidad')[:5]
-    
+
     context = {
-        'compras': compras,
-        'productores': productores,
-        'productos': productos,
-        'cuentas': cuentas,
-        'form': form,  # Pasar el formulario a la plantilla
-        'today': date.today(),
-        'total_compras': total_compras,
-        'compras_mes_actual': compras_mes_actual,
-        'top_productores': top_productores,
-        'compras_por_tipo': compras_por_tipo,
-        'meses': json.dumps(meses),
-        'datos_meses': json.dumps(datos_meses),
-        'acumulados_meses': json.dumps(acumulados_meses),
-        'porcentajes_meses': json.dumps(porcentajes_meses),
-        'total_periodo': total_periodo,
-        'productos_comprados': productos_comprados,
-        'compras_hoy': compras_hoy,
-    }
+    'compras': compras,
+    'productores': productores,
+    'productos': productos,
+    'cuentas': cuentas,
+    'form': form,
+    'today': date.today(),
+    'total_compras': float(total_compras),  # Convert to float
+    'compras_mes_actual': float(compras_mes_actual),  # Convert to float
+    'top_productores': top_productores,
+    'compras_por_tipo': compras_por_tipo,
+    'meses': json.dumps(meses),
+    'datos_meses': json.dumps(datos_meses),
+    'acumulados_meses': json.dumps(acumulados_meses),
+    'porcentajes_meses': json.dumps(porcentajes_meses),
+    'total_periodo': total_periodo,
+    'productos_comprados': productos_comprados,
+    'compras_hoy': float(compras_hoy),  # Convert to float
+}
     
     return render(request, 'compras/compras_productores.html', context)
 
