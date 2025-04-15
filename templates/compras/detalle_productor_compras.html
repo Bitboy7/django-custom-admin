@@ -2,186 +2,175 @@
 {% load static %}
 {% load humanize %}
 
-{% block title %}Detalle de Compras - {{ productor.nombre_completo }}{% endblock %}
+{% block title %}Compras de {{ productor.nombre_completo }}{% endblock %}
+
+{% block extra_css %}
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <style>
+        .dataTables_wrapper {
+            @apply bg-white rounded-lg p-4 shadow-sm;
+        }
+        .dataTables_filter input {
+            @apply pl-8 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500 py-1 px-2;
+            background-position: 10px center;
+            background-repeat: no-repeat;
+            background-size: 14px;
+        }
+        .dataTables_length select {
+            @apply border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500 py-1 pl-2 pr-8;
+        }
+        .dataTables_paginate .paginate_button {
+            @apply px-3 py-1 mx-1 rounded-md border border-gray-200 hover:bg-blue-500 hover:text-white transition-colors duration-200;
+        }
+        .dataTables_paginate .paginate_button.current {
+            @apply bg-blue-500 text-white border-blue-500;
+        }
+        .dataTables_paginate .paginate_button.disabled {
+            @apply opacity-50 cursor-not-allowed;
+        }
+        table.dataTable tbody tr.selected {
+            @apply bg-blue-100;
+        }
+    </style>
+{% endblock %}
 
 {% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">
+            <i class="fas fa-shopping-cart text-blue-500 mr-2"></i>Compras de {{ productor.nombre_completo }}
+        </h1>
+        <a href="{% url 'compras_productores' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-md transition-colors duration-300">
+            <i class="fas fa-arrow-left mr-2"></i>Volver
+        </a>
+    </div>
 
-<div class="container mx-auto p-4">
-    <!-- Información del Productor -->
+    <!-- Resumen del productor -->
     <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div class="flex flex-wrap items-center">
-            <div class="w-full md:w-1/4 mb-4 md:mb-0 flex justify-center">
-                {% if productor.imagen %}
-                <img src="{{ productor.imagen.url }}" alt="{{ productor.nombre_completo }}"
-                    class="w-32 h-32 rounded-full object-cover border-4 border-green-600">
-                {% else %}
-                <div class="w-32 h-32 rounded-full bg-gray-300 flex items-center justify-center text-gray-500 text-4xl">
-                    <i class="fas fa-user"></i>
-                </div>
-                {% endif %}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Información del Productor</h2>
+                <ul class="space-y-2 text-gray-700">
+                    <li class="flex items-start">
+                        <span class="font-medium w-32">Nombre:</span>
+                        <span>{{ productor.nombre_completo }}</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="font-medium w-32">RFC:</span>
+                        <span>{{ productor.rfc|default:"No disponible" }}</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="font-medium w-32">Teléfono:</span>
+                        <span>{{ productor.telefono|default:"No disponible" }}</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="font-medium w-32">Dirección:</span>
+                        <span>{{ productor.direccion|default:"No disponible" }}</span>
+                    </li>
+                </ul>
             </div>
-            <div class="w-full md:w-3/4">
-                <h2 class="text-2xl font-bold text-gray-800 mb-2">{{ productor.nombre_completo }}</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <p class="text-gray-600">
-                            <i class="fas fa-phone text-green-600 mr-2"></i> {{ productor.telefono|default:"No
-                            registrado" }}
-                        </p>
-                        <p class="text-gray-600">
-                            <i class="fas fa-envelope text-green-600 mr-2"></i> {{ productor.correo|default:"No
-                            registrado" }}
-                        </p>
-                        <p class="text-gray-600">
-                            <i class="fas fa-building text-green-600 mr-2"></i> Sucursal: {{
-                            productor.id_sucursal.nombre }}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-gray-600">
-                            <i class="fas fa-university text-green-600 mr-2"></i> Cuenta: {{ productor.num_cuenta }}
-                        </p>
-                        <p class="text-gray-600">
-                            <i class="fas fa-key text-green-600 mr-2"></i> CLABE: {{ productor.clabe_interbancaria }}
-                        </p>
-                        <p class="text-gray-600">
-                            <i class="fas fa-calendar-alt text-green-600 mr-2"></i> Registrado: {{
-                            productor.fecha_creacion|date:"d/m/Y" }}
-                        </p>
-                    </div>
-                </div>
+            
+            <div>
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Acumulados</h2>
+                <ul class="space-y-3">
+                    <li class="flex justify-between items-center bg-blue-50 p-3 rounded-md">
+                        <span class="font-medium">Compras totales:</span>
+                        <span class="text-xl font-bold text-blue-600">${{ total_compras|floatformat:2|intcomma }}</span>
+                    </li>
+                    <li class="flex justify-between items-center bg-green-50 p-3 rounded-md">
+                        <span class="font-medium">Compras del mes:</span>
+                        <span class="text-xl font-bold text-green-600">${{ compras_mes|floatformat:2|intcomma }}</span>
+                    </li>
+                    <li class="flex justify-between items-center bg-purple-50 p-3 rounded-md">
+                        <span class="font-medium">Promedio:</span>
+                        <span class="text-xl font-bold text-purple-600">${{ promedio_compra|floatformat:2|intcomma }}</span>
+                    </li>
+                </ul>
             </div>
-        </div>
-    </div>
-
-    <!-- Resumen de Compras -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div class="bg-white rounded-lg shadow-md p-4">
-            <h2 class="text-xl font-semibold text-gray-800 mb-2">
-                <i class="fas fa-money-bill-wave text-green-600 mr-2"></i>Total Compras
-            </h2>
-            <p class="text-3xl font-bold text-green-600">${{ total_compras|floatformat:2|intcomma }}</p>
-            <p class="text-gray-500 mt-2">Acumulado histórico</p>
-        </div>
-
-        <div class="bg-white rounded-lg shadow-md p-4">
-            <h2 class="text-xl font-semibold text-gray-800 mb-2">
-                <i class="fas fa-box text-blue-600 mr-2"></i>Cantidad Total
-            </h2>
-            <p class="text-3xl font-bold text-blue-600">{{ cantidad_productos|intcomma }}</p>
-            <p class="text-gray-500 mt-2">Productos comprados</p>
-        </div>
-
-        <div class="bg-white rounded-lg shadow-md p-4">
-            <h2 class="text-xl font-semibold text-gray-800 mb-2">
-                <i class="fas fa-calculator text-purple-600 mr-2"></i>Promedio
-            </h2>
-            <p class="text-3xl font-bold text-purple-600">${{ promedio_compra|floatformat:2|intcomma }}</p>
-            <p class="text-gray-500 mt-2">Por compra</p>
-        </div>
-    </div>
-
-    <!-- Gráfico y Compras por Producto -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <!-- Gráfico de compras -->
-        <div class="bg-white rounded-lg shadow-md p-4">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">
-                <i class="fas fa-chart-pie text-indigo-600 mr-2"></i>Distribución de Compras
-            </h2>
-            <div class="h-64">
-                <canvas id="comprasProductosChart"></canvas>
-            </div>
-        </div>
-
-        <!-- Compras por Producto -->
-        <div class="bg-white rounded-lg shadow-md p-4">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">
-                <i class="fas fa-list-ul text-orange-600 mr-2"></i>Compras por Producto
-            </h2>
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="py-2 px-3 text-left">Producto</th>
-                            <th class="py-2 px-3 text-right">Cantidad</th>
-                            <th class="py-2 px-3 text-right">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for producto in compras_por_producto %}
-                        <tr class="border-t hover:bg-gray-50">
-                            <td class="py-2 px-3">{{ producto.producto__nombre }} {{ producto.producto__variedad }}</td>
-                            <td class="py-2 px-3 text-right">{{ producto.cantidad|intcomma }}</td>
-                            <td class="py-2 px-3 text-right font-semibold">${{ producto.total|floatformat:2|intcomma }}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="3" class="py-4 text-center text-gray-500">No hay datos disponibles</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            
+            <div>
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Estadísticas</h2>
+                <ul class="space-y-3">
+                    <li class="flex justify-between items-center bg-yellow-50 p-3 rounded-md">
+                        <span class="font-medium">Total compras:</span>
+                        <span class="text-xl font-bold text-yellow-600">{{ cantidad_compras }}</span>
+                    </li>
+                    <li class="flex justify-between items-center bg-red-50 p-3 rounded-md">
+                        <span class="font-medium">Última compra:</span>
+                        <span class="text-lg font-bold text-red-600">{{ ultima_compra|date:"d/m/Y"|default:"Sin compras" }}</span>
+                    </li>
+                    <li class="flex justify-between items-center bg-indigo-50 p-3 rounded-md">
+                        <span class="font-medium">Primera compra:</span>
+                        <span class="text-lg font-bold text-indigo-600">{{ primera_compra|date:"d/m/Y"|default:"Sin compras" }}</span>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
 
-    <!-- Historial de compras -->
-    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+    <!-- Distribución por productos -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 class="text-xl font-semibold text-gray-800 mb-4">
-            <i class="fas fa-history text-purple-600 mr-2"></i>Historial de Compras
+            <i class="fas fa-chart-pie text-purple-500 mr-2"></i>Distribución de compras por producto
         </h2>
+        <div class="h-64">
+            <canvas id="comprasProductosChart"></canvas>
+        </div>
+    </div>
 
+    <!-- Listado de compras -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">
+            <i class="fas fa-list text-green-500 mr-2"></i>Historial de Compras
+        </h2>
         <div class="overflow-x-auto">
-            <table id="tablaCompras" class="min-w-full bg-white">
+            <table id="tablaCompras" class="w-full table-auto">
                 <thead class="bg-gray-100">
                     <tr>
-                        <th class="py-2 px-3 text-left">ID</th>
-                        <th class="py-2 px-3 text-left">Fecha</th>
-                        <th class="py-2 px-3 text-left">Producto</th>
-                        <th class="py-2 px-3 text-right">Cantidad</th>
-                        <th class="py-2 px-3 text-right">Precio Unit.</th>
-                        <th class="py-2 px-3 text-right">Total</th>
-                        <th class="py-2 px-3 text-center">Tipo Pago</th>
-                        <th class="py-2 px-3 text-center">Acciones</th>
+                        <th class="px-4 py-2 text-left">ID</th>
+                        <th class="px-4 py-2 text-left">Fecha</th>
+                        <th class="px-4 py-2 text-left">Producto</th>
+                        <th class="px-4 py-2 text-right">Cantidad</th>
+                        <th class="px-4 py-2 text-right">Precio Unit.</th>
+                        <th class="px-4 py-2 text-right">Total</th>
+                        <th class="px-4 py-2 text-center">Tipo Pago</th>
+                        <th class="px-4 py-2 text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for compra in compras %}
-                    <tr class="border-t hover:bg-gray-50">
-                        <td class="py-2 px-3">{{ compra.id }}</td>
-                        <td class="py-2 px-3">{{ compra.fecha_compra|date:"d/m/Y" }}</td>
-                        <td class="py-2 px-3">{{ compra.producto.nombre }} - {{ compra.producto.variedad }}</td>
-                        <td class="py-2 px-3 text-right">{{ compra.cantidad }}</td>
-                        <td class="py-2 px-3 text-right">${{ compra.precio_unitario|floatformat:2|intcomma }}</td>
-                        <td class="py-2 px-3 text-right font-semibold">${{ compra.monto_total|floatformat:2|intcomma }}
-                        </td>
-                        <td class="py-2 px-3 text-center">
+                    <tr class="border-t">
+                        <td class="px-4 py-2">{{ compra.id }}</td>
+                        <td class="px-4 py-2">{{ compra.fecha_compra|date:"d/m/Y" }}</td>
+                        <td class="px-4 py-2">{{ compra.producto.nombre }} {{ compra.producto.variedad }}</td>
+                        <td class="px-4 py-2 text-right">{{ compra.cantidad }}</td>
+                        <td class="px-4 py-2 text-right">${{ compra.precio_unitario|floatformat:2|intcomma }}</td>
+                        <td class="px-4 py-2 text-right font-semibold">${{ compra.monto_total|floatformat:2|intcomma }}</td>
+                        <td class="px-4 py-2 text-center">
                             {% if compra.tipo_pago == 'Efectivo' %}
                             <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Efectivo</span>
                             {% elif compra.tipo_pago == 'Deposito' %}
                             <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">Depósito</span>
                             {% elif compra.tipo_pago == 'Transferencia' %}
-                            <span
-                                class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">Transferencia</span>
+                            <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">Transferencia</span>
                             {% elif compra.tipo_pago == 'Cheque' %}
                             <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">Cheque</span>
                             {% else %}
                             <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">No definido</span>
                             {% endif %}
                         </td>
-                        <td class="py-2 px-3 text-center">
+                        <td class="px-4 py-2 text-center">
                             <div class="flex justify-center space-x-2">
-                                <a href="#" class="text-green-600 hover:text-green-800" title="Editar"
-                                    data-id="{{ compra.id }}">
+                                <a href="#" class="text-blue-600 hover:text-blue-800" title="Ver detalle">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="#" class="text-green-600 hover:text-green-800" title="Editar">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <a href="#" class="text-red-600 hover:text-red-800" title="Eliminar"
-                                    data-id="{{ compra.id }}">
-                                    <i class="fas fa-trash-alt"></i>
-                                </a>
-                                <a href="#" class="text-blue-600 hover:text-blue-800" title="Imprimir recibo"
-                                    data-id="{{ compra.id }}">
+                                <a href="#" class="text-red-600 hover:text-red-800" title="Generar comprobante">
                                     <i class="fas fa-receipt"></i>
                                 </a>
                             </div>
@@ -204,23 +193,133 @@
 <!-- DataTables -->
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.70/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.70/vfs_fonts.js"></script>
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
     // Inicializar DataTables
     $(document).ready(function () {
-        $('#tablaCompras').DataTable({
+        const tabla = $('#tablaCompras').DataTable({
             responsive: true,
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+            dom: '<"flex flex-wrap justify-between items-center mb-4"<"flex-grow-0 flex-shrink-0 mb-2 md:mb-0"l><"flex-grow-0 flex-shrink-0"B><"flex-grow-0 flex-shrink-0 w-full md:w-auto"f>>rtip',
+            buttons: [
+                {
+                    extend: 'collection',
+                    text: '<i class="fas fa-download mr-1"></i> Exportar',
+                    className: 'bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow',
+                    buttons: [
+                        {
+                            extend: 'copy',
+                            className: 'bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 px-3 rounded',
+                            text: '<i class="fas fa-copy mr-1"></i> Copiar'
+                        },
+                        {
+                            extend: 'csv',
+                            className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded',
+                            text: '<i class="fas fa-file-csv mr-1"></i> CSV'
+                        },
+                        {
+                            extend: 'excel',
+                            className: 'bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded',
+                            text: '<i class="fas fa-file-excel mr-1"></i> Excel'
+                        },
+                        {
+                            extend: 'pdf',
+                            className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded',
+                            text: '<i class="fas fa-file-pdf mr-1"></i> PDF',
+                            orientation: 'landscape',
+                            customize: function(doc) {
+                                doc.defaultStyle.fontSize = 8;
+                                doc.styles.tableHeader.fontSize = 9;
+                                doc.content[1].table.widths = Array(doc.content[1].table.body[0].length + 1).join('*').split('');
+                            }
+                        },
+                        {
+                            extend: 'print',
+                            className: 'bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded',
+                            text: '<i class="fas fa-print mr-1"></i> Imprimir'
+                        }
+                    ]
+                },
+                {
+                    text: '<i class="fas fa-columns mr-1"></i> Columnas',
+                    className: 'bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded shadow ml-2',
+                    extend: 'colvis'
+                }
+            ],
             language: {
-                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+                "processing": "Procesando...",
+                "lengthMenu": "Mostrar _MENU_ registros",
+                "zeroRecords": "No se encontraron resultados",
+                "emptyTable": "Ningún dato disponible en esta tabla",
+                "info": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+                "infoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
+                "infoFiltered": "(filtrado de un total de _MAX_ registros)",
+                "search": "<i class='fas fa-search'></i> Buscar:",
+                "infoThousands": ",",
+                "loadingRecords": "<div class='spinner-border text-primary'></div>",
+                "paginate": {
+                    "first": '<i class="fas fa-angle-double-left"></i>',
+                    "last": '<i class="fas fa-angle-double-right"></i>',
+                    "next": '<i class="fas fa-angle-right"></i>',
+                    "previous": '<i class="fas fa-angle-left"></i>'
+                }
             },
             order: [[1, 'desc']], // Ordenar por fecha descendente
             columnDefs: [
                 { responsivePriority: 1, targets: [1, 2, 5] }, // Columnas prioritarias
-                { responsivePriority: 2, targets: [7] } // Acciones siempre visibles
-            ]
+                { responsivePriority: 2, targets: [7] }, // Acciones siempre visibles
+                { className: 'text-right', targets: [3, 4, 5] }
+            ],
+            pagingType: 'full_numbers', // Use full_numbers pagination type for more control options
+            initComplete: function() {
+                $(this).fadeIn(1000);
+                
+                // Mejorar la apariencia del cuadro de búsqueda
+                $('.dataTables_filter input').addClass('ml-2 pl-8 pr-2 py-1 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent');
+                $('.dataTables_filter label').addClass('relative inline-block');
+                
+                // Añadir icono al cuadro de búsqueda
+                var searchIcon = '<div class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"><i class="fas fa-search"></i></div>';
+                $('.dataTables_filter label').addClass('relative').prepend(searchIcon);
+                
+                // Estilizar el selector de registros por página
+                $('.dataTables_length select').addClass('ml-2 mr-2 pl-2 pr-8 py-1 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent');
+            },
+            drawCallback: function() {
+                // Efectos de hover en las filas
+                $('tbody tr').hover(
+                    function() { $(this).addClass('bg-yellow-100'); },
+                    function() { $(this).removeClass('bg-yellow-100'); }
+                );
+                
+                // Enhanced pagination styling
+                $('.dataTables_paginate').addClass('flex justify-center mt-4');
+                $('.dataTables_paginate .paginate_button').addClass('px-3 py-1 mx-1 rounded-md border border-gray-200 hover:bg-blue-500 hover:text-white transition-colors duration-200');
+                $('.dataTables_paginate .paginate_button.current').addClass('bg-blue-500 text-white border-blue-500 font-bold');
+                $('.dataTables_paginate .paginate_button.disabled').addClass('opacity-50 cursor-not-allowed');
+                
+                // Add tooltips to pagination buttons
+                $('.paginate_button.first').attr('title', 'Primera página');
+                $('.paginate_button.previous').attr('title', 'Página anterior');
+                $('.paginate_button.next').attr('title', 'Página siguiente');
+                $('.paginate_button.last').attr('title', 'Última página');
+                
+                // Aplicar estilo a la información de paginación
+                $('.dataTables_info').addClass('text-sm text-gray-600 mt-4 text-center');
+            }
         });
+        
+        // Hacer que la tabla sea globalmente accesible
+        window.tablaCompras = tabla;
     });
 
     // Gráfico de distribución de compras por producto
@@ -237,51 +336,59 @@
             'rgba(75, 192, 192, 0.6)',
             'rgba(153, 102, 255, 0.6)',
             'rgba(255, 159, 64, 0.6)',
-            'rgba(199, 199, 199, 0.6)'
+            'rgba(199, 199, 199, 0.6)',
+            'rgba(83, 102, 255, 0.6)',
+            'rgba(40, 159, 64, 0.6)',
+            'rgba(210, 199, 199, 0.6)',
         ];
 
+        // Extraer datos del modelo
         {% for producto in compras_por_producto %}
         productosLabels.push('{{ producto.producto__nombre }} {{ producto.producto__variedad }}');
         productosData.push({{ producto.total }});
-    {% endfor %}
+        {% endfor %}
 
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: productosLabels,
-            datasets: [{
-                data: productosData,
-                backgroundColor: backgroundColors,
-                borderColor: backgroundColors.map(color => color.replace('0.6', '1')),
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: {
-                        boxWidth: 15,
-                        font: {
-                            size: 11
+        // Crear gráfico
+        const chart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: productosLabels,
+                datasets: [{
+                    label: 'Total de compras ($)',
+                    data: productosData,
+                    backgroundColor: backgroundColors,
+                    borderColor: backgroundColors.map(color => color.replace('0.6', '1')),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 15,
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
                         }
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            const value = context.raw;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = Math.round((value / total) * 100);
-                            return `$${value.toLocaleString()} (${percentage}%)`;
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                let value = context.raw;
+                                let sum = context.dataset.data.reduce((a, b) => a + b, 0);
+                                let percentage = Math.round((value / sum) * 100);
+                                return label + ': $' + value.toLocaleString() + ' (' + percentage + '%)';
+                            }
                         }
                     }
                 }
             }
-        }
-    });
         });
+    });
 </script>
 {% endblock %}

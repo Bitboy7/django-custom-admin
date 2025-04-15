@@ -8,6 +8,9 @@
     <!-- DataTables CSS -->
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/select/1.7.0/css/select.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/searchpanes/2.2.0/css/searchPanes.dataTables.min.css">
     <!-- DateRangePicker -->
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
     <style>
@@ -20,6 +23,40 @@
         }
         .daterangepicker {
             z-index: 1050 !important;
+        }
+        /* Estilos para DataTables */
+        .dataTables_wrapper {
+            @apply bg-white rounded-lg p-4 shadow-sm;
+        }
+        .dataTables_filter input {
+            @apply pl-8 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500 py-1 px-2;
+            background-position: 10px center;
+            background-repeat: no-repeat;
+            background-size: 14px;
+        }
+        .dataTables_length select {
+            @apply border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500 py-1 pl-2 pr-8;
+        }
+        .dataTables_paginate .paginate_button {
+            @apply px-3 py-1 mx-1 rounded-md border border-gray-200 hover:bg-blue-500 hover:text-white transition-colors duration-200;
+        }
+        .dataTables_paginate .paginate_button.current {
+            @apply bg-blue-500 text-white border-blue-500;
+        }
+        .dataTables_paginate .paginate_button.disabled {
+            @apply opacity-50 cursor-not-allowed;
+        }
+        table.dataTable tbody tr.selected {
+            @apply bg-blue-100;
+        }
+        .buttons-collection {
+            @apply relative;
+        }
+        .dt-button-collection {
+            @apply absolute bg-white shadow-lg rounded-lg p-2 z-10 mt-1 w-40;
+        }
+        .dt-button-collection .dt-button {
+            @apply block w-full text-left px-3 py-2 hover:bg-gray-100 rounded-md my-1;
         }
     </style>
 {% endblock %}
@@ -274,6 +311,15 @@
     <!-- jQuery y DataTables -->
     <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
+    <script src="https://cdn.datatables.net/searchpanes/2.2.0/js/dataTables.searchPanes.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.70/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.70/vfs_fonts.js"></script>
     <!-- Moment.js y DateRangePicker -->
     <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
@@ -305,6 +351,69 @@
             // Inicializar DataTables
             const tabla = $('#tablaCompras').DataTable({
                 responsive: true,
+                pageLength: 10,
+                stateSave: true,
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+                dom: '<"dt-header"<"dt-header-left"Bl><"dt-header-right"f>><"dt-container"rt><"dt-footer"<"dt-footer-left"i><"dt-footer-right"p>>',
+                buttons: [
+                    {
+                        extend: 'collection',
+                        text: '<i class="fas fa-download mr-1"></i> Exportar',
+                        className: 'bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow',
+                        buttons: [
+                            {
+                                extend: 'copy',
+                                className: 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-3 rounded shadow mr-2',
+                                text: '<i class="fas fa-copy mr-1"></i> Copiar'
+                            },
+                            {
+                                extend: 'csv',
+                                className: 'bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-3 rounded shadow mr-2',
+                                text: '<i class="fas fa-file-csv mr-1"></i> CSV'
+                            },
+                            {
+                                extend: 'excel',
+                                className: 'bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded shadow mr-2',
+                                text: '<i class="fas fa-file-excel mr-1"></i> Excel'
+                            },
+                            {
+                                extend: 'pdf',
+                                className: 'bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded shadow mr-2',
+                                text: '<i class="fas fa-file-pdf mr-1"></i> PDF',
+                                orientation: 'landscape',
+                                pageSize: 'LEGAL',
+                                customize: function(doc) {
+                                    doc.defaultStyle.fontSize = 8;
+                                    doc.styles.tableHeader.fontSize = 9;
+                                    doc.content[1].table.widths = Array(doc.content[1].table.body[0].length + 1).join('*').split('');
+                                }
+                            },
+                            {
+                                extend: 'print',
+                                className: 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded shadow',
+                                text: '<i class="fas fa-print mr-1"></i> Imprimir',
+                                customize: function(win) {
+                                    $(win.document.body).addClass('bg-white');
+                                    $(win.document.body).find('table')
+                                        .addClass('display')
+                                        .css('font-size', '12px');
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        text: '<i class="fas fa-columns mr-1"></i> Columnas',
+                        className: 'bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded shadow ml-2',
+                        extend: 'colvis'
+                    },
+                    {
+                        text: '<i class="fas fa-sync-alt mr-1"></i> Refrescar',
+                        className: 'bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow ml-2',
+                        action: function() {
+                            tabla.ajax.reload(null, false);
+                        }
+                    }
+                ],
                 language: {
                     "processing": "Procesando...",
                     "lengthMenu": "Mostrar _MENU_ registros",
@@ -313,14 +422,14 @@
                     "info": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
                     "infoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
                     "infoFiltered": "(filtrado de un total de _MAX_ registros)",
-                    "search": "Buscar:",
+                    "search": "<i class='fas fa-search'></i> Buscar:",
                     "infoThousands": ",",
-                    "loadingRecords": "Cargando...",
+                    "loadingRecords": "<div class='spinner-border text-primary'></div>",
                     "paginate": {
-                        "first": "Primero",
-                        "last": "Último",
-                        "next": "Siguiente",
-                        "previous": "Anterior"
+                        "first": '<i class="fas fa-angle-double-left"></i>',
+                        "last": '<i class="fas fa-angle-double-right"></i>',
+                        "next": '<i class="fas fa-angle-right"></i>',
+                        "previous": '<i class="fas fa-angle-left"></i>'
                     }
                 },
                 order: [[1, 'desc']],
@@ -328,7 +437,41 @@
                     { responsivePriority: 1, targets: [1, 2, 3, 4] },
                     { responsivePriority: 2, targets: [8] },
                     { orderable: false, targets: [8] }
-                ]
+                ],
+                initComplete: function() {
+                    $(this).fadeIn(1000);
+                    
+                    // Aplicar estilos a elementos de la tabla
+                    $('.dataTables_wrapper .dt-header').addClass('flex flex-wrap justify-between items-center mb-4 pb-2 border-b border-gray-200');
+                    $('.dataTables_wrapper .dt-header-left').addClass('flex-grow flex-shrink-0 mb-2 md:mb-0');
+                    $('.dataTables_wrapper .dt-header-right').addClass('flex-grow-0 flex-shrink-0 w-full md:w-auto');
+                    $('.dataTables_wrapper .dt-footer').addClass('flex flex-wrap justify-between items-center mt-4 pt-2 border-t border-gray-200');
+                    $('.dataTables_wrapper .dt-footer-left').addClass('flex-grow-0 flex-shrink-0 mb-2 md:mb-0');
+                    $('.dataTables_wrapper .dt-footer-right').addClass('flex-grow-0 flex-shrink-0');
+                    
+                    // Mejorar la apariencia del cuadro de búsqueda
+                    $('.dataTables_filter input').addClass('ml-2 pl-8 pr-2 py-1 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent');
+                    $('.dataTables_filter label').addClass('relative inline-block');
+                    
+                    // Añadir icono al cuadro de búsqueda
+                    var searchIcon = '<div class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"><i class="fas fa-search"></i></div>';
+                    $('.dataTables_filter label').addClass('relative').prepend(searchIcon);
+                    
+                    // Estilizar el selector de registros por página
+                    $('.dataTables_length select').addClass('ml-2 mr-2 pl-2 pr-8 py-1 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent');
+                },
+                drawCallback: function() {
+                    // Efectos de hover en las filas
+                    $('tbody tr').hover(
+                        function() { $(this).addClass('bg-yellow-100'); },
+                        function() { $(this).removeClass('bg-yellow-100'); }
+                    );
+                    
+                    // Añadir clases a los controles de paginación
+                    $('.dataTables_paginate .paginate_button').addClass('px-3 py-1 mx-1 rounded-md border border-gray-200 hover:bg-blue-500 hover:text-white transition-colors duration-200');
+                    $('.dataTables_paginate .paginate_button.current').addClass('bg-blue-500 text-white border-blue-500');
+                    $('.dataTables_paginate .paginate_button.disabled').addClass('opacity-50 cursor-not-allowed');
+                }
             });
             
             // Establecer variable global
