@@ -1,12 +1,11 @@
 from django.shortcuts import render
-from django.utils import timezone
 from datetime import datetime
 import decimal
 import numpy as np
+from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
 from django.contrib.auth.decorators import user_passes_test
 from django.http import HttpResponse
-from django.db.models import Sum, Avg, Max, Min
-from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
+from django.db.models import Sum, Avg, Max, Min, Count
 import openpyxl
 from openpyxl.styles import PatternFill, NamedStyle, Font, Alignment, Border, Side
 from openpyxl.chart import BarChart, Reference, LineChart
@@ -700,3 +699,5 @@ def balances_view(request):
         'categoria_gasto_minimo': categoria_gasto_minimo['id_cat_gastos__nombre'] if categoria_gasto_minimo else None
     }
     return render(request, 'balances.html', context)
+
+

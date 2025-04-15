@@ -2,6 +2,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .forms import GastoForm
 from .models import Cuenta, Compra, Banco, SaldoMensual
 from catalogo.models import Productor, Producto
+from django.utils import timezone
+import decimal
+import numpy as np
+from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
 from django.db.models import Sum, Avg, Count, Max, Min
 from django.contrib.auth.decorators import user_passes_test
 from datetime import date, datetime, timedelta
@@ -12,251 +16,210 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from .forms import CompraForm
 
-# Vista existente
 @login_required
-def registro_gasto(request):
-    if request.method == 'POST':
-        form = GastoForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('gastos')
-    else:
-        form = GastoForm()
-    return render(request, 'gastos/registro_gasto.html', {'form': form})
+def compras_balances_view(request):
+    """
+    Vista para análisis de compras que permite filtrar y visualizar datos
+    de compras por diferentes periodos, productores, productos, y métodos de pago.
+    """
+    # Obtener parámetros de filtrado de la solicitud
+    cuenta_id = request.GET.get('cuenta_id', '')
+    productor_id = request.GET.get('productor_id', '')
+    producto_id = request.GET.get('producto_id', '')
+    tipo_pago = request.GET.get('tipo_pago', '')
+    year = request.GET.get('year', datetime.now().year)
+    month = request.GET.get('month', datetime.now().month)
+    periodo = request.GET.get('periodo', 'diario')  # 'diario', 'semanal' o 'mensual'
+    dia = request.GET.get('dia', datetime.now().strftime('%Y-%m-%d'))
+    fecha_inicio = request.GET.get('fecha_inicio', '')
+    fecha_fin = request.GET.get('fecha_fin', '')
 
-# vista para compras a productores
-@login_required
-@user_passes_test(is_admin)
-def compras_productores(request):
-    # Obtener datos de compras
-    compras = Compra.objects.all().order_by('-fecha_compra')
-    productores = Productor.objects.all()
-    productos = Producto.objects.all()
-    cuentas = Cuenta.objects.all()
+    # Obtener los años disponibles
+    available_years = Compra.objects.dates('fecha_compra', 'year')
+
+    # Lista de meses
+    months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", 
+              "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+
+    # Tipos de pago disponibles
+    tipos_pago = Compra.objects.values_list('tipo_pago', flat=True).distinct()
     
-    # Crear una instancia del formulario para usar en la plantilla
-    form = CompraForm()
+    # Filtrar y agrupar los datos de compras según el periodo seleccionado
+    filters = {'fecha_compra__year': year}
+    if cuenta_id:
+        filters['cuenta_id'] = cuenta_id
+    if month:
+        filters['fecha_compra__month'] = month
+    if productor_id:
+        filters['productor_id'] = productor_id
+    if producto_id:
+        filters['producto_id'] = producto_id
+    if tipo_pago:
+        filters['tipo_pago'] = tipo_pago
+
+    # Aplicar filtros de fecha según el periodo seleccionado
+    if periodo == 'diario':
+        if dia:
+            filters['fecha_compra'] = dia
+        elif fecha_inicio and fecha_fin:
+            filters['fecha_compra__range'] = [fecha_inicio, fecha_fin]
+        
+        compras_data = Compra.objects.filter(**filters).values(
+            'cuenta__id',
+            'cuenta__numero_cuenta',
+            'cuenta__id_banco__nombre',
+            'productor__nombre_completo',
+            'producto__nombre',
+            'producto__variedad',
+            'tipo_pago',
+            'fecha_compra'
+        ).annotate(
+            total_compras=Sum('monto_total'),
+            cantidad_total=Sum('cantidad'),
+            precio_promedio=Avg('precio_unitario')
+        ).order_by('cuenta__id', 'fecha_compra')
+        
+    elif periodo == 'semanal':
+        compras_data = Compra.objects.filter(**filters).annotate(
+            semana=TruncWeek('fecha_compra')
+        ).values(
+            'cuenta__id',
+            'cuenta__numero_cuenta',
+            'cuenta__id_banco__nombre',
+            'productor__nombre_completo',
+            'producto__nombre',
+            'producto__variedad',
+            'tipo_pago',
+            'semana'
+        ).annotate(
+            total_compras=Sum('monto_total'),
+            cantidad_total=Sum('cantidad'),
+            precio_promedio=Avg('precio_unitario')
+        ).order_by('cuenta__id', 'semana')
+        
+    elif periodo == 'mensual':
+        compras_data = Compra.objects.filter(**filters).annotate(
+            mes=TruncMonth('fecha_compra')
+        ).values(
+            'cuenta__id',
+            'cuenta__numero_cuenta',
+            'cuenta__id_banco__nombre',
+            'productor__nombre_completo',
+            'producto__nombre',
+            'producto__variedad',
+            'tipo_pago',
+            'mes'
+        ).annotate(
+            total_compras=Sum('monto_total'),
+            cantidad_total=Sum('cantidad'),
+            precio_promedio=Avg('precio_unitario')
+        ).order_by('cuenta__id', 'mes')
+        
+    else:
+        compras_data = []
+
+    # Calcular el acumulado de la suma de montos
+    acumulado = 0
+    for compra in compras_data:
+        acumulado += compra['total_compras']
+        compra['acumulado'] = acumulado
+
+    # Métricas clave para el análisis de compras
+    total_compras = Compra.objects.filter(**filters).aggregate(total=Sum('monto_total'))['total'] or 0
+    cantidad_total = Compra.objects.filter(**filters).aggregate(total=Sum('cantidad'))['total'] or 0
+    promedio_compra = Compra.objects.filter(**filters).aggregate(promedio=Avg('monto_total'))['promedio'] or 0
+    numero_transacciones = Compra.objects.filter(**filters).count()
     
-    # Estadísticas generales
-    total_compras = Compra.objects.aggregate(total=Sum('monto_total'))['total'] or 0
-    compras_mes_actual = Compra.objects.filter(
-        fecha_compra__year=datetime.now().year,
-        fecha_compra__month=datetime.now().month
-    ).aggregate(total=Sum('monto_total'))['total'] or 0
+    # Compras máximas y mínimas
+    compra_maxima = Compra.objects.filter(**filters).aggregate(maximo=Max('monto_total'))['maximo'] or 0
+    compra_minima = Compra.objects.filter(**filters).filter(monto_total__gt=0).aggregate(minimo=Min('monto_total'))['minimo'] or 0
     
-    # Top productores con más compras
-    top_productores = Compra.objects.values(
-        'productor__nombre_completo', 
-        'productor__id'
+    # Para cálculo de mediana necesitamos valores en una lista
+    montos_compras = list(Compra.objects.filter(**filters).values_list('monto_total', flat=True))
+    compra_mediana = np.median(montos_compras) if montos_compras else 0
+    
+    # Análisis por método de pago
+    compras_por_tipo_pago = Compra.objects.filter(**filters).values('tipo_pago').annotate(
+        total=Sum('monto_total'),
+        cantidad=Count('id')
+    ).order_by('-total')
+    
+    # Análisis por productor
+    top_productores = Compra.objects.filter(**filters).values(
+        'productor__nombre_completo', 'productor__id'
     ).annotate(
         total_compras=Sum('monto_total'),
         cantidad_compras=Count('id')
     ).order_by('-total_compras')[:5]
     
-    # Compras por tipo de pago
-    compras_por_tipo = Compra.objects.values('tipo_pago').annotate(
-        total=Sum('monto_total'),
-        cantidad=Count('id')
-    ).order_by('-total')    # En la función compras_productores en gastos/views.py, añade esto:
-    
-    # Calcular compras de hoy
-    compras_hoy = Compra.objects.filter(
-        fecha_compra=date.today()
-    ).aggregate(total=Sum('monto_total'))['total'] or 0
-    
-    # Histórico mensual (últimos 6 meses)
-    meses = []
-    datos_meses = []
-    acumulados_meses = []
-    porcentajes_meses = []
-    total_periodo = 0
-    
-    for i in range(5, -1, -1):
-        fecha = datetime.now() - timedelta(days=30*i)
-        mes = fecha.month
-        anio = fecha.year
-        compras_mes = Compra.objects.filter(
-            fecha_compra__year=anio, 
-            fecha_compra__month=mes
-        ).aggregate(total=Sum('monto_total'))['total'] or 0
-        
-        meses.append(f"{fecha.strftime('%b')} {anio}")
-        datos_meses.append(float(compras_mes))
-        total_periodo += float(compras_mes)
-    
-    # Calcular acumulados y porcentajes
-    acumulado = 0
-    for valor in datos_meses:
-        acumulado += valor
-        acumulados_meses.append(acumulado)
-        
-    porcentajes_meses = [valor / total_periodo * 100 if total_periodo > 0 else 0 for valor in datos_meses]
-    
-    # Productos más comprados
-    productos_comprados = Compra.objects.values(
-        'producto__nombre', 
-        'producto__variedad'
+    # Análisis por producto
+    top_productos = Compra.objects.filter(**filters).values(
+        'producto__nombre', 'producto__variedad', 'producto__id'
     ).annotate(
         total=Sum('monto_total'),
-        cantidad=Sum('cantidad')
-    ).order_by('-cantidad')[:5]
+        cantidad=Sum('cantidad'),
+        precio_promedio=Avg('precio_unitario')
+    ).order_by('-total')[:5]
+    
+    # Datos para gráficos de evolución mensual
+    meses_labels = []
+    datos_compras_mensuales = []
+    
+    # Obtener datos de los últimos 6 meses para el gráfico
+    for i in range(5, -1, -1):
+        # Calcular mes en retroceso
+        date = datetime.now() - timezone.timedelta(days=30 * i)
+        month_num = date.month
+        year_num = date.year
+        
+        # Filtro para este mes
+        month_filter = Compra.objects.filter(
+            fecha_compra__month=month_num,
+            fecha_compra__year=year_num
+        ).aggregate(total=Sum('monto_total'))['total'] or 0
+        
+        # Añadir datos al gráfico
+        meses_labels.append(months[month_num - 1])
+        datos_compras_mensuales.append(float(month_filter))
 
-    context = {
-    'compras': compras,
-    'productores': productores,
-    'productos': productos,
-    'cuentas': cuentas,
-    'form': form,
-    'today': date.today(),
-    'total_compras': float(total_compras),  # Convert to float
-    'compras_mes_actual': float(compras_mes_actual),  # Convert to float
-    'top_productores': top_productores,
-    'compras_por_tipo': compras_por_tipo,
-    'meses': json.dumps(meses),
-    'datos_meses': json.dumps(datos_meses),
-    'acumulados_meses': json.dumps(acumulados_meses),
-    'porcentajes_meses': json.dumps(porcentajes_meses),
-    'total_periodo': total_periodo,
-    'productos_comprados': productos_comprados,
-    'compras_hoy': float(compras_hoy),  # Convert to float
-}
+    # Obtener todas las cuentas para el filtro
+    cuentas = Cuenta.objects.all()
     
-    return render(request, 'compras/compras_productores.html', context)
-
-@login_required                                                                              
-@user_passes_test(is_admin)
-def detalle_productor_compras(request, productor_id):
-    productor = get_object_or_404(Productor, id=productor_id)
-    compras = Compra.objects.filter(productor=productor).order_by('-fecha_compra')
-    
-    # Estadísticas del productor
-    total_compras = compras.aggregate(total=Sum('monto_total'))['total'] or 0
-    cantidad_productos = compras.aggregate(cantidad=Sum('cantidad'))['cantidad'] or 0
-    promedio_compra = compras.aggregate(promedio=Avg('monto_total'))['promedio'] or 0
-    
-    # Compras por producto
-    compras_por_producto = compras.values('producto__nombre', 'producto__variedad').annotate(
-        total=Sum('monto_total'),
-        cantidad=Sum('cantidad')
-    ).order_by('-total')
+    # Obtener todos los productores y productos para los filtros
+    from catalogo.models import Productor, Producto
+    productores = Productor.objects.all()
+    productos = Producto.objects.all()
     
     context = {
-        'productor': productor,
-        'compras': compras,
+        'compras_data': compras_data,
+        'cuentas': cuentas,
+        'productores': productores,
+        'productos': productos,
+        'tipos_pago': tipos_pago,
+        'selected_cuenta_id': cuenta_id,
+        'selected_productor_id': productor_id,
+        'selected_producto_id': producto_id,
+        'selected_tipo_pago': tipo_pago,
+        'selected_year': year,
+        'selected_month': month,
+        'selected_periodo': periodo,
+        'selected_dia': dia,
+        'selected_fecha_inicio': fecha_inicio,
+        'selected_fecha_fin': fecha_fin,
+        'available_years': available_years,
+        'months': months,
         'total_compras': total_compras,
-        'cantidad_productos': cantidad_productos,
+        'cantidad_total': cantidad_total,
         'promedio_compra': promedio_compra,
-        'compras_por_producto': compras_por_producto
+        'numero_transacciones': numero_transacciones,
+        'compra_maxima': compra_maxima,
+        'compra_minima': compra_minima,
+        'compra_mediana': compra_mediana,
+        'compras_por_tipo_pago': compras_por_tipo_pago,
+        'top_productores': top_productores,
+        'top_productos': top_productos,
+        'meses_labels': meses_labels,
+        'datos_compras_mensuales': datos_compras_mensuales,
     }
     
-    return render(request, 'compras/detalle_productor_compras.html', context)
-
-@login_required
-@require_POST
-@user_passes_test(is_admin)
-def guardar_compra(request):
-    try:
-        # Obtener datos del formulario
-        fecha_compra = request.POST.get('fecha_compra')
-        productor_id = request.POST.get('productor')
-        producto_id = request.POST.get('producto')
-        cuenta_id = request.POST.get('cuenta')
-        cantidad = request.POST.get('cantidad')
-        precio_unitario = request.POST.get('precio_unitario')
-        monto_total = request.POST.get('monto_total')
-        tipo_pago = request.POST.get('tipo_pago')
-        observaciones = request.POST.get('observaciones', '')  # Campo opcional
-        
-        # Validaciones básicas
-        if not all([fecha_compra, productor_id, producto_id, cuenta_id, cantidad, precio_unitario, monto_total, tipo_pago]):
-            return JsonResponse({'success': False, 'error': 'Todos los campos son requeridos'})
-        
-        try:
-            # Convertir tipos de datos
-            productor = Productor.objects.get(id=int(productor_id))
-            producto = Producto.objects.get(id=int(producto_id))
-            cuenta = Cuenta.objects.get(id=int(cuenta_id))
-            cantidad = int(cantidad)
-            precio_unitario = float(precio_unitario)
-            monto_total = float(monto_total)
-            
-            # Crear nueva compra
-            nueva_compra = Compra(
-                fecha_compra=fecha_compra,
-                productor=productor,
-                producto=producto,
-                cuenta=cuenta,
-                cantidad=cantidad,
-                precio_unitario=precio_unitario,
-                monto_total=monto_total,
-                tipo_pago=tipo_pago,
-                observaciones=observaciones  # Guardar las observaciones
-            )
-            nueva_compra.save()
-            
-            # Recalcular saldos si es necesario
-            saldo_mensual = SaldoMensual.objects.filter(
-                cuenta=cuenta,
-                año=datetime.strptime(fecha_compra, '%Y-%m-%d').year,
-                mes=datetime.strptime(fecha_compra, '%Y-%m-%d').month
-            ).first()
-            
-            if saldo_mensual:
-                saldo_mensual.calcular_saldo_final()
-            
-            # Dentro de la función guardar_compra, en el bloque de retorno de la respuesta exitosa:
-            return JsonResponse({
-                'success': True,
-                'compra': {
-                    'id': nueva_compra.id,
-                    'fecha_compra': nueva_compra.fecha_compra.strftime('%d/%m/%Y'),
-                    'productor_nombre': productor.nombre_completo,
-                    'producto_nombre': f"{producto.nombre} - {producto.variedad}",
-                    'cantidad': cantidad,
-                    'precio_unitario': str(precio_unitario),
-                    'monto_total': str(monto_total),
-                    'tipo_pago': tipo_pago,
-                    'observaciones': observaciones  # Añade esta línea
-                }
-            })
-                
-        except (Productor.DoesNotExist, Producto.DoesNotExist, Cuenta.DoesNotExist) as e:
-            return JsonResponse({'success': False, 'error': f'Error al buscar información: {str(e)}'})
-        except ValueError as e:
-            return JsonResponse({'success': False, 'error': f'Error en el formato de los datos: {str(e)}'})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': f'Error al guardar la compra: {str(e)}'})
-            
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
-    
-@login_required
-@user_passes_test(is_admin)
-def estadisticas_compras(request):
-    # Obtener estadísticas actualizadas
-    total_compras = Compra.objects.aggregate(total=Sum('monto_total'))['total'] or 0
-    compras_mes_actual = Compra.objects.filter(
-        fecha_compra__year=datetime.now().year,
-        fecha_compra__month=datetime.now().month
-    ).aggregate(total=Sum('monto_total'))['total'] or 0
-    
-    # Histórico mensual (últimos 6 meses)
-    meses = []
-    datos_meses = []
-    for i in range(5, -1, -1):
-        fecha = datetime.now() - timedelta(days=30*i)
-        mes = fecha.month
-        anio = fecha.year
-        compras_mes = Compra.objects.filter(
-            fecha_compra__year=anio, 
-            fecha_compra__month=mes
-        ).aggregate(total=Sum('monto_total'))['total'] or 0
-        meses.append(f"{fecha.strftime('%b')} {anio}")
-        datos_meses.append(float(compras_mes))
-    
-    return JsonResponse({
-        'total_compras': float(total_compras),
-        'compras_mes_actual': float(compras_mes_actual),
-        'meses': meses,
-        'datos_meses': datos_meses
-    })
+    return render(request, 'compras/compras_balances.html', context)

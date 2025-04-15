@@ -51,11 +51,6 @@
             </a>
           </li>
           <li>
-            <a href="{% url 'data' %}" class="text-gray-300 hover:text-white flex items-center py-2">
-              <i class="fas fa-database mr-1"></i> Data
-            </a>
-          </li>
-          <li>
             <a href="{% url 'balances' %}" class="text-gray-300 hover:text-white flex items-center py-2">
               <i class="fas fa-file-invoice-dollar mr-1"></i> Gastos
             </a>
@@ -76,10 +71,11 @@
   </nav>
 
   <!-- Contenido principal -->
-  <div class="container mx-auto">
+
     {% block content %}
+      
     {% endblock %}
-  </div>
+
 
   <!-- Flowbite JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script>

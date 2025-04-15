@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
 from catalogo.views import index, data
-from gastos.views import registro_gasto
 from .views import balances_view, export_full_report_to_excel
 from django.conf import settings
 from django.conf.urls.static import static
@@ -13,8 +12,6 @@ def redirect_to_admin(request):
 
 urlpatterns = [
     path("admin/", admin.site.urls),  # Added trailing slash
-    path('data/', data, name='data'),
-    path('gastos/', registro_gasto, name='gastos'),
     path('balances/', balances_view, name='balances'),
     path('export-full-report/', export_full_report_to_excel, name='export_full_report'),
     path('', include('catalogo.urls')),
