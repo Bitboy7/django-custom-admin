@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from datetime import datetime
-import decimal
+from django.contrib.auth.decorators import login_required
 import numpy as np
 from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
 from django.contrib.auth.decorators import user_passes_test
@@ -590,8 +590,16 @@ def _create_saldo_evolution_charts(wb, ws, cuentas, year):
     # Ajustar ancho de columnas
     for col_idx in range(1, 4):
         ws.column_dimensions[get_column_letter(col_idx)].width = 20
+        for row_idx in range(1, current_row):
+            cell = ws.cell(row=row_idx, column=col_idx)
+            if cell.value:
+                max_length = len(str(cell.value)) + 2
+                ws.column_dimensions[get_column_letter(col_idx)].width = max(max_length, ws.column_dimensions[get_column_letter(col_idx)].width)
+    # Ajustar el alto de las filas para que se vean bien los gráficos
+    for row_idx in range(1, current_row):
+        ws.row_dimensions[row_idx].height = 20
 
-@user_passes_test(is_admin)    
+@login_required
 def balances_view(request):
     cuenta_id = request.GET.get('cuenta_id', '')
     year = request.GET.get('year', datetime.now().year)
@@ -696,7 +704,8 @@ def balances_view(request):
         'gasto_minimo': gasto_minimo,
         'gasto_mediano': gasto_mediano,
         'categoria_gasto_maximo': categoria_gasto_maximo['id_cat_gastos__nombre'] if categoria_gasto_maximo else None,
-        'categoria_gasto_minimo': categoria_gasto_minimo['id_cat_gastos__nombre'] if categoria_gasto_minimo else None
+        'categoria_gasto_minimo': categoria_gasto_minimo['id_cat_gastos__nombre'] if categoria_gasto_minimo else None,
+        'meses_rango': range(1, 13),  # Agregar el rango de meses al contexto
     }
     return render(request, 'balances.html', context)
 

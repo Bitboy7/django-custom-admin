@@ -83,8 +83,12 @@
   <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
 
+
+
   <!-- Bloque para scripts adicionales -->
   {% block extra_js %}
+  {{ block.super }}
+  
     <script>
       // Script para manejar el menú móvil
       document.addEventListener('DOMContentLoaded', function () {

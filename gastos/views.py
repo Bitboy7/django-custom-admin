@@ -44,6 +44,45 @@ def compras_balances_view(request):
     # Tipos de pago disponibles
     tipos_pago = Compra.objects.values_list('tipo_pago', flat=True).distinct()
     
+    # Verificar si hay filtros aplicados
+    has_filters = any([
+        cuenta_id, 
+        productor_id,
+        producto_id,
+        tipo_pago,
+        str(year) != str(datetime.now().year),
+        month and str(month) != str(datetime.now().month),
+        periodo != 'diario',
+        dia and str(dia) != datetime.now().strftime('%Y-%m-%d'),
+        fecha_inicio,
+        fecha_fin
+    ])
+    
+    # Obtener nombres para mostrar en filtros
+    selected_cuenta_nombre = ""
+    if cuenta_id:
+        try:
+            cuenta_obj = Cuenta.objects.get(id=cuenta_id)
+            selected_cuenta_nombre = f"{cuenta_obj.numero_cuenta} - {cuenta_obj.id_banco.nombre}"
+        except Cuenta.DoesNotExist:
+            pass
+    
+    selected_productor_nombre = ""
+    if productor_id:
+        try:
+            productor_obj = Productor.objects.get(id=productor_id)
+            selected_productor_nombre = productor_obj.nombre_completo
+        except Productor.DoesNotExist:
+            pass
+    
+    selected_producto_nombre = ""
+    if producto_id:
+        try:
+            producto_obj = Producto.objects.get(id=producto_id)
+            selected_producto_nombre = f"{producto_obj.nombre} - {producto_obj.variedad}"
+        except Producto.DoesNotExist:
+            pass
+    
     # Filtrar y agrupar los datos de compras según el periodo seleccionado
     filters = {'fecha_compra__year': year}
     if cuenta_id:
@@ -220,6 +259,11 @@ def compras_balances_view(request):
         'top_productos': top_productos,
         'meses_labels': meses_labels,
         'datos_compras_mensuales': datos_compras_mensuales,
+        # Variables añadidas para mejora de usabilidad
+        'has_filters': has_filters,
+        'selected_cuenta_nombre': selected_cuenta_nombre,
+        'selected_productor_nombre': selected_productor_nombre,
+        'selected_producto_nombre': selected_producto_nombre,
     }
     
     return render(request, 'compras/compras_balances.html', context)
