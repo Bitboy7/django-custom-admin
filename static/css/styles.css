@@ -1,4 +1,18 @@
 /* Typography Enhancements */
+:root {
+  /* Colors */
+  --primary-color: #1976d2;
+  --primary-color-rgb: 25, 118, 210; /* RGB values for rgba() */
+  --secondary-color: #455a64;
+  --background-color: #f8f9fa;
+  --text-color: #333333;
+
+  /* Typography */
+  --font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", Oxygen,
+    Ubuntu, sans-serif;
+  --font-size: 14px;
+}
+
 body {
   font-family: var(--font-family);
   font-size: var(--font-size);
@@ -26,85 +40,200 @@ p {
   margin-bottom: 1rem;
 }
 
+/* Rounded and Professional Styles */
+.jazzmin-login-page {
+  background-image: url("https://thumbs.dreamstime.com/b/footpath-amoung-huge-rocks-edge-hill-beautiful-valley-view-top-94835544.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: var(--text-color);
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  line-height: 1.6;
+  padding: 2.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  margin: 2rem auto;
+  max-width: 90%;
+}
+
+.login-box {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
 /* Button Enhancements */
-.button-primary {
+.button-primary,
+.btn,
+.submit-row input,
+.button {
   background-color: var(--primary-color);
   color: white;
   border: none;
   font-size: var(--font-size);
   cursor: pointer;
-  padding: 0.75rem 1.25rem;
-  border-radius: 0.25rem;
-  transition: background-color var(--transition-duration)
-      var(--transition-timing-function),
-    transform var(--transition-duration) var(--transition-timing-function);
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.button-primary:hover {
-  background-color: darken(var(--primary-color), 10%);
-  transform: scale(1.05);
+.button-primary:hover,
+.btn:hover,
+.submit-row input:hover,
+.button:hover {
+  background-color: var(--secondary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* Card Enhancements */
-.card {
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  box-shadow: var(--box-shadow);
+.card,
+.module,
+fieldset,
+.dashboard .module {
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
   padding: 1.5rem;
   background-color: white;
   margin-bottom: 1.5rem;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
-.card-header {
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--border-color);
+.card:hover,
+.module:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.card-header,
+.module h2,
+.dashboard .module caption {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   font-weight: 600;
   background-color: var(--primary-color);
-  border-top-left-radius: 0.5rem;
-  border-top-right-radius: 0.5rem;
+  color: white;
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
 }
 
 .card-body {
-  padding: 1.5rem;
-  background-color: var(--background-color);
+  padding: 1.75rem;
+  background-color: white;
+}
+
+/* Table Enhancements */
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+th,
+td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+th {
+  background-color: rgba(0, 0, 0, 0.02);
+  font-weight: 600;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+tr:hover {
+  background-color: rgba(0, 0, 0, 0.01);
 }
 
 /* Input Enhancements */
-input {
-  padding: 0.75rem;
+input,
+select,
+textarea {
+  padding: 0.85rem 1rem;
   font-size: var(--font-size);
-  border: 1px solid var(--border-color);
-  border-radius: 0.25rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.75rem;
   font-family: var(--font-family);
-  transition: border-color var(--transition-duration)
-      var(--transition-timing-function),
-    box-shadow var(--transition-duration) var(--transition-timing-function);
+  transition: all 0.3s ease;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  box-sizing: border-box;
 }
 
-input:focus {
+input:focus,
+select:focus,
+textarea:focus {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.15);
+  outline: none;
+}
+
+/* Form Field Enhancements */
+form .form-row {
+  margin-bottom: 1.25rem;
+}
+
+label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+/* Navigation Enhancements */
+.breadcrumbs {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.sidebar {
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
 /* Footer Enhancements */
 .footer {
   background-color: var(--secondary-color);
   color: white;
-  padding: 1.5rem;
+  padding: 1.75rem;
   text-align: center;
-  box-shadow: var(--box-shadow);
-  border-top: 1px solid var(--border-color);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  border-radius: 1rem 1rem 0 0;
+  margin-top: 2rem;
 }
 
 /* Link Enhancements */
 a {
   color: var(--primary-color);
   text-decoration: none;
-  transition: color var(--transition-duration) var(--transition-timing-function);
+  transition: all 0.3s ease;
+  font-weight: 500;
 }
 
 a:hover {
-  color: darken(var(--primary-color), 10%);
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+.object-tools a {
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
 }
 
 /* Utility Classes */
@@ -175,4 +304,55 @@ form labek {
   display: block;
   margin-bottom: 0.5rem;
   text-decoration: none;
+}
+
+/* Alert and Message Styling */
+.messagelist {
+  margin: 0 0 1.5rem 0;
+  padding: 0;
+  list-style-type: none;
+}
+
+.messagelist li {
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.messagelist .success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.messagelist .error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.messagelist .warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+/* Responsive Improvements */
+@media (max-width: 767px) {
+  .jazzmin-login-page {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+
+  .card,
+  .module {
+    padding: 1rem;
+  }
+
+  .card-header,
+  .module h2 {
+    padding: 1rem;
+  }
+
+  form .form-row {
+    flex-direction: column;
+  }
 }
