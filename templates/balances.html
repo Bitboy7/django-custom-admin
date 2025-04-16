@@ -1,303 +1,696 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Saldos Iniciales por Cuenta y Mes</title>
-    {% load static %}
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="{% static 'js/table.js' %}"></script>
-    <!-- DataTables CSS -->
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css">
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
-    <!-- Font Awesome CDN -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-      .highlight {
-        background-color: #ffeb3b !important;
-      }
-    </style>
-  </head>
-  <body class="bg-gray-100 font-sans">
+{% extends "_base.html" %}
+
+{% load static %}
+{% load humanize %}
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css">
+<link rel="stylesheet" href="//cdn.datatables.net/2.2.2/css/dataTables.dataTables.min.css">
+<link rel="stylesheet" href="//cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
+<link rel="stylesheet" href="//cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+{% endblock %}
+
+{% block content %}
+  <div class="container mx-auto px-4 py-6">
+    <!-- Toast Notification - Mejorado con más estilos y animaciones -->
+    <div id="toast-notification" class="fixed top-4 right-4 z-50 transform translate-x-full transition-all duration-300 opacity-0">
+      <div class="bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 p-4 rounded-md shadow-xl flex items-start">
+        <div class="flex-shrink-0 text-green-500">
+          <i class="fas fa-check-circle text-xl animate-pulse"></i>
+        </div>
+        <div class="ml-3">
+          <p class="text-sm font-medium text-green-800" id="toast-title">¡Filtros aplicados!</p>
+          <p class="text-sm text-green-700 mt-1" id="toast-message">
+            La información ha sido filtrada según los criterios seleccionados.
+          </p>
+        </div>
+        <button type="button" class="ml-5 -mx-1.5 -my-1.5 bg-green-50 text-green-500 rounded-lg p-1.5 hover:bg-green-100 inline-flex h-8 w-8 items-center justify-center transition-colors duration-200" onclick="hideToast()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
     
-    <!-- Navbar -->
-    <nav class="bg-gray-800 p-4 sticky top-0 shadow z-30">
-      <div class="container mx-auto flex justify-between items-center">
-        <a href="{% url 'admin:index' %}" class="text-white text-lg font-semibold">
-          <i class="fas fa-cog"></i> Admin
-        </a>
-        <h1 class="text-white text-xl font-bold">Gestión de Saldos</h1>
-        <div class="space-x-4">
-          <a href="{% url 'balances' %}" class="text-gray-300 hover:text-white">Balances</a>
-          <a href="{% url 'exportar_gastos_excel' %}" class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-500">
-            Exportar acumulado general
+    <h1 class="text-3xl font-bold flex items-center mb-8 text-gray-800 border-b pb-2">
+      <i class="fas fa-chart-line mr-3 text-blue-600"></i>
+      <span class="bg-clip-text text-gray-800">Análisis de gastos </span>
+    </h1>
+    
+    <!-- Warning -->
+    <div id="warning-message" class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded-md shadow-sm" role="alert">
+      <div class="flex items-center">
+        <div class="py-1"><i class="fas fa-exclamation-triangle text-yellow-500 mr-3"></i></div>
+        <div>
+          <p class="font-bold text-lg">Atención</p>
+          <p>El filtro por defecto es diario. Por favor, seleccione el periodo deseado.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulario de filtros -->
+    <div class="bg-gradient-to-r from-blue-50 to-emerald-50 text-gray-800 shadow-md rounded-lg p-5 border border-gray-200 mb-10">
+      <form method="get" action="{% url 'balances' %}" class="space-y-6">
+        <div class="flex flex-wrap gap-4 mb-4">
+        
+          <div class="flex-1 min-w-[200px] group">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mb-2">
+              <i class="fas fa-university mr-1"></i> Cuenta
+            </span>
+
+            <label for="cuenta_id" class="block font-medium mb-2 group-hover:text-blue-300 transition-colors duration-200">Seleccione la Cuenta:</label>
+            <div class="relative">
+              <select name="cuenta_id" id="cuenta_id" 
+                class="block appearance-none w-full bg-white bg-opacity-90 border border-gray-400 hover:border-blue-500 px-4 py-2 pr-8 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="">Todas</option>
+                {% for cuenta in cuentas %}
+                <option value="{{ cuenta.id }}" {% if cuenta.id|stringformat:"s" == selected_cuenta_id %}selected{% endif %}>{{ cuenta.numero_cuenta }}</option>
+                {% endfor %}
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-600">
+                <i class="fas fa-chevron-down text-xs"></i>
+              </div>
+            </div>
+          </div>
+      
+          <div class="flex-1 min-w-[200px] group">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mb-2">
+              <i class="fas fa-calendar-alt mr-1"></i> Año
+            </span>
+            <label for="year" class="block font-medium mb-2 group-hover:text-indigo-300 transition-colors duration-200">Seleccione el Año:</label>
+            <div class="relative">
+              <select name="year" id="year" 
+                class="block appearance-none w-full bg-white bg-opacity-90 border border-gray-400 hover:border-indigo-500 px-4 py-2 pr-8 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                {% for year in available_years %}
+                <option value="{{ year.year }}" {% if year.year|stringformat:"s" == selected_year or not selected_year and year.year == current_year %}selected{% endif %}>{{ year.year }}</option>
+                {% endfor %}
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-600">
+                <i class="fas fa-chevron-down text-xs"></i>
+              </div>
+            </div>
+          </div>
+      
+          <div class="flex-1 min-w-[200px] group">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800 mb-2">
+              <i class="fas fa-calendar-alt mr-1"></i> Mes
+            </span>
+            <label for="month" class="block font-medium mb-2 group-hover:text-pink-300 transition-colors duration-200">Seleccione el Mes:</label>
+            <div class="relative">
+              <select name="month" id="month" 
+                class="block appearance-none w-full bg-white bg-opacity-90 border border-gray-400 hover:border-pink-500 px-4 py-2 pr-8 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                <option value="">Todos</option>
+                {% for month in months %}
+                <option value="{{ forloop.counter }}" {% if forloop.counter|stringformat:"s" == selected_month %}selected{% endif %}>{{ month }}</option>
+                {% endfor %}
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-600">
+                <i class="fas fa-chevron-down text-xs"></i>
+              </div>
+            </div>
+          </div>
+      
+          <div class="flex-1 min-w-[200px] group">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mb-2">
+              <i class="fas fa-clock mr-1"></i> Periodo
+            </span>
+            <label for="periodo" class="block font-medium mb-2 group-hover:text-red-300 transition-colors duration-200">Seleccione el Periodo:</label>
+            <div class="relative">
+              <select name="periodo" id="periodo" 
+                class="block appearance-none w-full bg-white bg-opacity-90 border border-gray-400 hover:border-red-500 px-4 py-2 pr-8 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                <option value="diario" {% if selected_periodo == 'diario' %}selected{% endif %}>Diario</option>
+                <option value="semanal" {% if selected_periodo == 'semanal' %}selected{% endif %}>Semanal</option>
+                <option value="mensual" {% if selected_periodo == 'mensual' %}selected{% endif %}>Mensual</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-600">
+                <i class="fas fa-chevron-down text-xs"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-4 mb-4" id="dia-container" style="display: {% if selected_periodo == 'diario' %}flex{% else %}none{% endif %};">
+          <div class="flex-1 min-w-[200px] group">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800 mb-2">
+              <i class="fas fa-calendar-day mr-1"></i> Día específico
+            </span>
+            <label for="dia" class="block font-medium mb-2 group-hover:text-cyan-300 transition-colors duration-200">Seleccione el Día:</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <i class="fas fa-calendar"></i>
+              </div>
+              <input type="date" name="dia" id="dia" 
+                class="block w-full pl-10 pr-3 py-2 bg-white bg-opacity-90 border border-gray-400 hover:border-cyan-500 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent" value="{{ selected_dia }}">
+            </div>
+          </div>
+          <div class="flex-1 min-w-[200px] group">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 mb-2">
+              <i class="fas fa-calendar-minus mr-1"></i> Desde
+            </span>
+            <label for="fecha_inicio" class="block font-medium mb-2 group-hover:text-emerald-300 transition-colors duration-200">Fecha Inicio:</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <i class="fas fa-calendar"></i>
+              </div>
+              <input type="date" name="fecha_inicio" id="fecha_inicio" 
+                class="block w-full pl-10 pr-3 py-2 bg-white bg-opacity-90 border border-gray-400 hover:border-emerald-500 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" value="{{ selected_fecha_inicio }}">
+            </div>
+          </div>
+          <div class="flex-1 min-w-[200px] group">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800 mb-2">
+              <i class="fas fa-calendar-plus mr-1"></i> Hasta
+            </span>
+            <label for="fecha_fin" class="block font-medium mb-2 group-hover:text-teal-300 transition-colors duration-200">Fecha Fin:</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <i class="fas fa-calendar"></i>
+              </div>
+              <input type="date" name="fecha_fin" id="fecha_fin" 
+                class="block w-full pl-10 pr-3 py-2 bg-white bg-opacity-90 border border-gray-400 hover:border-teal-500 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" value="{{ selected_fecha_fin }}">
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between pt-4">
+          <button type="submit" 
+            class="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-3 px-6 rounded-md shadow-md hover:shadow-lg transition-all duration-300 flex items-center group">
+            <i class="fas fa-filter mr-2 group-hover:animate-pulse"></i>Aplicar Filtros
+          </button>
+          <a href="{% url 'balances' %}" 
+             class="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-bold py-3 px-6 rounded-md shadow-md hover:shadow-lg transition-all duration-300 flex items-center group">
+            <i class="fas fa-undo mr-2 group-hover:animate-spin"></i>Restablecer
           </a>
+        </div>
+      </form>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <!-- Tarjetas de métricas superiores -->
+      <div class="lg:col-span-2">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+          <!-- Acumulado total -->
+          <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-lg p-5 border border-blue-200 transform transition-transform duration-300 hover:scale-[1.02] overflow-hidden relative">
+            <div class="absolute top-0 right-0 -mt-4 -mr-4 bg-blue-500 rounded-full w-20 h-20 opacity-20"></div>
+            <div class="flex justify-between items-center">
+              <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                <i class="fas fa-money-bill-wave text-blue-600 mr-2 text-3xl"></i>
+                <span>Acumulado total</span>
+              </h2>
+              <span class="text-3xl font-bold text-blue-600">${{ total_gastos|floatformat:2|intcomma }}</span>
+            </div>
+            <div class="mt-4 h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+              <div class="bg-blue-500 h-1 rounded-full" style="width: 100%"></div>
+            </div>
+          </div>
+
+          <!-- Promedio de gastos -->
+          <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg shadow-lg p-5 border border-emerald-200 transform transition-transform duration-300 hover:scale-[1.02] overflow-hidden relative">
+            <div class="absolute top-0 right-0 -mt-4 -mr-4 bg-emerald-500 rounded-full w-20 h-20 opacity-20"></div>
+            <div class="flex justify-between items-center">
+              <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                <i class="fas fa-calculator text-emerald-600 mr-2 text-3xl"></i>
+                <span>Promedio de Gastos</span>
+              </h2>
+              <span class="text-3xl font-bold text-emerald-600">${{ promedio_gastos|floatformat:2|intcomma }}</span>
+            </div>
+            <div class="mt-4 h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+              <div class="bg-emerald-500 h-1 rounded-full" style="width: {{ promedio_gastos|default:0|floatformat:0|intcomma }}%"></div>
+            </div>
+          </div>
+          
+          <!-- Transacciones -->
+          <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow-lg p-5 border border-purple-200 transform transition-transform duration-300 hover:scale-[1.02] overflow-hidden relative">
+            <div class="absolute top-0 right-0 -mt-4 -mr-4 bg-purple-500 rounded-full w-20 h-20 opacity-20"></div>
+            <div class="flex justify-between items-center">
+              <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                <i class="fas fa-exchange-alt text-purple-600 mr-2 text-3xl"></i>
+                <span>Transacciones</span>
+              </h2>
+              <span class="text-3xl font-bold text-purple-600">{{ numero_transacciones }}</span>
+            </div>
+            <div class="mt-4 h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+              <div class="bg-purple-500 h-1 rounded-full" style="width: {{ numero_transacciones|default:0|floatformat:0|intcomma }}%"></div>
+            </div>
+          </div>
+          
+          <!-- Gasto máximo -->
+          <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg shadow-lg p-5 border border-red-200 transform transition-transform duration-300 hover:scale-[1.02] overflow-hidden relative">
+            <div class="absolute top-0 right-0 -mt-4 -mr-4 bg-red-500 rounded-full w-20 h-20 opacity-20"></div>
+            <div class="flex justify-between items-center">
+              <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                <i class="fas fa-arrow-up text-red-600 mr-2 text-3xl"></i>
+                <span>Gasto Máximo</span>
+              </h2>
+              <span class="text-3xl font-bold text-red-600">${{ gasto_maximo|floatformat:2|intcomma }}</span>
+            </div>
+            <p class="text-gray-600 mt-2 italic">Categoría: {{ categoria_gasto_maximo }}</p>
           </div>
         </div>
       </div>
-    </nav>
 
-    <!-- Warning -->
-    <div id="warning-message" class="bg-yellow-200 border-l-4 border-yellow-500 text-yellow-700 p-2" role="alert">
-      <p class="font-bold">Atención</p>
-      <p>El filtro por defecto es diario. Por favor, seleccione el periodo deseado.</p>
+      <!-- Gráfico de barras horizontal -->
+      <div class="bg-white rounded-lg shadow-lg p-4 border border-gray-100">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+          <i class="fas fa-chart-bar text-amber-500 mr-2"></i> Gastos por Categoría
+        </h2>
+        <div style="height: 300px;" class="mt-2">
+          <canvas id="gastosCategoriasChart"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Otras gráficas y contenido -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
+      <!-- Gasto mínimo -->
+      <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-lg p-5 border border-green-200 transform transition-transform duration-300 hover:scale-[1.02] overflow-hidden relative">
+        <div class="absolute top-0 right-0 -mt-4 -mr-4 bg-green-500 rounded-full w-20 h-20 opacity-20"></div>
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+            <i class="fas fa-arrow-down text-green-600 mr-2 text-3xl"></i>
+            <span>Gasto Mínimo</span>
+          </h2>
+          <span class="text-3xl font-bold text-green-600">${{ gasto_minimo|floatformat:2|intcomma }}</span>
+        </div>
+        <p class="text-gray-600 mt-2 italic">Categoría: {{ categoria_gasto_minimo }}</p>
+      </div>
+      
+      <!-- Gasto mediano -->
+      <div class="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg shadow-lg p-5 border border-amber-200 transform transition-transform duration-300 hover:scale-[1.02] overflow-hidden relative">
+        <div class="absolute top-0 right-0 -mt-4 -mr-4 bg-amber-500 rounded-full w-20 h-20 opacity-20"></div>
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+            <i class="fas fa-equals text-amber-600 mr-2 text-3xl"></i>
+            <span>Gasto Mediano</span>
+          </h2>
+          <span class="text-3xl font-bold text-amber-600">${{ gasto_mediano|floatformat:2|intcomma }}</span>
+        </div>
+      </div>
+
+      <!-- Gráfico de distribución de gastos -->
+      <div class="lg:col-span-3 bg-white rounded-lg shadow-lg p-4 border border-gray-100">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+          <i class="fas fa-chart-pie text-indigo-500 mr-2"></i> Distribución de Gastos
+        </h2>
+        <div style="height: 200px;" class="mt-2">
+          <canvas id="distribucionGastosChart"></canvas>
+        </div>
+      </div>
     </div>
 
-    <script>
-      // Hide the warning message after 5 seconds
-      setTimeout(function() {
-      document.getElementById('warning-message').style.display = 'none';
-      }, 5000);
-    </script>
-
-    <form method="get" action="{% url 'balances' %}" class="bg-gray-800 p-6 rounded shadow-md">
-      <div class="flex flex-wrap gap-4 mb-4">
-        <div class="flex-1 min-w-[200px]">
-          <label for="cuenta_id" class="block text-white font-bold mb-2">Seleccione la Cuenta:</label>
-          <select name="cuenta_id" id="cuenta_id" class="block appearance-none forced-colors:appearance-auto w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
-            <option value="">Todas</option>
-            {% for cuenta in cuentas %}
-            <option value="{{ cuenta.id }}" {% if cuenta.id|stringformat:"s" == selected_cuenta_id %}selected{% endif %}>{{ cuenta.numero_cuenta }}</option>
-            {% endfor %}
-          </select>
-        </div>
-    
-        <div class="flex-1 min-w-[200px]">
-          <label for="year" class="block text-white font-bold mb-2">Seleccione el Año:</label>
-          <select name="year" id="year" class="block appearance-none forced-colors:appearance-auto w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
-            {% for year in available_years %}
-            <option value="{{ year.year }}" {% if year.year|stringformat:"s" == selected_year %}selected{% endif %}>{{ year.year }}</option>
-            {% endfor %}
-          </select>
-        </div>
-    
-        <div class="flex-1 min-w-[200px]">
-          <label for="month" class="block text-white font-bold mb-2">Seleccione el Mes:</label>
-          <select name="month" id="month" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
-            <option value="">Todos</option>
-            {% for month in months %}
-            <option value="{{ forloop.counter }}" {% if forloop.counter|stringformat:"s" == selected_month %}selected{% endif %}>{{ month }}</option>
-            {% endfor %}
-          </select>
-        </div>
-    
-        <div class="flex-1 min-w-[200px]">
-          <label for="periodo" class="block text-white font-bold mb-2">Seleccione el Periodo:</label>
-          <select name="periodo" id="periodo" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
-            <option value="diario" {% if selected_periodo == 'diario' %}selected{% endif %}>Diario</option>
-            <option value="semanal" {% if selected_periodo == 'semanal' %}selected{% endif %}>Semanal</option>
-            <option value="mensual" {% if selected_periodo == 'mensual' %}selected{% endif %}>Mensual</option>
-          </select>
-        </div>
-      </div>
-      <div class="flex flex-wrap gap-4 mb-4" id="dia-container" style="display: {% if selected_periodo == 'diario' %}flex{% else %}none{% endif %};">
-        <div class="flex-1 min-w-[200px]">
-          <label for="dia" class="block text-white font-bold mb-2">Seleccione el Día:</label>
-          <input type="date" name="dia" id="dia" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline" value="{{ selected_dia }}">
-        </div>
-        <div class="flex-1 min-w-[200px]">
-          <label for="fecha_inicio" class="block text-white font-bold mb-2">Fecha Inicio:</label>
-          <input type="date" name="fecha_inicio" id="fecha_inicio" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline" value="{{ selected_fecha_inicio }}">
-        </div>
-        <div class="flex-1 min-w-[200px]">
-          <label for="fecha_fin" class="block text-white font-bold mb-2">Fecha Fin:</label>
-          <input type="date" name="fecha_fin" id="fecha_fin" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline" value="{{ selected_fecha_fin }}">
-        </div>
-      </div>
-      <div class="flex items-center justify-between pt-4">
-        <button type="submit" class="bg-blue-800 hover:bg-orange-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-          <i class="fas fa-filter mr-2"></i>Filtrar
-        </button>
-      </div>
-    </form>
-
-      <!-- Tabla de datos -->
+    <!-- Tabla de datos mejorada -->
+    <div class="bg-white rounded-lg shadow-lg p-6 border border-gray-100 mb-8">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+        <i class="fas fa-table text-blue-500 mr-2"></i> Detalle de Gastos
+      </h2>
+      
       <div class="overflow-x-auto">
-      {% if balances %}
-      <table>
-        <thead>
-        <tr class="bg-gray-200 text-gray-700">
-          <th class="px-4 py-2">Cuenta</th>
-          <th class="px-4 py-2">Numero de la Cuenta</th>
-          <th class="px-4 py-2">Banco</th>
-          <th class="px-4 py-2">Sucursal</th>
-          <th class="px-4 py-2">Categoría</th>
-          <th class="px-4 py-2">Fecha</th>
-          <th class="px-4 py-2">Total Gastos</th>
-          <th class="px-4 py-2">Acumulado</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for balance in balances %}
-        <tr class="text-gray-700 hover:bg-gray-100 cursor-pointer" onclick="highlightRow(this)">
-          <td class="border px-4 py-2">{{ balance.id_cuenta_banco__id }}</td>
-          <td class="border px-4 py-2">{{ balance.id_cuenta_banco__numero_cuenta }}</td>
-          <td class="border px-4 py-2">{{ balance.id_cuenta_banco__id_banco__nombre }}</td>
-          <td class="border px-4 py-2">{{ balance.id_cuenta_banco__id_sucursal__nombre }}</td>
-          <td class="border px-4 py-2">{{ balance.id_cat_gastos__nombre }}</td>
-          <td class="border px-4 py-2">
-          {% if selected_periodo == 'diario' %}
-            {{ balance.fecha|date:"Y-m-d" }}
-          {% elif selected_periodo == 'semanal' %}
-            {{ balance.semana|date:"Y-m-d" }}
-          {% elif selected_periodo == 'mensual' %}
-            {{ balance.mes|date:"Y-m" }}
-          {% endif %}
-          </td>
-          <td class="border px-4 py-2">${{ balance.total_gastos }}</td>
-          <td class="border px-4 py-2">${{ balance.acumulado }}</td>
-        </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <div class="text-center py-8 bg-white shadow-md rounded">
-        <i class="fas fa-exclamation-circle text-gray-400 text-4xl mb-4"></i>
-        <p class="text-gray-600 text-lg">No hay datos disponibles para mostrar</p>
+        {% if balances %}
+        <table id="gastosTable" class="display responsive nowrap min-w-full bg-white border-collapse hover stripe" style="width:100%">
+          <thead>
+            <tr class="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700">
+              <th class="px-4 py-3 text-left">Cuenta</th>
+              <th class="px-4 py-3 text-left">Numero de la Cuenta</th>
+              <th class="px-4 py-3 text-left">Banco</th>
+              <th class="px-4 py-3 text-left">Sucursal</th>
+              <th class="px-4 py-3 text-left">Categoría</th>
+              <th class="px-4 py-3 text-left">Fecha</th>
+              <th class="px-4 py-3 text-right">Total Gastos</th>
+              <th class="px-4 py-3 text-right">Acumulado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for balance in balances %}
+            <tr class="text-gray-700 border-b border-gray-200 hover:bg-blue-50 transition-colors duration-150">
+              <td class="px-4 py-3">{{ balance.id_cuenta_banco__id }}</td>
+              <td class="px-4 py-3">{{ balance.id_cuenta_banco__numero_cuenta }}</td>
+              <td class="px-4 py-3">{{ balance.id_cuenta_banco__id_banco__nombre }}</td>
+              <td class="px-4 py-3">{{ balance.id_cuenta_banco__id_sucursal__nombre }}</td>
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {{ balance.id_cat_gastos__nombre }}
+                </span>
+              </td>
+              <td class="px-4 py-3">
+                {% if selected_periodo == 'diario' %}
+                  {{ balance.fecha|date:"Y-m-d" }}
+                {% elif selected_periodo == 'semanal' %}
+                  {{ balance.semana|date:"Y-m-d" }}
+                {% elif selected_periodo == 'mensual' %}
+                  {{ balance.mes|date:"Y-m" }}
+                {% endif %}
+              </td>
+              <td class="px-4 py-3 text-right font-medium text-blue-600" data-order="{{ balance.total_gastos }}">
+                ${{ balance.total_gastos|floatformat:2|intcomma }}
+              </td>
+              <td class="px-4 py-3 text-right font-medium text-green-600" data-order="{{ balance.acumulado }}">
+                ${{ balance.acumulado|floatformat:2|intcomma }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr class="bg-gradient-to-r from-blue-50 to-blue-100 font-semibold text-gray-800">
+              <th colspan="6" class="px-4 py-3 text-right">Total:</th>
+              <th class="px-4 py-3 text-right text-blue-600">${{ total_gastos|floatformat:2|intcomma }}</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </tfoot>
+        </table>
+        {% else %}
+        <div class="text-center py-8 bg-white border border-gray-200 rounded-lg">
+          <i class="fas fa-exclamation-circle text-gray-400 text-4xl mb-4"></i>
+          <p class="text-gray-600 text-lg">No hay datos disponibles para mostrar</p>
+          <p class="text-gray-500 mt-2">Intente modificar los filtros para ver resultados</p>
+        </div>
+        {% endif %}
       </div>
-      {% endif %}
-      </div>
+    </div>
+  </div>
+{% endblock content %}
 
-      <script>
-        document.getElementById('periodo').addEventListener('change', function() {
-          const periodo = this.value;
-          const diaContainer = document.getElementById('dia-container');
-          const rangoDiasContainer = document.getElementById('rango-dias-container');
-          if (periodo === 'diario') {
-            diaContainer.style.display = 'block';
-            rangoDiasContainer.style.display = 'block';
-          } else {
-            diaContainer.style.display = 'none';
-            rangoDiasContainer.style.display = 'none';
-          }
-        });
-      </script>
+{% block extra_js %}
+{{ block.super }}
+<!-- Incluir Chart.js y DataTables con todas sus extensiones -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="//cdn.datatables.net/2.2.2/js/dataTables.min.js"></script>
+<!-- Extensiones de DataTables -->
+<script src="//cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="//cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script src="//cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+<script src="//cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<!-- Librería JSZip para exportación Excel -->
+<script src="//cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- Librería PDFMake para exportación PDF -->
+<script src="//cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.70/pdfmake.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.70/vfs_fonts.js"></script>
 
-      <script>
-      function highlightRow(row) {
-        // Remove highlight from all rows
-        document.querySelectorAll('tr').forEach(tr => {
-        tr.classList.remove('highlight');
-        });
-        // Add highlight to clicked row
-        row.classList.add('highlight');
+
+
+<!-- Script para funciones generales -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Ocultar el mensaje de advertencia después de 5 segundos
+    setTimeout(function() {
+      document.getElementById("warning-message").style.display = "none";
+    }, 5000);
+
+    // Gestionar la visualización de los filtros de fecha según el periodo
+    document.getElementById('periodo').addEventListener('change', function() {
+      const diaContainer = document.getElementById('dia-container');
+      if (this.value === 'diario') {
+        diaContainer.style.display = 'flex';
+      } else {
+        diaContainer.style.display = 'none';
       }
-      </script>
+    });
+    
+    // Mostrar notificación toast cuando se aplican filtros (al enviar el formulario)
+    const filterForm = document.querySelector('form[action="{% url "balances" %}"]');
+    if (filterForm) {
+      filterForm.addEventListener('submit', function() {
+        showToast('Aplicando filtros...', 'Actualizando la información según los criterios seleccionados.');
+      });
+    }
+  });
+</script>
 
-      <!-- jsPDF and jsPDF-AutoTable CDN -->
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-
-      <script>
-        function exportPDF() {
-          const { jsPDF } = window.jspdf;
-          const doc = new jsPDF();
-
-          doc.autoTable({ 
-            html: 'table',
-            startY: 20,
-            theme: 'grid',
-            headStyles: { fillColor: [22, 160, 133] },
-            styles: { fontSize: 8 }
-          });
-
-          doc.save('reporte.pdf');
-        }
-
-        $(document).ready(function() {
-          // Add Export PDF button
-          new $.fn.dataTable.Buttons( $('table').DataTable(), {
-            buttons: [
-              {
-                text: 'Exportar PDF',
-                action: function ( e, dt, node, config ) {
-                  exportPDF();
+<!-- Script para inicialización de gráficos -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log("Inicializando gráficos...");
+    
+    // Crear gráfico de barras horizontal para categorías
+    var ctxCategorias = document.getElementById('gastosCategoriasChart');
+    if (!ctxCategorias) {
+      console.error("No se encontró el elemento canvas para el gráfico de categorías");
+      return;
+    }
+    
+    ctxCategorias = ctxCategorias.getContext('2d');
+    
+    // Colores para las categorías
+    var colors = [
+      'rgba(54, 162, 235, 0.7)',
+      'rgba(255, 99, 132, 0.7)',
+      'rgba(255, 206, 86, 0.7)',
+      'rgba(75, 192, 192, 0.7)',
+      'rgba(153, 102, 255, 0.7)',
+      'rgba(255, 159, 64, 0.7)',
+      'rgba(199, 199, 199, 0.7)',
+      'rgba(83, 102, 255, 0.7)',
+      'rgba(40, 159, 64, 0.7)',
+      'rgba(210, 199, 199, 0.7)'
+    ];
+    
+    // Extraer categorías y totales de los balances
+    var categorias = {};
+    {% for balance in balances %}
+      var categoria = "{{ balance.id_cat_gastos__nombre }}";
+      var monto = parseFloat("{{ balance.total_gastos }}");
+      
+      if (categorias[categoria]) {
+        categorias[categoria] += monto;
+      } else {
+        categorias[categoria] = monto;
+      }
+    {% endfor %}
+    
+    console.log("Categorías extraídas:", categorias);
+    
+    // Convertir a arrays para Chart.js
+    var labels = [];
+    var data = [];
+    var backgroundColors = [];
+    
+    var i = 0;
+    for (var key in categorias) {
+      if (categorias.hasOwnProperty(key)) {
+        labels.push(key);
+        data.push(categorias[key]);
+        backgroundColors.push(colors[i % colors.length]);
+        i++;
+      }
+    }
+    
+    console.log("Datos preparados para gráficos:", { labels, data });
+    
+    // Ordenar los datos de mayor a menor
+    var combinado = [];
+    for (var j = 0; j < labels.length; j++) {
+      combinado.push({ label: labels[j], data: data[j], color: backgroundColors[j] });
+    }
+    
+    combinado.sort(function(a, b) {
+      return b.data - a.data;
+    });
+    
+    labels = combinado.map(function(item) { return item.label; });
+    data = combinado.map(function(item) { return item.data; });
+    backgroundColors = combinado.map(function(item) { return item.color; });
+    
+    // Crear el gráfico de barras horizontal
+    if (labels.length > 0) {
+      console.log("Creando gráfico de barras con:", labels.length, "categorías");
+      
+      try {
+        new Chart(ctxCategorias, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Gastos por Categoría',
+              data: data,
+              backgroundColor: backgroundColors,
+              borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
+              borderWidth: 1,
+              borderRadius: 4,
+              maxBarThickness: 30
+            }]
+          },
+          options: {
+            indexAxis: 'y',  // Hacer el gráfico horizontal
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return '$' + new Intl.NumberFormat('es-MX').format(context.parsed.x.toFixed(2));
+                  }
                 }
               }
-            ]
-          });
-
-          $('table').DataTable().buttons(0, null).container().appendTo(
-            $('div.dataTables_wrapper')
-          );
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function(value) {
+                    return '$' + value.toLocaleString();
+                  }
+                }
+              },
+              y: {
+                ticks: {
+                  font: {
+                    weight: 'bold'
+                  }
+                }
+              }
+            },
+            animation: {
+              duration: 2000,
+              easing: 'easeOutQuart'
+            }
+          }
         });
-      </script>
+        console.log("Gráfico de barras creado exitosamente");
+      } catch (error) {
+        console.error("Error al crear el gráfico de barras:", error);
+      }
+    } else {
+      console.warn("No hay datos para el gráfico de barras");
+      document.querySelector('#gastosCategoriasChart').closest('div').innerHTML = '<div class="flex flex-col items-center justify-center h-full"><i class="fas fa-info-circle text-gray-300 text-4xl mb-2"></i><p class="text-gray-500">No hay datos disponibles para mostrar</p></div>';
+    }
+    
+    // Gráfico de distribución de gastos (pie chart)
+    var ctxDistribucion = document.getElementById('distribucionGastosChart');
+    
+    if (ctxDistribucion && labels.length > 0) {
+      ctxDistribucion = ctxDistribucion.getContext('2d');
+      console.log("Creando gráfico de distribución...");
+      
+      try {
+        new Chart(ctxDistribucion, {
+          type: 'doughnut',
+          data: {
+            labels: labels,
+            datasets: [{
+              data: data,
+              backgroundColor: backgroundColors,
+              borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
+              borderWidth: 1,
+              hoverOffset: 10
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'right',
+                labels: {
+                  boxWidth: 12,
+                  padding: 10
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    var label = context.label || '';
+                    var value = context.parsed || 0;
+                    var total = context.dataset.data.reduce((a, b) => a + b, 0);
+                    var percentage = ((value * 100) / total).toFixed(1);
+                    return label + ': $' + value.toLocaleString() + ' (' + percentage + '%)';
+                  }
+                }
+              }
+            },
+            animation: {
+              animateRotate: true,
+              animateScale: true,
+              duration: 1500
+            }
+          }
+        });
+        console.log("Gráfico de distribución creado exitosamente");
+      } catch (error) {
+        console.error("Error al crear el gráfico de distribución:", error);
+      }
+    } else if (ctxDistribucion) {
+      console.warn("No hay datos para el gráfico de distribución");
+      document.querySelector('#distribucionGastosChart').closest('div').innerHTML = '<div class="flex flex-col items-center justify-center h-full"><i class="fas fa-info-circle text-gray-300 text-4xl mb-2"></i><p class="text-gray-500">No hay datos disponibles para mostrar</p></div>';
+    }
+  });
+</script>
 
-      <!-- jQuery and DataTables JS -->
-      <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
-      <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-      <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-      <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-
-      <script>
-      $(document).ready(function() {
-        $('table').DataTable({
-        pageLength: 10,
-        responsive: true,
-        dom: 'Bfrtip',
-        buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
+<!-- Script para inicialización de DataTables -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log("Inicializando DataTable...");
+    
+    try {
+      new DataTable('#gastosTable', {
         language: {
-          url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+          processing: "Procesando...",
+          search: "Buscar:",
+          lengthMenu: "Mostrar _MENU_ registros",
+          info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+          infoEmpty: "Mostrando 0 a 0 de 0 registros",
+          infoFiltered: "(filtrado de _MAX_ registros totales)",
+          loadingRecords: "Cargando...",
+          zeroRecords: "No se encontraron registros coincidentes",
+          emptyTable: "No hay datos disponibles en la tabla",
+          paginate: {
+            first: "Primero",
+            previous: "Anterior",
+            next: "Siguiente",
+            last: "Último"
+          },
+          buttons: {
+            copy: "Copiar",
+            print: "Imprimir",
+            excel: "Excel",
+            pdf: "PDF",
+            csv: "CSV"
+          }
         },
-        animation: true,
-        "initComplete": function() {
-          $(this).fadeIn(1000);
-        },
-        "drawCallback": function() {
-          $('tbody tr').hover(
-          function() { $(this).addClass('bg-yellow-200'); },
-          function() { $(this).removeClass('bg-yellow-200'); }
-          );
-        },
-        "searching": false // Disable the search bar
-        });
+        buttons: [
+          {
+            extend: 'copy',
+            className: 'bg-blue-500 hover:bg-blue-600 text-white font-medium py-1 px-3 rounded shadow mr-2 mb-2',
+            text: '<i class="fas fa-copy mr-1"></i> Copiar'
+          },
+          {
+            extend: 'csv',
+            className: 'bg-green-500 hover:bg-green-600 text-white font-medium py-1 px-3 rounded shadow mr-2 mb-2',
+            text: '<i class="fas fa-file-csv mr-1"></i> CSV'
+          },
+          {
+            extend: 'excel',
+            className: 'bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-1 px-3 rounded shadow mr-2 mb-2',
+            text: '<i class="fas fa-file-excel mr-1"></i> Excel'
+          },
+          {
+            extend: 'pdf',
+            className: 'bg-red-500 hover:bg-red-600 text-white font-medium py-1 px-3 rounded shadow mr-2 mb-2',
+            text: '<i class="fas fa-file-pdf mr-1"></i> PDF'
+          },
+          {
+            extend: 'print',
+            className: 'bg-purple-500 hover:bg-purple-600 text-white font-medium py-1 px-3 rounded shadow mr-2 mb-2',
+            text: '<i class="fas fa-print mr-1"></i> Imprimir'
+          }
+        ],
+        dom: '<"flex justify-between items-center mb-4"<"flex-1"B><"flex-1 text-right"f>>rt<"flex justify-between items-center mt-4"<"flex-1"i><"flex-1"p>>',
+        responsive: true,
+        order: [[5, "desc"]],
+        pagingType: 'simple_numbers', // Changed to simple_numbers to remove first/last buttons
+        // Custom paging configuration
+        paging: {
+          numbers: true,    // Show page numbers
+          firstLast: false, // Disable First and Last buttons
+          previousNext: true // Keep Previous and Next buttons
+        }
       });
-      </script>
-    </div>
-    
-    <div class="container mx-auto p-3 mb-4">
-      <!-- Card para mostrar el total -->
-      <div class="mt-4 bg-white rounded-lg shadow-md p-3">
-        <div class="flex justify-between items-center">
-          <h2 class="text-xl font-semibold text-gray-800">Acumulado total</h2>
-          <span class="text-3xl font-bold text-green-600">${{ total_gastos|floatformat:2 }}</span>
-        </div>
-      </div>
-    
-     <!-- Cards para mostrar métricas importantes -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-  <div class="bg-white rounded-lg shadow-md p-3">
-    <h2 class="text-xl font-semibold text-gray-800">Total de Gastos</h2>
-    <span class="text-2xl font-bold text-green-600">${{ total_gastos|floatformat:2 }}</span>
-  </div>
-  <div class="bg-white rounded-lg shadow-md p-3">
-    <h2 class="text-xl font-semibold text-gray-800">Promedio de Gastos</h2>
-    <span class="text-2xl font-bold text-green-600">${{ promedio_gastos|floatformat:2 }}</span>
-  </div>
-  <div class="bg-white rounded-lg shadow-md p-3">
-    <h2 class="text-xl font-semibold text-gray-800">Número de Transacciones</h2>
-    <span class="text-2xl font-bold text-green-600">{{ numero_transacciones }}</span>
-  </div>
-  <div class="bg-white rounded-lg shadow-md p-3">
-    <h2 class="text-xl font-semibold text-gray-800">Gasto Máximo</h2>
-    <span class="text-2xl font-bold text-green-600">${{ gasto_maximo|floatformat:2 }}</span>
-    <p class="text-gray-600">Categoría: {{ categoria_gasto_maximo }}</p>
-  </div>
-  <div class="bg-white rounded-lg shadow-md p-3">
-    <h2 class="text-xl font-semibold text-gray-800">Gasto Mínimo</h2>
-    <span class="text-2xl font-bold text-green-600">${{ gasto_minimo|floatformat:2 }}</span>
-    <p class="text-gray-600">Categoría: {{ categoria_gasto_minimo }}</p>
-  </div>
-  <div class="bg-white rounded-lg shadow-md p-3">
-    <h2 class="text-xl font-semibold text-gray-800">Gasto Mediano</h2>
-    <span class="text-2xl font-bold text-green-600">${{ gasto_mediano|floatformat:2 }}</span>
-  </div>
-</div>
-      </div>
-    
-  </body>
-</html>
+      
+      // Añadir estilos a los botones de paginación
+      document.querySelectorAll('.paginate_button').forEach(function(button) {
+        button.classList.add('bg-gray-100', 'hover:bg-gray-200', 'px-3', 'py-1', 'rounded', 'border', 'border-gray-300', 'mx-1');
+      });
+      
+      console.log("DataTable inicializado exitosamente");
+    } catch (error) {
+      console.error("Error al inicializar DataTable:", error);
+    }
+  });
+</script>
+{% endblock %}

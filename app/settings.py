@@ -31,6 +31,10 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+CRSF_TRUSTED_ORIGINS = [
+    "http://localhost:8000",
+    "https://platypus-viable-doe.ngrok-free.app",]
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -88,7 +92,7 @@ JAZZMIN_SETTINGS = {
     "topmenu_links": [
 
         # external url that opens in a new window (Permissions can be added)
-        {"name": "Saldos", "url": "balances", "new_window": True},
+        {"name": "Acumulados", "url": "balances", "new_window": True, "permissions": ["auth.view_user"]},
 
     ],
     

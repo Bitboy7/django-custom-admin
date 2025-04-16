@@ -1,32 +1,20 @@
 from django.contrib import admin
 from django.urls import path, include
 from catalogo.views import index, data
-from gastos.views import registro_gasto
-from .views import balances_view, export_to_excel
+from .views import balances_view, export_full_report_to_excel
 from django.conf import settings
 from django.conf.urls.static import static
-"""
-URL configuration for app project.
+from django.shortcuts import redirect
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
+# Función para redireccionar a admin
+def redirect_to_admin(request):
+    return redirect('admin:index')
+
 urlpatterns = [
     path("admin/", admin.site.urls),  # Added trailing slash
-    path('data/', data, name='data'),
-    path('gastos/', registro_gasto, name='gastos'),
     path('balances/', balances_view, name='balances'),
-    path('exportar_gastos_excel/', export_to_excel, name='exportar_gastos_excel'),
+    path('export-full-report/', export_full_report_to_excel, name='export_full_report'),
     path('', include('catalogo.urls')),
     path('', include('gastos.urls')),
+    path('', redirect_to_admin, name='redirect_to_admin'),  # Redirige la raíz a admin
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
