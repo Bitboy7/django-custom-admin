@@ -1,7 +1,7 @@
 /* Typography Enhancements */
 :root {
   /* Colors */
-  --primary-color: #1976d2;
+  --primary-color: #1fb172;
   --primary-color-rgb: 25, 118, 210; /* RGB values for rgba() */
   --secondary-color: #455a64;
   --background-color: #f8f9fa;
@@ -31,7 +31,7 @@ h4,
 h5,
 h6 {
   font-family: var(--font-family);
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.2;
   margin-bottom: 1rem;
 }
@@ -67,15 +67,14 @@ p {
 
 /* Button Enhancements */
 .button-primary,
-.btn,
 .submit-row input,
+.btn-outline-primary,
 .button {
   background-color: var(--primary-color);
   color: white;
   border: none;
   font-size: var(--font-size);
   cursor: pointer;
-  padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
   transition: all 0.3s ease;
   font-weight: 500;
@@ -114,7 +113,6 @@ fieldset,
 .card-header,
 .module h2,
 .dashboard .module caption {
-  padding: 1.2rem 1.5rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   font-weight: 600;
   background-color: var(--primary-color);
