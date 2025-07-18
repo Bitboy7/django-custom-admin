@@ -7,24 +7,117 @@
 <link rel="stylesheet" href="//cdn.datatables.net/2.2.2/css/dataTables.dataTables.min.css">
 <link rel="stylesheet" href="//cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
 <link rel="stylesheet" href="//cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<link rel="stylesheet" href="{% static 'css/datatables-buttons.css' %}">
+<style>
+  /* Estilos personalizados para DataTables */
+  .dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 8px 12px !important;
+    margin: 0 2px !important;
+    border-radius: 6px !important;
+    border: 1px solid #d1d5db !important;
+    background: #f3f4f6 !important;
+    color: #374151 !important;
+    transition: all 0.2s ease !important;
+    display: inline-block !important;
+    text-decoration: none !important;
+  }
+  
+  .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: #e5e7eb !important;
+    border-color: #9ca3af !important;
+    color: #374151 !important;
+    text-decoration: none !important;
+  }
+  
+  .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+    color: white !important;
+    font-weight: 600 !important;
+  }
+  
+  .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+    background: #2563eb !important;
+    border-color: #2563eb !important;
+    color: white !important;
+  }
+  
+  .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+    background: #f9fafb !important;
+    border-color: #e5e7eb !important;
+    color: #9ca3af !important;
+    cursor: not-allowed !important;
+  }
+  
+  .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover {
+    background: #f9fafb !important;
+    border-color: #e5e7eb !important;
+    color: #9ca3af !important;
+  }
+  
+  .dataTables_wrapper .dataTables_paginate {
+    margin: 20px 0 !important;
+  }
+  
+  .dataTables_wrapper .dataTables_paginate .ellipsis {
+    padding: 8px 4px !important;
+    color: #9ca3af !important;
+  }
+  
+  .dataTables_wrapper .dataTables_length select {
+    background: white !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    padding: 6px 12px !important;
+    font-size: 14px !important;
+    color: #374151 !important;
+    margin: 0 8px !important;
+  }
+  
+  .dataTables_wrapper .dataTables_length {
+    font-size: 14px !important;
+    color: #6b7280 !important;
+    font-weight: 500 !important;
+  }
+  
+  .dataTables_wrapper .dataTables_info {
+    font-size: 14px !important;
+    color: #6b7280 !important;
+    font-weight: 500 !important;
+  }
+  
+  .dataTables_wrapper .dataTables_filter input {
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    padding: 8px 12px !important;
+    font-size: 14px !important;
+    margin-left: 8px !important;
+  }
+  
+  .dataTables_wrapper .dataTables_filter input:focus {
+    outline: none !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
   <div class="container mx-auto px-4 py-6">
     <!-- Toast Notification - Mejorado con más estilos y animaciones -->
     <div id="toast-notification" class="fixed top-4 right-4 z-50 transform translate-x-full transition-all duration-300 opacity-0">
-      <div class="bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 p-4 rounded-md shadow-xl flex items-start">
-        <div class="flex-shrink-0 text-green-500">
-          <i class="fas fa-check-circle text-xl animate-pulse"></i>
+      <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-4 rounded-md shadow-xl flex items-start max-w-md">
+        <div class="flex-shrink-0 text-green-600">
+          <i class="fas fa-filter text-xl animate-pulse"></i>
         </div>
-        <div class="ml-3">
+        <div class="ml-3 flex-1">
           <p class="text-sm font-medium text-green-800" id="toast-title">¡Filtros aplicados!</p>
           <p class="text-sm text-green-700 mt-1" id="toast-message">
             La información ha sido filtrada según los criterios seleccionados.
           </p>
         </div>
-        <button type="button" class="ml-5 -mx-1.5 -my-1.5 bg-green-50 text-green-500 rounded-lg p-1.5 hover:bg-green-100 inline-flex h-8 w-8 items-center justify-center transition-colors duration-200" onclick="hideToast()">
-          <i class="fas fa-times"></i>
+        <button type="button" class="ml-3 -mx-1.5 -my-1.5 bg-green-100 text-green-500 rounded-lg p-1.5 hover:bg-green-200 inline-flex h-8 w-8 items-center justify-center transition-colors duration-200" onclick="hideToast()">
+          <i class="fas fa-times text-sm"></i>
         </button>
       </div>
     </div>
@@ -46,7 +139,7 @@
     </div>
 
     <!-- Formulario de filtros -->
-    <div class="bg-gradient-to-r from-blue-50 to-emerald-50 text-gray-800 shadow-md rounded-lg p-5 border border-gray-200 mb-10">
+    <div class="bg-gradient-to-r from-gray-50 to-gray-100 text-gray-800 shadow-md rounded-lg p-5 border border-gray-200 mb-10">
       <form method="get" action="{% url 'balances' %}" class="space-y-6">
         <div class="flex flex-wrap gap-4 mb-4">
         
@@ -293,7 +386,7 @@
       </div>
     </div>
 
-    <!-- Tabla de datos mejorada -->
+    <!-- Tabla de datos -->
     <div class="bg-white rounded-lg shadow-lg p-6 border border-gray-100 mb-8">
       <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
         <i class="fas fa-table text-blue-500 mr-2"></i> Detalle de Gastos
@@ -304,6 +397,7 @@
         <table id="gastosTable" class="display responsive nowrap min-w-full bg-white border-collapse hover stripe" style="width:100%">
           <thead>
             <tr class="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700">
+              <th class="px-4 py-3 text-left">ID</th>
               <th class="px-4 py-3 text-left">Cuenta</th>
               <th class="px-4 py-3 text-left">Numero de la Cuenta</th>
               <th class="px-4 py-3 text-left">Banco</th>
@@ -317,6 +411,7 @@
           <tbody>
             {% for balance in balances %}
             <tr class="text-gray-700 border-b border-gray-200 hover:bg-blue-50 transition-colors duration-150">
+              <td class="px-4 py-3 font-mono text-sm">{{ balance.id }}</td>
               <td class="px-4 py-3">{{ balance.id_cuenta_banco__id }}</td>
               <td class="px-4 py-3">{{ balance.id_cuenta_banco__numero_cuenta }}</td>
               <td class="px-4 py-3">{{ balance.id_cuenta_banco__id_banco__nombre }}</td>
@@ -336,18 +431,18 @@
                 {% endif %}
               </td>
               <td class="px-4 py-3 text-right font-medium text-blue-600" data-order="{{ balance.total_gastos }}">
-                ${{ balance.total_gastos|floatformat:2|intcomma }}
+                ${{ balance.total_gastos|floatformat:2 }}
               </td>
               <td class="px-4 py-3 text-right font-medium text-green-600" data-order="{{ balance.acumulado }}">
-                ${{ balance.acumulado|floatformat:2|intcomma }}
+                ${{ balance.acumulado|floatformat:2 }}
               </td>
             </tr>
             {% endfor %}
           </tbody>
           <tfoot>
             <tr class="bg-gradient-to-r from-blue-50 to-blue-100 font-semibold text-gray-800">
-              <th colspan="6" class="px-4 py-3 text-right">Total:</th>
-              <th class="px-4 py-3 text-right text-blue-600">${{ total_gastos|floatformat:2|intcomma }}</th>
+              <th colspan="7" class="px-4 py-3 text-right">Total:</th>
+              <th class="px-4 py-3 text-right text-blue-600">${{ total_gastos|floatformat:2 }}</th>
               <th class="px-4 py-3"></th>
             </tr>
           </tfoot>
@@ -384,6 +479,86 @@
 
 <!-- Script para funciones generales -->
 <script>
+  // Funciones para el toast de notificación
+  function showToast(title, message, duration = 4000) {
+    const toast = document.getElementById('toast-notification');
+    const toastTitle = document.getElementById('toast-title');
+    const toastMessage = document.getElementById('toast-message');
+    
+    // Actualizar contenido del toast
+    toastTitle.textContent = title;
+    toastMessage.textContent = message;
+    
+    // Mostrar el toast
+    toast.classList.remove('translate-x-full', 'opacity-0');
+    toast.classList.add('translate-x-0', 'opacity-100');
+
+    // Auto-ocultar después de 4 segundos
+    setTimeout(function() {
+      hideToast();
+    }, duration);
+  }
+  
+  function hideToast() {
+    const toast = document.getElementById('toast-notification');
+    toast.classList.remove('translate-x-0', 'opacity-0');
+    toast.classList.add('translate-x-full', 'opacity-100');
+  }
+  
+  // Mostrar toast al cargar la página si hay parámetros de filtro
+  function checkAndShowFilterToast() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasFilters = urlParams.has('cuenta_id') || urlParams.has('year') || 
+                      urlParams.has('month') || urlParams.has('periodo') || 
+                      urlParams.has('dia') || urlParams.has('fecha_inicio') || 
+                      urlParams.has('fecha_fin');
+    
+    if (hasFilters) {
+      const activeFilters = [];
+      
+      if (urlParams.get('cuenta_id')) {
+        const cuentaSelect = document.getElementById('cuenta_id');
+        const selectedOption = cuentaSelect.options[cuentaSelect.selectedIndex];
+        activeFilters.push(`Cuenta: ${selectedOption.text}`);
+      }
+      
+      if (urlParams.get('year')) {
+        activeFilters.push(`Año: ${urlParams.get('year')}`);
+      }
+      
+      if (urlParams.get('month')) {
+        const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                           "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        const monthIndex = parseInt(urlParams.get('month')) - 1;
+        if (monthIndex >= 0 && monthIndex < 12) {
+          activeFilters.push(`Mes: ${monthNames[monthIndex]}`);
+        }
+      }
+      
+      if (urlParams.get('periodo')) {
+        const periodos = { 'diario': 'Diario', 'semanal': 'Semanal', 'mensual': 'Mensual' };
+        activeFilters.push(`Periodo: ${periodos[urlParams.get('periodo')] || urlParams.get('periodo')}`);
+      }
+      
+      if (urlParams.get('dia')) {
+        activeFilters.push(`Día: ${urlParams.get('dia')}`);
+      }
+      
+      if (urlParams.get('fecha_inicio') && urlParams.get('fecha_fin')) {
+        activeFilters.push(`Rango: ${urlParams.get('fecha_inicio')} - ${urlParams.get('fecha_fin')}`);
+      }
+      
+      let message = 'Filtros aplicados: ' + activeFilters.join(', ');
+      if (message.length > 100) {
+        message = `${activeFilters.length} filtros aplicados correctamente.`;
+      }
+      
+      setTimeout(function() {
+        showToast('¡Filtros aplicados!', message);
+      }, 500);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     // Ocultar el mensaje de advertencia después de 5 segundos
     setTimeout(function() {
@@ -403,10 +578,14 @@
     // Mostrar notificación toast cuando se aplican filtros (al enviar el formulario)
     const filterForm = document.querySelector('form[action="{% url "balances" %}"]');
     if (filterForm) {
-      filterForm.addEventListener('submit', function() {
+      filterForm.addEventListener('submit', function(e) {
+        // Mostrar toast de carga inmediatamente
         showToast('Aplicando filtros...', 'Actualizando la información según los criterios seleccionados.');
       });
     }
+    
+    // Mostrar toast si hay filtros aplicados al cargar la página
+    checkAndShowFilterToast();
   });
 </script>
 
@@ -614,6 +793,47 @@
 
 <!-- Script para inicialización de DataTables -->
 <script>
+  // Función auxiliar para formatear números desde el DOM
+  function formatNumericValue(node, includeSymbol) {
+    var dataOrder = node.getAttribute('data-order');
+    console.log('dataOrder value:', dataOrder);
+    
+    if (dataOrder) {
+      // Convertir coma decimal a punto para parseFloat (formato europeo → estadounidense)
+      var normalizedValue = dataOrder.replace(',', '.');
+      var numValue = parseFloat(normalizedValue);
+      
+      if (!isNaN(numValue)) {
+        var formatted = numValue.toFixed(2);
+        return includeSymbol ? '$' + formatted : formatted;
+      }
+    }
+    
+    // Si no hay data-order válido, extraer el número del texto
+    var textContent = node.textContent || node.innerText || '';
+    console.log('textContent:', textContent);
+    
+    // Limpiar el texto: remover símbolo de moneda y espacios
+    var cleanNumber = textContent.replace(/[$\s]/g, '');
+    console.log('cleanNumber after removing $ and spaces:', cleanNumber);
+    
+    // Si usa coma como separador decimal (formato europeo), convertir a punto
+    if (cleanNumber.indexOf(',') > cleanNumber.lastIndexOf('.')) {
+      cleanNumber = cleanNumber.replace(/\./g, '').replace(',', '.');
+      console.log('European format detected, converted to:', cleanNumber);
+    } else {
+      // Si usa punto como separador decimal, remover comas de miles
+      cleanNumber = cleanNumber.replace(/,/g, '');
+      console.log('US format detected, cleaned to:', cleanNumber);
+    }
+    
+    var numValue = parseFloat(cleanNumber);
+    var result = isNaN(numValue) ? '0.00' : numValue.toFixed(2);
+    console.log('Final parsed value:', result);
+    
+    return includeSymbol ? '$' + result : result;
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     console.log("Inicializando DataTable...");
     
@@ -643,49 +863,297 @@
             csv: "CSV"
           }
         },
+        columnDefs: [
+          {
+            targets: [5], // Columna "Categoría" (ahora es la columna 5)
+            render: function(data, type, row) {
+              if (type === 'export' || type === 'copy') {
+                // Para exportación, extraer solo el texto del span
+                var tempDiv = document.createElement('div');
+                tempDiv.innerHTML = data;
+                return tempDiv.textContent || tempDiv.innerText || '';
+              }
+              // Para visualización, mantener el HTML original
+              return data;
+            }
+          }
+        ],
         buttons: [
           {
             extend: 'copy',
-            className: 'bg-blue-500 hover:bg-blue-600 text-white font-medium py-1 px-3 rounded shadow mr-2 mb-2',
-            text: '<i class="fas fa-copy mr-1"></i> Copiar'
+            className: 'dt-button btn-copy',
+            text: '<i class="fas fa-copy mr-1"></i> Copiar',
+            exportOptions: {
+              format: {
+                body: function(data, row, column, node) {
+                  // Para la columna de categoría, extraer solo el texto
+                  if (column === 5) {
+                    var tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = data;
+                    return tempDiv.textContent || tempDiv.innerText || '';
+                  }
+                  // Para las columnas numéricas (ahora son 7 y 8), usar la función auxiliar
+                  if (column === 7 || column === 8) {
+                    console.log('Processing column', column, 'for copy export');
+                    return formatNumericValue(node, false);
+                  }
+                  return data;
+                }
+              }
+            }
           },
           {
             extend: 'csv',
-            className: 'bg-green-500 hover:bg-green-600 text-white font-medium py-1 px-3 rounded shadow mr-2 mb-2',
-            text: '<i class="fas fa-file-csv mr-1"></i> CSV'
+            className: 'dt-button btn-csv',
+            text: '<i class="fas fa-file-csv mr-1"></i> CSV',
+            exportOptions: {
+              format: {
+                body: function(data, row, column, node) {
+                  // Para la columna de categoría, extraer solo el texto
+                  if (column === 5) {
+                    var tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = data;
+                    return tempDiv.textContent || tempDiv.innerText || '';
+                  }
+                  // Para las columnas numéricas (ahora son 7 y 8), usar la función auxiliar
+                  if (column === 7 || column === 8) {
+                    console.log('Processing column', column, 'for CSV export');
+                    return formatNumericValue(node, false);
+                  }
+                  return data;
+                }
+              }
+            }
           },
           {
             extend: 'excel',
-            className: 'bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-1 px-3 rounded shadow mr-2 mb-2',
-            text: '<i class="fas fa-file-excel mr-1"></i> Excel'
+            className: 'dt-button btn-excel',
+            text: '<i class="fas fa-file-excel mr-1"></i> Excel',
+            exportOptions: {
+              format: {
+                body: function(data, row, column, node) {
+                  // Para la columna de categoría, extraer solo el texto
+                  if (column === 5) {
+                    var tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = data;
+                    return tempDiv.textContent || tempDiv.innerText || '';
+                  }
+                  // Para las columnas numéricas (ahora son 7 y 8), usar la función auxiliar
+                  if (column === 7 || column === 8) {
+                    console.log('Processing column', column, 'for Excel export');
+                    return formatNumericValue(node, false);
+                  }
+                  return data;
+                }
+              }
+            }
           },
           {
             extend: 'pdf',
-            className: 'bg-red-500 hover:bg-red-600 text-white font-medium py-1 px-3 rounded shadow mr-2 mb-2',
-            text: '<i class="fas fa-file-pdf mr-1"></i> PDF'
+            className: 'dt-button btn-pdf',
+            text: '<i class="fas fa-file-pdf mr-1"></i> PDF',
+            exportOptions: {
+              format: {
+                body: function(data, row, column, node) {
+                  // Para la columna de categoría, extraer solo el texto
+                  if (column === 5) {
+                    var tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = data;
+                    return tempDiv.textContent || tempDiv.innerText || '';
+                  }
+                  // Para las columnas numéricas (ahora son 7 y 8), usar la función auxiliar
+                  if (column === 7 || column === 8) {
+                    console.log('Processing column', column, 'for PDF export');
+                    return formatNumericValue(node, true);
+                  }
+                  return data;
+                }
+              }
+            }
           },
           {
             extend: 'print',
-            className: 'bg-purple-500 hover:bg-purple-600 text-white font-medium py-1 px-3 rounded shadow mr-2 mb-2',
-            text: '<i class="fas fa-print mr-1"></i> Imprimir'
+            className: 'dt-button btn-print',
+            text: '<i class="fas fa-print mr-1"></i> Imprimir',
+            exportOptions: {
+              format: {
+                body: function(data, row, column, node) {
+                  // Para la columna de categoría, extraer solo el texto
+                  if (column === 5) {
+                    var tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = data;
+                    return tempDiv.textContent || tempDiv.innerText || '';
+                  }
+                  // Para las columnas numéricas (ahora son 7 y 8), usar la función auxiliar
+                  if (column === 7 || column === 8) {
+                    console.log('Processing column', column, 'for print export');
+                    return formatNumericValue(node, true);
+                  }
+                  return data;
+                }
+              }
+            }
           }
         ],
-        dom: '<"flex justify-between items-center mb-4"<"flex-1"B><"flex-1 text-right"f>>rt<"flex justify-between items-center mt-4"<"flex-1"i><"flex-1"p>>',
+        dom: '<"flex justify-between items-center mb-4"<"flex-1"B><"flex items-center gap-4"l f>>rt<"flex justify-between items-center mt-4"<"flex-1"i><"flex-1 text-center"p>>',
         responsive: true,
-        order: [[5, "desc"]],
-        pagingType: 'simple_numbers', // Changed to simple_numbers to remove first/last buttons
-        // Custom paging configuration
-        paging: {
-          numbers: true,    // Show page numbers
-          firstLast: false, // Disable First and Last buttons
-          previousNext: true // Keep Previous and Next buttons
+        order: [[6, "desc"]], // Columna de fecha (ahora es la 6)
+        paging: true,
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+        pagingType: 'full_numbers',
+        processing: true,
+        searching: true,
+        info: true,
+        // Forzar mostrar paginación incluso con pocos registros para testing
+        pagingInfo: true,
+        initComplete: function() {
+          console.log("DataTable inicializado, configurando estilos...");
+          
+          // Aplicar estilos a los botones después de que la tabla se haya inicializado completamente
+          var buttonsContainer = document.querySelector('.dt-buttons');
+          if (buttonsContainer) {
+            buttonsContainer.style.display = 'flex';
+            buttonsContainer.style.flexWrap = 'wrap';
+            buttonsContainer.style.gap = '8px';
+          }
+          
+          // Aplicar estilos específicos a cada botón
+          setTimeout(function() {
+            document.querySelectorAll('.dt-button').forEach(function(btn) {
+              btn.style.fontFamily = 'inherit';
+              btn.style.fontSize = '14px';
+              btn.style.lineHeight = '1.5';
+              btn.style.transition = 'all 0.2s ease';
+              btn.style.cursor = 'pointer';
+            });
+            
+            // Estilar los controles de paginación
+            stylePaginationControls();
+            
+            // Estilar el selector de cantidad de registros
+            styleLengthMenu();
+            
+            // Debug: verificar que los botones de paginación estén presentes
+            var paginationButtons = document.querySelectorAll('.paginate_button');
+            console.log("Botones de paginación encontrados:", paginationButtons.length);
+            paginationButtons.forEach(function(btn, index) {
+              console.log(`Botón ${index}:`, btn.textContent, btn.className);
+            });
+            
+          }, 100);
+        },
+        drawCallback: function() {
+          // Re-aplicar estilos cada vez que se redibuje la tabla
+          setTimeout(function() {
+            stylePaginationControls();
+            console.log("Tabla redibujada, estilos de paginación reaplicados");
+          }, 50);
         }
       });
       
-      // Añadir estilos a los botones de paginación
-      document.querySelectorAll('.paginate_button').forEach(function(button) {
-        button.classList.add('bg-gray-100', 'hover:bg-gray-200', 'px-3', 'py-1', 'rounded', 'border', 'border-gray-300', 'mx-1');
-      });
+      // Función para estilar controles de paginación
+      function stylePaginationControls() {
+        // Los estilos ahora están manejados por CSS, solo necesitamos asegurar visibilidad
+        var paginateContainer = document.querySelector('.dataTables_paginate');
+        if (paginateContainer) {
+          paginateContainer.style.display = 'block';
+          paginateContainer.style.textAlign = 'center';
+        }
+        
+        // Asegurar que todos los botones sean visibles
+        document.querySelectorAll('.paginate_button').forEach(function(button) {
+          button.style.display = 'inline-block';
+          button.style.visibility = 'visible';
+        });
+      }
+      
+      // Función para estilar el selector de cantidad de registros
+      function styleLengthMenu() {
+        var lengthSelect = document.querySelector('.dataTables_length select');
+        if (lengthSelect) {
+          lengthSelect.style.backgroundColor = 'white';
+          lengthSelect.style.border = '1px solid #d1d5db';
+          lengthSelect.style.borderRadius = '6px';
+          lengthSelect.style.padding = '6px 12px';
+          lengthSelect.style.fontSize = '14px';
+          lengthSelect.style.color = '#374151';
+          lengthSelect.style.marginLeft = '8px';
+          lengthSelect.style.marginRight = '8px';
+        }
+        
+        var lengthLabel = document.querySelector('.dataTables_length');
+        if (lengthLabel) {
+          lengthLabel.style.fontSize = '14px';
+          lengthLabel.style.color = '#6b7280';
+          lengthLabel.style.fontWeight = '500';
+        }
+      }
+      
+      // Re-aplicar estilos cuando se actualice la paginación usando drawCallback en lugar de evento separado
+      
+      // Aplicar estilos adicionales a los botones de DataTables después de la inicialización
+      setTimeout(function() {
+        // Botón Copiar
+        var copyBtn = document.querySelector('.dt-button.btn-copy');
+        if (copyBtn) {
+          copyBtn.style.backgroundColor = '#3B82F6';
+          copyBtn.style.color = 'white';
+          copyBtn.style.border = 'none';
+          copyBtn.style.padding = '6px 12px';
+          copyBtn.style.borderRadius = '6px';
+          copyBtn.style.marginRight = '8px';
+          copyBtn.style.fontWeight = '500';
+        }
+        
+        // Botón CSV
+        var csvBtn = document.querySelector('.dt-button.btn-csv');
+        if (csvBtn) {
+          csvBtn.style.backgroundColor = '#10B981';
+          csvBtn.style.color = 'white';
+          csvBtn.style.border = 'none';
+          csvBtn.style.padding = '6px 12px';
+          csvBtn.style.borderRadius = '6px';
+          csvBtn.style.marginRight = '8px';
+          csvBtn.style.fontWeight = '500';
+        }
+        
+        // Botón Excel
+        var excelBtn = document.querySelector('.dt-button.btn-excel');
+        if (excelBtn) {
+          excelBtn.style.backgroundColor = '#059669';
+          excelBtn.style.color = 'white';
+          excelBtn.style.border = 'none';
+          excelBtn.style.padding = '6px 12px';
+          excelBtn.style.borderRadius = '6px';
+          excelBtn.style.marginRight = '8px';
+          excelBtn.style.fontWeight = '500';
+        }
+        
+        // Botón PDF
+        var pdfBtn = document.querySelector('.dt-button.btn-pdf');
+        if (pdfBtn) {
+          pdfBtn.style.backgroundColor = '#EF4444';
+          pdfBtn.style.color = 'white';
+          pdfBtn.style.border = 'none';
+          pdfBtn.style.padding = '6px 12px';
+          pdfBtn.style.borderRadius = '6px';
+          pdfBtn.style.marginRight = '8px';
+          pdfBtn.style.fontWeight = '500';
+        }
+        
+        // Botón Imprimir
+        var printBtn = document.querySelector('.dt-button.btn-print');
+        if (printBtn) {
+          printBtn.style.backgroundColor = '#8B5CF6';
+          printBtn.style.color = 'white';
+          printBtn.style.border = 'none';
+          printBtn.style.padding = '6px 12px';
+          printBtn.style.borderRadius = '6px';
+          printBtn.style.marginRight = '8px';
+          printBtn.style.fontWeight = '500';
+        }
+      }, 100);
       
       console.log("DataTable inicializado exitosamente");
     } catch (error) {

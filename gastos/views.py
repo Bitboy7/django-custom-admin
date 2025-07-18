@@ -10,7 +10,7 @@ from django.db.models import Sum, Avg, Count, Max, Min
 from django.contrib.auth.decorators import user_passes_test
 from datetime import date, datetime, timedelta
 import json
-from app.views import is_admin
+from app.services.utils import UtilService
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
