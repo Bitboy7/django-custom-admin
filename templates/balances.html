@@ -4,11 +4,19 @@
 {% load humanize %}
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css">
-<link rel="stylesheet" href="//cdn.datatables.net/2.2.2/css/dataTables.dataTables.min.css">
-<link rel="stylesheet" href="//cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
-<link rel="stylesheet" href="//cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<link rel="stylesheet" href="//cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="//cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+<link rel="stylesheet" href="//cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
 <link rel="stylesheet" href="{% static 'css/datatables-buttons.css' %}">
 <style>
+  /* Ocultar elementos de carga de DataTables */
+  .dataTables_processing {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    opacity: 0 !important;
+  }
+  
   /* Estilos personalizados para DataTables */
   .dataTables_wrapper .dataTables_paginate .paginate_button {
     padding: 8px 12px !important;
@@ -463,12 +471,12 @@
 {{ block.super }}
 <!-- Incluir Chart.js y DataTables con todas sus extensiones -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script src="//cdn.datatables.net/2.2.2/js/dataTables.min.js"></script>
+<script src="//cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <!-- Extensiones de DataTables -->
-<script src="//cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
-<script src="//cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
-<script src="//cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
-<script src="//cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="//cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="//cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="//cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+<script src="//cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
 <!-- Librería JSZip para exportación Excel -->
 <script src="//cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <!-- Librería PDFMake para exportación PDF -->
@@ -838,15 +846,15 @@
     console.log("Inicializando DataTable...");
     
     try {
-      new DataTable('#gastosTable', {
+      $('#gastosTable').DataTable({
         language: {
-          processing: "Procesando...",
+          processing: "", // Eliminamos el texto de procesamiento
           search: "Buscar:",
           lengthMenu: "Mostrar _MENU_ registros",
           info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
           infoEmpty: "Mostrando 0 a 0 de 0 registros",
           infoFiltered: "(filtrado de _MAX_ registros totales)",
-          loadingRecords: "Cargando...",
+          loadingRecords: "", // Eliminamos el texto de carga
           zeroRecords: "No se encontraron registros coincidentes",
           emptyTable: "No hay datos disponibles en la tabla",
           paginate: {
@@ -1002,7 +1010,7 @@
         pageLength: 25,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
         pagingType: 'full_numbers',
-        processing: true,
+        processing: false, // Desactivamos la animación de procesamiento
         searching: true,
         info: true,
         // Forzar mostrar paginación incluso con pocos registros para testing

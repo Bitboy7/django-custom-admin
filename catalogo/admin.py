@@ -1,4 +1,5 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from import_export.admin import ImportExportModelAdmin
@@ -6,7 +7,7 @@ from .models import Productor, Estado, Sucursal, Pais, Producto
 from django.utils.html import format_html
 
 @admin.register(Pais)
-class PaisAdmin(admin.ModelAdmin):
+class PaisAdmin(ModelAdmin):
     list_display = ('id', 'siglas', 'nombre', 'moneda', 'mostrar_bandera')
     search_fields = ('nombre', 'siglas')    
     fieldsets = (
@@ -71,7 +72,7 @@ class ProductorAdmin(ImportExportModelAdmin):
     mostrar_bandera_nacionalidad.short_description = 'Nacionalidad'
     
 @admin.register(Estado)
-class EstadoAdmin(admin.ModelAdmin):
+class EstadoAdmin(ModelAdmin):
     list_display = ('id', 'nombre', 'mostrar_bandera_pais')
     search_fields = ('nombre',)
     list_filter = ('nombre',)
@@ -86,7 +87,7 @@ class EstadoAdmin(admin.ModelAdmin):
     mostrar_bandera_pais.short_description = 'Bandera del País'
 
 @admin.register(Sucursal)
-class SucursalAdmin(admin.ModelAdmin):
+class SucursalAdmin(ModelAdmin):
     list_display = ('id', 'nombre', 'direccion', 'telefono', 'id_estado')
     search_fields = ('nombre', 'direccion', 'telefono')
     list_filter = ('id_estado',)
@@ -97,7 +98,7 @@ class SucursalAdmin(admin.ModelAdmin):
     )
 
 @admin.register(Producto)
-class ProductoAdmin(admin.ModelAdmin):
+class ProductoAdmin(ModelAdmin):
     list_display = ('id', 'nombre', 'variedad', 'precio_unitario', 'disponible', 'mostrar_imagen', 'descripcion')
     search_fields = ('nombre', 'variedad', 'descripcion')
     list_filter = ('disponible', 'variedad')

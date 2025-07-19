@@ -1,4 +1,5 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from import_export.admin import ImportExportModelAdmin
@@ -26,7 +27,7 @@ class CatGastosAdmin(ImportExportModelAdmin):
     )
 
 @admin.register(Banco)
-class BancoAdmin(admin.ModelAdmin):
+class BancoAdmin(ModelAdmin):
     list_display = ('id', 'nombre', 'telefono', 'direccion', 'fecha_registro', 'mostrar_logotipo')
     search_fields = ('nombre', 'telefono', 'direccion')
     list_filter = ('nombre', 'telefono', 'direccion', 'fecha_registro')
@@ -46,7 +47,7 @@ class BancoAdmin(admin.ModelAdmin):
     )
 
 @admin.register(Cuenta)
-class CuentaAdmin(admin.ModelAdmin):
+class CuentaAdmin(ModelAdmin):
     list_display = ('id', 'mostrar_logotipo_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente', 'rfc', 'clabe')
     search_fields = ('id_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente',)
     list_filter = ('id_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente', 'rfc')

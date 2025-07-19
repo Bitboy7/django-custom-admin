@@ -1,4 +1,5 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 from .models import Cliente, Agente, Ventas, Anticipo
 from catalogo.models import Sucursal, Pais, Producto
 from gastos.models import Cuenta
@@ -44,7 +45,7 @@ class ClienteAdmin(ImportExportModelAdmin):
     get_bandera.short_description = 'Bandera'
     
 @admin.register(Agente)
-class AgenteAdmin(admin.ModelAdmin):
+class AgenteAdmin(ModelAdmin):
     list_display = ('nombre', 'fecha_registro')
     list_per_page = 12
    
