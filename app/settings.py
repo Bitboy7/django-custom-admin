@@ -32,7 +32,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ["true", "1", "yes"]
 
-ALLOWED_HOSTS = os.getenv("DOMAIN")
+ALLOWED_HOSTS = os.getenv("DOMAIN", "localhost,127.0.0.1").split(",")
 
 # Configuración de seguridad para producción
 if not DEBUG:
@@ -47,7 +47,7 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = os.getenv("CSRF_COOKIE_SECURE", "False").lower() in ["true", "1"]
     X_FRAME_OPTIONS = 'DENY'
 
-CSRF_TRUSTED_ORIGINS = os.getenv("DOMAIN")
+CSRF_TRUSTED_ORIGINS = os.getenv("DOMAIN", "http://localhost:8000").split(",")
 
 # Application definition
 
