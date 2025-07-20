@@ -51,17 +51,9 @@ Thumbs.db
 logs/
 *.log
 
-# Media files (uploads)
-media/temp_documents/
-media/temp_invoices/
-
 # Node modules
 node_modules/
 npm-debug.log*
-
-# Static files (will be collected in production)
-static/static-only/
-static/CACHE/
 
 # Documentation
 README.md
