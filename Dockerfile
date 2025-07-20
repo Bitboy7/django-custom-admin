@@ -1,12 +1,21 @@
-# Usar una imagen base oficial de Python
-FROM python:3.9-slim
+# Usar una imagen base oficial de Python 3.12
+FROM python:3.12-slim
+
+# Configurar variables de entorno para Python
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
 
 # Instalar las dependencias del sistema necesarias
 RUN apt-get update && apt-get install -y \
     gcc \
     libmariadb-dev \
     pkg-config \
+    curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Crear usuario no privilegiado
+RUN adduser --disabled-password --gecos '' appuser
 
 # Establecer el directorio de trabajo en el contenedor
 WORKDIR /app
@@ -15,19 +24,32 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Instalar las dependencias de Python
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Instalar gunicorn
-RUN pip install gunicorn
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir gunicorn
 
 # Copiar el resto del código de la aplicación
 COPY . .
 
-# Compilar los archivos estáticos de Django
-RUN python manage.py collectstatic --noinput
+# Copiar y dar permisos al script de entrada
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Crear directorios necesarios
+RUN mkdir -p /app/static/static-only /app/media /app/logs
+
+# Cambiar permisos
+RUN chown -R appuser:appuser /app
+
+# Cambiar al usuario no privilegiado
+USER appuser
 
 # Exponer el puerto que usará la aplicación
 EXPOSE 8000
 
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/admin/ || exit 1
+
 # Comando para correr la aplicación en modo producción con Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "django_custom_admin.wsgi:application"]
+CMD ["/app/entrypoint.sh"]

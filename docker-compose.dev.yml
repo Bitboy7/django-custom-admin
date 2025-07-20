@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    volumes:
+      - mysql_dev_data:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-agricola_dev}
+      MYSQL_USER: ${DB_USER:-dev_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-dev_password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
+    ports:
+      - "3307:3306"
+    networks:
+      - app-network
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+      - dev_logs:/app/logs
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DB_NAME=${DB_NAME:-agricola_dev}
+      - DB_USER=${DB_USER:-dev_user}
+      - DB_PASSWORD=${DB_PASSWORD:-dev_password}
+      - DB_HOST=db
+      - DB_PORT=3306
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-not-for-production}
+      - DEBUG=True
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+      - CSRF_TRUSTED_ORIGINS=http://localhost:8000
+    networks:
+      - app-network
+
+volumes:
+  mysql_dev_data:
+  dev_logs:
+
+networks:
+  app-network:
+    driver: bridge
