@@ -1,0 +1,290 @@
+/* ==========================================================================
+   Django Import/Export - Botones repositionados para Django Unfold
+   ========================================================================== */
+
+/* Contenedor principal de import/export - mover debajo del botón Add */
+.import_export_menu {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  margin: 15px 0 20px 0 !important;
+  clear: both !important;
+  z-index: auto !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  justify-content: flex-start !important;
+}
+
+/* Posicionamiento específico después del botón "Add" */
+.object-tools + .import_export_menu,
+.object-tools-items + .import_export_menu {
+  margin-top: 20px !important;
+}
+
+/* Botones de import/export en el changelist */
+.changelist-actions .import_export_menu {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  margin: 15px 0 !important;
+  padding: 0 !important;
+}
+
+/* Estilos para los botones individuales */
+.import_export_menu a {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 10px 18px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+  white-space: nowrap !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  min-width: 120px !important;
+  justify-content: center !important;
+}
+
+/* Botón Import */
+.import_export_menu a[href*="import"],
+.import_export_menu .import-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+  color: white !important;
+  border: 1px solid #2563eb !important;
+}
+
+.import_export_menu a[href*="import"]:hover,
+.import_export_menu .import-btn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;
+  border-color: #1d4ed8 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4) !important;
+}
+
+/* Botón Export */
+.import_export_menu a[href*="export"],
+.import_export_menu .export-btn {
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%) !important;
+  color: white !important;
+  border: 1px solid #059669 !important;
+}
+
+.import_export_menu a[href*="export"]:hover,
+.import_export_menu .export-btn:hover {
+  background: linear-gradient(135deg, #059669 0%, #065f46 100%) !important;
+  border-color: #047857 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
+}
+
+/* Iconos para los botones - usando CSS para consistencia */
+.import_export_menu a[href*="import"]:before,
+.import_export_menu .import-btn:before {
+  content: "📥" !important;
+  margin-right: 6px !important;
+  font-size: 16px !important;
+}
+
+.import_export_menu a[href*="export"]:before,
+.import_export_menu .export-btn:before {
+  content: "📤" !important;
+  margin-right: 6px !important;
+  font-size: 16px !important;
+}
+
+/* Mover los botones debajo del área de filtros y búsqueda */
+#changelist .results {
+  margin-top: 20px !important;
+}
+
+/* Ajustar el layout en Django Unfold */
+.unfold-admin #changelist .import_export_menu {
+  order: 2 !important;
+  margin: 20px 0 25px 0 !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  padding: 15px !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Asegurar que no interfiera con el botón "Add" */
+.object-tools {
+  margin-bottom: 15px !important;
+}
+
+.object-tools + .import_export_menu {
+  margin-top: 20px !important;
+}
+
+/* Separar visualmente de otros elementos */
+.import_export_menu::before {
+  content: "" !important;
+  display: block !important;
+  width: 100% !important;
+  height: 1px !important;
+  background: linear-gradient(
+    to right,
+    transparent,
+    #e5e7eb,
+    transparent
+  ) !important;
+  margin-bottom: 15px !important;
+}
+
+.import_export_menu::after {
+  content: "" !important;
+  display: block !important;
+  width: 100% !important;
+  height: 1px !important;
+  background: linear-gradient(
+    to right,
+    transparent,
+    #e5e7eb,
+    transparent
+  ) !important;
+  margin-top: 15px !important;
+}
+
+/* Responsive - en pantallas pequeñas */
+@media (max-width: 768px) {
+  .import_export_menu {
+    margin: 15px 0 !important;
+    flex-direction: column !important;
+  }
+
+  .import_export_menu a {
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    min-width: auto !important;
+    width: 100% !important;
+  }
+}
+
+/* Para el tema Django Unfold específicamente */
+.unfold-admin .import_export_menu a {
+  font-family: inherit !important;
+  letter-spacing: 0.025em !important;
+}
+
+.unfold-admin .import_export_menu a[href*="import"] {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+}
+
+.unfold-admin .import_export_menu a[href*="export"] {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+  border: none !important;
+}
+
+.unfold-admin .import_export_menu a:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Ajustar el espacio entre elementos en la página del admin */
+.unfold-admin #changelist-wrapper {
+  padding-top: 0 !important;
+}
+
+/* Estilo especial para cuando los botones están en el header del changelist */
+.changelist-tools .import_export_menu {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.changelist-tools .import_export_menu::before,
+.changelist-tools .import_export_menu::after {
+  display: none !important;
+}
+
+/* Forzar posicionamiento correcto */
+body.change-list .import_export_menu {
+  position: relative !important;
+  float: none !important;
+  display: flex !important;
+  margin: 20px 0 !important;
+}
+
+/* Ocultar cualquier posicionamiento absoluto */
+.import_export_menu[style*="position: absolute"],
+.import_export_menu[style*="position:absolute"] {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  left: auto !important;
+  bottom: auto !important;
+}
+
+/* Estilo adicional para Django Unfold - evitar conflictos con el header */
+.unfold-admin .module .import_export_menu {
+  margin: 20px 0 !important;
+  width: 100% !important;
+  float: none !important;
+}
+
+/* Asegurar que los botones no se superpongan con elementos del header */
+.unfold-admin #content-main .import_export_menu {
+  position: static !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  margin: 20px 0 30px 0 !important;
+  padding: 15px !important;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+  border-radius: 12px !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Título para la sección de import/export */
+.unfold-admin .import_export_menu::before {
+  content: "📊 Herramientas de Datos" !important;
+  display: block !important;
+  width: 100% !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  font-size: 14px !important;
+  margin-bottom: 12px !important;
+  text-align: left !important;
+  background: none !important;
+  height: auto !important;
+}
+
+/* Mejorar la apariencia en el tema Unfold */
+.unfold-admin .import_export_menu a {
+  margin: 0 !important;
+  flex: 0 0 auto !important;
+}
+
+/* Responsive mejorado */
+@media (max-width: 1024px) {
+  .unfold-admin .import_export_menu {
+    padding: 12px !important;
+    margin: 15px 0 25px 0 !important;
+  }
+
+  .unfold-admin .import_export_menu a {
+    flex: 1 1 auto !important;
+    min-width: 140px !important;
+  }
+}
+
+/* Tema oscuro - si se usa */
+@media (prefers-color-scheme: dark) {
+  .unfold-admin #content-main .import_export_menu {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
+    border-color: #475569 !important;
+  }
+
+  .unfold-admin .import_export_menu::before {
+    color: #cbd5e1 !important;
+  }
+}

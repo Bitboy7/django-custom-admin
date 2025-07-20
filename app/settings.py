@@ -171,6 +171,12 @@ UNFOLD = {
                         "permission": lambda request: request.user.has_perm("gastos.view_gastos"),
                     },
                     {
+                        "title": _("Subir Factura (IA)"),
+                        "icon": "document_scanner",
+                        "link": reverse_lazy("gastos:ingresar_gasto_factura"),
+                        "permission": lambda request: request.user.has_perm("gastos.add_gastos"),
+                    },
+                    {
                         "title": _("Compras"),
                         "icon": "shopping_cart",
                         "link": reverse_lazy("admin:gastos_compra_changelist"),
@@ -288,6 +294,14 @@ UNFOLD = {
             },
         ],
     },
+    # CSS personalizado para mejorar la apariencia de los botones import/export
+    "STYLES": [
+        lambda request: static("css/custom.css"),
+    ],
+    # JavaScript personalizado para reposicionar botones import/export
+    "SCRIPTS": [
+        lambda request: static("js/admin_import_export.js"),
+    ],
 }
 
 def environment_callback(request):
