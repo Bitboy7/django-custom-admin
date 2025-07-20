@@ -19,7 +19,7 @@ python manage.py check --deploy --settings=app.settings || echo "⚠️ Adverten
 
 # Ejecutar migraciones
 echo "🔄 Ejecutando migraciones..."
-python manage.py migrate --noinput || echo "⚠️ Error en migraciones, continuando..."
+python manage.py migrate || echo "⚠️ Error en migraciones, continuando..."
 
 # Crear superusuario si no existe (de forma más segura)
 echo "👤 Verificando superusuario..."
@@ -67,8 +67,8 @@ except Exception as e:
 echo "✅ Configuración completada"
 echo "🎯 Iniciando servidor..."
 
-# Obtener el puerto de Railway o usar 8000 por defecto
-PORT=${PORT:-8000}
+# Obtener el puerto de Railway o usar 8080   por defecto
+PORT=${PORT:-8080}
 
 # Ejecutar Gunicorn con configuración optimizada para Railway
 exec gunicorn app.wsgi:application \

@@ -31,12 +31,11 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copiar el resto del código de la aplicación
 COPY . .
 
-# Copiar y dar permisos al script de entrada
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
-
 # Crear directorios necesarios
 RUN mkdir -p /app/static/static-only /app/media /app/logs
+
+# Dar permisos al script de entrada (ya copiado con COPY . .)
+RUN chmod +x /app/entrypoint.sh
 
 # Cambiar permisos
 RUN chown -R appuser:appuser /app
@@ -46,10 +45,6 @@ USER appuser
 
 # Exponer el puerto que usará la aplicación
 EXPOSE 8000
-
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/admin/ || exit 1
 
 # Comando para correr la aplicación en modo producción con Gunicorn
 CMD ["/app/entrypoint.sh"]
