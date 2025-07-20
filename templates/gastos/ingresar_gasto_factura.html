@@ -1,0 +1,440 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-8">
+    <div class="max-w-2xl mx-auto px-6">
+        <!-- Header Section -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-xl mb-4 shadow-lg">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold text-slate-800 mb-2">Reconocimiento Inteligente de documentos</h1>
+            <p class="text-slate-600 text-lg">Sube una factura o estado de cuenta en PDF para extraer automáticamente la información</p>
+        </div>
+
+        <!-- Error Alert -->
+        {% if error %}
+            <div class="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-lg shadow-sm">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Error al procesar la factura</h3>
+                        <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Main Form Card -->
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+            <div class="px-8 py-6 bg-gradient-to-r from-blue-600 to-blue-700">
+                <h2 class="text-xl font-semibold text-white flex items-center">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    Subir Documento
+                </h2>
+            </div>
+            
+            <form method="post" enctype="multipart/form-data" class="p-8">
+                {% csrf_token %}
+                
+                <!-- Type Selection -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-slate-700 mb-3">
+                        Tipo de Documento
+                    </label>
+                    {{ form.tipo_documento }}
+                    {% if form.tipo_documento.errors %}
+                        <div class="mt-1 text-sm text-red-600">
+                            {{ form.tipo_documento.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- AI Category Assignment Option -->
+                <div class="mb-6">
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            {{ form.asignar_categorias }}
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="{{ form.asignar_categorias.id_for_label }}" class="font-medium text-slate-700">
+                                Asignar categorías automáticamente con IA
+                            </label>
+                            <p class="text-slate-500 mt-1">
+                                <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-yellow-100 text-yellow-800 mr-2">
+                                    <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                    Atención
+                                </span>
+                                Esta función utiliza IA para sugerir categorías de gastos automáticamente. Puede ser lenta y exceder límites de API para estados de cuenta con muchos movimientos (más de 10-15).
+                            </p>
+                        </div>
+                    </div>
+                    {% if form.asignar_categorias.errors %}
+                        <div class="mt-1 text-sm text-red-600">
+                            {{ form.asignar_categorias.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- File Upload Area -->
+                <div class="mb-8">
+                    <label class="block text-sm font-medium text-slate-700 mb-3">
+                        Archivo PDF (Factura o Estado de Cuenta)
+                    </label>
+                    {% if form.documento_pdf.errors %}
+                        <div class="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <div class="text-sm text-red-600">
+                                {{ form.documento_pdf.errors }}
+                            </div>
+                        </div>
+                    {% endif %}
+                    <div id="dropZone" class="mt-1 flex justify-center px-6 pt-8 pb-8 border-2 border-slate-300 border-dashed rounded-xl hover:border-blue-400 transition-colors duration-200 bg-slate-50 hover:bg-blue-50">
+                        <div class="space-y-2 text-center">
+                            <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div class="text-slate-600">
+                                <label for="id_documento_pdf" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500 px-3 py-1">
+                                    <span>Seleccionar archivo</span>
+                                </label>
+                                <p class="text-sm text-slate-500 mt-2">o arrastra y suelta tu documento aquí</p>
+                            </div>
+                            <p class="text-xs text-slate-500">Formatos soportados: PDF (máx. 10MB)</p>
+                        </div>
+                    </div>
+                    <!-- Hidden file input -->
+                    <div style="display: none;">
+                        {{ form.documento_pdf }}
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center justify-between pt-6 border-t border-slate-200">
+                    <a href="{% url 'admin:index' %}" class="inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Cancelar
+                    </a>
+                    <button type="submit" id="submitBtn" class="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-lg transform hover:scale-105 transition-all duration-200">
+                        <svg id="submitIcon" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        <!-- Loading Spinner (initially hidden) -->
+                        <svg id="loadingSpinner" class="animate-spin w-4 h-4 mr-2 hidden" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span id="submitText">Procesar con IA</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Info Cards -->
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white rounded-lg p-4 shadow-sm border border-slate-200">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-slate-900">Rápido</p>
+                        <p class="text-xs text-slate-500">Procesamiento en segundos</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow-sm border border-slate-200">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-slate-900">Inteligente</p>
+                        <p class="text-xs text-slate-500">Detecta facturas y estados de cuenta</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow-sm border border-slate-200">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-slate-900">Seguro</p>
+                        <p class="text-xs text-slate-500">Datos protegidos</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="bg-white rounded-2xl p-8 shadow-2xl max-w-md mx-4">
+                <div class="text-center">
+                    <!-- AI Processing Animation -->
+                    <div class="relative mb-6">
+                        <svg class="w-20 h-20 mx-auto text-blue-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        <!-- Rotating circles around the brain -->
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="w-24 h-24 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-xl font-semibold text-slate-800 mb-2">Procesando con IA...</h3>
+                    <p id="loadingText" class="text-slate-600 mb-4">Analizando el documento</p>
+                    
+                    <!-- Progress Steps -->
+                    <div class="space-y-2 text-sm text-slate-500">
+                        <div id="step1" class="flex items-center">
+                            <div class="w-2 h-2 bg-blue-600 rounded-full mr-2 animate-pulse"></div>
+                            <span>Leyendo archivo PDF...</span>
+                        </div>
+                        <div id="step2" class="flex items-center opacity-50">
+                            <div class="w-2 h-2 bg-slate-300 rounded-full mr-2"></div>
+                            <span>Extrayendo información...</span>
+                        </div>
+                        <div id="step3" class="flex items-center opacity-50">
+                            <div class="w-2 h-2 bg-slate-300 rounded-full mr-2"></div>
+                            <span>Procesando con Google Gemini...</span>
+                        </div>
+                        <div id="step4" class="flex items-center opacity-50">
+                            <div class="w-2 h-2 bg-slate-300 rounded-full mr-2"></div>
+                            <span>Generando resultado...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const submitBtn = document.getElementById('submitBtn');
+    const submitIcon = document.getElementById('submitIcon');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const submitText = document.getElementById('submitText');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const loadingTextElement = document.getElementById('loadingText');
+    const fileInput = document.getElementById('id_documento_pdf');
+    const dropZone = document.getElementById('dropZone');
+    
+    // Hide the file input initially (additional safety)
+    if (fileInput) {
+        fileInput.style.display = 'none';
+        fileInput.style.visibility = 'hidden';
+        fileInput.style.position = 'absolute';
+        fileInput.style.left = '-9999px';
+        console.log('File input hidden and configured');
+    } else {
+        console.error('File input not found!');
+    }
+    
+    // Loading messages
+    const loadingMessages = [
+        "Analizando el documento...",
+        "Detectando tipo de documento...",
+        "Extrayendo información...",
+        "Procesando con Google Gemini...",
+        "Validando datos...",
+        "Preparando resultado..."
+    ];
+    
+    // Make file input clickable through the label
+    const selectFileLabel = dropZone.querySelector('label[for="id_documento_pdf"]');
+    selectFileLabel.addEventListener('click', function(e) {
+        e.preventDefault();
+        fileInput.click();
+    });
+    
+    form.addEventListener('submit', function(e) {
+        console.log('Form submitted');
+        console.log('FileInput element:', fileInput);
+        console.log('FileInput files:', fileInput.files);
+        console.log('FileInput files length:', fileInput.files ? fileInput.files.length : 'null');
+        
+        // Validate that a file is selected
+        if (!fileInput.files || !fileInput.files.length) {
+            e.preventDefault();
+            alert('Por favor selecciona un archivo PDF');
+            console.log('No file selected, preventing form submission');
+            return false;
+        }
+        
+        const selectedFile = fileInput.files[0];
+        console.log('File selected:', selectedFile.name);
+        console.log('File type:', selectedFile.type);
+        console.log('File size:', selectedFile.size);
+        
+        // Show loading state
+        showLoadingState();
+        
+        // Simulate processing steps with timing
+        animateProcessingSteps();
+        
+        console.log('Form submission proceeding...');
+    });
+    
+    function showLoadingState() {
+        console.log('Showing loading state');
+        
+        // Update button
+        submitBtn.disabled = true;
+        submitBtn.classList.remove('hover:scale-105');
+        submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+        
+        // Switch icons
+        submitIcon.classList.add('hidden');
+        loadingSpinner.classList.remove('hidden');
+        submitText.textContent = 'Procesando, espere por favor...';
+        
+        // Show overlay
+        loadingOverlay.classList.remove('hidden');
+        
+        // Prevent form resubmission
+        setTimeout(() => {
+            submitBtn.style.pointerEvents = 'none';
+        }, 100);
+    }
+    
+    function animateProcessingSteps() {
+        let currentStep = 1;
+        let messageIndex = 0;
+        
+        // Change loading message every 2 seconds
+        const messageInterval = setInterval(() => {
+            if (messageIndex < loadingMessages.length) {
+                loadingTextElement.textContent = loadingMessages[messageIndex];
+                messageIndex++;
+            }
+        }, 2000);
+        
+        // Animate steps every 3 seconds
+        const stepInterval = setInterval(() => {
+            if (currentStep <= 4) {
+                // Activate current step
+                const currentStepEl = document.getElementById(`step${currentStep}`);
+                if (currentStepEl) {
+                    currentStepEl.classList.remove('opacity-50');
+                    const dot = currentStepEl.querySelector('.w-2');
+                    dot.classList.remove('bg-slate-300');
+                    dot.classList.add('bg-blue-600', 'animate-pulse');
+                }
+                
+                // Deactivate previous step
+                if (currentStep > 1) {
+                    const prevStepEl = document.getElementById(`step${currentStep - 1}`);
+                    if (prevStepEl) {
+                        const prevDot = prevStepEl.querySelector('.w-2');
+                        prevDot.classList.remove('animate-pulse');
+                        prevDot.classList.add('bg-green-500');
+                    }
+                }
+                
+                currentStep++;
+            } else {
+                // All steps completed
+                clearInterval(stepInterval);
+                clearInterval(messageInterval);
+                
+                // Mark last step as completed
+                const lastStepEl = document.getElementById('step4');
+                if (lastStepEl) {
+                    const lastDot = lastStepEl.querySelector('.w-2');
+                    lastDot.classList.remove('animate-pulse');
+                    lastDot.classList.add('bg-green-500');
+                }
+                
+                loadingTextElement.textContent = 'Finalizando...';
+            }
+        }, 3000);
+    }
+    
+    // Hide loading on page unload (in case of navigation)
+    window.addEventListener('beforeunload', function() {
+        loadingOverlay.classList.add('hidden');
+    });
+    
+    // File drag and drop functionality
+    dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        dropZone.classList.add('border-blue-400', 'bg-blue-50');
+    });
+    
+    dropZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        dropZone.classList.remove('border-blue-400', 'bg-blue-50');
+    });
+    
+    dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dropZone.classList.remove('border-blue-400', 'bg-blue-50');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            if (file.type === 'application/pdf') {
+                fileInput.files = files;
+                updateFileDisplay(file);
+            } else {
+                alert('Por favor selecciona un archivo PDF válido');
+            }
+        }
+    });
+    
+    fileInput.addEventListener('change', function(e) {
+        console.log('File input changed');
+        if (e.target.files.length > 0) {
+            updateFileDisplay(e.target.files[0]);
+        }
+    });
+    
+    function updateFileDisplay(file) {
+        console.log('Updating file display for:', file.name);
+        const fileName = file.name;
+        const fileSize = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+        
+        // Update the drop zone to show selected file
+        const dropZoneContent = dropZone.querySelector('.space-y-2');
+        dropZoneContent.innerHTML = `
+            <div class="text-center">
+                <svg class="mx-auto h-12 w-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p class="text-sm font-medium text-green-700">${fileName}</p>
+                <p class="text-xs text-slate-500">${fileSize}</p>
+                <button type="button" onclick="clearFile()" class="mt-2 text-xs text-blue-600 hover:text-blue-500">Cambiar archivo</button>
+            </div>
+        `;
+    }
+    
+    // Make clearFile function global
+    window.clearFile = function() {
+        fileInput.value = '';
+        location.reload(); // Simple way to reset the form
+    };
+});
+</script>
+{% endblock %}

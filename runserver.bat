@@ -2,7 +2,8 @@
 cd C:\Users\dev-y\Documents\django-custom-admin
 
 REM Ejecutar el servidor de desarrollo de Django
-start poetry run py .\manage.py runserver
+call venv\Scripts\activate
+start py .\manage.py runserver
 
 REM Esperar unos segundos para asegurarse de que el servidor se inicie
 timeout /t 5 /nobreak

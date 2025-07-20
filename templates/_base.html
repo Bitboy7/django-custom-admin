@@ -56,10 +56,16 @@
             </a>
           </li>
           <li>
-            <a href="{% url 'compras_productores' %}" class="text-gray-300 hover:text-white flex items-center py-2">
+            <a href="{% url 'gastos:ingresar_gasto_factura' %}" class="text-gray-300 hover:text-white flex items-center py-2">
+              <i class="fas fa-brain mr-1"></i> Documentos IA
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'gastos:compras_balances' %}" class="text-gray-300 hover:text-white flex items-center py-2">
               <i class="fas fa-shopping-cart mr-1"></i> Compras
             </a>
           </li>
+
           <li>
             <a href="{% url 'export_full_report' %}" class="text-gray-300 hover:text-white flex items-center py-2">
               <i class="fas fa-file-excel mr-1"></i> Exportar reporte completo

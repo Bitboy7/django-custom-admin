@@ -18,7 +18,13 @@ django-import-export = "^4.3.3"
 pandas = "^2.2.3"
 pillow = "^11.1.0"
 django-unfold = "^0.62.0"
-numpy = "^2.3.1"
+numpy = "*"
+# Comentamos temporalmente las dependencias de IA hasta resolver el problema de compilación
+# langchain = "^0.3.0"
+# langchain-community = "^0.3.0" 
+# langchain-google-genai = "^2.0.0"
+# google-generativeai = "^0.8.0"
+# pypdf = "^5.0.0"
 
 
 [build-system]
