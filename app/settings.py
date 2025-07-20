@@ -30,13 +30,13 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [os.getenv("DOMAIN")]
 
 CRSF_TRUSTED_ORIGINS = [
-    "http://localhost:8000",
-    "https://platypus-viable-doe.ngrok-free.app",]
+    os.getenv("DOMAIN")
+]
 
 # Application definition
 
