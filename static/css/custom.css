@@ -288,3 +288,45 @@ body.change-list .import_export_menu {
     color: #cbd5e1 !important;
   }
 }
+
+/* ==========================================================================
+   Estilos adicionales para mejorar la apariencia general
+   ========================================================================== */
+
+/* Mejorar la apariencia de los mensajes */
+.messagelist li {
+    border-radius: 6px !important;
+    padding: 12px 16px !important;
+    margin: 8px 0 !important;
+}
+
+/* Estilos para las tablas del admin */
+.results table {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Mejorar contraste de texto */
+.text-muted {
+    opacity: 0.8;
+}
+
+/* Estilos para mejorar la legibilidad */
+.field-box {
+    background: #f8fafc;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+/* Estilos responsivos adicionales */
+@media (max-width: 768px) {
+    .import_export_menu {
+        flex-direction: column !important;
+    }
+    
+    .import_export_menu a {
+        width: 100% !important;
+        text-align: center !important;
+    }
+}

@@ -71,9 +71,9 @@ INSTALLED_APPS = [
 
 # Configuración completa para Django Unfold
 UNFOLD = {
-    "SITE_TITLE": "Agricola de la Costa - Sistema de Administración",
-    "SITE_HEADER": "Agricola de la Costa",
-    "SITE_SUBHEADER": "Sistema de Gestión Integral",
+    "SITE_TITLE": "Agricola de la Costa San Luis - Sistema de administración",
+    "SITE_HEADER": "Agricola de la Costa San Luis",
+    "SITE_SUBHEADER": "Sistema de gestión Integral",
     "SITE_URL": "/admin/",
     "SITE_ICON": lambda request: static("img/icon.png"),
     "SITE_LOGO": lambda request: static("img/logo-sm.png"),
@@ -325,6 +325,7 @@ def environment_callback(request):
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -421,7 +422,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Compressor settings
 COMPRESS_ROOT = BASE_DIR / 'static'
-
 COMPRESS_ENABLED = True
 
 STATICFILES_FINDERS = [
@@ -429,6 +429,13 @@ STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
     'compressor.finders.CompressorFinder',
 ]
+
+# Configuración para servir archivos estáticos en producción
+if not DEBUG:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    # Configuración adicional para archivos estáticos
+    WHITENOISE_USE_FINDERS = True
+    WHITENOISE_AUTOREFRESH = True
 
 # Configuración de logging
 LOGGING = {

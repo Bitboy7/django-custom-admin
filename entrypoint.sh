@@ -20,6 +20,7 @@ python manage.py check --deploy --settings=app.settings || echo "⚠️ Adverten
 # Ejecutar migraciones de forma más robusta
 echo "🔄 Ejecutando migraciones..."
 python manage.py migrate --fake-initial || python manage.py migrate --run-syncdb || echo "⚠️ Error en migraciones, continuando..."
+python manage.py makemigrations || echo "⚠️ Error al crear migraciones, continuando..."
 
 # Crear superusuario si no existe (de forma más segura)
 echo "👤 Verificando superusuario..."
