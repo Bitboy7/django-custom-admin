@@ -69,8 +69,8 @@ except Exception as e:
 echo "✅ Configuración completada"
 echo "🎯 Iniciando servidor..."
 
-# Obtener el puerto de Railway o usar 8080   por defecto
-PORT=${PORT:-8080}
+# Obtener el puerto de Railway o usar 8000 por defecto
+PORT=${PORT:-8000}
 
 # Ejecutar Gunicorn con configuración optimizada para Railway
 exec gunicorn app.wsgi:application \
