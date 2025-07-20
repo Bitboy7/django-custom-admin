@@ -17,9 +17,9 @@ sleep 5
 echo "🔍 Verificando configuración de Django..."
 python manage.py check --deploy --settings=app.settings || echo "⚠️ Advertencias de configuración detectadas, continuando..."
 
-# Ejecutar migraciones
+# Ejecutar migraciones de forma más robusta
 echo "🔄 Ejecutando migraciones..."
-python manage.py migrate || echo "⚠️ Error en migraciones, continuando..."
+python manage.py migrate --fake-initial || python manage.py migrate --run-syncdb || echo "⚠️ Error en migraciones, continuando..."
 
 # Crear superusuario si no existe (de forma más segura)
 echo "👤 Verificando superusuario..."
@@ -32,8 +32,8 @@ try:
         print('Creando superusuario por defecto...')
         User.objects.create_superuser(os.environ.get('DJANGO_SUPERUSER_NAME'),
                                        os.environ.get('DJANGO_SUPERUSER_EMAIL'),
-                                       os.environ.get('DJANGO_SUPERUSER_PASSWORD')
-        print('Superusuario creado: adminastrador')
+                                       os.environ.get('DJANGO_SUPERUSER_PASSWORD'))
+        print(f'Superusuario creado: {os.environ.get("DJANGO_SUPERUSER_NAME")}')"
     else:
         print('Superusuario ya existe')
 except Exception as e:
