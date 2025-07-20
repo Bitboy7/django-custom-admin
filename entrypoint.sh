@@ -30,10 +30,12 @@ try:
     User = get_user_model()
     if not User.objects.filter(is_superuser=True).exists():
         print('Creando superusuario por defecto...')
-        User.objects.create_superuser(os.environ.get('DJANGO_SUPERUSER_NAME'),
-                                       os.environ.get('DJANGO_SUPERUSER_EMAIL'),
-                                       os.environ.get('DJANGO_SUPERUSER_PASSWORD'))
-        print(f'Superusuario creado: {os.environ.get("DJANGO_SUPERUSER_NAME")}')"
+        User.objects.create_superuser(
+            os.environ.get('DJANGO_SUPERUSER_NAME'),
+            os.environ.get('DJANGO_SUPERUSER_EMAIL'),
+            os.environ.get('DJANGO_SUPERUSER_PASSWORD')
+        )
+        print(f'Superusuario creado: {os.environ.get(\"DJANGO_SUPERUSER_NAME\")}')
     else:
         print('Superusuario ya existe')
 except Exception as e:
