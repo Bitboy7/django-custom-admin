@@ -7,15 +7,6 @@ set -e
 
 echo "🚀 Iniciando configuración de producción..."
 
-# Esperar a que la base de datos esté lista
-echo "⏳ Esperando a que la base de datos esté lista..."
-while ! python manage.py check --database default > /dev/null 2>&1; do
-    echo "Base de datos no está lista, esperando..."
-    sleep 2
-done
-
-echo "✅ Base de datos conectada correctamente"
-
 # Ejecutar migraciones
 echo "🔄 Ejecutando migraciones..."
 python manage.py migrate --noinput
