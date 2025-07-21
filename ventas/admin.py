@@ -7,6 +7,7 @@ from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
+from unfold.contrib.import_export.forms import ExportForm, ImportForm, SelectableFieldsExportForm
 
 class ClienteResource(resources.ModelResource):
     pais = fields.Field(    
@@ -30,8 +31,10 @@ class ClienteResource(resources.ModelResource):
         
 
 @admin.register(Cliente)
-class ClienteAdmin(ImportExportModelAdmin):
+class ClienteAdmin(ModelAdmin, ImportExportModelAdmin):
     resource_class = ClienteResource
+    import_form_class = ImportForm
+    export_form_class = ExportForm
     list_display = ('id', 'nombre', 'telefono', 'correo', 'direccion', 'get_pais', 'get_bandera', 'mostrar_logotipo', 'fecha_registro')
     list_per_page = 20
     search_fields = ('nombre',)
@@ -102,8 +105,10 @@ class VentasResource(resources.ModelResource):
             row['id'] = next_id
        
 @admin.register(Ventas)
-class VentasAdmin(ImportExportModelAdmin):
+class VentasAdmin(ModelAdmin, ImportExportModelAdmin):
     resource_class = VentasResource
+    import_form_class = ImportForm
+    export_form_class = ExportForm
     list_display = ('fecha_salida_manifiesto', 'agente_id', 'fecha_deposito', 'carga', 'PO', 'producto', 'cantidad', 'monto', 'descripcion', 'cliente', 'fecha_registro', 'sucursal_id','cuenta')
     list_per_page = 30
     list_filter = ('fecha_salida_manifiesto', 'agente_id', 'fecha_deposito', 'carga', 'monto','cuenta')
@@ -146,8 +151,10 @@ class AnticiposResource(resources.ModelResource):
             row['id'] = next_id
      
 @admin.register(Anticipo)
-class AnticipoAdmin(ImportExportModelAdmin):
+class AnticipoAdmin(ModelAdmin, ImportExportModelAdmin):
     resource_class = AnticiposResource
+    import_form_class = ImportForm
+    export_form_class = ExportForm
     list_display = ('fecha', 'cliente', 'sucursal', 'cuenta', 'monto', 'descripcion','estado_anticipo')
     list_per_page = 20
     list_filter = ('fecha', 'cliente', 'sucursal', 'cuenta', 'monto', 'estado_anticipo')

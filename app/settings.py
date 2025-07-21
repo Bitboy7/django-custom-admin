@@ -53,6 +53,7 @@ CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:8000"
 
 INSTALLED_APPS = [
     "unfold",
+    "unfold.contrib.import_export",  # Soporte para django-import-export con Unfold
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -61,6 +62,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     'django.contrib.humanize',
     'compressor',
+    'djmoney',  # Django Money para manejo de monedas
     'app',  # Agregamos la app principal para los comandos de gestión
     'auditoria',  # Sistema de registro de actividad
     'catalogo.apps.CatalogoConfig',
@@ -305,13 +307,15 @@ UNFOLD = {
             },
         ],
     },
-    # CSS personalizado para mejorar la apariencia de los botones import/export
+    # CSS personalizado para mejorar la apariencia de los botones import/export y widgets de dinero
     "STYLES": [
         lambda request: static("css/custom.css"),
+        lambda request: static("css/money_widget.css"),
     ],
-    # JavaScript personalizado para reposicionar botones import/export
+    # JavaScript personalizado para reposicionar botones import/export y mejorar widgets de dinero
     "SCRIPTS": [
         lambda request: static("js/admin_import_export.js"),
+        lambda request: static("js/money_widget.js"),
     ],
 }
 
@@ -502,4 +506,37 @@ else:
             'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
         }
     }
+
+# ===============================
+# CONFIGURACIÓN DJANGO MONEY
+# ===============================
+
+# Configuración por defecto de moneda
+DEFAULT_CURRENCY = 'MXN'
+
+# Lista de monedas soportadas (puedes agregar o quitar según tus necesidades)
+CURRENCIES = ['MXN', 'USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR']
+
+# Configuración adicional de django-money
+CURRENCY_CHOICES = [
+    ('MXN', 'Peso Mexicano (MXN)'),
+    ('USD', 'Dólar Estadounidense (USD)'),
+    ('EUR', 'Euro (EUR)'),
+    ('GBP', 'Libra Esterlina (GBP)'),
+    ('JPY', 'Yen Japonés (JPY)'),
+    ('CAD', 'Dólar Canadiense (CAD)'),
+    ('AUD', 'Dólar Australiano (AUD)'),
+    ('CHF', 'Franco Suizo (CHF)'),
+    ('CNY', 'Yuan Chino (CNY)'),
+    ('INR', 'Rupia India (INR)'),
+]
+
+# Configuración de Exchange rates (opcional, para conversiones automáticas)
+# Para usar conversiones de moneda en tiempo real, descomenta las siguientes líneas:
+# OPEN_EXCHANGE_RATES_APP_ID = os.getenv('OPEN_EXCHANGE_RATES_APP_ID')
+# FIXER_ACCESS_KEY = os.getenv('FIXER_ACCESS_KEY')
+
+# Configuración de formato de moneda
+USE_L10N = True
+USE_THOUSAND_SEPARATOR = True
 

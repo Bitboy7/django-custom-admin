@@ -1,6 +1,7 @@
 from django.db import models
 from catalogo.models import Sucursal, Pais, Producto
 from django.utils.html import format_html
+from djmoney.models.fields import MoneyField
 
 class Cliente(models.Model):
     nombre = models.CharField(max_length=50)
@@ -43,7 +44,7 @@ class Anticipo(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     sucursal = models.ForeignKey(Sucursal, on_delete=models.CASCADE)
     cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE)
-    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    monto = MoneyField(max_digits=10, decimal_places=2, default_currency='MXN')
     fecha = models.DateField()
     descripcion = models.TextField(blank=True, null=True, default='Sin descripción')
     fecha_registro = models.DateTimeField(auto_now_add=True)
@@ -73,7 +74,7 @@ class Ventas(models.Model):
     PO = models.CharField(max_length=50, blank=True, null=True)
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
     cantidad = models.CharField(max_length=50)
-    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    monto = MoneyField(max_digits=10, decimal_places=2, default_currency='MXN')
     descripcion = models.CharField(max_length=100, blank=True, null=True)  
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     fecha_registro = models.DateTimeField(auto_now_add=True)

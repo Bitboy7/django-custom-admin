@@ -30,13 +30,36 @@ class BalanceAnalysisService:
         }
     
     def build_filters(self, cuenta_id, year, month, periodo, dia, fecha_inicio, fecha_fin):
-        """Construye los filtros para la consulta"""
-        filters = {'fecha__year': year}
+        """Construye los filtros para la consulta con validación de tipos"""
+        filters = {}
         
+        # Validar y agregar filtro de año
+        if year:
+            try:
+                year_int = int(year)
+                filters['fecha__year'] = year_int
+            except (ValueError, TypeError):
+                # Si no se puede convertir, usar el año actual
+                filters['fecha__year'] = datetime.now().year
+        else:
+            filters['fecha__year'] = datetime.now().year
+        
+        # Validar y agregar filtro de cuenta
         if cuenta_id:
-            filters['id_cuenta_banco_id'] = cuenta_id
+            try:
+                cuenta_int = int(cuenta_id)
+                filters['id_cuenta_banco_id'] = cuenta_int
+            except (ValueError, TypeError):
+                pass  # No agregar filtro si no es válido
+        
+        # Validar y agregar filtro de mes
         if month:
-            filters['fecha__month'] = month
+            try:
+                month_int = int(month)
+                if 1 <= month_int <= 12:
+                    filters['fecha__month'] = month_int
+            except (ValueError, TypeError):
+                pass  # No agregar filtro si no es válido
         
         # Filtros específicos por periodo
         if periodo == 'diario':
@@ -139,11 +162,40 @@ class BalanceAnalysisService:
         }
     
     def process_request_parameters(self, request):
-        """Procesa los parámetros de la request"""
+        """Procesa los parámetros de la request y limpia valores problemáticos"""
+        # Obtener el año y limpiarlo de caracteres especiales
+        year_param = request.GET.get('year', str(datetime.now().year))
+        # Limpiar espacios no rompibles y otros caracteres especiales
+        year_param = str(year_param).replace('\xa0', '').replace('\u00A0', '').strip()
+        try:
+            year = int(year_param)
+        except (ValueError, TypeError):
+            year = datetime.now().year
+        
+        # Obtener el mes y limpiarlo
+        month_param = request.GET.get('month', '')
+        month = ''
+        if month_param:
+            try:
+                month_int = int(str(month_param).strip())
+                if 1 <= month_int <= 12:
+                    month = month_int
+            except (ValueError, TypeError):
+                month = ''
+        
+        # Obtener cuenta_id y limpiarlo
+        cuenta_id_param = request.GET.get('cuenta_id', '')
+        cuenta_id = ''
+        if cuenta_id_param:
+            try:
+                cuenta_id = int(str(cuenta_id_param).strip())
+            except (ValueError, TypeError):
+                cuenta_id = ''
+        
         return {
-            'cuenta_id': request.GET.get('cuenta_id', ''),
-            'year': request.GET.get('year', datetime.now().year),
-            'month': request.GET.get('month', ''),
+            'cuenta_id': cuenta_id,
+            'year': year,
+            'month': month,
             'periodo': request.GET.get('periodo', 'diario'),
             'dia': request.GET.get('dia', datetime.now().strftime('%Y-%m-%d')),
             'fecha_inicio': request.GET.get('fecha_inicio', ''),

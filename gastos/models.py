@@ -3,6 +3,7 @@ from django.utils import timezone
 from catalogo.models import Sucursal, Productor
 from django.db.models import Sum
 from django.utils.html import format_html
+from djmoney.models.fields import MoneyField
 
 class CatGastos(models.Model):
     id = models.AutoField(primary_key=True)
@@ -66,7 +67,7 @@ class Gastos(models.Model):
     id_sucursal = models.ForeignKey(Sucursal, on_delete=models.CASCADE)
     id_cat_gastos = models.ForeignKey(CatGastos, on_delete=models.CASCADE)
     id_cuenta_banco = models.ForeignKey(Cuenta, on_delete=models.CASCADE)
-    monto = models.FloatField(default=0)
+    monto = MoneyField(max_digits=14, decimal_places=2, default_currency='MXN')
     fecha_registro = models.DateTimeField(default=timezone.now)
     descripcion = models.TextField(blank=True, null=True)
     fecha = models.DateField(default=timezone.now)
@@ -85,8 +86,8 @@ class Compra(models.Model):
         productor = models.ForeignKey(Productor, on_delete=models.CASCADE)
         producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
         cantidad = models.PositiveIntegerField()
-        precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
-        monto_total = models.DecimalField(max_digits=10, decimal_places=2)
+        precio_unitario = MoneyField(max_digits=10, decimal_places=2, default_currency='MXN')
+        monto_total = MoneyField(max_digits=10, decimal_places=2, default_currency='MXN')
         fecha_registro = models.DateTimeField(default=timezone.now)
         cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE, null=True, blank=True, default=2)
         
@@ -111,8 +112,8 @@ class SaldoMensual(models.Model):
     cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE)
     año = models.PositiveIntegerField(choices=[(r, r) for r in range(1999, timezone.now().year + 1)], default=2025)
     mes = models.PositiveIntegerField(choices=[(i, i) for i in range(1, 13)], default=timezone.now().month)
-    saldo_inicial = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    saldo_final = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
+    saldo_inicial = MoneyField(max_digits=10, decimal_places=2, default_currency='MXN', default=0)
+    saldo_final = MoneyField(max_digits=10, decimal_places=2, default_currency='MXN', default=0, blank=True, null=True)
     fecha_registro = models.DateTimeField(default=timezone.now)
     ultima_modificacion = models.DateTimeField(auto_now=True, editable=True)
 

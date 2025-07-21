@@ -3,6 +3,7 @@ from unfold.admin import ModelAdmin
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from import_export.admin import ImportExportModelAdmin
+from unfold.contrib.import_export.forms import ExportForm, ImportForm, SelectableFieldsExportForm
 from .models import Productor, Estado, Sucursal, Pais, Producto
 from django.utils.html import format_html
 
@@ -41,8 +42,10 @@ class ProductorResource(resources.ModelResource):
             row['id'] = next_id
     
 @admin.register(Productor)
-class ProductorAdmin(ImportExportModelAdmin):
+class ProductorAdmin(ModelAdmin, ImportExportModelAdmin):
     resource_class = ProductorResource
+    import_form_class = ImportForm
+    export_form_class = ExportForm
     list_display = ('id', 'nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal', 'fecha_creacion', 'mostrar_imagen', 'nacimiento', 'mostrar_bandera_nacionalidad')
     search_fields = ('id', 'nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal__nombre', 'fecha_creacion')
     list_filter = ('id_sucursal', 'nombre_completo', 'nacionalidad')

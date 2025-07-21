@@ -3,10 +3,10 @@ from unfold.admin import ModelAdmin
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from import_export.admin import ImportExportModelAdmin
+from unfold.contrib.import_export.forms import ExportForm, ImportForm, SelectableFieldsExportForm
 from .models import CatGastos, Banco, Cuenta, Gastos, Compra, SaldoMensual
 from django.utils.html import format_html
 from catalogo.models import Sucursal
-from django.contrib import admin
 
 class CatGastoResource(resources.ModelResource):
     fields = ('id', 'nombre', 'fecha_registro')
@@ -14,8 +14,10 @@ class CatGastoResource(resources.ModelResource):
         model = CatGastos
 
 @admin.register(CatGastos)
-class CatGastosAdmin(ImportExportModelAdmin):
+class CatGastosAdmin(ModelAdmin, ImportExportModelAdmin):
     resource_class = CatGastoResource
+    import_form_class = ImportForm
+    export_form_class = ExportForm
     list_display = ('id', 'nombre')
     search_fields = ('id', 'nombre', 'fecha_registro')
     list_filter = ('nombre', 'fecha_registro')
@@ -96,8 +98,10 @@ class GastosResource(resources.ModelResource):
         return gasto.id_cuenta_banco.numero_cuenta
 
 @admin.register(Gastos)
-class GastosAdmin(ImportExportModelAdmin):
+class GastosAdmin(ModelAdmin, ImportExportModelAdmin):
     resource_class = GastosResource
+    import_form_class = ImportForm
+    export_form_class = ExportForm
     list_display = ('id', 'id_sucursal', 'id_cat_gastos',
                     'id_cuenta_banco', 'monto', 'descripcion', 'fecha', 'fecha_registro')
     search_fields = ('id' ,'monto', 'fecha_registro', 'id_sucursal', 'id_cat_gastos', 'id_cuenta_banco')
@@ -143,8 +147,10 @@ class ComprasResource(resources.ModelResource):
         return compra.cuenta.numero_cuenta
     
 @admin.register(Compra)
-class ComprasAdmin(ImportExportModelAdmin):
+class ComprasAdmin(ModelAdmin, ImportExportModelAdmin):
         resource_class = ComprasResource
+        import_form_class = ImportForm
+        export_form_class = ExportForm
         list_display = ('id', 'fecha_compra','fecha_registro', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total', 'cuenta', 'tipo_pago')
         search_fields = ('fecha_compra',  'monto_total', 'productor', 'producto', 'cuenta','tipo_pago')
         list_filter = ('fecha_compra', 'productor', 'producto', 'monto_total')
@@ -169,7 +175,10 @@ class SaldoMensualResource(resources.ModelResource):
         return saldo.cuenta.numero_cuenta
           
 @admin.register(SaldoMensual)
-class SaldoMensualAdmin(ImportExportModelAdmin):
+class SaldoMensualAdmin(ModelAdmin, ImportExportModelAdmin):
+    resource_class = SaldoMensualResource
+    import_form_class = ImportForm
+    export_form_class = ExportForm
     list_display = ('cuenta', 'año', 'mes', 'saldo_inicial', 'saldo_final', 'fecha_registro', 'ultima_modificacion')
     search_fields = ('cuenta__numero_cuenta', 'año', 'mes')
     list_filter = ('cuenta', 'año', 'mes')
