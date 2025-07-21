@@ -3,8 +3,13 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.db.models import Sum, Count
 from django.utils import timezone
+from django.http import JsonResponse
+from django.contrib.admin.views.decorators import staff_member_required
 from datetime import datetime, timedelta
 import json
+import os
+import requests
+import logging
 
 from .services.excel_service import ExcelReportService
 from .services.balance_service import BalanceAnalysisService
@@ -12,6 +17,8 @@ from .services.utils import UtilService
 from gastos.models import Gastos, Compra
 from ventas.models import Ventas
 from auditoria.models import LogActividad
+
+logger = logging.getLogger(__name__)
 
 
 @user_passes_test(UtilService.is_admin)
@@ -209,5 +216,92 @@ def dashboard_callback(request, context):
     })
     
     return context
+
+
+@login_required
+def currency_conversion_api(request):
+    """API para conversiones de moneda en tiempo real"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        import json
+        data = json.loads(request.body)
+        amount = float(data.get('amount', 0))
+        from_currency = data.get('from_currency', 'MXN')
+        to_currencies = data.get('to_currencies', ['MXN', 'USD', 'EUR'])
+        
+        if amount <= 0:
+            return JsonResponse({'error': 'Cantidad inválida'}, status=400)
+        
+        conversions = {}
+        
+        # Si tenemos API key de OpenExchangeRates
+        api_key = os.getenv('OPEN_EXCHANGE_RATES_APP_ID')
+        if api_key:
+            try:
+                # Obtener tasas de cambio de OpenExchangeRates
+                url = f"https://openexchangerates.org/api/latest.json?app_id={api_key}"
+                response = requests.get(url, timeout=5)
+                rates_data = response.json()
+                
+                if 'rates' in rates_data:
+                    base_rate = rates_data['rates'].get(from_currency, 1)
+                    
+                    for target_currency in to_currencies:
+                        if target_currency in rates_data['rates']:
+                            # Convertir: amount * (target_rate / base_rate)
+                            target_rate = rates_data['rates'][target_currency]
+                            converted_amount = amount * (target_rate / base_rate)
+                            conversions[target_currency] = round(converted_amount, 2)
+                        else:
+                            conversions[target_currency] = amount
+                            
+            except Exception as e:
+                logger.warning(f"Error con OpenExchangeRates: {e}")
+                # Fallback a tasas fijas
+                conversions = get_fallback_conversions(amount, from_currency, to_currencies)
+        else:
+            # Usar tasas de cambio fijas como fallback
+            conversions = get_fallback_conversions(amount, from_currency, to_currencies)
+        
+        return JsonResponse({
+            'success': True,
+            'original_amount': amount,
+            'original_currency': from_currency,
+            'conversions': conversions
+        })
+        
+    except Exception as e:
+        logger.error(f"Error en conversión de moneda: {e}")
+        return JsonResponse({'error': 'Error interno del servidor'}, status=500)
+
+
+def get_fallback_conversions(amount, from_currency, to_currencies):
+    """Conversiones con tasas fijas cuando no hay API disponible"""
+    # Tasas aproximadas (deberían actualizarse regularmente)
+    fixed_rates = {
+        'MXN': {'USD': 0.056, 'EUR': 0.052, 'MXN': 1.0},
+        'USD': {'MXN': 17.8, 'EUR': 0.92, 'USD': 1.0},
+        'EUR': {'MXN': 19.3, 'USD': 1.09, 'EUR': 1.0},
+    }
+    
+    conversions = {}
+    
+    for target_currency in to_currencies:
+        if from_currency in fixed_rates and target_currency in fixed_rates[from_currency]:
+            rate = fixed_rates[from_currency][target_currency]
+            converted_amount = amount * rate
+            conversions[target_currency] = round(converted_amount, 2)
+        else:
+            conversions[target_currency] = amount  # Fallback al valor original
+    
+    return conversions
+
+
+@staff_member_required
+def currency_test_view(request):
+    """Vista para probar el sistema de conversiones de moneda"""
+    return render(request, 'currency_conversion_test.html')
 
 

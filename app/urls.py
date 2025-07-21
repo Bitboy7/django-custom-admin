@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf.urls.i18n import i18n_patterns
 from catalogo.views import index, data
-from .views import balances_view, export_full_report_to_excel
+from .views import balances_view, export_full_report_to_excel, currency_conversion_api, currency_test_view
 from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import redirect
@@ -15,7 +15,16 @@ def redirect_to_admin(request):
 urlpatterns = [
     # URL para cambiar idioma (debe estar fuera de i18n_patterns)
     path("i18n/", include("django.conf.urls.i18n")),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # API de conversión de moneda (sin prefijo de idioma)
+    path('api/currency-conversion/', currency_conversion_api, name='currency_conversion_api'),
+]
+
+# Agregar archivos media tanto en desarrollo como en producción
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# En producción, también agregamos archivos estáticos por si acaso
+if not settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 # URLs con prefijo de idioma
 urlpatterns += i18n_patterns(

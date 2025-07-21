@@ -383,6 +383,10 @@ MIDDLEWARE = [
     "auditoria.admin_middleware.AdminAuditMiddleware",  # Registro de actividad en admin
 ]
 
+# Agregar middleware para servir archivos media en producción
+if not DEBUG:
+    MIDDLEWARE.insert(-2, "app.middleware.MediaServeMiddleware")  # Insertar antes de los middlewares de auditoría
+
 ROOT_URLCONF = "app.urls"
 
 TEMPLATES = [
@@ -492,6 +496,10 @@ if not DEBUG:
     # Configuración adicional para archivos estáticos
     WHITENOISE_USE_FINDERS = True
     WHITENOISE_AUTOREFRESH = True
+    # Configuración para servir archivos media con WhiteNoise en producción
+    WHITENOISE_ROOT = MEDIA_ROOT
+    # Añadir configuración para servir archivos media
+    WHITENOISE_MEDIA_PREFIX = '/media/'
 
 # Configuración de logging
 LOGGING = {
@@ -583,10 +591,9 @@ CURRENCY_CHOICES = [
     ('INR', 'Rupia India (INR)'),
 ]
 
-# Configuración de Exchange rates (opcional, para conversiones automáticas)
-# Para usar conversiones de moneda en tiempo real, descomenta las siguientes líneas:
-# OPEN_EXCHANGE_RATES_APP_ID = os.getenv('OPEN_EXCHANGE_RATES_APP_ID')
-# FIXER_ACCESS_KEY = os.getenv('FIXER_ACCESS_KEY')
+# Configuración de Exchange rates (conversiones automáticas)
+OPEN_EXCHANGE_RATES_APP_ID = os.getenv('OPEN_EXCHANGE_RATES_APP_ID')
+#FIXER_ACCESS_KEY = os.getenv('FIXER_ACCESS_KEY')
 
 # Configuración de formato de moneda
 USE_L10N = True
