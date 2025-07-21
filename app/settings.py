@@ -20,7 +20,6 @@ from dotenv import load_dotenv
 import os
 from django.templatetags.static import static
 from django.urls import reverse_lazy
-from django.utils.translation import gettext_lazy as _
 
 load_dotenv()
 # Quick-start development settings - unsuitable for production
@@ -178,18 +177,18 @@ UNFOLD = {
         "show_all_applications": True,
         "navigation": [
             {
-                "title": _("Panel Principal"),
+                "title": "Panel Principal",
                 "separator": True,
                 "collapsible": True,
                 "items": [
                     {
-                        "title": _("Dashboard"),
+                        "title": "Dashboard",
                         "icon": "dashboard",
                         "link": reverse_lazy("admin:index"),
                         "permission": lambda request: request.user.is_authenticated,
                     },
                     {
-                        "title": _("Balances"),
+                        "title": "Balances",
                         "icon": "analytics",
                         "link": reverse_lazy("balances"),
                         "permission": lambda request: request.user.is_authenticated,
@@ -197,48 +196,48 @@ UNFOLD = {
                 ],
             },
             {
-                "title": _("Gestión de Gastos"),
+                "title": "Gestión de Gastos",
                 "separator": True,
                 "collapsible": True,
                 "items": [
                     {
-                        "title": _("Bancos"),
+                        "title": "Bancos",
                         "icon": "account_balance",
                         "link": reverse_lazy("admin:gastos_banco_changelist"),
                         "permission": lambda request: request.user.has_perm("gastos.view_banco"),
                     },
                     {
-                        "title": _("Cuentas"),
+                        "title": "Cuentas",
                         "icon": "credit_card",
                         "link": reverse_lazy("admin:gastos_cuenta_changelist"),
                         "permission": lambda request: request.user.has_perm("gastos.view_cuenta"),
                     },
                     {
-                        "title": _("Categorías de Gastos"),
+                        "title": "Categorías de Gastos",
                         "icon": "category",
                         "link": reverse_lazy("admin:gastos_catgastos_changelist"),
                         "permission": lambda request: request.user.has_perm("gastos.view_catgastos"),
                     },
                     {
-                        "title": _("Gastos"),
+                        "title": "Gastos",
                         "icon": "receipt_long",
                         "link": reverse_lazy("admin:gastos_gastos_changelist"),
                         "permission": lambda request: request.user.has_perm("gastos.view_gastos"),
                     },
                     {
-                        "title": _("Subir Factura (IA)"),
+                        "title": "Subir Factura (IA)",
                         "icon": "document_scanner",
                         "link": reverse_lazy("gastos:ingresar_gasto_factura"),
                         "permission": lambda request: request.user.has_perm("gastos.add_gastos"),
                     },
                     {
-                        "title": _("Compras"),
+                        "title": "Compras",
                         "icon": "shopping_cart",
                         "link": reverse_lazy("admin:gastos_compra_changelist"),
                         "permission": lambda request: request.user.has_perm("gastos.view_compra"),
                     },
                     {
-                        "title": _("Saldos Mensuales"),
+                        "title": "Saldos Mensuales",
                         "icon": "trending_up",
                         "link": reverse_lazy("admin:gastos_saldomensual_changelist"),
                         "permission": lambda request: request.user.has_perm("gastos.view_saldomensual"),
@@ -246,30 +245,30 @@ UNFOLD = {
                 ],
             },
             {
-                "title": _("Gestión de Ventas"),
+                "title": "Gestión de Ventas",
                 "separator": True,
                 "collapsible": True,
                 "items": [
                     {
-                        "title": _("Clientes"),
+                        "title": "Clientes",
                         "icon": "people",
                         "link": reverse_lazy("admin:ventas_cliente_changelist"),
                         "permission": lambda request: request.user.has_perm("ventas.view_cliente"),
                     },
                     {
-                        "title": _("Agentes"),
+                        "title": "Agentes",
                         "icon": "support_agent",
                         "link": reverse_lazy("admin:ventas_agente_changelist"),
                         "permission": lambda request: request.user.has_perm("ventas.view_agente"),
                     },
                     {
-                        "title": _("Ventas"),
+                        "title": "Ventas",
                         "icon": "point_of_sale",
                         "link": reverse_lazy("admin:ventas_ventas_changelist"),
                         "permission": lambda request: request.user.has_perm("ventas.view_ventas"),
                     },
                     {
-                        "title": _("Anticipos"),
+                        "title": "Anticipos",
                         "icon": "payments",
                         "link": reverse_lazy("admin:ventas_anticipo_changelist"),
                         "permission": lambda request: request.user.has_perm("ventas.view_anticipo"),
@@ -277,36 +276,36 @@ UNFOLD = {
                 ],
             },
             {
-                "title": _("Catálogo"),
+                "title": "Catálogo",
                 "separator": True,
                 "collapsible": True,
                 "items": [
                     {
-                        "title": _("Países"),
+                        "title": "Países",
                         "icon": "public",
                         "link": reverse_lazy("admin:catalogo_pais_changelist"),
                         "permission": lambda request: request.user.has_perm("catalogo.view_pais"),
                     },
                     {
-                        "title": _("Estados"),
+                        "title": "Estados",
                         "icon": "map",
                         "link": reverse_lazy("admin:catalogo_estado_changelist"),
                         "permission": lambda request: request.user.has_perm("catalogo.view_estado"),
                     },
                     {
-                        "title": _("Sucursales"),
+                        "title": "Sucursales",
                         "icon": "store",
                         "link": reverse_lazy("admin:catalogo_sucursal_changelist"),
                         "permission": lambda request: request.user.has_perm("catalogo.view_sucursal"),
                     },
                     {
-                        "title": _("Productores"),
+                        "title": "Productores",
                         "icon": "agriculture",
                         "link": reverse_lazy("admin:catalogo_productor_changelist"),
                         "permission": lambda request: request.user.has_perm("catalogo.view_productor"),
                     },
                     {
-                        "title": _("Productos"),
+                        "title": "Productos",
                         "icon": "inventory",
                         "link": reverse_lazy("admin:catalogo_producto_changelist"),
                         "permission": lambda request: request.user.has_perm("catalogo.view_producto"),
@@ -314,12 +313,12 @@ UNFOLD = {
                 ],
             },
             {
-                "title": _("Administración"),
+                "title": "Administración",
                 "separator": True,
                 "collapsible": True,
                 "items": [
                     {
-                        "title": _("Usuarios"),
+                        "title": "Usuarios",
                         "icon": "person",
                         "link": reverse_lazy("admin:auth_user_changelist"),
                         "permission": lambda request: (
@@ -328,7 +327,7 @@ UNFOLD = {
                         ),
                     },
                     {
-                        "title": _("Grupos"),
+                        "title": "Grupos",
                         "icon": "group",
                         "link": reverse_lazy("admin:auth_group_changelist"),
                         "permission": lambda request: (
@@ -337,7 +336,7 @@ UNFOLD = {
                         ),
                     },
                     {
-                        "title": _("Registro de Actividad"),
+                        "title": "Registro de Actividad",
                         "icon": "history",
                         "link": reverse_lazy("admin:auditoria_logactividad_changelist"),
                         "permission": lambda request: (
@@ -373,7 +372,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    # "django.middleware.locale.LocaleMiddleware",  # Middleware para soporte multiidioma - Temporalmente deshabilitado
+    "django.middleware.locale.LocaleMiddleware",  # Middleware para soporte multiidioma
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -444,24 +443,20 @@ LANGUAGE_CODE = "es"  # Idioma por defecto
 
 TIME_ZONE = "America/Mexico_City"
 
-USE_I18N = False  # Deshabilitar internacionalización temporalmente
+USE_I18N = True  # Habilitar internacionalización para que Unfold use español
 
 # Desactivamos el soporte de zona horaria para evitar errores con MySQL
 USE_TZ = False
 
-# Idiomas disponibles en la aplicación - Temporalmente deshabilitado
-# LANGUAGES = (
-#     ("es", _("Español")),
-#     ("en", _("English")),
-#     ("fr", _("Français")),
-#     ("de", _("Deutsch")),
-#     ("pt", _("Português")),
-# )
+# Idiomas disponibles en la aplicación
+LANGUAGES = [
+    ('es', 'Español'),
+]
 
-# Directorio donde se almacenan los archivos de traducción - Temporalmente deshabilitado
-# LOCALE_PATHS = [
-#     BASE_DIR / 'locale',
-# ]
+# Directorio donde se almacenan los archivos de traducción
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
