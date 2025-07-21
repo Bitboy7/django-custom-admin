@@ -99,6 +99,12 @@ class Compra(models.Model):
             
         tipo_pago = models.CharField(max_length=50, blank=True, null=True, choices=TipoPago.choices)
         
+        def save(self, *args, **kwargs):
+            # Calcular automáticamente el monto total antes de guardar
+            if self.cantidad and self.precio_unitario:
+                self.monto_total = self.cantidad * self.precio_unitario
+            super().save(*args, **kwargs)
+        
         def __str__(self):
             return f'{self.productor} - {self.producto.nombre}'
 

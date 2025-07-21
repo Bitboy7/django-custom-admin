@@ -90,10 +90,52 @@ UNFOLD = {
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "SHOW_BACK_BUTTON": True,
+    "SHOW_LANGUAGES": True,  # Habilitar selector de idiomas
     "ENVIRONMENT": "app.environment_callback",
+    "DASHBOARD_CALLBACK": "app.views.dashboard_callback",
     "THEME": None,  # Permite cambio de tema
     "LOGIN": {
         "image": lambda request: static("img/login-bg.png") if static("img/login-bg.png") else None,
+    },
+    # Configuración personalizada de idiomas
+    "LANGUAGES": {
+        "navigation": [
+            {
+                'bidi': False,
+                'code': 'es',
+                'name': 'Spanish',
+                'name_local': 'Español',
+                'name_translated': 'Español'
+            },
+            {
+                'bidi': False,
+                'code': 'en',
+                'name': 'English',
+                'name_local': 'English',
+                'name_translated': 'Inglés'
+            },
+            {
+                'bidi': False,
+                'code': 'fr',
+                'name': 'French',
+                'name_local': 'Français',
+                'name_translated': 'Francés'
+            },
+            {
+                'bidi': False,
+                'code': 'de',
+                'name': 'German',
+                'name_local': 'Deutsch',
+                'name_translated': 'Alemán'
+            },
+            {
+                'bidi': False,
+                'code': 'pt',
+                'name': 'Portuguese',
+                'name_local': 'Português',
+                'name_translated': 'Portugués'
+            },
+        ],
     },
     "COLORS": {
         "base": {
@@ -331,6 +373,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    # "django.middleware.locale.LocaleMiddleware",  # Middleware para soporte multiidioma - Temporalmente deshabilitado
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -397,14 +440,28 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
-LANGUAGE_CODE = "es-ES"
+LANGUAGE_CODE = "es"  # Idioma por defecto
 
 TIME_ZONE = "America/Mexico_City"
 
-USE_I18N = True
+USE_I18N = True  # Habilitar internacionalización
 
 # Desactivamos el soporte de zona horaria para evitar errores con MySQL
 USE_TZ = False
+
+# Idiomas disponibles en la aplicación
+LANGUAGES = (
+    ("es", _("Español")),
+    ("en", _("English")),
+    ("fr", _("Français")),
+    ("de", _("Deutsch")),
+    ("pt", _("Português")),
+)
+
+# Directorio donde se almacenan los archivos de traducción
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/

@@ -3,18 +3,83 @@ from .models import Gastos, CatGastos, SaldoMensual, Compra, Cuenta
 from catalogo.models import Productor, Sucursal
 
 class CompraForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Hacer el campo monto_total de solo lectura y agregar ayuda
+        self.fields['monto_total'].widget.attrs.update({
+            'readonly': True,
+            'title': 'Este campo se calcula automáticamente (Cantidad × Precio Unitario)',
+            'style': 'background-color: #f8f9fa;',
+            'class': 'calculated-field calc-tooltip'
+        })
+        
+        # Agregar IDs específicos para el JavaScript
+        self.fields['cantidad'].widget.attrs.update({
+            'id': 'id_cantidad_compra',
+            'min': '0',
+            'step': '1'
+        })
+        
+        self.fields['precio_unitario'].widget.attrs.update({
+            'id': 'id_precio_unitario_compra',
+            'min': '0'
+        })
+        
+        self.fields['monto_total'].widget.attrs.update({
+            'id': 'id_monto_total_compra'
+        })
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cantidad = cleaned_data.get('cantidad')
+        precio_unitario = cleaned_data.get('precio_unitario')
+        
+        # Calcular automáticamente el monto total
+        if cantidad is not None and precio_unitario is not None:
+            monto_total = cantidad * precio_unitario
+            cleaned_data['monto_total'] = monto_total
+            
+        return cleaned_data
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        # Asegurar que el monto total se calcule correctamente
+        if instance.cantidad and instance.precio_unitario:
+            instance.monto_total = instance.cantidad * instance.precio_unitario
+            
+        if commit:
+            instance.save()
+        return instance
+
     class Meta:
         model = Compra
         fields = ['fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 
                   'monto_total', 'cuenta', 'tipo_pago']
         
         widgets = {
-            'fecha_compra': forms.DateInput(attrs={'class': 'form-control', 'placeholder': 'YYYY-MM-DD'}),
+            'fecha_compra': forms.DateInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'YYYY-MM-DD',
+                'type': 'date'
+            }),
             'productor': forms.Select(attrs={'class': 'form-control'}),
             'producto': forms.Select(attrs={'class': 'form-control'}),
-            'cantidad': forms.NumberInput(attrs={'class': 'form-control'}),
-            'precio_unitario': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'monto_total': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'cantidad': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ingrese la cantidad'
+            }),
+            'precio_unitario': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.01',
+                'placeholder': 'Ingrese el precio unitario'
+            }),
+            'monto_total': forms.NumberInput(attrs={
+                'class': 'form-control calculated-field', 
+                'step': '0.01',
+                'placeholder': 'Se calculará automáticamente'
+            }),
             'cuenta': forms.Select(attrs={'class': 'form-control'}),
             'tipo_pago': forms.Select(attrs={'class': 'form-control'}),
         }

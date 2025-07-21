@@ -1,0 +1,93 @@
+/* Estilos personalizados para el admin de Django */
+
+/* Estilos para campos calculados automáticamente */
+.calculated-field {
+  background-color: #f8f9fa !important;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  position: relative;
+}
+
+.calculated-field:after {
+  content: "🧮";
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* Highlight para cálculos */
+.calculation-highlight {
+  background-color: #e8f5e8 !important;
+  transition: background-color 0.3s ease;
+}
+
+/* Mejoras visuales para formularios de compra */
+.form-row.field-cantidad input,
+.form-row.field-precio_unitario input {
+  border-left: 3px solid #007bff;
+}
+
+.form-row.field-monto_total input {
+  border-left: 3px solid #28a745;
+  background-color: #f8f9fa;
+}
+
+/* Tooltip personalizado */
+.calc-tooltip {
+  position: relative;
+}
+
+.calc-tooltip:hover:after {
+  content: attr(title);
+  position: absolute;
+  top: -30px;
+  left: 0;
+  background: #333;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+}
+
+/* Animación para cambios de valor */
+@keyframes valueChange {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.value-changed {
+  animation: valueChange 0.3s ease;
+}
+
+/* Estilos para validación */
+.field-error {
+  border-color: #dc3545 !important;
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.field-success {
+  border-color: #28a745 !important;
+  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .form-row .field-cantidad,
+  .form-row .field-precio_unitario,
+  .form-row .field-monto_total {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+}

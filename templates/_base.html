@@ -95,6 +95,9 @@
   {% block extra_js %}
   {{ block.super }}
   
+    <!-- Calculadora de compras -->
+    <script src="{% static 'js/compra_calculator.js' %}"></script>
+    
     <script>
       // Script para manejar el menú móvil
       document.addEventListener('DOMContentLoaded', function () {

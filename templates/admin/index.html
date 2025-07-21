@@ -1,0 +1,728 @@
+{% extends 'admin/base.html' %} 
+{% load i18n %} 
+{% load humanize %} 
+{% load static %} 
+{% block breadcrumbs %}
+{% endblock %} 
+{% block title %} 
+{% if subtitle%} {{ subtitle }} | {% endif %} {{ title }} | {{ site_title|default:_('Djangosite admin') }} 
+{% endblock %} 
+{% block branding %} 
+{% include "  <!-- Header Section -->
+  <div
+    class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white"
+  >
+    <h1 class="text-3xl font-bold mb-2">
+      <i class="fas fa-tachometer-alt mr-3"></i>
+      {% trans "Dashboard de Administración" %}
+    </h1>
+    <p class="text-blue-100">
+      {% trans "Bienvenido al sistema de gestión integral de Agrícola de la Costa San Luis" %}
+    </p>
+    <div class="mt-4 text-sm">
+      <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full">
+        <i class="fas fa-calendar mr-1"></i>
+        {% trans "Último acceso:" %} {{ last_login|date:"d/m/Y H:i" }}
+      </span>
+    </div>
+  </div>e_branding.html" %}
+{% endblock %} 
+
+{% block extrahead %}
+{{ block.super }}
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css"
+/>
+<style>
+  /* Variables CSS para modo claro y oscuro */
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-gradient-start: #667eea;
+    --bg-gradient-end: #764ba2;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --border-color: #e5e7eb;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --shadow-hover: rgba(0, 0, 0, 0.2);
+  }
+
+  [data-theme="dark"], 
+  .dark,
+  html[data-theme="dark"],
+  html.dark {
+    --bg-primary: #1f2937;
+    --bg-secondary: #111827;
+    --bg-gradient-start: #4338ca;
+    --bg-gradient-end: #7c3aed;
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+    --text-muted: #9ca3af;
+    --border-color: #374151;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --shadow-hover: rgba(0, 0, 0, 0.5);
+  }
+
+  .dashboard-card {
+    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    color: white;
+    box-shadow: 0 4px 6px var(--shadow-color);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px var(--shadow-hover);
+  }
+  
+  .metric-card {
+    background: var(--bg-primary);
+    border-radius: 8px;
+    padding: 1.25rem;
+    box-shadow: 0 2px 4px var(--shadow-color);
+    border-left: 4px solid #3b82f6;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  [data-theme="dark"] .metric-card,
+  .dark .metric-card,
+  html[data-theme="dark"] .metric-card,
+  html.dark .metric-card {
+    border-left-color: #60a5fa;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  }
+  
+  .metric-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--text-primary);
+    transition: color 0.3s ease;
+  }
+  
+  .metric-label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: color 0.3s ease;
+  }
+  
+  .chart-container {
+    background: var(--bg-primary);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px var(--shadow-color);
+    height: 300px;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .recent-activity {
+    background: var(--bg-primary);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px var(--shadow-color);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .activity-item {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: border-color 0.3s ease;
+  }
+  
+  .activity-item:last-child {
+    border-bottom: none;
+  }
+  
+  .status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .status-success {
+    background-color: #dcfce7;
+    color: #166534;
+  }
+  
+  [data-theme="dark"] .status-success,
+  .dark .status-success,
+  html[data-theme="dark"] .status-success,
+  html.dark .status-success {
+    background-color: #064e3b;
+    color: #86efac;
+  }
+  
+  .status-warning {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+  
+  [data-theme="dark"] .status-warning,
+  .dark .status-warning,
+  html[data-theme="dark"] .status-warning,
+  html.dark .status-warning {
+    background-color: #78350f;
+    color: #fbbf24;
+  }
+  
+  .status-info {
+    background-color: #dbeafe;
+    color: #1e40af;
+  }
+  
+  [data-theme="dark"] .status-info,
+  .dark .status-info,
+  html[data-theme="dark"] .status-info,
+  html.dark .status-info {
+    background-color: #1e3a8a;
+    color: #93c5fd;
+  }
+
+  /* Mejoras adicionales para modo oscuro */
+  [data-theme="dark"] .text-gray-900,
+  .dark .text-gray-900,
+  html[data-theme="dark"] .text-gray-900,
+  html.dark .text-gray-900 {
+    color: #f9fafb !important;
+  }
+
+  [data-theme="dark"] .text-gray-500,
+  .dark .text-gray-500,
+  html[data-theme="dark"] .text-gray-500,
+  html.dark .text-gray-500 {
+    color: #9ca3af !important;
+  }
+
+  [data-theme="dark"] .text-gray-800,
+  .dark .text-gray-800,
+  html[data-theme="dark"] .text-gray-800,
+  html.dark .text-gray-800 {
+    color: #f3f4f6 !important;
+  }
+
+  [data-theme="dark"] .border-gray-200,
+  .dark .border-gray-200,
+  html[data-theme="dark"] .border-gray-200,
+  html.dark .border-gray-200 {
+    border-color: #374151 !important;
+  }
+
+  [data-theme="dark"] .hover\:bg-gray-50:hover,
+  .dark .hover\:bg-gray-50:hover,
+  html[data-theme="dark"] .hover\:bg-gray-50:hover,
+  html.dark .hover\:bg-gray-50:hover {
+    background-color: #374151 !important;
+  }
+
+  /* Colores específicos para métricas en modo oscuro */
+  [data-theme="dark"] .text-red-600,
+  .dark .text-red-600,
+  html[data-theme="dark"] .text-red-600,
+  html.dark .text-red-600 {
+    color: #f87171 !important;
+  }
+
+  [data-theme="dark"] .text-green-600,
+  .dark .text-green-600,
+  html[data-theme="dark"] .text-green-600,
+  html.dark .text-green-600 {
+    color: #4ade80 !important;
+  }
+
+  [data-theme="dark"] .text-blue-600,
+  .dark .text-blue-600,
+  html[data-theme="dark"] .text-blue-600,
+  html.dark .text-blue-600 {
+    color: #60a5fa !important;
+  }
+
+  /* Información del sistema en modo oscuro */
+  [data-theme="dark"] .bg-white,
+  .dark .bg-white,
+  html[data-theme="dark"] .bg-white,
+  html.dark .bg-white {
+    background-color: var(--bg-primary) !important;
+  }
+
+  /* Animaciones suaves para transiciones */
+  * {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  }
+
+  /* Detección automática de modo oscuro del sistema */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg-primary: #1f2937;
+      --bg-secondary: #111827;
+      --bg-gradient-start: #4338ca;
+      --bg-gradient-end: #7c3aed;
+      --text-primary: #f9fafb;
+      --text-secondary: #d1d5db;
+      --text-muted: #9ca3af;
+      --border-color: #374151;
+      --shadow-color: rgba(0, 0, 0, 0.3);
+      --shadow-hover: rgba(0, 0, 0, 0.5);
+    }
+
+    :root:not([data-theme="light"]) .status-success {
+      background-color: #064e3b;
+      color: #86efac;
+    }
+
+    :root:not([data-theme="light"]) .status-warning {
+      background-color: #78350f;
+      color: #fbbf24;
+    }
+
+    :root:not([data-theme="light"]) .status-info {
+      background-color: #1e3a8a;
+      color: #93c5fd;
+    }
+
+    :root:not([data-theme="light"]) .text-gray-900 {
+      color: #f9fafb !important;
+    }
+
+    :root:not([data-theme="light"]) .text-gray-500 {
+      color: #9ca3af !important;
+    }
+
+    :root:not([data-theme="light"]) .text-gray-800 {
+      color: #f3f4f6 !important;
+    }
+
+    :root:not([data-theme="light"]) .text-red-600 {
+      color: #f87171 !important;
+    }
+
+    :root:not([data-theme="light"]) .text-green-600 {
+      color: #4ade80 !important;
+    }
+
+    :root:not([data-theme="light"]) .text-blue-600 {
+      color: #60a5fa !important;
+    }
+
+    :root:not([data-theme="light"]) .border-gray-200 {
+      border-color: #374151 !important;
+    }
+
+    :root:not([data-theme="light"]) .hover\:bg-gray-50:hover {
+      background-color: #374151 !important;
+    }
+
+    :root:not([data-theme="light"]) .bg-white {
+      background-color: var(--bg-primary) !important;
+    }
+
+    :root:not([data-theme="light"]) .metric-card {
+      border-left-color: #60a5fa;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    }
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="space-y-6">
+  <!-- Header Section -->
+  <div
+    class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white"
+  >
+    <h1 class="text-3xl font-bold mb-2">
+      <i class="fas fa-tachometer-alt mr-3"></i>
+      Dashboard
+    </h1>
+    <p class="text-blue-100">
+      Bienvenido al sistema de gestión integral de Agrícola de la Costa San Luis
+    </p>
+    <div class="mt-4 text-sm">
+      <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full">
+        <i class="fas fa-calendar mr-1"></i>
+        Último acceso: {{ last_login|date:"d/m/Y H:i" }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Métricas principales -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="metric-card">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="metric-label">{% trans "Total Gastos" %}</div>
+          <div class="metric-value text-red-600">
+            ${{ total_gastos|floatformat:2|intcomma }}
+          </div>
+        </div>
+        <div class="text-red-500 text-3xl">
+          <i class="fas fa-money-bill-wave"></i>
+        </div>
+      </div>
+      <div class="mt-2 text-sm text-gray-500">
+        <i
+          class="fas fa-arrow-{% if gastos_trend > 0 %}up text-red-500{% else %}down text-green-500{% endif %} mr-1"
+        ></i>
+        {{ gastos_trend|floatformat:1 }}% {% trans "vs mes anterior" %}
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="metric-label">{% trans "Total Ventas" %}</div>
+          <div class="metric-value text-green-600">
+            ${{ total_ventas|floatformat:2|intcomma }}
+          </div>
+        </div>
+        <div class="text-green-500 text-3xl">
+          <i class="fas fa-chart-line"></i>
+        </div>
+      </div>
+      <div class="mt-2 text-sm text-gray-500">
+        <i
+          class="fas fa-arrow-{% if ventas_trend > 0 %}up text-green-500{% else %}down text-red-500{% endif %} mr-1"
+        ></i>
+        {{ ventas_trend|floatformat:1 }}% {% trans "vs mes anterior" %}
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="metric-label">{% trans "Total Compras" %}</div>
+          <div class="metric-value text-blue-600">
+            ${{ total_compras|floatformat:2|intcomma }}
+          </div>
+        </div>
+        <div class="text-blue-500 text-3xl">
+          <i class="fas fa-shopping-cart"></i>
+        </div>
+      </div>
+      <div class="mt-2 text-sm text-gray-500">
+        <i
+          class="fas fa-arrow-{% if compras_trend > 0 %}up text-red-500{% else %}down text-green-500{% endif %} mr-1"
+        ></i>
+        {{ compras_trend|floatformat:1 }}% {% trans "vs mes anterior" %}
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="metric-label">{% trans "Balance Neto" %}</div>
+          <div
+            class="metric-value {% if balance_neto >= 0 %}text-green-600{% else %}text-red-600{% endif %}"
+          >
+            ${{ balance_neto|floatformat:2|intcomma }}
+          </div>
+        </div>
+        <div
+          class="{% if balance_neto >= 0 %}text-green-500{% else %}text-red-500{% endif %} text-3xl"
+        >
+          <i class="fas fa-balance-scale"></i>
+        </div>
+      </div>
+      <div class="mt-2 text-sm text-gray-500">{% trans "Ventas - Gastos - Compras" %}</div>
+    </div>
+  </div>
+
+  <!-- Gráficos y estadísticas -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Gráfico de gastos por categoría -->
+    <div class="chart-container">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-chart-pie mr-2 text-blue-500"></i>
+        {% trans "Gastos por Categoría" %}
+      </h3>
+      <canvas id="gastosChart" height="200"></canvas>
+    </div>
+
+    <!-- Gráfico de tendencias -->
+    <div class="chart-container">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-chart-line mr-2 text-green-500"></i>
+        {% trans "Tendencias Mensuales" %}
+      </h3>
+      <canvas id="tendenciasChart" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Actividad reciente y accesos rápidos -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Actividad reciente -->
+    <div class="recent-activity">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-clock mr-2 text-purple-500"></i>
+        {% trans "Actividad Reciente" %}
+      </h3>
+      <div class="space-y-0">
+        {% for activity in recent_activities %}
+        <div class="activity-item">
+          <div class="flex items-center space-x-3">
+            <div
+              class="w-8 h-8 rounded-full bg-{{ activity.color }}-100 flex items-center justify-center"
+            >
+              <i
+                class="fas fa-{{ activity.icon }} text-{{ activity.color }}-600 text-sm"
+              ></i>
+            </div>
+            <div>
+              <div class="font-medium text-gray-900">
+                {{ activity.description }}
+              </div>
+              <div class="text-sm text-gray-500">
+                {{ activity.user }} - {{ activity.timestamp|timesince }} ago
+              </div>
+            </div>
+          </div>
+          <span class="status-badge status-{{ activity.status }}"
+            >{{ activity.status|title }}</span
+          >
+        </div>
+        {% empty %}
+        <div class="text-center py-8 text-gray-500">
+          <i class="fas fa-info-circle text-2xl mb-2"></i>
+          <p>{% trans "No hay actividad reciente" %}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Accesos rápidos -->
+    <div class="recent-activity">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-bolt mr-2 text-yellow-500"></i>
+        {% trans "Accesos Rápidos" %}
+      </h3>
+      <div class="grid grid-cols-2 gap-4">
+        <a
+          href="{% url 'admin:gastos_gastos_add' %}"
+          class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <div class="text-center">
+            <i class="fas fa-plus-circle text-2xl text-red-500 mb-2"></i>
+            <div class="font-medium text-gray-900">{% trans "Nuevo Gasto" %}</div>
+          </div>
+        </a>
+        <a
+          href="{% url 'admin:ventas_ventas_add' %}"
+          class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <div class="text-center">
+            <i class="fas fa-plus-circle text-2xl text-green-500 mb-2"></i>
+            <div class="font-medium text-gray-900">{% trans "Nueva Venta" %}</div>
+          </div>
+        </a>
+        <a
+          href="{% url 'admin:gastos_compra_add' %}"
+          class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <div class="text-center">
+            <i class="fas fa-shopping-cart text-2xl text-blue-500 mb-2"></i>
+            <div class="font-medium text-gray-900">{% trans "Nueva Compra" %}</div>
+          </div>
+        </a>
+        <a
+          href="{% url 'balances' %}"
+          class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <div class="text-center">
+            <i class="fas fa-chart-bar text-2xl text-purple-500 mb-2"></i>
+            <div class="font-medium text-gray-900">{% trans "Ver Balances" %}</div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Información del sistema -->
+  <div class="bg-white rounded-lg p-6 shadow">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+      <i class="fas fa-info-circle mr-2 text-blue-500"></i>
+      {% trans "Información del Sistema" %}
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+      <div class="flex justify-between">
+        <span class="text-gray-500">{% trans "Versión" %}:</span>
+        <span class="font-medium">1.0.0</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-500">{% trans "Total Usuarios" %}:</span>
+        <span class="font-medium">{{ total_users }}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-500">{% trans "Última Actualización" %}:</span>
+        <span class="font-medium">{{ last_update|date:"d/m/Y" }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+      // Función para detectar si estamos en modo oscuro
+      function isDarkMode() {
+          return document.documentElement.hasAttribute('data-theme') && 
+                 document.documentElement.getAttribute('data-theme') === 'dark' ||
+                 document.documentElement.classList.contains('dark') ||
+                 document.body.classList.contains('dark') ||
+                 (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches &&
+                  !document.documentElement.hasAttribute('data-theme'));
+      }
+
+      // Función para obtener colores según el tema
+      function getThemeColors() {
+          const darkMode = isDarkMode();
+          return {
+              chartBg: darkMode ? '#1f2937' : '#ffffff',
+              textColor: darkMode ? '#f9fafb' : '#1f2937',
+              gridColor: darkMode ? '#374151' : '#e5e7eb',
+              borderColor: darkMode ? '#6b7280' : '#ffffff'
+          };
+      }
+
+      const colors = getThemeColors();
+
+      // Gráfico de gastos por categoría
+      const gastosCtx = document.getElementById('gastosChart').getContext('2d');
+      const gastosChart = new Chart(gastosCtx, {
+          type: 'doughnut',
+          data: {
+              labels: {{ gastos_categorias_labels|safe }},
+              datasets: [{
+                  data: {{ gastos_categorias_data|safe }},
+                  backgroundColor: [
+                      '#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff', '#ff9f40'
+                  ],
+                  borderWidth: 2,
+                  borderColor: colors.borderColor
+              }]
+          },
+          options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                  legend: {
+                      position: 'bottom',
+                      labels: {
+                          color: colors.textColor
+                      }
+                  }
+              }
+          }
+      });
+
+      // Gráfico de tendencias
+      const tendenciasCtx = document.getElementById('tendenciasChart').getContext('2d');
+      const tendenciasChart = new Chart(tendenciasCtx, {
+          type: 'line',
+          data: {
+              labels: {{ meses_labels|safe }},
+              datasets: [{
+                  label: 'Gastos',
+                  data: {{ gastos_mensuales|safe }},
+                  borderColor: '#ff6384',
+                  backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                  tension: 0.4
+              }, {
+                  label: 'Ventas',
+                  data: {{ ventas_mensuales|safe }},
+                  borderColor: '#36a2eb',
+                  backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                  tension: 0.4
+              }]
+          },
+          options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                  legend: {
+                      position: 'top',
+                      labels: {
+                          color: colors.textColor
+                      }
+                  }
+              },
+              scales: {
+                  x: {
+                      ticks: {
+                          color: colors.textColor
+                      },
+                      grid: {
+                          color: colors.gridColor
+                      }
+                  },
+                  y: {
+                      beginAtZero: true,
+                      ticks: {
+                          color: colors.textColor,
+                          callback: function(value) {
+                              return '$' + value.toLocaleString();
+                          }
+                      },
+                      grid: {
+                          color: colors.gridColor
+                      }
+                  }
+              }
+          }
+      });
+
+      // Función para actualizar los gráficos cuando cambia el tema
+      function updateChartsTheme() {
+          const newColors = getThemeColors();
+          
+          // Actualizar gráfico de gastos
+          gastosChart.options.plugins.legend.labels.color = newColors.textColor;
+          gastosChart.data.datasets[0].borderColor = newColors.borderColor;
+          
+          // Actualizar gráfico de tendencias
+          tendenciasChart.options.plugins.legend.labels.color = newColors.textColor;
+          tendenciasChart.options.scales.x.ticks.color = newColors.textColor;
+          tendenciasChart.options.scales.y.ticks.color = newColors.textColor;
+          tendenciasChart.options.scales.x.grid.color = newColors.gridColor;
+          tendenciasChart.options.scales.y.grid.color = newColors.gridColor;
+          
+          // Redibujar los gráficos
+          gastosChart.update();
+          tendenciasChart.update();
+      }
+
+      // Observador para cambios en el atributo data-theme
+      const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+              if (mutation.type === 'attributes' && 
+                  (mutation.attributeName === 'data-theme' || mutation.attributeName === 'class')) {
+                  setTimeout(updateChartsTheme, 100);
+              }
+          });
+      });
+
+      // Observar cambios en el elemento html y body
+      observer.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ['data-theme', 'class']
+      });
+      
+      observer.observe(document.body, {
+          attributes: true,
+          attributeFilter: ['class']
+      });
+
+      // Escuchar cambios en las preferencias del sistema
+      if (window.matchMedia) {
+          window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+              setTimeout(updateChartsTheme, 100);
+          });
+      }
+  });
+</script>
+{% endblock %}

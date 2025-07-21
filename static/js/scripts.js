@@ -127,30 +127,85 @@ for (let i = 0; i < tablas.length; i++) {
   });
 }
 
-// Seleccionamos todos los elementos con la clase "field-fecha" en el documento HTML
-const cantidadInput = document.querySelector(
-  ".form-group.field-cantidad input"
-);
-const precioUnitarioInput = document.querySelector(
-  ".form-group.field-precio_unitario input"
-);
-const montoTotalInput = document.querySelector(
-  ".form-group.field-monto_total input"
-);
+// Función mejorada para calcular automáticamente el monto total
+function initializeAutoCalculation() {
+  // Seleccionar campos usando múltiples selectores para mayor compatibilidad
+  const cantidadInput = document.querySelector(
+    ".form-group.field-cantidad input, " +
+      "input[name='cantidad'], " +
+      "input[id*='cantidad'], " +
+      ".field-cantidad input"
+  );
 
-if (cantidadInput && precioUnitarioInput && montoTotalInput) {
-  const updateMontoTotal = () => {
-    const cantidad = parseFloat(cantidadInput.value) || 0;
-    const precioUnitario = parseFloat(precioUnitarioInput.value) || 0;
-    const montoTotal = cantidad * precioUnitario;
-    montoTotalInput.value = montoTotal.toFixed(2);
-  };
+  const precioUnitarioInput = document.querySelector(
+    ".form-group.field-precio_unitario input, " +
+      "input[name='precio_unitario'], " +
+      "input[id*='precio_unitario'], " +
+      ".field-precio_unitario input"
+  );
 
-  cantidadInput.addEventListener("input", updateMontoTotal);
-  precioUnitarioInput.addEventListener("input", updateMontoTotal);
+  const montoTotalInput = document.querySelector(
+    ".form-group.field-monto_total input, " +
+      "input[name='monto_total'], " +
+      "input[id*='monto_total'], " +
+      ".field-monto_total input"
+  );
+
+  console.log("Inicializando cálculo automático:", {
+    cantidadInput: !!cantidadInput,
+    precioUnitarioInput: !!precioUnitarioInput,
+    montoTotalInput: !!montoTotalInput,
+  });
+
+  if (cantidadInput && precioUnitarioInput && montoTotalInput) {
+    const updateMontoTotal = () => {
+      const cantidad = parseFloat(cantidadInput.value) || 0;
+      const precioUnitario = parseFloat(precioUnitarioInput.value) || 0;
+      const montoTotal = cantidad * precioUnitario;
+
+      // Formatear a 2 decimales
+      montoTotalInput.value = montoTotal.toFixed(2);
+
+      // Agregar efecto visual para mostrar que se calculó
+      montoTotalInput.style.backgroundColor = "#e8f5e8";
+      setTimeout(() => {
+        montoTotalInput.style.backgroundColor = "";
+      }, 1000);
+
+      console.log(
+        `Cálculo automático: ${cantidad} × ${precioUnitario} = ${montoTotal.toFixed(
+          2
+        )}`
+      );
+    };
+
+    // Eventos para actualizar el total
+    cantidadInput.addEventListener("input", updateMontoTotal);
+    cantidadInput.addEventListener("change", updateMontoTotal);
+    precioUnitarioInput.addEventListener("input", updateMontoTotal);
+    precioUnitarioInput.addEventListener("change", updateMontoTotal);
+
+    // Calcular al cargar la página si ya hay valores
+    updateMontoTotal();
+
+    // Hacer el campo de monto total de solo lectura para evitar confusiones
+    montoTotalInput.setAttribute("readonly", true);
+    montoTotalInput.style.backgroundColor = "#f8f9fa";
+    montoTotalInput.title =
+      "Este campo se calcula automáticamente (Cantidad × Precio Unitario)";
+
+    console.log(
+      "✅ Cálculo automático de monto total configurado correctamente"
+    );
+  } else {
+    console.log(
+      "⚠️ No se encontraron todos los campos necesarios para el cálculo automático"
+    );
+  }
 }
 
-updateMontoTotal();
+// Inicializar al cargar la página
+initializeAutoCalculation();
 
 if (tablas.length > 0) {
   // Obtener todos los elementos con la clase field-monto de esta tabla

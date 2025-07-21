@@ -1,0 +1,97 @@
+# Django translations for Spanish
+# Copyright (C) 2025
+# This file is distributed under the same license as the PACKAGE package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Django Custom Admin\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-01-20 23:58+0000\n"
+"PO-Revision-Date: 2025-01-20 23:58+0000\n"
+"Last-Translator: Auto <auto@example.com>\n"
+"Language-Team: Spanish <es@li.org>\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: templates/admin/index.html
+msgid "Panel de Control"
+msgstr "Panel de Control"
+
+#: templates/admin/index.html
+msgid "Total Gastos"
+msgstr "Total Gastos"
+
+#: templates/admin/index.html
+msgid "vs mes anterior"
+msgstr "vs mes anterior"
+
+#: templates/admin/index.html
+msgid "Total Ventas"
+msgstr "Total Ventas"
+
+#: templates/admin/index.html
+msgid "Total Compras"
+msgstr "Total Compras"
+
+#: templates/admin/index.html
+msgid "Balance Neto"
+msgstr "Balance Neto"
+
+#: templates/admin/index.html
+msgid "Ventas - Gastos - Compras"
+msgstr "Ventas - Gastos - Compras"
+
+#: templates/admin/index.html
+msgid "Gastos por Categoría"
+msgstr "Gastos por Categoría"
+
+#: templates/admin/index.html
+msgid "Tendencias Mensuales"
+msgstr "Tendencias Mensuales"
+
+#: templates/admin/index.html
+msgid "Actividad Reciente"
+msgstr "Actividad Reciente"
+
+#: templates/admin/index.html
+msgid "No hay actividad reciente"
+msgstr "No hay actividad reciente"
+
+#: templates/admin/index.html
+msgid "Accesos Rápidos"
+msgstr "Accesos Rápidos"
+
+#: templates/admin/index.html
+msgid "Nuevo Gasto"
+msgstr "Nuevo Gasto"
+
+#: templates/admin/index.html
+msgid "Nueva Venta"
+msgstr "Nueva Venta"
+
+#: templates/admin/index.html
+msgid "Nueva Compra"
+msgstr "Nueva Compra"
+
+#: templates/admin/index.html
+msgid "Ver Balances"
+msgstr "Ver Balances"
+
+#: templates/admin/index.html
+msgid "Información del Sistema"
+msgstr "Información del Sistema"
+
+#: templates/admin/index.html
+msgid "Versión"
+msgstr "Versión"
+
+#: templates/admin/index.html
+msgid "Total Usuarios"
+msgstr "Total Usuarios"
+
+#: templates/admin/index.html
+msgid "Última Actualización"
+msgstr "Última Actualización"

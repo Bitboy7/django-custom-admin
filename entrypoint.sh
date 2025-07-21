@@ -21,7 +21,7 @@ python manage.py check --deploy --settings=app.settings || echo "⚠️ Adverten
 echo "🔄 Ejecutando migraciones..."
 python manage.py migrate --fake-initial || python manage.py migrate --run-syncdb || echo "⚠️ Error en migraciones, continuando..."
 python manage.py makemigrations || echo "⚠️ Error al crear migraciones, continuando..."
-
+python manage.py migrate ventas  
 # Crear superusuario si no existe (de forma más segura)
 echo "👤 Verificando superusuario..."
 python manage.py shell -c "
@@ -50,6 +50,10 @@ python manage.py setup_roles --create-roles || echo "Los roles ya están configu
 # Recopilar archivos estáticos
 echo "📦 Recopilando archivos estáticos..."
 python manage.py collectstatic --noinput --clear || echo "⚠️ Error al recopilar estáticos, continuando..."
+
+# Compilar mensajes de traducción
+echo "🌐 Compilando mensajes de traducción..."
+python manage.py compilemessages || echo "⚠️ Error al compilar traducciones, continuando..."
 
 # Crear directorios de media necesarios
 echo "📁 Creando directorios de media..."

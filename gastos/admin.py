@@ -160,6 +160,15 @@ class ComprasAdmin(ModelAdmin, ImportExportModelAdmin):
                 'fields': ('fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total', 'cuenta', 'tipo_pago')
             }),
         )
+        
+        class Media:
+            js = (
+                'js/compra_calculator.js',
+                'js/scripts.js',
+            )
+            css = {
+                'all': ('css/admin_custom.css',)
+            }
  
 class SaldoMensualResource(resources.ModelResource):
     cuenta = fields.Field(
