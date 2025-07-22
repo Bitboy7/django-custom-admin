@@ -46,6 +46,18 @@ def balances_view(request):
     return render(request, 'balances.html', context)
 
 
+@login_required
+def user_manual_view(request):
+    """
+    Vista para mostrar el manual de usuario
+    """
+    context = {
+        'title': 'Manual de Usuario',
+        'site_title': 'Agrícola de la Costa San Luis',
+    }
+    return render(request, 'user_manual.html', context)
+
+
 def dashboard_callback(request, context):
     """
     Callback para el dashboard personalizado de Django Unfold

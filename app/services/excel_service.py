@@ -43,6 +43,15 @@ class ExcelReportService:
             return dt.replace(tzinfo=None)
         return dt
     
+    def convert_money_to_float(self, value):
+        """Convierte un objeto Money a float de manera segura."""
+        if value is None:
+            return 0.0
+        elif hasattr(value, 'amount'):
+            return float(value.amount)
+        else:
+            return float(value)
+    
     def create_full_report(self):
         """Crea un reporte completo con todas las hojas"""
         wb = openpyxl.Workbook()
@@ -95,7 +104,7 @@ class ExcelReportService:
                 gasto.id_sucursal.nombre,
                 gasto.id_cat_gastos.nombre,
                 gasto.id_cuenta_banco.numero_cuenta,
-                gasto.monto,
+                self.convert_money_to_float(gasto.monto),
                 gasto.descripcion,
                 self.remove_timezone(gasto.fecha_registro)
             ]
@@ -139,8 +148,8 @@ class ExcelReportService:
                 compra.productor.nombre_completo,
                 f"{compra.producto.nombre} - {compra.producto.variedad}",
                 compra.cantidad,
-                compra.precio_unitario,
-                compra.monto_total,
+                self.convert_money_to_float(compra.precio_unitario),
+                self.convert_money_to_float(compra.monto_total),
                 compra.cuenta.numero_cuenta if compra.cuenta else "",
                 compra.tipo_pago,
                 self.remove_timezone(compra.fecha_registro)
@@ -188,7 +197,7 @@ class ExcelReportService:
                 venta.PO,
                 venta.producto.nombre,
                 venta.cantidad,
-                venta.monto,
+                self.convert_money_to_float(venta.monto),
                 venta.cliente.nombre if hasattr(venta.cliente, 'nombre') else str(venta.cliente),
                 venta.sucursal_id.nombre,
                 venta.cuenta.numero_cuenta if hasattr(venta, 'cuenta') and venta.cuenta else ""
@@ -232,7 +241,7 @@ class ExcelReportService:
                 anticipo.cliente.nombre if hasattr(anticipo.cliente, 'nombre') else str(anticipo.cliente),
                 anticipo.sucursal.nombre if hasattr(anticipo.sucursal, 'nombre') else str(anticipo.sucursal),
                 anticipo.cuenta.numero_cuenta if hasattr(anticipo.cuenta, 'numero_cuenta') else str(anticipo.cuenta),
-                anticipo.monto,
+                self.convert_money_to_float(anticipo.monto),
                 anticipo.descripcion,
                 anticipo.estado_anticipo
             ]
@@ -282,7 +291,7 @@ class ExcelReportService:
                         try:
                             year_value = getattr(saldo, field_name, None)
                             if year_value is not None and int(year_value) == current_year:
-                                saldos_acumulados[cuenta.id] = float(saldo.saldo_inicial)
+                                saldos_acumulados[cuenta.id] = self.convert_money_to_float(saldo.saldo_inicial)
                                 break
                         except:
                             continue
@@ -322,11 +331,11 @@ class ExcelReportService:
                     fecha__month=month
                 ).aggregate(total=Sum('monto'))['total'] or 0
                 
-                # Convertir a float
-                gastos_mes = float(gastos_mes) if gastos_mes is not None else 0
-                compras_mes = float(compras_mes) if compras_mes is not None else 0
-                ventas_mes = float(ventas_mes) if ventas_mes is not None else 0
-                anticipos_mes = float(anticipos_mes) if anticipos_mes is not None else 0
+                # Convertir a float - manejar objetos Money
+                gastos_mes = self.convert_money_to_float(gastos_mes)
+                compras_mes = self.convert_money_to_float(compras_mes)
+                ventas_mes = self.convert_money_to_float(ventas_mes)
+                anticipos_mes = self.convert_money_to_float(anticipos_mes)
                 
                 saldo_final = saldo_inicial - gastos_mes + compras_mes + ventas_mes + anticipos_mes
                 saldos_acumulados[cuenta.id] = saldo_final

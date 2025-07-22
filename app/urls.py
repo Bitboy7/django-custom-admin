@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf.urls.i18n import i18n_patterns
 from catalogo.views import index, data
-from .views import balances_view, export_full_report_to_excel, currency_conversion_api, currency_test_view
+from .views import balances_view, export_full_report_to_excel, currency_conversion_api, currency_test_view, user_manual_view
 from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import redirect
@@ -30,6 +30,7 @@ if not settings.DEBUG:
 urlpatterns += i18n_patterns(
     path("admin/", admin.site.urls),
     path('balances/', balances_view, name='balances'),
+    path('manual/', user_manual_view, name='user_manual'),
     path('export-full-report/', export_full_report_to_excel, name='export_full_report'),
     path('', include('catalogo.urls')),
     path('', include('gastos.urls')),

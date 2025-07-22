@@ -1,171 +1,385 @@
-<!DOCTYPE html>
-<html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Manual de Usuario</title>
-  </head>
-  <body>
-    <h1>Manual de Usuario</h1>
+{% extends 'admin/base.html' %}
+{% load i18n static %}
 
-    <h2>Introducción</h2>
+{% block title %}{% trans "Manual de Usuario" %} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+  .user-manual {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: "Roboto", "Lucida Grande", Verdana, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  
+  .manual-header {
+    background: linear-gradient(135deg, #417690 0%, #2c5282 100%);
+    color: white;
+    padding: 40px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    text-align: center;
+  }
+  
+  .manual-header h1 {
+    margin: 0;
+    font-size: 2.5em;
+    font-weight: 300;
+  }
+  
+  .manual-header p {
+    margin: 15px 0 0 0;
+    font-size: 1.1em;
+    opacity: 0.9;
+  }
+  
+  .table-of-contents {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 30px;
+  }
+  
+  .table-of-contents h2 {
+    color: #417690;
+    margin-top: 0;
+    border-bottom: 2px solid #417690;
+    padding-bottom: 10px;
+  }
+  
+  .table-of-contents ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .table-of-contents li {
+    margin: 10px 0;
+  }
+  
+  .table-of-contents a {
+    color: #495057;
+    text-decoration: none;
+    padding: 8px 15px;
+    display: block;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+  }
+  
+  .table-of-contents a:hover {
+    background: #417690;
+    color: white;
+    text-decoration: none;
+  }
+  
+  .section {
+    margin-bottom: 40px;
+    padding: 25px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .section h2 {
+    color: #417690;
+    border-bottom: 3px solid #417690;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+  }
+  
+  .section h3 {
+    color: #495057;
+    margin-top: 25px;
+    margin-bottom: 15px;
+  }
+  
+  .section ol, .section ul {
+    margin-left: 20px;
+  }
+  
+  .section li {
+    margin: 8px 0;
+  }
+  
+  .code-block {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 15px;
+    font-family: 'Courier New', monospace;
+    margin: 15px 0;
+  }
+  
+  .highlight-box {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 0 4px 4px 0;
+  }
+  
+  .warning-box {
+    background: #fff3e0;
+    border-left: 4px solid #ff9800;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 0 4px 4px 0;
+  }
+  
+  .back-to-admin {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #417690;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 25px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    z-index: 1000;
+  }
+  
+  .back-to-admin:hover {
+    background: #2c5282;
+    color: white;
+    text-decoration: none;
+    transform: translateY(-2px);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'admin:index' %}" class="back-to-admin">← {% trans "Volver a inicio" %}</a>
+
+<div class="user-manual">
+  <div class="manual-header">
+    <h1>{% trans "Manual de usuario" %}</h1>
+    <p>{% trans "Sistema de administración Agrícola de la Costa San Luis S.P.R. de R.L." %}</p>
+  </div>
+
+  <div class="table-of-contents">
+    <h2>{% trans "Tabla de Contenidos" %}</h2>
+    <ul>
+      <li><a href="#acceso-al-sistema">{% trans "Acceso al Sistema" %}</a></li>
+      <li><a href="#gestion-de-catalogos">{% trans "Gestión de Catálogos" %}</a></li>
+      <li><a href="#registro-de-gastos">{% trans "Registro de Gastos" %}</a></li>
+      <li><a href="#registro-de-ventas">{% trans "Registro de Ventas" %}</a></li>
+      <li><a href="#balances-y-reportes">{% trans "Balances y Reportes" %}</a></li>
+      <li><a href="#auditoria">{% trans "Auditoría del Sistema" %}</a></li>
+      <li><a href="#configuracion">{% trans "Configuración" %}</a></li>
+      <li><a href="#soporte-tecnico">{% trans "Soporte Técnico" %}</a></li>
+    </ul>
+  </div>
+
+  <div class="section" id="acceso-al-sistema">
+    <h2>{% trans "Acceso al Sistema" %}</h2>
     <p>
-      Este manual está diseñado para guiarte en el uso del sistema de gestión
-      para la empresa Agricola de la Costa San Luis S.P.R. de R.L., desarrollado
-      con Django. Aquí encontrarás instrucciones detalladas sobre cómo utilizar
-      las diferentes funciones de la aplicación.
+      {% trans "Para acceder al sistema, abre tu navegador web y dirígete a la URL del servidor de la aplicación. Si estás utilizando el servidor de desarrollo, la URL será:" %}
+    </p>
+    <div class="code-block">http://localhost:8000</div>
+
+    <h3>{% trans "Inicio de Sesión" %}</h3>
+    <ol>
+      <li>{% trans "Ingresa tu nombre de usuario y contraseña en la página de inicio de sesión." %}</li>
+      <li>{% trans "Haz clic en el botón 'Iniciar Sesión'." %}</li>
+    </ol>
+    
+    <div class="highlight-box">
+      <strong>{% trans "Nota:" %}</strong> {% trans "El sistema requiere autenticación. Solo usuarios autorizados pueden acceder a las funcionalidades." %}
+    </div>
+  </div>
+
+  <div class="section" id="gestion-de-catalogos">
+    <h2>{% trans "Gestión de Catálogos" %}</h2>
+    <p>
+      {% trans "La gestión de catálogos te permite administrar los diferentes catálogos de productos, clientes, proveedores y otros elementos del sistema." %}
     </p>
 
-    <h2>Tabla de Contenidos</h2>
+    <h3>{% trans "Ver Catálogos" %}</h3>
+    <ol>
+      <li>{% trans "Navega a la sección de catálogos desde el menú principal del admin." %}</li>
+      <li>{% trans "Verás una lista de todos los catálogos disponibles organizados por categorías." %}</li>
+    </ol>
+
+    <h3>{% trans "Agregar un Nuevo Elemento al Catálogo" %}</h3>
+    <ol>
+      <li>{% trans "Selecciona el tipo de catálogo (Productos, Clientes, Bancos, etc.)." %}</li>
+      <li>{% trans "Haz clic en el botón 'Agregar' correspondiente." %}</li>
+      <li>{% trans "Completa el formulario con la información requerida." %}</li>
+      <li>{% trans "Haz clic en 'Guardar' para agregar el elemento." %}</li>
+    </ol>
+
+    <h3>{% trans "Editar un Elemento del Catálogo" %}</h3>
+    <ol>
+      <li>{% trans "En la lista del catálogo, haz clic en el elemento que deseas modificar." %}</li>
+      <li>{% trans "Realiza los cambios necesarios en el formulario." %}</li>
+      <li>{% trans "Haz clic en 'Guardar' para actualizar la información." %}</li>
+    </ol>
+
+    <div class="warning-box">
+      <strong>{% trans "Advertencia:" %}</strong> {% trans "Al eliminar elementos del catálogo, verifica que no estén siendo utilizados en otros registros para evitar errores." %}
+    </div>
+  </div>
+
+  <div class="section" id="registro-de-gastos">
+    <h2>{% trans "Registro de Gastos" %}</h2>
+    <p>
+      {% trans "El módulo de gastos te permite registrar y controlar todos los gastos de la empresa, incluyendo compras, gastos operativos y anticipos." %}
+    </p>
+
+    <h3>{% trans "Tipos de Gastos" %}</h3>
     <ul>
-      <li><a href="#acceso-al-sistema">Acceso al Sistema</a></li>
-      <li><a href="#gestion-de-catalogos">Gestión de Catálogos</a></li>
-      <li><a href="#registro-de-gastos">Registro de Gastos</a></li>
-      <li><a href="#balances-y-reportes">Balances y Reportes</a></li>
-      <li><a href="#configuracion">Configuración</a></li>
-      <li><a href="#soporte-tecnico">Soporte Técnico</a></li>
+      <li><strong>{% trans "Gastos Operativos:" %}</strong> {% trans "Gastos diarios de operación de la empresa." %}</li>
+      <li><strong>{% trans "Compras:" %}</strong> {% trans "Registro de compras de productos y materiales." %}</li>
+      <li><strong>{% trans "Anticipos:" %}</strong> {% trans "Pagos adelantados a proveedores o empleados." %}</li>
     </ul>
 
-    <h2 id="acceso-al-sistema">Acceso al Sistema</h2>
+    <h3>{% trans "Registrar un Nuevo Gasto" %}</h3>
+    <ol>
+      <li>{% trans "Navega a la sección 'Gastos' en el menú principal." %}</li>
+      <li>{% trans "Selecciona el tipo de gasto que deseas registrar." %}</li>
+      <li>{% trans "Haz clic en 'Agregar' para el tipo correspondiente." %}</li>
+      <li>{% trans "Completa todos los campos requeridos del formulario." %}</li>
+      <li>{% trans "Adjunta los documentos de soporte si es necesario." %}</li>
+      <li>{% trans "Haz clic en 'Guardar' para registrar el gasto." %}</li>
+    </ol>
+
+    <div class="highlight-box">
+      <strong>{% trans "Características Especiales:" %}</strong>
+      <ul>
+        <li>{% trans "Conversión automática de monedas" %}</li>
+        <li>{% trans "Cálculo automático de totales con impuestos" %}</li>
+        <li>{% trans "Integración con IA para categorización automática" %}</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section" id="registro-de-ventas">
+    <h2>{% trans "Registro de Ventas" %}</h2>
     <p>
-      Para acceder al sistema, abre tu navegador web y dirígete a la URL del
-      servidor de la aplicación. Si estás utilizando el servidor de desarrollo,
-      la URL será:
-    </p>
-    <pre>http://localhost:8000</pre>
-
-    <h3>Inicio de Sesión</h3>
-    <ol>
-      <li>
-        Ingresa tu nombre de usuario y contraseña en la página de inicio de
-        sesión.
-      </li>
-      <li>Haz clic en el botón "Iniciar Sesión".</li>
-    </ol>
-
-    <h2 id="gestion-de-catalogos">Gestión de Catálogos</h2>
-    <p>
-      La gestión de catálogos te permite administrar los diferentes catálogos de
-      productos y servicios de la empresa.
-    </p>
-
-    <h3>Ver Catálogos</h3>
-    <ol>
-      <li>Navega a la sección de catálogos desde el menú principal.</li>
-      <li>Verás una lista de todos los catálogos disponibles.</li>
-    </ol>
-
-    <h3>Agregar un Nuevo Catálogo</h3>
-    <ol>
-      <li>Haz clic en el botón "Agregar Catálogo".</li>
-      <li>Completa el formulario con la información del nuevo catálogo.</li>
-      <li>Haz clic en "Guardar" para agregar el catálogo.</li>
-    </ol>
-
-    <h3>Editar un Catálogo</h3>
-    <ol>
-      <li>
-        En la lista de catálogos, haz clic en el botón "Editar" junto al
-        catálogo que deseas modificar.
-      </li>
-      <li>Realiza los cambios necesarios en el formulario.</li>
-      <li>Haz clic en "Guardar" para actualizar el catálogo.</li>
-    </ol>
-
-    <h3>Eliminar un Catálogo</h3>
-    <ol>
-      <li>
-        En la lista de catálogos, haz clic en el botón "Eliminar" junto al
-        catálogo que deseas eliminar.
-      </li>
-      <li>Confirma la eliminación en el cuadro de diálogo que aparece.</li>
-    </ol>
-
-    <h2 id="registro-de-gastos">Registro de Gastos</h2>
-    <p>
-      El registro de gastos te permite llevar un control detallado de los gastos
-      de la empresa.
+      {% trans "El módulo de ventas permite gestionar todas las transacciones de venta de la empresa." %}
     </p>
 
-    <h3>Ver Gastos</h3>
+    <h3>{% trans "Registrar una Nueva Venta" %}</h3>
     <ol>
-      <li>Navega a la sección de gastos desde el menú principal.</li>
-      <li>Verás una lista de todos los gastos registrados.</li>
+      <li>{% trans "Accede a la sección 'Ventas' desde el menú principal." %}</li>
+      <li>{% trans "Haz clic en 'Agregar Venta'." %}</li>
+      <li>{% trans "Selecciona el cliente y los productos." %}</li>
+      <li>{% trans "Especifica cantidades y precios." %}</li>
+      <li>{% trans "El sistema calculará automáticamente los totales." %}</li>
+      <li>{% trans "Guarda la venta para completar el registro." %}</li>
     </ol>
+  </div>
 
-    <h3>Registrar un Nuevo Gasto</h3>
-    <ol>
-      <li>Haz clic en el botón "Registrar Gasto".</li>
-      <li>Completa el formulario con la información del nuevo gasto.</li>
-      <li>Haz clic en "Guardar" para registrar el gasto.</li>
-    </ol>
-
-    <h3>Editar un Gasto</h3>
-    <ol>
-      <li>
-        En la lista de gastos, haz clic en el botón "Editar" junto al gasto que
-        deseas modificar.
-      </li>
-      <li>Realiza los cambios necesarios en el formulario.</li>
-      <li>Haz clic en "Guardar" para actualizar el gasto.</li>
-    </ol>
-
-    <h3>Eliminar un Gasto</h3>
-    <ol>
-      <li>
-        En la lista de gastos, haz clic en el botón "Eliminar" junto al gasto
-        que deseas eliminar.
-      </li>
-      <li>Confirma la eliminación en el cuadro de diálogo que aparece.</li>
-    </ol>
-
-    <h2 id="balances-y-reportes">Balances y Reportes</h2>
+  <div class="section" id="balances-y-reportes">
+    <h2>{% trans "Balances y Reportes" %}</h2>
     <p>
-      La sección de balances y reportes te permite generar informes financieros
-      y ver el estado de las finanzas de la empresa.
+      {% trans "La sección de balances y reportes te permite generar informes financieros detallados y analizar el estado financiero de la empresa." %}
     </p>
 
-    <h3>Ver Balances</h3>
+    <h3>{% trans "Acceder a los Balances" %}</h3>
     <ol>
-      <li>Navega a la sección de balances desde el menú principal.</li>
-      <li>Verás un resumen de los balances financieros.</li>
+      <li>{% trans "Desde el dashboard principal, haz clic en 'Ver Balances'." %}</li>
+      <li>{% trans "También puedes acceder directamente desde el menú navegando a '/balances/'." %}</li>
     </ol>
 
-    <h3>Generar Reportes</h3>
-    <ol>
-      <li>Haz clic en el botón "Generar Reporte".</li>
-      <li>Selecciona el tipo de reporte y el rango de fechas.</li>
-      <li>Haz clic en "Generar" para ver el reporte.</li>
-    </ol>
-
-    <h2 id="configuracion">Configuración</h2>
-    <p>
-      Para configurar la aplicación, asegúrate de que las siguientes variables
-      estén correctamente definidas en tu archivo <code>.env</code>:
-    </p>
+    <h3>{% trans "Tipos de Reportes Disponibles" %}</h3>
     <ul>
-      <li><code>SECRET_KEY</code>: La clave secreta de Django.</li>
-      <li>
-        <code>DEBUG</code>: Define si el modo debug está activado (<code
-          >True</code
-        >
-        o <code>False</code>).
-      </li>
-      <li><code>ALLOWED_HOSTS</code>: Lista de hosts permitidos.</li>
+      <li><strong>{% trans "Reporte Completo Excel:" %}</strong> {% trans "Incluye gastos, compras, ventas y balances mensuales." %}</li>
+      <li><strong>{% trans "Balance Mensual:" %}</strong> {% trans "Resumen financiero por mes." %}</li>
+      <li><strong>{% trans "Análisis de Flujo de Caja:" %}</strong> {% trans "Estado de ingresos y egresos." %}</li>
+      <li><strong>{% trans "Reportes por Categoría:" %}</strong> {% trans "Gastos agrupados por tipo." %}</li>
     </ul>
 
-    <h2 id="soporte-tecnico">Soporte Técnico</h2>
+    <h3>{% trans "Generar Reportes" %}</h3>
+    <ol>
+      <li>{% trans "Selecciona el tipo de reporte deseado." %}</li>
+      <li>{% trans "Configura el rango de fechas si es necesario." %}</li>
+      <li>{% trans "Haz clic en 'Generar' o 'Exportar'." %}</li>
+      <li>{% trans "El sistema generará el archivo Excel automáticamente." %}</li>
+    </ol>
+  </div>
+
+  <div class="section" id="auditoria">
+    <h2>{% trans "Auditoría del Sistema" %}</h2>
     <p>
-      Si necesitas ayuda adicional, por favor contacta al soporte técnico de la
-      empresa.
+      {% trans "El sistema incluye un módulo de auditoría que registra todas las acciones realizadas por los usuarios." %}
     </p>
 
-    <hr />
+    <h3>{% trans "Características de Auditoría" %}</h3>
+    <ul>
+      <li>{% trans "Registro automático de todas las operaciones CRUD (Crear, Leer, Actualizar, Eliminar)." %}</li>
+      <li>{% trans "Seguimiento de cambios por usuario y fecha." %}</li>
+      <li>{% trans "Historial completo de modificaciones." %}</li>
+    </ul>
 
+    <h3>{% trans "Consultar Logs de Auditoría" %}</h3>
+    <ol>
+      <li>{% trans "Navega a la sección 'Auditoría' en el admin." %}</li>
+      <li>{% trans "Utiliza los filtros para buscar actividades específicas." %}</li>
+      <li>{% trans "Revisa los detalles de cada operación registrada." %}</li>
+    </ol>
+  </div>
+
+  <div class="section" id="configuracion">
+    <h2>{% trans "Configuración del Sistema" %}</h2>
     <p>
-      Este manual cubre las funciones principales de la aplicación. Si tienes
-      alguna pregunta o necesitas más información, no dudes en contactar al
-      equipo de soporte.
+      {% trans "Para el correcto funcionamiento del sistema, asegúrate de que las siguientes configuraciones estén establecidas:" %}
     </p>
-  </body>
-</html>
+    <h3>{% trans "Variables de Entorno" %}</h3>
+    <p>{% trans "En tu archivo" %} <code>.env</code>:</p>
+    <ul>
+      <li><code>SECRET_KEY</code>: {% trans "La clave secreta de Django." %}</li>
+      <li><code>DEBUG</code>: {% trans "Define si el modo debug está activado" %} (<code>True</code> {% trans "o" %} <code>False</code>).</li>
+      <li><code>ALLOWED_HOSTS</code>: {% trans "Lista de hosts permitidos." %}</li>
+      <li><code>DATABASE_URL</code>: {% trans "URL de conexión a la base de datos." %}</li>
+      <li><code>CURRENCY_API_KEY</code>: {% trans "Clave para el servicio de conversión de monedas." %}</li>
+    </ul>
+
+    <h3>{% trans "Configuraciones Especiales" %}</h3>
+    <ul>
+      <li><strong>{% trans "Multiidioma:" %}</strong> {% trans "El sistema soporta español, inglés, francés, alemán y portugués." %}</li>
+      <li><strong>{% trans "Conversión de Monedas:" %}</strong> {% trans "Integración con APIs para conversión automática." %}</li>
+      <li><strong>{% trans "IA:" %}</strong> {% trans "Categorización automática de gastos usando inteligencia artificial." %}</li>
+    </ul>
+  </div>
+
+  <div class="section" id="soporte-tecnico">
+    <h2>{% trans "Soporte Técnico" %}</h2>
+    <p>
+      {% trans "Si necesitas ayuda adicional con el sistema, puedes:" %}
+    </p>
+    
+    <ul>
+      <li>{% trans "Contactar al administrador del sistema" %}</li>
+      <li>{% trans "Revisar los logs de error en la sección de auditoría" %}</li>
+      <li>{% trans "Consultar la documentación técnica en la carpeta Docs/" %}</li>
+    </ul>
+
+    <div class="highlight-box">
+      <h4>{% trans "Documentación Adicional" %}</h4>
+      <ul>
+        <li><strong>AI_INVOICE_MODULE.md:</strong> {% trans "Información sobre el módulo de IA" %}</li>
+        <li><strong>DEPLOYMENT_GUIDE.md:</strong> {% trans "Guía de despliegue" %}</li>
+        <li><strong>ROLES_GUIDE.md:</strong> {% trans "Gestión de roles y permisos" %}</li>
+        <li><strong>TRANSLATIONS_GUIDE.md:</strong> {% trans "Guía de traducciones" %}</li>
+      </ul>
+    </div>
+
+    <div class="warning-box">
+      <strong>{% trans "Importante:" %}</strong> {% trans "Mantén siempre respaldos regulares de tu base de datos y archivos del sistema." %}
+    </div>
+  </div>
+
+  <hr style="margin: 40px 0;">
+
+  <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+    <p style="margin: 0; color: #6c757d;">
+      <strong>{% trans "Sistema de Gestión Agrícola de la Costa San Luis S.P.R. de R.L." %}</strong><br>
+      {% trans "Este manual cubre las funciones principales de la aplicación. Para más información, consulta la documentación técnica." %}
+    </p>
+  </div>
+</div>
+{% endblock %}
