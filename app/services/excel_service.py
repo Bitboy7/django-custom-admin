@@ -44,13 +44,14 @@ class ExcelReportService:
         return dt
     
     def convert_money_to_float(self, value):
-        """Convierte un objeto Money a float de manera segura."""
+        """Convierte un objeto Money a float de manera segura con mejor formato."""
         if value is None:
             return 0.0
         elif hasattr(value, 'amount'):
-            return float(value.amount)
+            # Convertir el Decimal a float con 2 decimales
+            return round(float(value.amount), 2)
         else:
-            return float(value)
+            return round(float(value), 2)
     
     def create_full_report(self):
         """Crea un reporte completo con todas las hojas"""

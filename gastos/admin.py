@@ -7,6 +7,7 @@ from unfold.contrib.import_export.forms import ExportForm, ImportForm, Selectabl
 from .models import CatGastos, Banco, Cuenta, Gastos, Compra, SaldoMensual
 from django.utils.html import format_html
 from catalogo.models import Sucursal
+from app.widgets import MoneyWidget
 
 class CatGastoResource(resources.ModelResource):
     fields = ('id', 'nombre', 'fecha_registro')
@@ -71,22 +72,28 @@ class CuentaAdmin(ModelAdmin):
 class GastosResource(resources.ModelResource):
     sucursal = fields.Field(
         column_name='sucursal',
-        attribute='sucursal',
+        attribute='id_sucursal',
         widget=ForeignKeyWidget(Sucursal, field='nombre'))
     
     categoria = fields.Field(
         column_name='categoria',
-        attribute='categoria',
+        attribute='id_cat_gastos',
         widget=ForeignKeyWidget(CatGastos, field='nombre'))
     
     cuenta = fields.Field(
         column_name='cuenta',
-        attribute='cuenta',
+        attribute='id_cuenta_banco',
         widget=ForeignKeyWidget(Cuenta, field='numero_cuenta'))
+    
+    monto = fields.Field(
+        column_name='monto',
+        attribute='monto',
+        widget=MoneyWidget())
     
     class Meta:
         model = Gastos
         fields = ('id', 'sucursal', 'categoria', 'cuenta', 'monto', 'descripcion', 'fecha')
+        import_id_fields = ('id',)
 
     def dehydrate_categoria(self, gasto):
         return gasto.id_cat_gastos.nombre
@@ -133,9 +140,20 @@ class ComprasResource(resources.ModelResource):
         attribute='cuenta',
         widget=ForeignKeyWidget(Cuenta, field='numero_cuenta'))
     
+    precio_unitario = fields.Field(
+        column_name='precio_unitario',
+        attribute='precio_unitario',
+        widget=MoneyWidget())
+    
+    monto_total = fields.Field(
+        column_name='monto_total',
+        attribute='monto_total',
+        widget=MoneyWidget())
+    
     class Meta:
         model = Compra
         fields = ('id', 'fecha_compra', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total', 'fecha_registro', 'cuenta', 'tipo_pago')
+        import_id_fields = ('id',)
         
     def dehydrate_productor(self, compra):
         return compra.productor.nombre_completo
@@ -144,7 +162,7 @@ class ComprasResource(resources.ModelResource):
         return compra.producto.nombre
     
     def dehydrate_cuenta(self, compra):
-        return compra.cuenta.numero_cuenta
+        return compra.cuenta.numero_cuenta if compra.cuenta else ""
     
 @admin.register(Compra)
 class ComprasAdmin(ModelAdmin, ImportExportModelAdmin):
@@ -176,9 +194,20 @@ class SaldoMensualResource(resources.ModelResource):
             attribute='cuenta',
             widget=ForeignKeyWidget(Cuenta, field='numero_cuenta'))
     
+    saldo_inicial = fields.Field(
+        column_name='saldo_inicial',
+        attribute='saldo_inicial',
+        widget=MoneyWidget())
+    
+    saldo_final = fields.Field(
+        column_name='saldo_final',
+        attribute='saldo_final',
+        widget=MoneyWidget())
+    
     class Meta:
         model = SaldoMensual
         fields = ('id', 'cuenta', 'año', 'mes', 'saldo_inicial', 'saldo_final', 'fecha_registro', 'ultima_modificacion')
+        import_id_fields = ('id',)
         
     def dehydrate_cuenta(self, saldo):
         return saldo.cuenta.numero_cuenta

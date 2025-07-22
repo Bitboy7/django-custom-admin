@@ -8,6 +8,7 @@ from import_export.admin import ImportExportModelAdmin
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from unfold.contrib.import_export.forms import ExportForm, ImportForm, SelectableFieldsExportForm
+from app.widgets import MoneyWidget
 
 class ClienteResource(resources.ModelResource):
     pais = fields.Field(    
@@ -55,7 +56,7 @@ class AgenteAdmin(ModelAdmin):
 class VentasResource(resources.ModelResource):
     agente = fields.Field(
         column_name='agente',
-        attribute='agente',
+        attribute='agente_id',
         widget=ForeignKeyWidget(Agente, field='nombre'))
     
     producto = fields.Field(    
@@ -70,17 +71,23 @@ class VentasResource(resources.ModelResource):
     
     sucursal = fields.Field(
         column_name='sucursal',
-        attribute='sucursal',
+        attribute='sucursal_id',
         widget=ForeignKeyWidget(Sucursal, field='nombre'))
     
     cuenta = fields.Field(
         column_name='cuenta',
         attribute='cuenta',
         widget=ForeignKeyWidget(Cuenta, field='numero_cuenta'))
+    
+    monto = fields.Field(
+        column_name='monto',
+        attribute='monto',
+        widget=MoneyWidget())
 
     class Meta:
         model = Ventas
         fields = ('id', 'fecha_salida_manifiesto', 'agente', 'fecha_deposito', 'carga', 'PO', 'producto', 'cantidad', 'monto', 'descripcion', 'cliente', 'fecha_registro', 'sucursal','cuenta')
+        import_id_fields = ('id',)
         
     def dehydrate_agente(self, ventas):
         return ventas.agente_id.nombre
@@ -95,7 +102,7 @@ class VentasResource(resources.ModelResource):
         return ventas.sucursal_id.nombre
     
     def dehydrate_cuenta(self, ventas):
-        return ventas.cuenta.numero_cuenta
+        return ventas.cuenta.numero_cuenta if ventas.cuenta else ""
 
     def before_import_row(self, row, **kwargs):
         # Asigna un ID específico basado en un rango disponible
@@ -130,9 +137,15 @@ class AnticiposResource(resources.ModelResource):
         attribute='cuenta',
         widget=ForeignKeyWidget(Cuenta, field='numero_cuenta'))
     
+    monto = fields.Field(
+        column_name='monto',
+        attribute='monto',
+        widget=MoneyWidget())
+    
     class Meta:
         model = Anticipo
         fields = ('id', 'fecha', 'cliente', 'sucursal', 'cuenta', 'monto', 'descripcion','estado_anticipo')
+        import_id_fields = ('id',)
         
     def dehydrate_cliente(self, anticipo):
         return anticipo.cliente.nombre
@@ -141,7 +154,7 @@ class AnticiposResource(resources.ModelResource):
         return anticipo.sucursal.nombre
     
     def dehydrate_cuenta(self, anticipo):
-        return anticipo.cuenta.numero_cuenta
+        return anticipo.cuenta.numero_cuenta if anticipo.cuenta else ""
 
     def before_import_row(self, row, **kwargs):
         # Asigna un ID específico basado en un rango disponible
