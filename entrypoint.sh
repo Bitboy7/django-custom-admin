@@ -47,6 +47,21 @@ except Exception as e:
 echo "🔐 Configurando roles del sistema..."
 python manage.py setup_roles --create-roles || echo "Los roles ya están configurados o hubo un error"
 
+# Verificar si el usuario ya tiene el rol antes de asignarlo
+echo "🔍 Verificando si $DJANGO_SUPERUSER_NAME ya tiene el rol Administrador..."
+HAS_ROLE=$(python manage.py setup_roles --show-user-role "$DJANGO_SUPERUSER_NAME" 2>/dev/null | grep -c "Administrador")
+
+if [ "$HAS_ROLE" -eq 0 ]; then
+    echo "👨‍💼 Asignando rol Administrador a $DJANGO_SUPERUSER_NAME..."
+    python manage.py setup_roles --assign-role "$DJANGO_SUPERUSER_NAME" Administrador || echo "⚠️ Error al asignar rol o usuario no existe"
+else
+    echo "✅ $DJANGO_SUPERUSER_NAME ya tiene el rol Administrador"
+fi
+
+# Verificar el rol asignado
+echo "🔍 Verificando rol asignado..."
+python manage.py setup_roles --show-user-role "$DJANGO_SUPERUSER_NAME" || echo "⚠️ Error al verificar rol de usuario"
+
 # Recopilar archivos estáticos
 echo "📦 Recopilando archivos estáticos..."
 python manage.py collectstatic --noinput --clear || echo "⚠️ Error al recopilar estáticos, continuando..."
