@@ -10,6 +10,7 @@ import json
 import os
 import requests
 import logging
+import calendar
 
 from .services.excel_service import ExcelReportService
 from .services.balance_service import BalanceAnalysisService
@@ -225,6 +226,9 @@ def dashboard_callback(request, context):
         'total_users': total_users,
         'last_login': request.user.last_login,
         'last_update': now.date(),
+        'current_year': current_year,
+        'current_month_name': calendar.month_name[current_month],
+        'total_categorias': len(gastos_categorias_labels)
     })
     
     return context

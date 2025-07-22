@@ -13,6 +13,10 @@
 {{ block.super }}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css" />
 <link rel="stylesheet" href="{% static 'css/dashboard-custom.css' %}">
+{% endblock %} 
+
+{% block styles %}
+{{ block.super }}
 <style>
   /* Toast Styles */
   .toast-container {
@@ -94,7 +98,8 @@
     color: white;
   }
 </style>
-{% endblock %} {% block content %}
+{% endblock %} 
+{% block content %}
 <div class="space-y-6">
   <!-- Header Section -->
   <div
@@ -202,16 +207,33 @@
         <i class="fas fa-chart-pie mr-2 text-blue-500"></i>
         {% trans "Gastos por Categoría" %}
       </h3>
-      <canvas id="gastosChart" height="200"></canvas>
+      <p class="text-sm text mb-4">
+        {% trans "Distribución de gastos de" %} {{ current_month_name }} {{ current_year }}. 
+        {% if total_categorias > 0 %}
+          {% trans "Mostrando" %} {{ total_categorias }} {% trans "categorías con mayor gasto" %}.
+        {% else %}
+          {% trans "No hay datos de gastos para este mes" %}.
+        {% endif %}
+      </p>
+      <canvas id="gastosChart" height="250"></canvas>
+      <div class="mt-2 text-xs text-gray-500 text-center">
+        {% trans "Haga clic en las etiquetas para mostrar/ocultar categorías" %}
+      </div>
     </div>
 
     <!-- Gráfico de tendencias -->
     <div class="chart-container">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4">
+      <h3 class="text-lg font-semibold mb-4">
         <i class="fas fa-chart-line mr-2 text-green-500"></i>
         {% trans "Tendencias Mensuales" %}
       </h3>
-      <canvas id="tendenciasChart" height="200"></canvas>
+      <p class="text-sm mb-4">
+        {% trans "Comparación de gastos vs ventas en los últimos 6 meses. Permite identificar patrones y tendencias financieras." %}
+      </p>
+      <canvas id="tendenciasChart" height="250"></canvas>
+      <div class="mt-2 text-xs  text-center">
+        {% trans "Montos en MXN (Pesos Mexicanos) - Período:" %} {{ current_year }}
+      </div>
     </div>
   </div>
 
@@ -451,9 +473,10 @@
           const darkMode = isDarkMode();
           return {
               chartBg: darkMode ? '#1f2937' : '#ffffff',
-              textColor: darkMode ? '#f9fafb' : '#1f2937',
+              textColor: darkMode ? '#6b7280' : '#6b7280',
               gridColor: darkMode ? '#374151' : '#e5e7eb',
-              borderColor: darkMode ? '#6b7280' : '#ffffff'
+              borderColor: darkMode ? '#6b7280' : '#d1d5db',
+              legendTextColor: darkMode ? '#6b7280' : '#374151'
           };
       }
 
@@ -468,10 +491,12 @@
               datasets: [{
                   data: {{ gastos_categorias_data|safe }},
                   backgroundColor: [
-                      '#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff', '#ff9f40'
+                      '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
+                      '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384', '#C9CBCF'
                   ],
                   borderWidth: 2,
-                  borderColor: colors.borderColor
+                  borderColor: colors.borderColor,
+                  hoverOffset: 4
               }]
           },
           options: {
@@ -481,8 +506,39 @@
                   legend: {
                       position: 'bottom',
                       labels: {
-                          color: colors.textColor
+                          color: colors.legendTextColor,
+                          padding: 15,
+                          usePointStyle: true,
+                          font: {
+                              size: 11
+                          },
+                          boxWidth: 12,
+                          boxHeight: 12
                       }
+                  },
+                  tooltip: {
+                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                      titleColor: '#fff',
+                      bodyColor: '#fff',
+                      borderColor: colors.textColor,
+                      borderWidth: 1,
+                      callbacks: {
+                          label: function(context) {
+                              const label = context.label || '';
+                              const value = context.parsed;
+                              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                              const percentage = ((value / total) * 100).toFixed(1);
+                              return `${label}: $${value.toLocaleString()} MXN (${percentage}%)`;
+                          }
+                      }
+                  }
+              },
+              layout: {
+                  padding: {
+                      top: 10,
+                      bottom: 40,
+                      left: 10,
+                      right: 10
                   }
               }
           }
@@ -495,50 +551,132 @@
           data: {
               labels: {{ meses_labels|safe }},
               datasets: [{
-                  label: 'Gastos',
+                  label: 'Gastos ($)',
                   data: {{ gastos_mensuales|safe }},
-                  borderColor: '#ff6384',
+                  borderColor: '#FF6384',
                   backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                  tension: 0.4
+                  tension: 0.4,
+                  fill: true,
+                  pointBackgroundColor: '#FF6384',
+                  pointBorderColor: '#fff',
+                  pointBorderWidth: 2,
+                  pointRadius: 4,
+                  pointHoverRadius: 6
               }, {
-                  label: 'Ventas',
+                  label: 'Ventas ($)',
                   data: {{ ventas_mensuales|safe }},
-                  borderColor: '#36a2eb',
+                  borderColor: '#36A2EB',
                   backgroundColor: 'rgba(54, 162, 235, 0.1)',
-                  tension: 0.4
+                  tension: 0.4,
+                  fill: true,
+                  pointBackgroundColor: '#36A2EB',
+                  pointBorderColor: '#fff',
+                  pointBorderWidth: 2,
+                  pointRadius: 4,
+                  pointHoverRadius: 6
               }]
           },
           options: {
               responsive: true,
               maintainAspectRatio: false,
+              interaction: {
+                  mode: 'index',
+                  intersect: false,
+              },
               plugins: {
                   legend: {
                       position: 'top',
                       labels: {
-                          color: colors.textColor
+                          color: colors.legendTextColor,
+                          usePointStyle: true,
+                          padding: 20,
+                          font: {
+                              size: 12,
+                              weight: 'bold'
+                          }
+                      }
+                  },
+                  tooltip: {
+                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                      titleColor: '#fff',
+                      bodyColor: '#fff',
+                      borderColor: colors.textColor,
+                      borderWidth: 1,
+                      callbacks: {
+                          title: function(context) {
+                              return `Mes: ${context[0].label}`;
+                          },
+                          label: function(context) {
+                              return `${context.dataset.label}: $${context.parsed.y.toLocaleString()} MXN`;
+                          },
+                          afterBody: function(context) {
+                              if (context.length === 2) {
+                                  const gastos = context[0].parsed.y;
+                                  const ventas = context[1].parsed.y;
+                                  const balance = ventas - gastos;
+                                  return [``, `Balance: $${balance.toLocaleString()} MXN`];
+                              }
+                              return [];
+                          }
                       }
                   }
               },
               scales: {
                   x: {
-                      ticks: {
-                          color: colors.textColor
+                      display: true,
+                      title: {
+                          display: true,
+                          text: 'Período (Mes/Año)',
+                          color: colors.textColor,
+                          font: {
+                              size: 12,
+                              weight: 'bold'
+                          }
                       },
-                      grid: {
-                          color: colors.gridColor
-                      }
-                  },
-                  y: {
-                      beginAtZero: true,
                       ticks: {
                           color: colors.textColor,
-                          callback: function(value) {
-                              return '$' + value.toLocaleString();
+                          font: {
+                              size: 11
                           }
                       },
                       grid: {
-                          color: colors.gridColor
+                          color: colors.gridColor,
+                          drawBorder: false
                       }
+                  },
+                  y: {
+                      display: true,
+                      title: {
+                          display: true,
+                          text: 'Monto en MXN (Pesos Mexicanos)',
+                          color: colors.textColor,
+                          font: {
+                              size: 12,
+                              weight: 'bold'
+                          }
+                      },
+                      beginAtZero: true,
+                      ticks: {
+                          color: colors.textColor,
+                          font: {
+                              size: 11
+                          },
+                          callback: function(value) {
+                              return '$' + value.toLocaleString() + ' MXN';
+                          }
+                      },
+                      grid: {
+                          color: colors.gridColor,
+                          drawBorder: false
+                      }
+                  }
+              },
+              layout: {
+                  padding: {
+                      top: 10,
+                      bottom: 20,
+                      left: 10,
+                      right: 10
                   }
               }
           }
@@ -549,11 +687,15 @@
           const newColors = getThemeColors();
           
           // Actualizar gráfico de gastos
-          gastosChart.options.plugins.legend.labels.color = newColors.textColor;
+          gastosChart.options.plugins.legend.labels.color = newColors.legendTextColor;
           gastosChart.data.datasets[0].borderColor = newColors.borderColor;
+          gastosChart.options.plugins.tooltip.borderColor = newColors.textColor;
           
           // Actualizar gráfico de tendencias
-          tendenciasChart.options.plugins.legend.labels.color = newColors.textColor;
+          tendenciasChart.options.plugins.legend.labels.color = newColors.legendTextColor;
+          tendenciasChart.options.plugins.tooltip.borderColor = newColors.textColor;
+          tendenciasChart.options.scales.x.title.color = newColors.textColor;
+          tendenciasChart.options.scales.y.title.color = newColors.textColor;
           tendenciasChart.options.scales.x.ticks.color = newColors.textColor;
           tendenciasChart.options.scales.y.ticks.color = newColors.textColor;
           tendenciasChart.options.scales.x.grid.color = newColors.gridColor;

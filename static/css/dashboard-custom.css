@@ -397,8 +397,16 @@ html.dark .metric-label {
   border-radius: 8px;
   padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  height: 300px;
+  min-height: 400px;
+  height: auto;
   transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-container canvas {
+  flex-grow: 1;
+  max-height: 300px;
 }
 
 [data-theme="dark"] .chart-container,
