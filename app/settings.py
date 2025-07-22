@@ -91,7 +91,7 @@ UNFOLD = {
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "SHOW_BACK_BUTTON": True,
-    # "SHOW_LANGUAGES": True,  # Habilitar selector de idiomas - Temporalmente deshabilitado
+    "SHOW_LANGUAGES": True,  # Habilitar selector de idiomas
     "ENVIRONMENT": "app.environment_callback",
     "DASHBOARD_CALLBACK": "app.views.dashboard_callback",
     "THEME": None,  # Permite cambio de tema
@@ -99,46 +99,25 @@ UNFOLD = {
         "image": lambda request: static("img/login-1.jpg") if static("img/login-bg.png") else None,
         
     },
-    # Configuración personalizada de idiomas - Temporalmente deshabilitado
-    # "LANGUAGES": {
-    #     "navigation": [
-    #         {
-    #             'bidi': False,
-    #             'code': 'es',
-    #             'name': 'Spanish',
-    #             'name_local': 'Español',
-    #             'name_translated': 'Español'
-    #         },
-    #         {
-    #             'bidi': False,
-    #             'code': 'en',
-    #             'name': 'English',
-    #             'name_local': 'English',
-    #             'name_translated': 'Inglés'
-    #         },
-    #         {
-    #             'bidi': False,
-    #             'code': 'fr',
-    #             'name': 'French',
-    #             'name_local': 'Français',
-    #             'name_translated': 'Francés'
-    #         },
-    #         {
-    #             'bidi': False,
-    #             'code': 'de',
-    #             'name': 'German',
-    #             'name_local': 'Deutsch',
-    #             'name_translated': 'Alemán'
-    #         },
-    #         {
-    #             'bidi': False,
-    #             'code': 'pt',
-    #             'name': 'Portuguese',
-    #             'name_local': 'Português',
-    #             'name_translated': 'Portugués'
-    #         },
-    #     ],
-    # },
+    # Configuración personalizada de idiomas
+    "LANGUAGES": {
+        "navigation": [
+            {
+                'bidi': False,
+                'code': 'es',
+                'name': 'Spanish',
+                'name_local': 'Español',
+                'name_translated': 'Español'
+            },
+            {
+                'bidi': False,
+                'code': 'en',
+                'name': 'English',
+                'name_local': 'English',
+                'name_translated': 'Inglés'
+            },
+        ],
+    },
     "COLORS": {
         "base": {
             "50": "248, 250, 252",   # Gris muy claro

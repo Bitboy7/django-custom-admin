@@ -1,0 +1,63 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-01-01 12:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: views.py
+msgid "Manual de Usuario"
+msgstr "User Manual"
+
+#: views.py
+msgid "Agrícola de la Costa San Luis"
+msgstr "Agricola de la Costa San Luis"
+
+#: views.py
+msgid "Sistema administrativo"
+msgstr "Administrative System"
+
+#: views.py
+msgid "Dashboard"
+msgstr "Dashboard"
+
+#: views.py
+msgid "Balances"
+msgstr "Balances"
+
+#: views.py
+msgid "Gastos"
+msgstr "Expenses"
+
+#: views.py
+msgid "Ventas"
+msgstr "Sales"
+
+#: views.py
+msgid "Compras"
+msgstr "Purchases"
+
+#: views.py
+msgid "Total"
+msgstr "Total"
+
+#: views.py
+msgid "Mes actual"
+msgstr "Current month"
+
+#: views.py
+msgid "Mes anterior"
+msgstr "Previous month"
