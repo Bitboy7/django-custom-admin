@@ -115,10 +115,10 @@ for (let i = 0; i < tablas.length; i++) {
     // Obtenemos el valor actual del campo como un número flotante
     let valor = parseFloat(campo.textContent);
 
-    // Formateamos el valor con el símbolo de moneda y sin redondeo
-    let valorConFormato = new Intl.NumberFormat("es-ES", {
+    // Formateamos el valor con el símbolo de moneda en formato estadounidense
+    let valorConFormato = new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "MXN",
+      currency: "USD",
       maximumFractionDigits: 16,
     }).format(valor);
 
@@ -228,10 +228,10 @@ if (tablas.length > 0) {
   celdaTotal.style.textAlign = "right";
   celdaTotal.style.fontWeight = "bold";
 
-  // Formatear y mostrar el total
-  const totalFormateado = new Intl.NumberFormat("es-ES", {
+  // Formatear y mostrar el total en formato estadounidense
+  const totalFormateado = new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "MXN",
+    currency: "USD",
   }).format(sumaTotal);
 
   celdaTotal.textContent = `Total: ${totalFormateado}`;

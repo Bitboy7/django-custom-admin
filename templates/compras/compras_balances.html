@@ -2,6 +2,7 @@
 {% load static %}
 {% load humanize %}
 {% load compras_tags %}
+{% load gastos_tags %}
 
 {% block title %}Análisis de Compras - Agrícola de la Costa{% endblock %}
 
@@ -258,7 +259,7 @@
           <i class="fas fa-money-bill-wave text-gray-600 mr-2 text-xl"></i> Total de Compras
         </div>
         <div class="text-3xl font-bold text-gray-700 tracking-tight mb-1 whitespace-nowrap overflow-hidden overflow-ellipsis">
-          ${{ total_compras|floatformat:2|intcomma }}
+          ${{ total_compras|us_currency:2 }}
         </div>
         <div class="text-sm text-gray-500 mt-2">Valor total de todas las compras</div>
       </div>
@@ -276,7 +277,7 @@
           <i class="fas fa-boxes text-slate-500 mr-2 text-xl"></i> Cantidad Total
         </div>
         <div class="text-3xl font-bold text-slate-600 tracking-tight mb-1 whitespace-nowrap overflow-hidden overflow-ellipsis">
-          {{ cantidad_total|floatformat:2|intcomma }}
+          {{ cantidad_total|us_number:2 }}
         </div>
         <div class="text-sm text-gray-500 mt-2">Unidades totales compradas</div>
       </div>
@@ -294,7 +295,7 @@
           <i class="fas fa-exchange-alt text-zinc-500 mr-2 text-xl"></i> Transacciones
         </div>
         <div class="text-3xl font-bold text-zinc-600 tracking-tight mb-1 whitespace-nowrap overflow-hidden overflow-ellipsis">
-          {{ numero_transacciones|intcomma }}
+          {{ numero_transacciones|us_number:0 }}
         </div>
         <div class="text-sm text-gray-500 mt-2">Número de operaciones</div>
       </div>
@@ -312,7 +313,7 @@
           <i class="fas fa-chart-line text-stone-500 mr-2 text-xl"></i> Compra Promedio
         </div>
         <div class="text-3xl font-bold text-stone-600 tracking-tight mb-1 whitespace-nowrap overflow-hidden overflow-ellipsis">
-          ${{ promedio_compra|floatformat:2|intcomma }}
+          ${{ promedio_compra|us_currency:2 }}
         </div>
         <div class="text-sm text-gray-500 mt-2">Valor promedio por compra</div>
       </div>
@@ -342,15 +343,15 @@
         <div class="space-y-4">
             <div class="flex justify-between items-center p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors duration-200">
                 <span class="text-gray-700 font-medium">Máxima:</span>
-                <span class="font-bold text-blue-700 text-xl">${{ compra_maxima|floatformat:2|intcomma }}</span>
+                <span class="font-bold text-blue-700 text-xl">${{ compra_maxima|us_currency:2 }}</span>
             </div>
             <div class="flex justify-between items-center p-3 rounded-lg bg-green-50 hover:bg-green-100 transition-colors duration-200">
                 <span class="text-gray-700 font-medium">Mínima:</span>
-                <span class="font-bold text-green-700 text-xl">${{ compra_minima|floatformat:2|intcomma }}</span>
+                <span class="font-bold text-green-700 text-xl">${{ compra_minima|us_currency:2 }}</span>
             </div>
             <div class="flex justify-between items-center p-3 rounded-lg bg-yellow-50 hover:bg-yellow-100 transition-colors duration-200">
                 <span class="text-gray-700 font-medium">Mediana:</span>
-                <span class="font-bold text-yellow-700 text-xl">${{ compra_mediana|floatformat:2|intcomma }}</span>
+                <span class="font-bold text-yellow-700 text-xl">${{ compra_mediana|us_currency:2 }}</span>
             </div>
         </div>
     </div>
@@ -376,7 +377,7 @@
                     {{ tipo.tipo_pago }}
                 </span>
                 <div>
-                    <span class="font-bold text-purple-700 text-lg block text-right">${{ tipo.total|floatformat:2|intcomma }}</span>
+                    <span class="font-bold text-purple-700 text-lg block text-right">${{ tipo.total|us_currency:2 }}</span>
                     <span class="text-sm text-gray-500 block text-right">({{ tipo.cantidad }} operaciones)</span>
                 </div>
             </li>
@@ -430,7 +431,7 @@
                   <span class="font-medium text-gray-800 hover:text-gray-600 transition-colors">{{ productor.productor__nombre_completo }}</span>
                 </div>
               </td>
-              <td class="py-4 px-4 text-right font-bold text-gray-700">${{ productor.total_compras|floatformat:2|intcomma }}</td>
+              <td class="py-4 px-4 text-right font-bold text-gray-700">${{ productor.total_compras|us_currency:2 }}</td>
               <td class="py-4 px-4 text-right">
                 <span class="bg-gray-100 text-gray-700 py-1 px-3 rounded-full text-sm font-medium">{{ productor.cantidad_compras }}</span>
               </td>
@@ -480,13 +481,13 @@
                 </div>
               </td>
               <td class="py-4 px-4 text-right">
-                <span class="font-bold text-gray-700 text-lg">${{ producto.total|floatformat:2|intcomma }}</span>
+                <span class="font-bold text-gray-700 text-lg">${{ producto.total|us_currency:2 }}</span>
               </td>
               <td class="py-4 px-4 text-right">
-                <span class="bg-gray-100 text-gray-700 py-1.5 px-3.5 rounded-full text-sm font-medium shadow-sm">{{ producto.cantidad|floatformat:2|intcomma }}</span>
+                <span class="bg-gray-100 text-gray-700 py-1.5 px-3.5 rounded-full text-sm font-medium shadow-sm">{{ producto.cantidad|us_number:2 }}</span>
               </td>
               <td class="py-4 px-4 text-right">
-                <span class="bg-gray-100 text-gray-700 py-1.5 px-3.5 rounded-full text-sm font-medium shadow-sm">${{ producto.precio_promedio|floatformat:2|intcomma }}</span>
+                <span class="bg-gray-100 text-gray-700 py-1.5 px-3.5 rounded-full text-sm font-medium shadow-sm">${{ producto.precio_promedio|us_currency:2 }}</span>
               </td>
             </tr>
             {% empty %}
@@ -569,13 +570,13 @@
                 {{ compra.mes|date:"m/Y" }}
               {% endif %}
             </td>
-            <td data-order="{{ compra.cantidad_total }}">{{ compra.cantidad_total|floatformat:2|intcomma }}</td>
-            <td data-order="{{ compra.precio_promedio }}">${{ compra.precio_promedio|floatformat:2|intcomma }}</td>
+            <td data-order="{{ compra.cantidad_total }}">{{ compra.cantidad_total|us_number:2 }}</td>
+            <td data-order="{{ compra.precio_promedio }}">${{ compra.precio_promedio|us_currency:2 }}</td>
             <td data-order="{{ compra.total_compras }}">
-              <span class="font-medium text-blue-600">${{ compra.total_compras|floatformat:2|intcomma }}</span>
+              <span class="font-medium text-blue-600">${{ compra.total_compras|us_currency:2 }}</span>
             </td>
             <td data-order="{{ compra.acumulado }}">
-              <span class="font-medium text-green-600">${{ compra.acumulado|floatformat:2|intcomma }}</span>
+              <span class="font-medium text-green-600">${{ compra.acumulado|us_currency:2 }}</span>
             </td>
           </tr>
           {% empty %}
@@ -601,7 +602,7 @@
         <tfoot>
           <tr class="bg-gradient-to-r from-blue-50 to-blue-100 font-semibold text-gray-800">
             <th colspan="7" class="px-4 py-3 text-right">Total:</th>
-            <th class="px-4 py-3 text-right text-blue-600">${{ total_compras|floatformat:2|intcomma }}</th>
+            <th class="px-4 py-3 text-right text-blue-600">${{ total_compras|us_currency:2 }}</th>
             <th class="px-4 py-3"></th>
           </tr>
         </tfoot>
@@ -877,9 +878,9 @@
                   label += ': ';
                 }
                 if (context.parsed.x !== null) {
-                  label += new Intl.NumberFormat('es-MX', {
+                  label += new Intl.NumberFormat('en-US', {
                     style: 'currency',
-                    currency: 'MXN'
+                    currency: 'USD'
                   }).format(context.parsed.x);
                 }
                 return label;

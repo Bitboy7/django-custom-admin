@@ -72,7 +72,9 @@ INSTALLED_APPS = [
 
 # Configuración completa para Django Unfold
 UNFOLD = {
-    "SITE_TITLE": "Agricola de la Costa San Luis - Sistema de administración",
+    "SITE_TITLE": "Sistema administrativo - Agricola de la Costa San Luis",
+    "SITE_NAME": "Agricola de la Costa San Luis",
+    "SITE_DESCRIPTION": "Sistema de gestión integral para Agricola de la Costa San Luis",
     "SITE_HEADER": "Agricola de la Costa San Luis",
     "SITE_SUBHEADER": "Sistema de gestión Integral",
     "SITE_URL": "/admin/",
@@ -94,7 +96,8 @@ UNFOLD = {
     "DASHBOARD_CALLBACK": "app.views.dashboard_callback",
     "THEME": None,  # Permite cambio de tema
     "LOGIN": {
-        "image": lambda request: static("img/login-bg.png") if static("img/login-bg.png") else None,
+        "image": lambda request: static("img/login-1.jpg") if static("img/login-bg.png") else None,
+        
     },
     # Configuración personalizada de idiomas - Temporalmente deshabilitado
     # "LANGUAGES": {
@@ -443,19 +446,24 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
-LANGUAGE_CODE = "es"  # Idioma por defecto
+LANGUAGE_CODE = "en-us"  # Idioma por defecto - US format for numbers
 
 TIME_ZONE = "America/Mexico_City"
 
-USE_I18N = True  # Habilitar internacionalización para que Unfold use español
+USE_I18N = True  # Habilitar internacionalización
 
 # Desactivamos el soporte de zona horaria para evitar errores con MySQL
 USE_TZ = False
 
 # Idiomas disponibles en la aplicación
 LANGUAGES = [
+    ('en', 'English'),
     ('es', 'Español'),
 ]
+
+# Configuración de formato de números (US format)
+DECIMAL_SEPARATOR = '.'
+THOUSAND_SEPARATOR = ','
 
 # Directorio donde se almacenan los archivos de traducción
 LOCALE_PATHS = [
@@ -595,7 +603,12 @@ CURRENCY_CHOICES = [
 OPEN_EXCHANGE_RATES_APP_ID = os.getenv('OPEN_EXCHANGE_RATES_APP_ID')
 #FIXER_ACCESS_KEY = os.getenv('FIXER_ACCESS_KEY')
 
-# Configuración de formato de moneda
+# Configuración de formato de moneda - US Format
 USE_L10N = True
 USE_THOUSAND_SEPARATOR = True
+
+# Formato de números estadounidense
+NUMBER_GROUPING = 3
+DECIMAL_SEPARATOR = '.'
+THOUSAND_SEPARATOR = ','
 

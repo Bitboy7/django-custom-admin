@@ -1,4 +1,5 @@
 {% extends "_base.html" %}
+{% load gastos_tags %}
 
 {% block content %}
 <div class="min-h-screen bg-gradient-to-br from-slate-50 to-green-50 py-8">
@@ -50,7 +51,7 @@
                                 </div>
                                 <div class="ml-3">
                                     <dt class="text-sm font-medium text-slate-500">Monto Detectado</dt>
-                                    <dd class="text-lg font-semibold text-green-600">${{ gasto_form.monto.value|floatformat:2 }}</dd>
+                                    <dd class="text-lg font-semibold text-green-600">${{ gasto_form.monto.value|us_currency:2 }}</dd>
                                 </div>
                             </div>
                             {% endif %}

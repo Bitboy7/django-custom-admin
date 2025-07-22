@@ -41,7 +41,7 @@
                     </div>
                     <div class="text-center">
                         <p class="text-sm font-medium text-slate-500">Saldo Final</p>
-                        <p class="text-lg font-semibold text-green-600">${{ estado_cuenta.saldo_final|default:"0.00"|floatformat:2 }}</p>
+                        <p class="text-lg font-semibold text-green-600">${{ estado_cuenta.saldo_final|default:"0.00"|us_currency:2 }}</p>
                     </div>
                 </div>
             </div>
@@ -155,7 +155,7 @@
                                             </svg>
                                         {% endif %}
                                         <span class="text-lg font-bold {% if movimiento.monto < 0 %}text-red-600{% else %}text-green-600{% endif %}">
-                                            ${{ movimiento.monto|floatformat:2 }}
+                                            ${{ movimiento.monto|us_currency:2 }}
                                         </span>
                                     </div>
                                     <input type="hidden" name="movimiento_{{ forloop.counter0 }}_monto" value="{{ movimiento.monto }}">

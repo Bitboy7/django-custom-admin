@@ -2,6 +2,7 @@
 
 {% load static %}
 {% load humanize %}
+{% load gastos_tags %}
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css">
 <link rel="stylesheet" href="//cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
@@ -152,9 +153,6 @@
         <div class="flex flex-wrap gap-4 mb-4">
         
           <div class="flex-1 min-w-[200px] group">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mb-2">
-              <i class="fas fa-university mr-1"></i> Cuenta
-            </span>
 
             <label for="cuenta_id" class="block font-medium mb-2 group-hover:text-blue-300 transition-colors duration-200">Seleccione la Cuenta:</label>
             <div class="relative">
@@ -172,9 +170,6 @@
           </div>
       
           <div class="flex-1 min-w-[200px] group">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mb-2">
-              <i class="fas fa-calendar-alt mr-1"></i> Año
-            </span>
             <label for="year" class="block font-medium mb-2 group-hover:text-indigo-300 transition-colors duration-200">Seleccione el Año:</label>
             <div class="relative">
               <select name="year" id="year" 
@@ -190,9 +185,7 @@
           </div>
       
           <div class="flex-1 min-w-[200px] group">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800 mb-2">
-              <i class="fas fa-calendar-alt mr-1"></i> Mes
-            </span>
+  
             <label for="month" class="block font-medium mb-2 group-hover:text-pink-300 transition-colors duration-200">Seleccione el Mes:</label>
             <div class="relative">
               <select name="month" id="month" 
@@ -209,9 +202,6 @@
           </div>
       
           <div class="flex-1 min-w-[200px] group">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mb-2">
-              <i class="fas fa-clock mr-1"></i> Periodo
-            </span>
             <label for="periodo" class="block font-medium mb-2 group-hover:text-red-300 transition-colors duration-200">Seleccione el Periodo:</label>
             <div class="relative">
               <select name="periodo" id="periodo" 
@@ -286,17 +276,17 @@
       <div class="lg:col-span-2">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
           <!-- Acumulado total -->
-          <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-lg p-5 border border-blue-200 transform transition-transform duration-300 hover:scale-[1.02] overflow-hidden relative">
+          <div class="bg-gradient-to-br from-blue-50 to-white rounded-lg shadow-lg p-5 border border-blue-200 transform transition-transform duration-300 hover:scale-[1.02] overflow-hidden relative">
             <div class="absolute top-0 right-0 -mt-4 -mr-4 bg-blue-500 rounded-full w-20 h-20 opacity-20"></div>
             <div class="flex justify-between items-center">
               <h2 class="text-xl font-semibold text-gray-800 flex items-center">
-                <i class="fas fa-money-bill-wave text-blue-600 mr-2 text-3xl"></i>
+                <i class="fas fa-money-bill-wave text-blue-900 mr-2 text-3xl"></i>
                 <span>Acumulado total</span>
               </h2>
-              <span class="text-3xl font-bold text-blue-600">${{ total_gastos|floatformat:2|intcomma }}</span>
+              <span class="text-3xl font-bold text-blue-900">${{ total_gastos|us_currency:2 }}</span>
             </div>
             <div class="mt-4 h-1 w-full bg-gray-200 rounded-full overflow-hidden">
-              <div class="bg-blue-500 h-1 rounded-full" style="width: 100%"></div>
+              <div class="bg-blue-900 h-1 rounded-full" style="width: 100%"></div>
             </div>
           </div>
 
@@ -308,25 +298,25 @@
                 <i class="fas fa-calculator text-emerald-600 mr-2 text-3xl"></i>
                 <span>Promedio</span>
               </h2>
-              <span class="text-3xl font-bold text-emerald-600">${{ promedio_gastos|floatformat:2|intcomma }}</span>
+              <span class="text-3xl font-bold text-emerald-600">${{ promedio_gastos|us_currency:2 }}</span>
             </div>
             <div class="mt-4 h-1 w-full bg-gray-200 rounded-full overflow-hidden">
-              <div class="bg-emerald-500 h-1 rounded-full" style="width: {{ promedio_gastos|default:0|floatformat:0|intcomma }}%"></div>
+              <div class="bg-emerald-500 h-1 rounded-full" style="width: {{ promedio_gastos|default:0|us_number:0 }}%"></div>
             </div>
           </div>
           
           <!-- Transacciones -->
-          <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow-lg p-5 border border-purple-200 transform transition-transform duration-300 hover:scale-[1.02] overflow-hidden relative">
-            <div class="absolute top-0 right-0 -mt-4 -mr-4 bg-purple-500 rounded-full w-20 h-20 opacity-20"></div>
+          <div class="bg-gradient-to-br from-purple-50 to-white rounded-lg shadow-lg p-5 border border-purple-200 transform transition-transform duration-300 hover:scale-[1.02] overflow-hidden relative">
+            <div class="absolute top-0 right-0 -mt-4 -mr-4 bg-blue-500 rounded-full w-20 h-20 opacity-20"></div>
             <div class="flex justify-between items-center">
               <h2 class="text-xl font-semibold text-gray-800 flex items-center">
-                <i class="fas fa-exchange-alt text-purple-600 mr-2 text-3xl"></i>
+                <i class="fas fa-exchange-alt text-blue-900 mr-2 text-3xl"></i>
                 <span>Transacciones</span>
               </h2>
-              <span class="text-3xl font-bold text-purple-600">{{ numero_transacciones }}</span>
+              <span class="text-3xl font-bold text-blue-900">{{ numero_transacciones }}</span>
             </div>
             <div class="mt-4 h-1 w-full bg-gray-200 rounded-full overflow-hidden">
-              <div class="bg-purple-500 h-1 rounded-full" style="width: {{ numero_transacciones|default:0|floatformat:0|intcomma }}%"></div>
+              <div class="bg-blue-900 h-1 rounded-full" style="width: {{ numero_transacciones|default:0|us_number:0 }}%"></div>
             </div>
           </div>
           
@@ -338,7 +328,7 @@
                 <i class="fas fa-arrow-up text-red-600 mr-2 text-3xl"></i>
                 <span>Máximo</span>
               </h2>
-              <span class="text-3xl font-bold text-red-600">${{ gasto_maximo|floatformat:2|intcomma }}</span>
+              <span class="text-3xl font-bold text-red-600">${{ gasto_maximo|us_currency:2 }}</span>
             </div>
             <p class="text-gray-600 mt-2 italic">Categoría: {{ categoria_gasto_maximo }}</p>
           </div>
@@ -366,7 +356,7 @@
             <i class="fas fa-arrow-down text-green-600 mr-2 text-3xl"></i>
             <span>Mínimo</span>
           </h2>
-          <span class="text-3xl font-bold text-green-600">${{ gasto_minimo|floatformat:2|intcomma }}</span>
+          <span class="text-3xl font-bold text-green-600">${{ gasto_minimo|us_currency:2 }}</span>
         </div>
         <p class="text-gray-600 mt-2 italic">Categoría: {{ categoria_gasto_minimo }}</p>
       </div>
@@ -379,7 +369,7 @@
             <i class="fas fa-equals text-amber-600 mr-2 text-3xl"></i>
             <span>Media</span>
           </h2>
-          <span class="text-3xl font-bold text-amber-600">${{ gasto_mediano|floatformat:2|intcomma }}</span>
+          <span class="text-3xl font-bold text-amber-600">${{ gasto_mediano|us_currency:2 }}</span>
         </div>
       </div>
 
@@ -439,10 +429,10 @@
                 {% endif %}
               </td>
               <td class="px-4 py-3 text-right font-medium text-blue-600" data-order="{{ balance.total_gastos }}">
-                ${{ balance.total_gastos|floatformat:2 }}
+                ${{ balance.total_gastos|us_currency:2 }}
               </td>
               <td class="px-4 py-3 text-right font-medium text-green-600" data-order="{{ balance.acumulado }}">
-                ${{ balance.acumulado|floatformat:2 }}
+                ${{ balance.acumulado|us_currency:2 }}
               </td>
             </tr>
             {% endfor %}
@@ -450,7 +440,7 @@
           <tfoot>
             <tr class="bg-gradient-to-r from-blue-50 to-blue-100 font-semibold text-gray-800">
               <th colspan="7" class="px-4 py-3 text-right">Total:</th>
-              <th class="px-4 py-3 text-right text-blue-600">${{ total_gastos|floatformat:2 }}</th>
+              <th class="px-4 py-3 text-right text-blue-600">${{ total_gastos|us_currency:2 }}</th>
               <th class="px-4 py-3"></th>
             </tr>
           </tfoot>
@@ -725,7 +715,7 @@
               tooltip: {
                 callbacks: {
                   label: function(context) {
-                    return '$' + new Intl.NumberFormat('es-MX').format(context.parsed.x.toFixed(2));
+                    return '$' + new Intl.NumberFormat('en-US').format(context.parsed.x.toFixed(2));
                   }
                 }
               }
