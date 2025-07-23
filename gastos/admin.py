@@ -29,8 +29,17 @@ class CatGastosAdmin(ModelAdmin, ImportExportModelAdmin):
         }),
     )
 
+
+class BancoResource(resources.ModelResource):
+    class Meta:
+        model = Banco
+        fields = ('id', 'nombre', 'telefono', 'direccion', 'logotipo', 'fecha_registro')
+
 @admin.register(Banco)
-class BancoAdmin(ModelAdmin):
+class BancoAdmin(ModelAdmin, ImportExportModelAdmin):
+    resource_class = BancoResource
+    import_form_class = ImportForm
+    export_form_class = ExportForm
     list_display = ('id', 'nombre', 'telefono', 'direccion', 'fecha_registro', 'mostrar_logotipo')
     search_fields = ('nombre', 'telefono', 'direccion')
     list_filter = ('nombre', 'telefono', 'direccion', 'fecha_registro')
@@ -49,8 +58,17 @@ class BancoAdmin(ModelAdmin):
         })
     )
 
+
+class CuentaResource(resources.ModelResource):
+    class Meta:
+        model = Cuenta
+        fields = ('id', 'id_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente', 'rfc', 'clabe', 'fecha_registro')
+
 @admin.register(Cuenta)
-class CuentaAdmin(ModelAdmin):
+class CuentaAdmin(ModelAdmin, ImportExportModelAdmin):
+    resource_class = CuentaResource
+    import_form_class = ImportForm
+    export_form_class = ExportForm
     list_display = ('id', 'mostrar_logotipo_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente', 'rfc', 'clabe')
     search_fields = ('id_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente',)
     list_filter = ('id_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente', 'rfc')

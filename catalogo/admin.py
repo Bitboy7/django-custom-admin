@@ -7,8 +7,17 @@ from unfold.contrib.import_export.forms import ExportForm, ImportForm, Selectabl
 from .models import Productor, Estado, Sucursal, Pais, Producto
 from django.utils.html import format_html
 
+
+class PaisResource(resources.ModelResource):
+    class Meta:
+        model = Pais
+        fields = ('id', 'siglas', 'nombre', 'moneda', 'bandera')
+
 @admin.register(Pais)
-class PaisAdmin(ModelAdmin):
+class PaisAdmin(ModelAdmin, ImportExportModelAdmin):
+    resource_class = PaisResource
+    import_form_class = ImportForm
+    export_form_class = ExportForm
     list_display = ('id', 'siglas', 'nombre', 'moneda', 'mostrar_bandera')
     search_fields = ('nombre', 'siglas')    
     fieldsets = (
@@ -22,18 +31,18 @@ class PaisAdmin(ModelAdmin):
     )
     
 class ProductorResource(resources.ModelResource):
-    sucursal = fields.Field(
-        column_name='sucursal',
-        attribute='sucursal',
+    id_sucursal = fields.Field(
+        column_name='id_sucursal',
+        attribute='id_sucursal',
         widget=ForeignKeyWidget(Sucursal, field='nombre'))
-    
+
     class Meta:
         model = Productor
-        fields = ('id', 'nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'sucursal', 'fecha_creacion', 'nacimiento', 'nacionalidad')
-        
-    def dehydrate_sucursal(self, productor):
-        return productor.sucursal.nombre   
-    
+        fields = ('id', 'nombre_completo', 'num_cuenta', 'clabe_interbancaria', 'telefono', 'correo', 'id_sucursal', 'fecha_creacion', 'nacimiento', 'nacionalidad')
+
+    def dehydrate_id_sucursal(self, productor):
+        return productor.id_sucursal.nombre
+
     def before_import_row(self, row, **kwargs):
         # Asigna un ID específico basado en un rango disponible
         if not row['id']:
@@ -74,8 +83,17 @@ class ProductorAdmin(ModelAdmin, ImportExportModelAdmin):
         return obj.nacionalidad.mostrar_bandera()
     mostrar_bandera_nacionalidad.short_description = 'Nacionalidad'
     
+
+class EstadoResource(resources.ModelResource):
+    class Meta:
+        model = Estado
+        fields = ('id', 'nombre', 'pais')
+
 @admin.register(Estado)
-class EstadoAdmin(ModelAdmin):
+class EstadoAdmin(ModelAdmin, ImportExportModelAdmin):
+    resource_class = EstadoResource
+    import_form_class = ImportForm
+    export_form_class = ExportForm
     list_display = ('id', 'nombre', 'mostrar_bandera_pais')
     search_fields = ('nombre',)
     list_filter = ('nombre',)
@@ -89,8 +107,17 @@ class EstadoAdmin(ModelAdmin):
         return obj.pais.mostrar_bandera()
     mostrar_bandera_pais.short_description = 'Bandera del País'
 
+
+class SucursalResource(resources.ModelResource):
+    class Meta:
+        model = Sucursal
+        fields = ('id', 'nombre', 'direccion', 'telefono', 'id_estado')
+
 @admin.register(Sucursal)
-class SucursalAdmin(ModelAdmin):
+class SucursalAdmin(ModelAdmin, ImportExportModelAdmin):
+    resource_class = SucursalResource
+    import_form_class = ImportForm
+    export_form_class = ExportForm
     list_display = ('id', 'nombre', 'direccion', 'telefono', 'id_estado')
     search_fields = ('nombre', 'direccion', 'telefono')
     list_filter = ('id_estado',)
@@ -100,8 +127,17 @@ class SucursalAdmin(ModelAdmin):
         }),
     )
 
+
+class ProductoResource(resources.ModelResource):
+    class Meta:
+        model = Producto
+        fields = ('id', 'nombre', 'variedad', 'precio_unitario', 'disponible', 'descripcion', 'imagen')
+
 @admin.register(Producto)
-class ProductoAdmin(ModelAdmin):
+class ProductoAdmin(ModelAdmin, ImportExportModelAdmin):
+    resource_class = ProductoResource
+    import_form_class = ImportForm
+    export_form_class = ExportForm
     list_display = ('id', 'nombre', 'variedad', 'precio_unitario', 'disponible', 'mostrar_imagen', 'descripcion')
     search_fields = ('nombre', 'variedad', 'descripcion')
     list_filter = ('disponible', 'variedad')
