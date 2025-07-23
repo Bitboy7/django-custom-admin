@@ -332,7 +332,6 @@ UNFOLD = {
     },
     # CSS personalizado para mejorar la apariencia de los botones import/export y widgets de dinero
     "STYLES": [
-        lambda request: static("css/custom.css"),
         lambda request: static("css/money_widget.css"),
     ],
     # JavaScript personalizado para reposicionar botones import/export y mejorar widgets de dinero
