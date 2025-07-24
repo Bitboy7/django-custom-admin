@@ -156,7 +156,7 @@ class ComprasResource(resources.ModelResource):
     cuenta = fields.Field(
         column_name='cuenta',
         attribute='cuenta',
-        widget=ForeignKeyWidget(Cuenta, field='id'))
+        widget=ForeignKeyWidget(Cuenta, field='numero_cuenta'))
     
     precio_unitario = fields.Field(
         column_name='precio_unitario',
