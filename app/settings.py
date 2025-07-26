@@ -170,7 +170,7 @@ UNFOLD = {
                         "permission": lambda request: request.user.is_authenticated,
                     },
                     {
-                        "title": "Balances",
+                        "title": "Acumulados",
                         "icon": "analytics",
                         "link": reverse_lazy("balances"),
                         "permission": lambda request: request.user.is_authenticated,
