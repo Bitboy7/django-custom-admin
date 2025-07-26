@@ -336,13 +336,22 @@ def compras_balances_view(request):
     Vista para análisis de compras que permite filtrar y visualizar datos
     de compras por diferentes periodos, productores, productos, y métodos de pago.
     """
-    # Obtener parámetros de filtrado de la solicitud
-    cuenta_id = request.GET.get('cuenta_id', '')
-    productor_id = request.GET.get('productor_id', '')
-    producto_id = request.GET.get('producto_id', '')
+    # Función para limpiar parámetros numéricos
+    def clean_int_param(param):
+        if param is not None and param != '':
+            try:
+                return int(str(param).replace(',', '').replace(' ', ''))
+            except ValueError:
+                return None
+        return None
+
+    # Obtener parámetros de filtrado de la solicitud y limpiar los numéricos
+    cuenta_id = clean_int_param(request.GET.get('cuenta_id', ''))
+    productor_id = clean_int_param(request.GET.get('productor_id', ''))
+    producto_id = clean_int_param(request.GET.get('producto_id', ''))
     tipo_pago = request.GET.get('tipo_pago', '')
-    year = request.GET.get('year', datetime.now().year)
-    month = request.GET.get('month', datetime.now().month)
+    year = clean_int_param(request.GET.get('year', datetime.now().year)) or datetime.now().year
+    month = clean_int_param(request.GET.get('month', datetime.now().month)) or datetime.now().month
     periodo = request.GET.get('periodo', 'diario')  # 'diario', 'semanal' o 'mensual'
     dia = request.GET.get('dia', datetime.now().strftime('%Y-%m-%d'))
     fecha_inicio = request.GET.get('fecha_inicio', '')
