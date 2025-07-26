@@ -562,9 +562,17 @@
               {% if selected_periodo == 'diario' %}
                 {{ compra.fecha_compra|date:"d/m/Y" }}
               {% elif selected_periodo == 'semanal' %}
-                {{ compra.semana|date:"d/m/Y" }}
+                {% if compra.semana %}
+                  {{ compra.semana|date:"d/m/Y" }}
+                {% else %}
+                  {{ compra.fecha_compra|date:"d/m/Y" }}
+                {% endif %}
               {% elif selected_periodo == 'mensual' %}
-                {{ compra.mes|date:"m/Y" }}
+                {% if compra.mes %}
+                  {{ compra.mes|date:"m/Y" }}
+                {% else %}
+                  {{ compra.fecha_compra|date:"m/Y" }}
+                {% endif %}
               {% endif %}
             </td>
             <td data-order="{{ compra.cantidad_total }}">{{ compra.cantidad_total|us_number:2 }}</td>

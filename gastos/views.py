@@ -351,7 +351,7 @@ def compras_balances_view(request):
     producto_id = clean_int_param(request.GET.get('producto_id', ''))
     tipo_pago = request.GET.get('tipo_pago', '')
     year = clean_int_param(request.GET.get('year', datetime.now().year)) or datetime.now().year
-    month = clean_int_param(request.GET.get('month', datetime.now().month)) or datetime.now().month
+    month = clean_int_param(request.GET.get('month', ''))  # Remove default month
     periodo = request.GET.get('periodo', 'diario')  # 'diario', 'semanal' o 'mensual'
     dia = request.GET.get('dia', datetime.now().strftime('%Y-%m-%d'))
     fecha_inicio = request.GET.get('fecha_inicio', '')
@@ -374,7 +374,7 @@ def compras_balances_view(request):
         producto_id,
         tipo_pago,
         str(year) != str(datetime.now().year),
-        month and str(month) != str(datetime.now().month),
+        month,  # If month is set, it's a filter
         periodo != 'diario',
         dia and str(dia) != datetime.now().strftime('%Y-%m-%d'),
         fecha_inicio,
@@ -408,9 +408,11 @@ def compras_balances_view(request):
     
     # Filtrar y agrupar los datos de compras según el periodo seleccionado
     filters = {'fecha_compra__year': year}
+    
+    # Only add filters if they have valid values
     if cuenta_id:
         filters['cuenta_id'] = cuenta_id
-    if month:
+    if month:  # Only add month filter if month is specified
         filters['fecha_compra__month'] = month
     if productor_id:
         filters['productor_id'] = productor_id
@@ -418,6 +420,10 @@ def compras_balances_view(request):
         filters['producto_id'] = producto_id
     if tipo_pago:
         filters['tipo_pago'] = tipo_pago
+
+    # Debug: Print filters to see what's being applied
+    logger.info(f"Applied filters: {filters}")
+    logger.info(f"Periodo: {periodo}")
 
     # Aplicar filtros de fecha según el periodo seleccionado
     if periodo == 'diario':
@@ -460,7 +466,11 @@ def compras_balances_view(request):
         ).order_by('cuenta__id', 'semana')
         
     elif periodo == 'mensual':
-        compras_data = Compra.objects.filter(**filters).annotate(
+        # Debug: Check if base query returns data
+        base_query = Compra.objects.filter(**filters)
+        logger.info(f"Base query count: {base_query.count()}")
+        
+        compras_data = base_query.annotate(
             mes=TruncMonth('fecha_compra')
         ).values(
             'cuenta__id',
@@ -476,6 +486,9 @@ def compras_balances_view(request):
             cantidad_total=Sum('cantidad'),
             precio_promedio=Avg('precio_unitario')
         ).order_by('cuenta__id', 'mes')
+        
+        # Debug: Check final result
+        logger.info(f"Monthly compras_data count: {len(list(compras_data))}")
         
     else:
         compras_data = []
