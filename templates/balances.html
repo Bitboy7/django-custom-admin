@@ -428,7 +428,7 @@
                   {{ balance.mes|date:"Y-m" }}
                 {% endif %}
               </td>
-              <td class="px-4 py-3 text-right font-medium text-blue-600" data-order="{{ balance.total_gastos }}">
+              <td class="px-4 py-3 text-right font-medium text-blue-600" data-order="{{ balance.total_gastos.amount }}">
                 ${{ balance.total_gastos|us_currency:2 }}
               </td>
               <td class="px-4 py-3 text-right font-medium text-green-600" data-order="{{ balance.acumulado }}">

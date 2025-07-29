@@ -3,22 +3,47 @@
 function formatNumericValue(node, includeSymbol) {
   var dataOrder = node.getAttribute("data-order");
   if (dataOrder) {
-    var normalizedValue = dataOrder.replace(",", ".");
-    var numValue = parseFloat(normalizedValue);
+    // Limpiar el valor data-order de cualquier texto adicional (MXN, $, etc.)
+    var cleanValue = dataOrder.toString().replace(/[^0-9.-]/g, "");
+    var numValue = parseFloat(cleanValue);
     if (!isNaN(numValue)) {
-      var formatted = numValue.toFixed(2);
+      var formatted = numValue.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
       return includeSymbol ? "$" + formatted : formatted;
     }
   }
+
   var textContent = node.textContent || node.innerText || "";
+
+  // Limpiar el texto de símbolos y espacios
   var cleanNumber = textContent.replace(/[$\s]/g, "");
-  if (cleanNumber.indexOf(",") > cleanNumber.lastIndexOf(".")) {
-    cleanNumber = cleanNumber.replace(/\./g, "").replace(",", ".");
-  } else {
-    cleanNumber = cleanNumber.replace(/,/g, "");
+
+  // Si ya está en formato US (1,234.56), convertir a número
+  if (cleanNumber.match(/^\d{1,3}(,\d{3})*(\.\d{2})?$/)) {
+    // Formato US válido: remover comas para parseFloat
+    var numValue = parseFloat(cleanNumber.replace(/,/g, ""));
+    if (!isNaN(numValue)) {
+      var formatted = numValue.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      return includeSymbol ? "$" + formatted : formatted;
+    }
   }
-  var numValue = parseFloat(cleanNumber);
-  var result = isNaN(numValue) ? "0.00" : numValue.toFixed(2);
+
+  // Fallback: intentar parsear directamente removiendo todas las comas
+  var numValue = parseFloat(cleanNumber.replace(/,/g, ""));
+  if (!isNaN(numValue)) {
+    var formatted = numValue.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return includeSymbol ? "$" + formatted : formatted;
+  }
+
+  var result = "0.00";
   return includeSymbol ? "$" + result : result;
 }
 

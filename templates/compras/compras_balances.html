@@ -576,11 +576,11 @@
               {% endif %}
             </td>
             <td data-order="{{ compra.cantidad_total }}">{{ compra.cantidad_total|us_number:2 }}</td>
-            <td data-order="{{ compra.precio_promedio }}">${{ compra.precio_promedio|us_currency:2 }}</td>
-            <td data-order="{{ compra.total_compras }}">
+            <td data-order="{{ compra.precio_promedio.amount }}">${{ compra.precio_promedio|us_currency:2 }}</td>
+            <td data-order="{{ compra.total_compras.amount }}">
               <span class="font-medium text-blue-600">${{ compra.total_compras|us_currency:2 }}</span>
             </td>
-            <td data-order="{{ compra.acumulado }}">
+            <td data-order="{% if compra.acumulado.amount %}{{ compra.acumulado.amount }}{% else %}{{ compra.acumulado }}{% endif %}">
               <span class="font-medium text-green-600">${{ compra.acumulado|us_currency:2 }}</span>
             </td>
           </tr>
