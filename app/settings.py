@@ -51,8 +51,7 @@ CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:8000"
 # Application definition
 
 INSTALLED_APPS = [
-    "unfold",
-    "unfold.contrib.import_export",  # Soporte para django-import-export con Unfold
+    "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -70,284 +69,197 @@ INSTALLED_APPS = [
     'import_export',
 ]
 
-# Configuración completa para Django Unfold
-UNFOLD = {
-    "SITE_TITLE": "Sistema administrativo - Agricola de la Costa San Luis",
-    "SITE_NAME": "Agricola de la Costa San Luis",
-    "SITE_DESCRIPTION": "Sistema de gestión integral para Agricola de la Costa San Luis",
-    "SITE_HEADER": "Agricola de la Costa San Luis",
-    "SITE_SUBHEADER": "Sistema de gestión Integral",
-    "SITE_URL": "/admin/",
-    "SITE_ICON": lambda request: static("img/icon.png"),
-    "SITE_LOGO": lambda request: static("img/logo-sm.png"),
-    "SITE_FAVICONS": [
-        {
-            "rel": "icon",
-            "sizes": "32x32",
-            "type": "image/png",
-            "href": lambda request: static("img/icon.png"),
-        },
-    ],
-    "SHOW_HISTORY": True,
-    "SHOW_VIEW_ON_SITE": True,
-    "SHOW_BACK_BUTTON": True,
-    "SHOW_LANGUAGES": True,  # Habilitar selector de idiomas
-    "ENVIRONMENT": "app.environment_callback",
-    "DASHBOARD_CALLBACK": "app.views.dashboard_callback",
-    "THEME": None,  # Permite cambio de tema
-    "LOGIN": {
-        "image": lambda request: static("img/login-1.jpg") if static("img/login-bg.png") else None,
+# Configuración completa para Django Jazzmin
+JAZZMIN_SETTINGS = {
+    # title of the window (Will default to current_admin_site.site_title if absent or None)
+    "site_title": "Sistema administrativo - Agricola de la Costa San Luis",
+    
+    # Title on the login screen (19 chars max) (defaults to current_admin_site.site_header if absent or None)
+    "site_header": "Agricola de la Costa San Luis",
+    
+    # Title on the brand (19 chars max) (defaults to current_admin_site.site_header if absent or None)
+    "site_brand": "Agricola de la Costa San Luis",
+    
+    # Logo to use for your site, must be present in static files, used for brand on top left
+    "site_logo": "img/logo-sm.png",
+    
+    # Logo to use for your site, must be present in static files, used for login form logo (defaults to site_logo)
+    "login_logo": "img/logo-sm.png",
+    
+    # Logo to use for login form in dark themes (defaults to login_logo)
+    "login_logo_dark": None,
+    
+    # CSS classes that are applied to the logo above
+    "site_logo_classes": "img-circle elevation-3",
+    
+    # Relative path to a favicon for your site, will default to site_logo if absent (ideally 32x32 px)
+    "site_icon": "img/icon.png",
+    
+    # Welcome text on the login screen
+    "welcome_sign": "Bienvenido al Sistema de Gestión Integral",
+    
+    # Copyright on the footer
+    "copyright": "Agricola de la Costa San Luis",
+    
+    # List of model admins to search from the search bar, search bar omitted if excluded
+    "search_model": ["auth.User", "auth.Group"],
+    
+    # Field name on user model that contains avatar ImageField/URLField/Charfield or a callable that receives the user
+    "user_avatar": None,
+    
+    ############
+    # Top Menu #
+    ############
+    
+    # Links to put along the top menu
+    "topmenu_links": [
+        # Url that gets reversed (Permissions can be added)
+        {"name": "Inicio", "url": "admin:index", "permissions": ["auth.view_user"]},
         
-    },
-    # Configuración personalizada de idiomas
-    "LANGUAGES": {
-        "navigation": [
-            {
-                'bidi': False,
-                'code': 'es',
-                'name': 'Spanish',
-                'name_local': 'Español',
-                'name_translated': 'Español'
-            },
-            {
-                'bidi': False,
-                'code': 'en',
-                'name': 'English',
-                'name_local': 'English',
-                'name_translated': 'Inglés'
-            },
-        ],
-    },
-    "COLORS": {
-        "base": {
-            "50": "248, 250, 252",   # Gris muy claro
-            "100": "241, 245, 249",  # Gris claro
-            "200": "226, 232, 240",  # Gris suave
-            "300": "203, 213, 225",  # Gris medio claro
-            "400": "148, 163, 184",  # Gris medio
-            "500": "100, 116, 139",  # Gris equilibrado
-            "600": "71, 85, 105",    # Gris oscuro medio
-            "700": "51, 65, 85",     # Gris oscuro
-            "800": "30, 41, 59",     # Gris muy oscuro
-            "900": "15, 23, 42",     # Casi negro azulado
-            "950": "2, 6, 23",       # Negro azulado profundo
-        },
-        "primary": {
-            "50": "239, 246, 255",   # Azul muy claro
-            "100": "219, 234, 254",  # Azul claro
-            "200": "191, 219, 254",  # Azul suave
-            "300": "147, 197, 253",  # Azul medio claro
-            "400": "96, 165, 250",   # Azul vibrante
-            "500": "59, 130, 246",   # Azul principal elegante
-            "600": "37, 99, 235",    # Azul intenso
-            "700": "29, 78, 216",    # Azul oscuro
-            "800": "30, 64, 175",    # Azul muy oscuro
-            "900": "30, 58, 138",    # Azul marino
-            "950": "23, 37, 84",     # Azul marino profundo
-        },
-        "font": {
-            "subtle-light": "var(--color-base-600)",      # Texto sutil en modo claro
-            "subtle-dark": "var(--color-base-400)",       # Texto sutil en modo oscuro - más visible
-            "default-light": "var(--color-base-800)",     # Texto por defecto en modo claro
-            "default-dark": "var(--color-base-300)",      # Texto por defecto en modo oscuro - más contrastado
-            "important-light": "var(--color-base-900)",   # Texto importante en modo claro
-            "important-dark": "var(--color-base-200)",    # Texto importante en modo oscuro - menos claro
-        },
-    },
-    "SIDEBAR": {
-        "show_search": True,
-        "show_all_applications": True,
-        "navigation": [
-            {
-                "title": "Panel Principal",
-                "separator": True,
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": "Dashboard",
-                        "icon": "dashboard",
-                        "link": reverse_lazy("admin:index"),
-                        "permission": lambda request: request.user.is_authenticated,
-                    },
-                    {
-                        "title": "Acumulados",
-                        "icon": "analytics",
-                        "link": reverse_lazy("balances"),
-                        "permission": lambda request: request.user.is_authenticated,
-                    },
-                ],
-            },
-            {
-                "title": "Gestión de Gastos",
-                "separator": True,
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": "Bancos",
-                        "icon": "account_balance",
-                        "link": reverse_lazy("admin:gastos_banco_changelist"),
-                        "permission": lambda request: request.user.has_perm("gastos.view_banco"),
-                    },
-                    {
-                        "title": "Cuentas",
-                        "icon": "credit_card",
-                        "link": reverse_lazy("admin:gastos_cuenta_changelist"),
-                        "permission": lambda request: request.user.has_perm("gastos.view_cuenta"),
-                    },
-                    {
-                        "title": "Categorías de Gastos",
-                        "icon": "category",
-                        "link": reverse_lazy("admin:gastos_catgastos_changelist"),
-                        "permission": lambda request: request.user.has_perm("gastos.view_catgastos"),
-                    },
-                    {
-                        "title": "Gastos",
-                        "icon": "receipt_long",
-                        "link": reverse_lazy("admin:gastos_gastos_changelist"),
-                        "permission": lambda request: request.user.has_perm("gastos.view_gastos"),
-                    },
-                    {
-                        "title": "Subir Factura (IA)",
-                        "icon": "document_scanner",
-                        "link": reverse_lazy("gastos:ingresar_gasto_factura"),
-                        "permission": lambda request: request.user.has_perm("gastos.add_gastos"),
-                    },
-                    {
-                        "title": "Compras",
-                        "icon": "shopping_cart",
-                        "link": reverse_lazy("admin:gastos_compra_changelist"),
-                        "permission": lambda request: request.user.has_perm("gastos.view_compra"),
-                    },
-                    {
-                        "title": "Saldos Mensuales",
-                        "icon": "trending_up",
-                        "link": reverse_lazy("admin:gastos_saldomensual_changelist"),
-                        "permission": lambda request: request.user.has_perm("gastos.view_saldomensual"),
-                    },
-                ],
-            },
-            {
-                "title": "Gestión de Ventas",
-                "separator": True,
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": "Clientes",
-                        "icon": "people",
-                        "link": reverse_lazy("admin:ventas_cliente_changelist"),
-                        "permission": lambda request: request.user.has_perm("ventas.view_cliente"),
-                    },
-                    {
-                        "title": "Agentes",
-                        "icon": "support_agent",
-                        "link": reverse_lazy("admin:ventas_agente_changelist"),
-                        "permission": lambda request: request.user.has_perm("ventas.view_agente"),
-                    },
-                    {
-                        "title": "Ventas",
-                        "icon": "point_of_sale",
-                        "link": reverse_lazy("admin:ventas_ventas_changelist"),
-                        "permission": lambda request: request.user.has_perm("ventas.view_ventas"),
-                    },
-                    {
-                        "title": "Anticipos",
-                        "icon": "payments",
-                        "link": reverse_lazy("admin:ventas_anticipo_changelist"),
-                        "permission": lambda request: request.user.has_perm("ventas.view_anticipo"),
-                    },
-                ],
-            },
-            {
-                "title": "Catálogo",
-                "separator": True,
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": "Países",
-                        "icon": "public",
-                        "link": reverse_lazy("admin:catalogo_pais_changelist"),
-                        "permission": lambda request: request.user.has_perm("catalogo.view_pais"),
-                    },
-                    {
-                        "title": "Estados",
-                        "icon": "map",
-                        "link": reverse_lazy("admin:catalogo_estado_changelist"),
-                        "permission": lambda request: request.user.has_perm("catalogo.view_estado"),
-                    },
-                    {
-                        "title": "Sucursales",
-                        "icon": "store",
-                        "link": reverse_lazy("admin:catalogo_sucursal_changelist"),
-                        "permission": lambda request: request.user.has_perm("catalogo.view_sucursal"),
-                    },
-                    {
-                        "title": "Productores",
-                        "icon": "agriculture",
-                        "link": reverse_lazy("admin:catalogo_productor_changelist"),
-                        "permission": lambda request: request.user.has_perm("catalogo.view_productor"),
-                    },
-                    {
-                        "title": "Productos",
-                        "icon": "inventory",
-                        "link": reverse_lazy("admin:catalogo_producto_changelist"),
-                        "permission": lambda request: request.user.has_perm("catalogo.view_producto"),
-                    },
-                ],
-            },
-            {
-                "title": "Administración",
-                "separator": True,
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": "Usuarios",
-                        "icon": "person",
-                        "link": reverse_lazy("admin:auth_user_changelist"),
-                        "permission": lambda request: (
-                            request.user.has_perm("auth.view_user") and 
-                            request.user.groups.filter(name="Administrador").exists()
-                        ),
-                    },
-                    {
-                        "title": "Grupos",
-                        "icon": "group",
-                        "link": reverse_lazy("admin:auth_group_changelist"),
-                        "permission": lambda request: (
-                            request.user.has_perm("auth.view_group") and 
-                            request.user.groups.filter(name="Administrador").exists()
-                        ),
-                    },
-                    {
-                        "title": "Registro de Actividad",
-                        "icon": "history",
-                        "link": reverse_lazy("admin:auditoria_logactividad_changelist"),
-                        "permission": lambda request: (
-                            request.user.has_perm("auditoria.view_logactividad") and 
-                            request.user.groups.filter(name="Administrador").exists()
-                        ),
-                    },
-                ],
-            },
-        ],
-    },
-    # CSS personalizado para mejorar la apariencia de los botones import/export y widgets de dinero
-    "STYLES": [
-        lambda request: static("css/money_widget.css"),
+        # external url that opens in a new window (Permissions can be added)
+        {"name": "Acumulados", "url": "/balances/", "new_window": False},
+        
+        # model admin to link to (Permissions checked against model)
+        {"model": "auth.User"},
+        
+        # App with dropdown menu to all its models pages (Permissions checked against models)
+        {"app": "gastos"},
     ],
-    # JavaScript personalizado para reposicionar botones import/export y mejorar widgets de dinero
-    "SCRIPTS": [
-        lambda request: static("js/admin_import_export.js"),
-        lambda request: static("js/money_widget.js"),
+    
+    #############
+    # User Menu #
+    #############
+    
+    # Additional links to include in the user menu on the top right ("app" url type is not allowed)
+    "usermenu_links": [
+        {"name": "Acumulados", "url": "/balances/", "icon": "fas fa-chart-line"},
+        {"model": "auth.user"}
     ],
+    
+    #############
+    # Side Menu #
+    #############
+    
+    # Whether to display the side menu
+    "show_sidebar": True,
+    
+    # Whether to aut expand the menu
+    "navigation_expanded": True,
+    
+    # Hide these apps when generating side menu e.g (auth)
+    "hide_apps": [],
+    
+    # Hide these models when generating side menu (e.g auth.user)
+    "hide_models": [],
+    
+    # List of apps (and models) to base side menu ordering off of (does not need to contain all apps/models)
+    "order_with_respect_to": ["auth", "gastos", "ventas", "catalogo", "auditoria"],
+    
+    # Custom links to append to app groups, keyed on app name
+    "custom_links": {
+        "gastos": [{
+            "name": "Subir Factura (IA)", 
+            "url": "/gastos/ingresar-gasto-factura/", 
+            "icon": "fas fa-file-upload",
+            "permissions": ["gastos.add_gastos"]
+        }]
+    },
+    
+    # Custom icons for side menu apps/models See https://fontawesome.com/icons?d=gallery&m=free&v=5.0.0,5.0.1,5.0.10,5.0.11,5.0.12,5.0.13,5.0.2,5.0.3,5.0.4,5.0.5,5.0.6,5.0.7,5.0.8,5.0.9,5.1.0,5.1.1,5.2.0,5.3.0,5.3.1,5.4.0,5.4.1,5.4.2,5.5.0,5.6.0,5.6.1,5.6.3,5.7.0,5.7.1,5.7.2,5.8.0,5.8.1,5.8.2,5.9.0,5.10.0,5.10.1,5.10.2,5.11.0,5.11.1,5.11.2,5.12.0,5.12.1,5.13.0,5.13.1,5.14.0,5.15.0,5.15.1,5.15.2,5.15.3,5.15.4&s=solid
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        "gastos": "fas fa-money-bill-wave",
+        "gastos.Banco": "fas fa-university",
+        "gastos.Cuenta": "fas fa-credit-card",
+        "gastos.CatGastos": "fas fa-tags",
+        "gastos.Gastos": "fas fa-receipt",
+        "gastos.Compra": "fas fa-shopping-cart",
+        "gastos.SaldoMensual": "fas fa-chart-line",
+        "ventas": "fas fa-chart-bar",
+        "ventas.Cliente": "fas fa-users",
+        "ventas.Agente": "fas fa-user-tie",
+        "ventas.Ventas": "fas fa-cash-register",
+        "ventas.Anticipo": "fas fa-hand-holding-usd",
+        "catalogo": "fas fa-list",
+        "catalogo.Pais": "fas fa-globe",
+        "catalogo.Estado": "fas fa-map",
+        "catalogo.Sucursal": "fas fa-store",
+        "catalogo.Productor": "fas fa-seedling",
+        "catalogo.Producto": "fas fa-box",
+        "auditoria": "fas fa-history",
+        "auditoria.LogActividad": "fas fa-clipboard-list",
+    },
+    
+    # Icons that are used when one is not manually specified
+    "default_icon_parents": "fas fa-chevron-circle-right",
+    "default_icon_children": "fas fa-circle",
+    
+    #################
+    # Related Modal #
+    #################
+    # Use modals instead of popups
+    "related_modal_active": False,
+    
+    #############
+    # UI Tweaks #
+    #############
+    # Relative paths to custom CSS/JS scripts (must be present in static files)
+    "custom_css": "css/money_widget.css",
+    "custom_js": "js/admin_import_export.js",
+    # Whether to link font from fonts.googleapis.com (use custom_css to supply font otherwise)
+    "use_google_fonts_cdn": True,
+    # Whether to show the UI customizer on the sidebar
+    "show_ui_builder": False,
+    
+    ###############
+    # Change view #
+    ###############
+    # Render out the change view as a single form, or in tabs, current options are
+    # - single
+    # - horizontal_tabs (default)
+    # - vertical_tabs
+    # - collapsible
+    # - carousel
+    "changeform_format": "horizontal_tabs",
+    # override change forms on a per modeladmin basis
+    "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs"},
+    # Add a language dropdown into the admin
+    "language_chooser": True,
 }
 
-def environment_callback(request):
-    """
-    Callback para mostrar el entorno en la esquina superior derecha
-    """
-    if not DEBUG:
-        return ["Producción", "danger"]
-    return ["Desarrollo", "info"]
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": False,
+    "accent": "accent-primary",
+    "navbar": "navbar-dark",
+    "no_navbar_border": False,
+    "navbar_fixed": False,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": False,
+    "sidebar": "sidebar-dark-primary",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": False,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "default",
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success"
+    }
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

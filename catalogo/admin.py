@@ -1,9 +1,9 @@
 from django.contrib import admin
-from unfold.admin import ModelAdmin
+from django.contrib.admin import ModelAdmin
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from import_export.admin import ImportExportModelAdmin
-from unfold.contrib.import_export.forms import ExportForm, ImportForm, SelectableFieldsExportForm
+from import_export.forms import ExportForm, ImportForm
 from .models import Productor, Estado, Sucursal, Pais, Producto
 from django.utils.html import format_html
 
@@ -14,7 +14,7 @@ class PaisResource(resources.ModelResource):
         fields = ('id', 'siglas', 'nombre', 'moneda', 'bandera')
 
 @admin.register(Pais)
-class PaisAdmin(ModelAdmin, ImportExportModelAdmin):
+class PaisAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = PaisResource
     import_form_class = ImportForm
     export_form_class = ExportForm
@@ -51,7 +51,7 @@ class ProductorResource(resources.ModelResource):
             row['id'] = next_id
     
 @admin.register(Productor)
-class ProductorAdmin(ModelAdmin, ImportExportModelAdmin):
+class ProductorAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = ProductorResource
     import_form_class = ImportForm
     export_form_class = ExportForm
@@ -90,7 +90,7 @@ class EstadoResource(resources.ModelResource):
         fields = ('id', 'nombre', 'pais')
 
 @admin.register(Estado)
-class EstadoAdmin(ModelAdmin, ImportExportModelAdmin):
+class EstadoAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = EstadoResource
     import_form_class = ImportForm
     export_form_class = ExportForm
@@ -114,7 +114,7 @@ class SucursalResource(resources.ModelResource):
         fields = ('id', 'nombre', 'direccion', 'telefono', 'id_estado')
 
 @admin.register(Sucursal)
-class SucursalAdmin(ModelAdmin, ImportExportModelAdmin):
+class SucursalAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = SucursalResource
     import_form_class = ImportForm
     export_form_class = ExportForm
@@ -134,7 +134,7 @@ class ProductoResource(resources.ModelResource):
         fields = ('id', 'nombre', 'variedad', 'precio_unitario', 'disponible', 'descripcion', 'imagen')
 
 @admin.register(Producto)
-class ProductoAdmin(ModelAdmin, ImportExportModelAdmin):
+class ProductoAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = ProductoResource
     import_form_class = ImportForm
     export_form_class = ExportForm

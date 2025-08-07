@@ -5,8 +5,8 @@ from django.contrib.auth.models import User, Group
 from django.contrib.admin import SimpleListFilter
 from django.utils.html import format_html
 
-from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
-from unfold.admin import ModelAdmin
+from django.contrib.auth.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
+from django.contrib.admin import ModelAdmin
 from .permissions import RoleManager, can_manage_users
 
 

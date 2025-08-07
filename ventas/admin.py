@@ -1,5 +1,5 @@
 from django.contrib import admin
-from unfold.admin import ModelAdmin
+from django.contrib.admin import ModelAdmin
 from .models import Cliente, Agente, Ventas, Anticipo
 from catalogo.models import Sucursal, Pais, Producto
 from gastos.models import Cuenta
@@ -7,7 +7,7 @@ from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
-from unfold.contrib.import_export.forms import ExportForm, ImportForm, SelectableFieldsExportForm
+from import_export.forms import ExportForm, ImportForm
 from app.widgets import MoneyWidget
 
 class ClienteResource(resources.ModelResource):
@@ -32,7 +32,7 @@ class ClienteResource(resources.ModelResource):
         
 
 @admin.register(Cliente)
-class ClienteAdmin(ModelAdmin, ImportExportModelAdmin):
+class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = ClienteResource
     import_form_class = ImportForm
     export_form_class = ExportForm
@@ -112,7 +112,7 @@ class VentasResource(resources.ModelResource):
             row['id'] = next_id
        
 @admin.register(Ventas)
-class VentasAdmin(ModelAdmin, ImportExportModelAdmin):
+class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = VentasResource
     import_form_class = ImportForm
     export_form_class = ExportForm
@@ -164,7 +164,7 @@ class AnticiposResource(resources.ModelResource):
             row['id'] = next_id
      
 @admin.register(Anticipo)
-class AnticipoAdmin(ModelAdmin, ImportExportModelAdmin):
+class AnticipoAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = AnticiposResource
     import_form_class = ImportForm
     export_form_class = ExportForm
