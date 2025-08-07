@@ -321,3 +321,79 @@ def currency_test_view(request):
     return render(request, 'currency_conversion_test.html')
 
 
+@staff_member_required
+def custom_admin_index(request):
+    """
+    Vista personalizada del admin index que incluye datos del dashboard
+    """
+    from django.contrib.admin.sites import site
+    from django.apps import apps
+    
+    # Obtener el contexto básico del admin
+    app_list = []
+    user = request.user
+    
+    for app_config in apps.get_app_configs():
+        app_label = app_config.label
+        
+        # Obtener modelos del admin para esta app
+        models = []
+        for model, model_admin in site._registry.items():
+            if model._meta.app_label == app_label:
+                info = (app_label, model._meta.model_name)
+                model_dict = {
+                    'name': model._meta.verbose_name_plural.capitalize(),
+                    'object_name': model._meta.object_name,
+                    'perms': {
+                        'add': user.has_perm(f'{app_label}.add_{model._meta.model_name}'),
+                        'change': user.has_perm(f'{app_label}.change_{model._meta.model_name}'),
+                        'delete': user.has_perm(f'{app_label}.delete_{model._meta.model_name}'),
+                        'view': user.has_perm(f'{app_label}.view_{model._meta.model_name}'),
+                    }
+                }
+                
+                if model_dict['perms']['change'] or model_dict['perms']['view']:
+                    try:
+                        from django.urls import reverse
+                        model_dict['admin_url'] = reverse(f'admin:{info[0]}_{info[1]}_changelist')
+                    except:
+                        model_dict['admin_url'] = None
+                    
+                    if model_dict['perms']['add']:
+                        try:
+                            model_dict['add_url'] = reverse(f'admin:{info[0]}_{info[1]}_add')
+                        except:
+                            model_dict['add_url'] = None
+                    
+                    models.append(model_dict)
+        
+        if models:
+            app_list.append({
+                'name': app_config.verbose_name.title(),
+                'app_label': app_label,
+                'app_url': f'/admin/{app_label}/',
+                'has_module_perms': True,
+                'models': models,
+            })
+    
+    # Contexto básico
+    context = {
+        'title': 'Administración del sitio',
+        'subtitle': None,
+        'app_list': app_list,
+        'username': user.username,
+        'site_title': site.site_title,
+        'site_header': site.site_header,
+        'site_url': '/',
+        'has_permission': user.is_active and user.is_staff,
+        'available_apps': app_list,
+        'is_popup': False,
+    }
+    
+    # Agregar datos del dashboard
+    context = dashboard_callback(request, context)
+    
+    # Renderizar con el template personalizado
+    return render(request, 'admin/index.html', context)
+
+
