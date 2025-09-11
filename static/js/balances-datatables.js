@@ -1,40 +1,55 @@
 // Inicialización de DataTables para balances
 
+// Obtiene un valor numérico robusto desde una celda (TD),
+// soportando formatos: "1,234.56", "1.234,56", "$ 1,234.56", "MXN 1.234,56", etc.
+function getNumericValueFromNode(node) {
+  if (!node) return NaN;
+  var dataOrder = node.getAttribute && node.getAttribute("data-order");
+  var source = dataOrder || node.textContent || node.innerText || "";
+  if (typeof source !== "string") source = String(source);
+
+  // Mantener solo dígitos, separadores y signo negativo
+  var s = source.replace(/[^0-9.,-]/g, "").trim();
+  if (!s) return NaN;
+
+  var lastDot = s.lastIndexOf(".");
+  var lastComma = s.lastIndexOf(",");
+
+  if (lastDot > -1 && lastComma > -1) {
+    // Tiene ambos separadores: el último encontrado se asume como separador decimal
+    if (lastDot > lastComma) {
+      // Punto como decimal: quitar comas de miles
+      s = s.replace(/,/g, "");
+    } else {
+      // Coma como decimal: quitar puntos de miles y convertir coma a punto
+      s = s.replace(/\./g, "").replace(",", ".");
+    }
+  } else if (lastComma > -1) {
+    // Solo coma presente
+    if (/,-?\d{1,3}$/.test(s) || /,\d{2}$/.test(s)) {
+      // Parece decimal con coma
+      s = s.replace(/\./g, "").replace(",", ".");
+    } else {
+      // Coma como miles
+      s = s.replace(/,/g, "");
+    }
+  } else if (lastDot > -1) {
+    // Solo punto presente
+    if (/\.-?\d{1,3}$/.test(s) || /\.\d{2}$/.test(s)) {
+      // Parece decimal con punto -> ya está bien
+    } else {
+      // Punto como miles
+      s = s.replace(/\./g, "");
+    }
+  }
+
+  var num = parseFloat(s);
+  return isNaN(num) ? NaN : num;
+}
+
+// Formatea un node numérico según US, con o sin símbolo, para vistas de impresión/PDF
 function formatNumericValue(node, includeSymbol) {
-  var dataOrder = node.getAttribute("data-order");
-  if (dataOrder) {
-    // Limpiar el valor data-order de cualquier texto adicional (MXN, $, etc.)
-    var cleanValue = dataOrder.toString().replace(/[^0-9.-]/g, "");
-    var numValue = parseFloat(cleanValue);
-    if (!isNaN(numValue)) {
-      var formatted = numValue.toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-      return includeSymbol ? "$" + formatted : formatted;
-    }
-  }
-
-  var textContent = node.textContent || node.innerText || "";
-
-  // Limpiar el texto de símbolos y espacios
-  var cleanNumber = textContent.replace(/[$\s]/g, "");
-
-  // Si ya está en formato US (1,234.56), convertir a número
-  if (cleanNumber.match(/^\d{1,3}(,\d{3})*(\.\d{2})?$/)) {
-    // Formato US válido: remover comas para parseFloat
-    var numValue = parseFloat(cleanNumber.replace(/,/g, ""));
-    if (!isNaN(numValue)) {
-      var formatted = numValue.toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-      return includeSymbol ? "$" + formatted : formatted;
-    }
-  }
-
-  // Fallback: intentar parsear directamente removiendo todas las comas
-  var numValue = parseFloat(cleanNumber.replace(/,/g, ""));
+  var numValue = getNumericValueFromNode(node);
   if (!isNaN(numValue)) {
     var formatted = numValue.toLocaleString("en-US", {
       minimumFractionDigits: 2,
@@ -42,7 +57,6 @@ function formatNumericValue(node, includeSymbol) {
     });
     return includeSymbol ? "$" + formatted : formatted;
   }
-
   var result = "0.00";
   return includeSymbol ? "$" + result : result;
 }
@@ -98,10 +112,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (column === 5) {
                   var tempDiv = document.createElement("div");
                   tempDiv.innerHTML = data;
-                  return tempDiv.textContent || tempDiv.innerText || "";
+                  var text = tempDiv.textContent || tempDiv.innerText || "";
+                  // Simplemente devolver el texto extraído
+                  return text;
                 }
                 if (column === 7 || column === 8) {
-                  return formatNumericValue(node, false);
+                  var n = getNumericValueFromNode(node);
+                  return isNaN(n) ? data : n.toFixed(2);
                 }
                 return data;
               },
@@ -112,16 +129,25 @@ document.addEventListener("DOMContentLoaded", function () {
           extend: "csv",
           className: "dt-button btn-csv",
           text: '<i class="fas fa-file-csv mr-1"></i> CSV',
+          charset: "utf-8",
+          bom: true,
           exportOptions: {
             format: {
               body: function (data, row, column, node) {
                 if (column === 5) {
                   var tempDiv = document.createElement("div");
                   tempDiv.innerHTML = data;
-                  return tempDiv.textContent || tempDiv.innerText || "";
+                  var text = tempDiv.textContent || tempDiv.innerText || "";
+                  // Debug para CSV
+                  console.log("CSV - Column 5 (Categoria):");
+                  console.log("Original data:", data);
+                  console.log("Extracted text:", text);
+                  // Simplemente devolver el texto extraído sin normalización
+                  return text;
                 }
                 if (column === 7 || column === 8) {
-                  return formatNumericValue(node, false);
+                  var n = getNumericValueFromNode(node);
+                  return isNaN(n) ? data : n.toFixed(2);
                 }
                 return data;
               },
@@ -158,7 +184,9 @@ document.addEventListener("DOMContentLoaded", function () {
                   return tempDiv.textContent || tempDiv.innerText || "";
                 }
                 if (column === 7 || column === 8) {
-                  return formatNumericValue(node, false);
+                  // Para Excel devolver un Number puro, sin separadores, para que detecte tipo numérico
+                  var n = getNumericValueFromNode(node);
+                  return isNaN(n) ? 0 : n;
                 }
                 return data;
               },
