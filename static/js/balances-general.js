@@ -21,6 +21,232 @@ function hideToast() {
   toast.classList.add("translate-x-full", "opacity-100");
 }
 
+// *** SISTEMA DE PERSISTENCIA DE FILTROS ***
+
+// Clave para localStorage
+const FILTERS_STORAGE_KEY = "balances_filters";
+
+// Guardar filtros en localStorage
+function saveFiltersToStorage() {
+  const filterForm = document.querySelector('form[action*="balances"]');
+  if (!filterForm) return;
+
+  const filters = {
+    cuenta_id: document.getElementById("cuenta_id")?.value || "",
+    year: document.getElementById("year")?.value || "",
+    month: document.getElementById("month")?.value || "",
+    periodo: document.getElementById("periodo")?.value || "",
+    dia: document.getElementById("dia")?.value || "",
+    fecha_inicio:
+      document.querySelector('input[name="fecha_inicio"]')?.value || "",
+    fecha_fin: document.querySelector('input[name="fecha_fin"]')?.value || "",
+    timestamp: new Date().getTime(), // Para evitar filtros muy antiguos
+  };
+
+  localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
+  console.log("Filtros guardados en localStorage:", filters);
+}
+
+// Cargar filtros desde localStorage
+function loadFiltersFromStorage() {
+  try {
+    const savedFilters = localStorage.getItem(FILTERS_STORAGE_KEY);
+    if (!savedFilters) return null;
+
+    const filters = JSON.parse(savedFilters);
+
+    // Verificar que los filtros no sean muy antiguos (más de 24 horas)
+    const now = new Date().getTime();
+    const maxAge = 24 * 60 * 60 * 1000; // 24 horas en milisegundos
+
+    if (filters.timestamp && now - filters.timestamp > maxAge) {
+      console.log("Filtros guardados son muy antiguos, los eliminamos");
+      localStorage.removeItem(FILTERS_STORAGE_KEY);
+      return null;
+    }
+
+    return filters;
+  } catch (error) {
+    console.error("Error al cargar filtros desde localStorage:", error);
+    localStorage.removeItem(FILTERS_STORAGE_KEY);
+    return null;
+  }
+}
+
+// Aplicar filtros guardados al formulario
+function applyStoredFilters() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const hasUrlParams = urlParams.toString().length > 0;
+
+  // Si hay parámetros en la URL, sincronizar con localStorage
+  if (hasUrlParams) {
+    console.log("Parámetros URL detectados, sincronizando con localStorage");
+    syncUrlParamsWithStorage();
+    // No hacer return aquí, para que también se ejecute updateFormInputsFromUrl
+    return;
+  }
+
+  const savedFilters = loadFiltersFromStorage();
+  if (!savedFilters) return;
+
+  console.log("Aplicando filtros guardados:", savedFilters);
+
+  // Aplicar cada filtro al formulario
+  Object.keys(savedFilters).forEach((key) => {
+    if (key === "timestamp") return;
+
+    const element =
+      document.getElementById(key) ||
+      document.querySelector(`input[name="${key}"]`);
+    if (element && savedFilters[key]) {
+      element.value = savedFilters[key];
+
+      // Disparar evento change para actualizar UI si es necesario
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  });
+
+  // Mostrar toast indicando que se aplicaron filtros guardados
+  setTimeout(() => {
+    showToast(
+      "🔄 Filtros restaurados",
+      "Se han aplicado los filtros de tu sesión anterior. Puedes modificarlos o limpiarlos según necesites.",
+      6000
+    );
+  }, 500);
+}
+
+// Sincronizar parámetros URL con localStorage
+function syncUrlParamsWithStorage() {
+  const urlParams = new URLSearchParams(window.location.search);
+
+  const currentFilters = {
+    cuenta_id: urlParams.get("cuenta_id") || "",
+    year: urlParams.get("year") || "",
+    month: urlParams.get("month") || "",
+    periodo: urlParams.get("periodo") || "",
+    dia: urlParams.get("dia") || "",
+    fecha_inicio: urlParams.get("fecha_inicio") || "",
+    fecha_fin: urlParams.get("fecha_fin") || "",
+    timestamp: new Date().getTime(),
+  };
+
+  // Solo guardar si hay al menos un filtro aplicado
+  const hasFilters = Object.keys(currentFilters).some(
+    (key) => key !== "timestamp" && currentFilters[key] !== ""
+  );
+
+  if (hasFilters) {
+    localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(currentFilters));
+    console.log("Filtros URL sincronizados con localStorage:", currentFilters);
+  } else {
+    // Si no hay filtros en URL, limpiar localStorage
+    localStorage.removeItem(FILTERS_STORAGE_KEY);
+    console.log("No hay filtros en URL, localStorage limpiado");
+  }
+
+  // *** ACTUALIZAR LOS INPUTS DEL FORMULARIO INMEDIATAMENTE ***
+  updateFormInputsFromUrl();
+}
+
+// Actualizar inputs del formulario con valores de la URL
+function updateFormInputsFromUrl() {
+  const urlParams = new URLSearchParams(window.location.search);
+
+  // Mapear parámetros URL a elementos del formulario
+  const urlToFormMapping = {
+    cuenta_id: "cuenta_id",
+    year: "year",
+    month: "month",
+    periodo: "periodo",
+    dia: "dia",
+    fecha_inicio: "fecha_inicio",
+    fecha_fin: "fecha_fin",
+  };
+
+  console.log("Actualizando inputs del formulario con valores URL...");
+
+  Object.keys(urlToFormMapping).forEach((urlParam) => {
+    const formElementId = urlToFormMapping[urlParam];
+    const element =
+      document.getElementById(formElementId) ||
+      document.querySelector(`input[name="${formElementId}"]`);
+
+    if (element) {
+      const urlValue = urlParams.get(urlParam);
+
+      if (urlValue) {
+        // Actualizar valor del elemento
+        element.value = urlValue;
+        console.log(`Actualizado ${formElementId}: ${urlValue}`);
+
+        // Disparar evento change para actualizar la UI
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+  });
+
+  // Manejar el contenedor de día específicamente para el periodo
+  const periodoValue = urlParams.get("periodo");
+  if (periodoValue === "diario") {
+    const diaContainer = document.getElementById("dia-container");
+    if (diaContainer) {
+      diaContainer.style.display = "flex";
+    }
+  } else {
+    const diaContainer = document.getElementById("dia-container");
+    if (diaContainer) {
+      diaContainer.style.display = "none";
+    }
+  }
+}
+
+// Limpiar filtros guardados
+function clearStoredFilters() {
+  localStorage.removeItem(FILTERS_STORAGE_KEY);
+  console.log("Filtros guardados eliminados");
+
+  showToast(
+    "🗑️ Filtros limpiados",
+    "Los filtros guardados han sido eliminados. La próxima vez comenzarás con valores por defecto.",
+    4000
+  );
+}
+
+// Verificar si hay filtros guardados y mostrar indicador
+function checkStoredFiltersStatus() {
+  const savedFilters = loadFiltersFromStorage();
+  const clearBtn = document.getElementById("clear-stored-filters-btn");
+
+  if (savedFilters && clearBtn) {
+    // Hay filtros guardados - mostrar el botón con un estilo más llamativo
+    clearBtn.classList.remove("opacity-50");
+    clearBtn.classList.add("ring-2", "ring-orange-300");
+    clearBtn.title =
+      "Hay filtros guardados automáticamente - haz clic para limpiarlos";
+
+    // Agregar un pequeño indicador visual
+    if (!clearBtn.querySelector(".saved-indicator")) {
+      const indicator = document.createElement("span");
+      indicator.className =
+        "saved-indicator absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse";
+      clearBtn.style.position = "relative";
+      clearBtn.appendChild(indicator);
+    }
+  } else if (clearBtn) {
+    // No hay filtros guardados - mostrar el botón desactivado
+    clearBtn.classList.add("opacity-50");
+    clearBtn.classList.remove("ring-2", "ring-orange-300");
+    clearBtn.title = "No hay filtros guardados automáticamente";
+
+    // Remover indicador si existe
+    const indicator = clearBtn.querySelector(".saved-indicator");
+    if (indicator) {
+      indicator.remove();
+    }
+  }
+}
+
 // Mostrar toast al cargar la página si hay parámetros de filtro
 function checkAndShowFilterToast() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -97,30 +323,93 @@ function checkAndShowFilterToast() {
 document.addEventListener("DOMContentLoaded", function () {
   // Ocultar el mensaje de advertencia después de 5 segundos
   setTimeout(function () {
-    document.getElementById("warning-message").style.display = "none";
-  }, 5000);
-  // Gestionar la visualización de los filtros de fecha según el periodo
-  document.getElementById("periodo").addEventListener("change", function () {
-    const diaContainer = document.getElementById("dia-container");
-    if (this.value === "diario") {
-      diaContainer.style.display = "flex";
-    } else {
-      diaContainer.style.display = "none";
+    const warningMessage = document.getElementById("warning-message");
+    if (warningMessage) {
+      warningMessage.style.display = "none";
     }
-  });
-  // Mostrar notificación toast cuando se aplican filtros (al enviar el formulario)
-  const filterForm = document.querySelector('form[action="/balances/"]');
+  }, 5000);
+
+  // Gestionar la visualización de los filtros de fecha según el periodo
+  const periodoSelect = document.getElementById("periodo");
+  if (periodoSelect) {
+    periodoSelect.addEventListener("change", function () {
+      const diaContainer = document.getElementById("dia-container");
+      if (diaContainer) {
+        if (this.value === "diario") {
+          diaContainer.style.display = "flex";
+        } else {
+          diaContainer.style.display = "none";
+        }
+      }
+    });
+  }
+
+  // *** APLICAR FILTROS GUARDADOS AL CARGAR LA PÁGINA ***
+  applyStoredFilters();
+
+  // *** ASEGURAR QUE LOS INPUTS ESTÉN ACTUALIZADOS CON LA URL ACTUAL ***
+  // Esto es importante para cuando se recarga la página después de aplicar filtros
+  setTimeout(() => {
+    updateFormInputsFromUrl();
+  }, 100);
+
+  // *** VERIFICAR ESTADO DE FILTROS GUARDADOS ***
+  checkStoredFiltersStatus();
+
+  // *** GUARDAR FILTROS CUANDO SE ENVÍA EL FORMULARIO ***
+  const filterForm = document.querySelector('form[action*="balances"]');
   if (filterForm) {
     filterForm.addEventListener("submit", function (e) {
       // Limpiar valores del formulario antes de enviar
       cleanFormValues(this);
+
+      // Guardar filtros en localStorage ANTES de enviar
+      saveFiltersToStorage();
+
       // Mostrar toast de carga inmediatamente
       showToast(
-        "Aplicando filtros...",
+        "⏳ Aplicando filtros...",
         "Actualizando la información según los criterios seleccionados."
       );
     });
   }
+
+  // *** AGREGAR BOTONES PARA LIMPIAR FILTROS ***
+  const clearFiltersBtn = document.querySelector(
+    'a[href*="balances"][href$="balances/"]'
+  );
+  if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener("click", function (e) {
+      // Limpiar filtros guardados cuando se hace clic en "Restablecer"
+      clearStoredFilters();
+    });
+  }
+
+  // Botón específico para limpiar solo los filtros guardados
+  const clearStoredFiltersBtn = document.getElementById(
+    "clear-stored-filters-btn"
+  );
+  if (clearStoredFiltersBtn) {
+    clearStoredFiltersBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      clearStoredFilters();
+
+      // Actualizar estado visual del botón
+      checkStoredFiltersStatus();
+
+      // Opcional: también limpiar el formulario actual
+      const form = document.querySelector('form[action*="balances"]');
+      if (form) {
+        form.reset();
+        // Disparar cambios para actualizar UI
+        const periodoSelect = document.getElementById("periodo");
+        if (periodoSelect) {
+          periodoSelect.dispatchEvent(new Event("change"));
+        }
+      }
+    });
+  }
+
   // Función para limpiar valores del formulario
   function cleanFormValues(form) {
     // Limpiar espacios no rompibles y caracteres especiales del año
@@ -139,6 +428,7 @@ document.addEventListener("DOMContentLoaded", function () {
       cuentaSelect.value = cuentaSelect.value.replace(/[\u00A0\s]/g, "").trim();
     }
   }
-  // Mostrar toast si hay filtros aplicados al cargar la página
+
+  // *** MOSTRAR TOAST SI HAY FILTROS APLICADOS AL CARGAR LA PÁGINA ***
   checkAndShowFilterToast();
 });
