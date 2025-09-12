@@ -1,4 +1,26 @@
-// Inicialización de DataTables para balances
+// Función para extraer texto limpio de HTML
+function getCleanTextFromHTML(htmlContent) {
+  if (!htmlContent) return "";
+
+  // Si ya es texto plano, devolverlo
+  if (typeof htmlContent === "string" && !htmlContent.includes("<")) {
+    return htmlContent.trim();
+  }
+
+  var tempDiv = document.createElement("div");
+  tempDiv.innerHTML = htmlContent;
+
+  // Extraer solo el texto de elementos específicos o todo el texto
+  var text = tempDiv.textContent || tempDiv.innerText || "";
+
+  // Limpiar caracteres especiales de formato
+  text = text
+    .replace(/[\n\r\t]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return text;
+}
 
 // Obtiene un valor numérico robusto desde una celda (TD),
 // soportando formatos: "1,234.56", "1.234,56", "$ 1,234.56", "MXN 1.234,56", etc.
@@ -90,12 +112,31 @@ document.addEventListener("DOMContentLoaded", function () {
       },
       columnDefs: [
         {
-          targets: [5],
+          // Columna #0: Número secuencial - limpiar HTML de botones
+          targets: [0],
           render: function (data, type, row) {
             if (type === "export" || type === "copy") {
-              var tempDiv = document.createElement("div");
-              tempDiv.innerHTML = data;
-              return tempDiv.textContent || tempDiv.innerText || "";
+              return getCleanTextFromHTML(data);
+            }
+            return data;
+          },
+        },
+        {
+          // Columna #1: Categoría - limpiar HTML de spans y badges
+          targets: [1],
+          render: function (data, type, row) {
+            if (type === "export" || type === "copy") {
+              return getCleanTextFromHTML(data);
+            }
+            return data;
+          },
+        },
+        {
+          // Columnas #2-4: Cuenta, Banco, Sucursal - limpiar HTML
+          targets: [2, 3, 4],
+          render: function (data, type, row) {
+            if (type === "export" || type === "copy") {
+              return getCleanTextFromHTML(data);
             }
             return data;
           },
@@ -109,18 +150,17 @@ document.addEventListener("DOMContentLoaded", function () {
           exportOptions: {
             format: {
               body: function (data, row, column, node) {
-                if (column === 5) {
-                  var tempDiv = document.createElement("div");
-                  tempDiv.innerHTML = data;
-                  var text = tempDiv.textContent || tempDiv.innerText || "";
-                  // Simplemente devolver el texto extraído
-                  return text;
-                }
-                if (column === 7 || column === 8) {
+                // Limpiar HTML de todas las columnas
+                var cleanData = getCleanTextFromHTML(data);
+
+                // Para columnas numéricas, asegurar formato correcto
+                if (column === 6 || column === 7) {
+                  // Total y Acumulado (ahora columnas 6 y 7)
                   var n = getNumericValueFromNode(node);
-                  return isNaN(n) ? data : n.toFixed(2);
+                  return isNaN(n) ? cleanData : n.toFixed(2);
                 }
-                return data;
+
+                return cleanData;
               },
             },
           },
@@ -134,22 +174,17 @@ document.addEventListener("DOMContentLoaded", function () {
           exportOptions: {
             format: {
               body: function (data, row, column, node) {
-                if (column === 5) {
-                  var tempDiv = document.createElement("div");
-                  tempDiv.innerHTML = data;
-                  var text = tempDiv.textContent || tempDiv.innerText || "";
-                  // Debug para CSV
-                  console.log("CSV - Column 5 (Categoria):");
-                  console.log("Original data:", data);
-                  console.log("Extracted text:", text);
-                  // Simplemente devolver el texto extraído sin normalización
-                  return text;
-                }
-                if (column === 7 || column === 8) {
+                // Limpiar HTML de todas las columnas
+                var cleanData = getCleanTextFromHTML(data);
+
+                // Para columnas numéricas, asegurar formato correcto
+                if (column === 6 || column === 7) {
+                  // Total y Acumulado (ahora columnas 6 y 7)
                   var n = getNumericValueFromNode(node);
-                  return isNaN(n) ? data : n.toFixed(2);
+                  return isNaN(n) ? cleanData : n.toFixed(2);
                 }
-                return data;
+
+                return cleanData;
               },
             },
           },
@@ -173,24 +208,112 @@ document.addEventListener("DOMContentLoaded", function () {
               pad(now.getMinutes()) +
               "-" +
               pad(now.getSeconds());
-            return "gastos-acumulados-" + fecha + "-" + hora;
+            return "gastos-detalle-" + fecha + "-" + hora;
           },
           exportOptions: {
             format: {
               body: function (data, row, column, node) {
-                if (column === 5) {
-                  var tempDiv = document.createElement("div");
-                  tempDiv.innerHTML = data;
-                  return tempDiv.textContent || tempDiv.innerText || "";
-                }
-                if (column === 7 || column === 8) {
-                  // Para Excel devolver un Number puro, sin separadores, para que detecte tipo numérico
+                // Limpiar HTML de todas las columnas
+                var cleanData = getCleanTextFromHTML(data);
+
+                // Para columnas numéricas, devolver número puro para Excel
+                if (column === 6 || column === 7) {
+                  // Total y Acumulado (ahora columnas 6 y 7)
                   var n = getNumericValueFromNode(node);
                   return isNaN(n) ? 0 : n;
                 }
-                return data;
+
+                return cleanData;
               },
             },
+          },
+        },
+        {
+          text: '<i class="fas fa-chart-pie mr-1"></i> Resumen Excel',
+          className: "dt-button btn-summary-excel",
+          action: function (e, dt, button, config) {
+            var categoryTotals = {};
+            var table = $("#gastosTable").DataTable();
+            var data = table.rows({ search: "applied" }).data();
+
+            // Procesar cada fila para agrupar por categoría
+            for (var i = 0; i < data.length; i++) {
+              var rowData = data[i];
+              // Extraer texto limpio de la categoría (columna 1)
+              var categoryHtml = rowData[1];
+              var tempDiv = document.createElement("div");
+              tempDiv.innerHTML = categoryHtml;
+              var category =
+                tempDiv.textContent || tempDiv.innerText || categoryHtml;
+              category = category.trim();
+
+              // Obtener el total de la fila (columna 6)
+              var totalValue = 0;
+              var totalCell = table.cell(i, 6).node();
+              if (totalCell) {
+                totalValue = getNumericValueFromNode(totalCell);
+                if (isNaN(totalValue)) totalValue = 0;
+              }
+
+              // Sumar al total de la categoría
+              if (categoryTotals[category]) {
+                categoryTotals[category] += totalValue;
+              } else {
+                categoryTotals[category] = totalValue;
+              }
+            }
+
+            // Convertir a array y ordenar por total descendente
+            var sortedCategories = Object.keys(categoryTotals)
+              .map(function (category) {
+                return [category, categoryTotals[category]];
+              })
+              .sort(function (a, b) {
+                return b[1] - a[1];
+              });
+
+            // Calcular gran total
+            var grandTotal = sortedCategories.reduce(function (sum, item) {
+              return sum + item[1];
+            }, 0);
+
+            // Crear datos para Excel usando formato CSV (compatible con Excel)
+            var csvData = "\uFEFF"; // BOM para UTF-8
+            csvData += "Categoría,Total Acumulado\n";
+            sortedCategories.forEach(function (item) {
+              csvData += '"' + item[0] + '",' + item[1].toFixed(2) + "\n";
+            });
+            csvData += '"TOTAL GENERAL",' + grandTotal.toFixed(2);
+
+            // Crear nombre de archivo
+            var now = new Date();
+            var pad = (n) => n.toString().padStart(2, "0");
+            var fecha =
+              now.getFullYear() +
+              "-" +
+              pad(now.getMonth() + 1) +
+              "-" +
+              pad(now.getDate());
+            var hora =
+              pad(now.getHours()) +
+              "-" +
+              pad(now.getMinutes()) +
+              "-" +
+              pad(now.getSeconds());
+            var filename =
+              "gastos-resumen-categorias-" + fecha + "-" + hora + ".csv";
+
+            // Crear y descargar el archivo
+            var blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
+            var link = document.createElement("a");
+            var url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", filename);
+            link.style.visibility = "hidden";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
           },
         },
         {
@@ -200,15 +323,16 @@ document.addEventListener("DOMContentLoaded", function () {
           exportOptions: {
             format: {
               body: function (data, row, column, node) {
-                if (column === 5) {
-                  var tempDiv = document.createElement("div");
-                  tempDiv.innerHTML = data;
-                  return tempDiv.textContent || tempDiv.innerText || "";
-                }
-                if (column === 7 || column === 8) {
+                // Limpiar HTML de todas las columnas
+                var cleanData = getCleanTextFromHTML(data);
+
+                // Para columnas numéricas con símbolo de moneda
+                if (column === 6 || column === 7) {
+                  // Total y Acumulado (ahora columnas 6 y 7)
                   return formatNumericValue(node, true);
                 }
-                return data;
+
+                return cleanData;
               },
             },
           },
@@ -220,15 +344,16 @@ document.addEventListener("DOMContentLoaded", function () {
           exportOptions: {
             format: {
               body: function (data, row, column, node) {
-                if (column === 5) {
-                  var tempDiv = document.createElement("div");
-                  tempDiv.innerHTML = data;
-                  return tempDiv.textContent || tempDiv.innerText || "";
-                }
-                if (column === 7 || column === 8) {
+                // Limpiar HTML de todas las columnas
+                var cleanData = getCleanTextFromHTML(data);
+
+                // Para columnas numéricas con símbolo de moneda
+                if (column === 6 || column === 7) {
+                  // Total y Acumulado (ahora columnas 6 y 7)
                   return formatNumericValue(node, true);
                 }
-                return data;
+
+                return cleanData;
               },
             },
           },
@@ -236,7 +361,7 @@ document.addEventListener("DOMContentLoaded", function () {
       ],
       dom: '<"flex justify-between items-center mb-4"<"flex-1"B><"flex items-center gap-4"l f>>rt<"flex justify-between items-center mt-4"<"flex-1"i><"flex-1 text-center"p>>',
       responsive: true,
-      order: [[6, "desc"]],
+      order: [[6, "desc"]], // Ordenar por Total Gastos (ahora columna 6) descendente
       paging: true,
       pageLength: 25,
       lengthMenu: [

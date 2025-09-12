@@ -391,7 +391,7 @@
     <!-- Tabla de datos -->
     <div class="bg-white rounded-lg shadow-lg p-6 border border-gray-100 mb-8">
       <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-        <i class="fas fa-table text-blue-500 mr-2"></i> Detalle de Gastos
+        <i class="fas fa-table text-blue-500 mr-2"></i> Detalle de Gastos por Categoría y Cuenta
       </h2>
       
       <div class="overflow-x-auto">
@@ -399,42 +399,66 @@
         <table id="gastosTable" class="display responsive nowrap min-w-full bg-white border-collapse hover stripe" style="width:100%">
           <thead>
             <tr class="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700">
-              <th class="px-4 py-3 text-left">ID</th>
-              <th class="px-4 py-3 text-left">Cuenta</th>
-              <th class="px-4 py-3 text-left">Numero de la Cuenta</th>
+              <th class="px-4 py-3 text-left">#</th>
+              <th class="px-4 py-3 text-left">Categoría</th>
+              <th class="px-4 py-3 text-left">N° Cuenta</th>
               <th class="px-4 py-3 text-left">Banco</th>
               <th class="px-4 py-3 text-left">Sucursal</th>
-              <th class="px-4 py-3 text-left">Categoría</th>
               <th class="px-4 py-3 text-left">Fecha</th>
-              <th class="px-4 py-3 text-right">Total Gastos</th>
+              <th class="px-4 py-3 text-right">Total</th>
               <th class="px-4 py-3 text-right">Acumulado</th>
             </tr>
           </thead>
           <tbody>
             {% for balance in balances %}
             <tr class="text-gray-700 border-b border-gray-200 hover:bg-blue-50 transition-colors duration-150">
-              <td class="px-4 py-3 font-mono text-sm">{{ balance.id }}</td>
-              <td class="px-4 py-3">{{ balance.id_cuenta_banco__id }}</td>
-              <td class="px-4 py-3">{{ balance.id_cuenta_banco__numero_cuenta }}</td>
-              <td class="px-4 py-3">{{ balance.id_cuenta_banco__id_banco__nombre }}</td>
-              <td class="px-4 py-3">{{ balance.id_cuenta_banco__id_sucursal__nombre }}</td>
+              
+              <td class="px-4 py-3 font-mono text-sm">{{ balance.numero_secuencial }}</td>
+              
               <td class="px-4 py-3">
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                   {{ balance.id_cat_gastos__nombre }}
                 </span>
               </td>
+              
               <td class="px-4 py-3">
-                {% if selected_periodo == 'diario' %}
-                  {{ balance.fecha|date:"Y-m-d" }}
-                {% elif selected_periodo == 'semanal' %}
-                  {{ balance.semana|date:"Y-m-d" }}
-                {% elif selected_periodo == 'mensual' %}
-                  {{ balance.mes|date:"Y-m" }}
+                {% if balance.id_cuenta_banco__numero_cuenta %}
+                  {{ balance.id_cuenta_banco__numero_cuenta }}
+                {% else %}
+                  <span class="text-gray-400">-</span>
                 {% endif %}
               </td>
-              <td class="px-4 py-3 text-right font-medium text-blue-600" data-order="{{ balance.total_gastos.amount }}">
+              
+              <td class="px-4 py-3">
+                {% if balance.id_cuenta_banco__id_banco__nombre %}
+                  {{ balance.id_cuenta_banco__id_banco__nombre }}
+                {% else %}
+                  <span class="text-gray-400">-</span>
+                {% endif %}
+              </td>
+              
+              <td class="px-4 py-3">
+                {% if balance.id_cuenta_banco__id_sucursal__nombre %}
+                  {{ balance.id_cuenta_banco__id_sucursal__nombre }}
+                {% else %}
+                  <span class="text-gray-400">-</span>
+                {% endif %}
+              </td>
+              
+              <td class="px-4 py-3">
+                {% if selected_periodo == 'diario' %}
+                  {% if balance.fecha %}{{ balance.fecha|date:"Y-m-d" }}{% else %}-{% endif %}
+                {% elif selected_periodo == 'semanal' %}
+                  {% if balance.semana %}{{ balance.semana|date:"Y-m-d" }}{% else %}-{% endif %}
+                {% elif selected_periodo == 'mensual' %}
+                  {% if balance.mes %}{{ balance.mes|date:"Y-m" }}{% else %}-{% endif %}
+                {% endif %}
+              </td>
+              
+              <td class="px-4 py-3 text-right font-medium text-blue-600" data-order="{{ balance.total_gastos }}">
                 ${{ balance.total_gastos|us_currency:2 }}
               </td>
+              
               <td class="px-4 py-3 text-right font-medium text-green-600" data-order="{{ balance.acumulado }}">
                 ${{ balance.acumulado|us_currency:2 }}
               </td>
@@ -443,7 +467,7 @@
           </tbody>
           <tfoot>
             <tr class="bg-gradient-to-r from-blue-50 to-blue-100 font-semibold text-gray-800">
-              <th colspan="7" class="px-4 py-3 text-right">Total:</th>
+              <th colspan="6" class="px-4 py-3 text-right">Total:</th>
               <th class="px-4 py-3 text-right text-blue-600">${{ total_gastos|us_currency:2 }}</th>
               <th class="px-4 py-3"></th>
             </tr>

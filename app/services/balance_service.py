@@ -71,44 +71,70 @@ class BalanceAnalysisService:
         return filters
     
     def get_balances_by_period(self, filters, periodo):
-        """Obtiene los balances agrupados por período"""
-        base_values = [
-            'id',
-            'id_cuenta_banco__id', 
-            'id_cuenta_banco__numero_cuenta',
-            'id_cuenta_banco__id_banco__nombre',
-            'id_cuenta_banco__id_sucursal__nombre',
-            'id_cat_gastos__nombre'
-        ]
+        """Obtiene los balances agrupados por período, categoría y cuenta"""
         
         if periodo == 'diario':
+            # Para período diario, agrupamos por categoría, cuenta y fecha
             balances = Gastos.objects.filter(**filters).values(
-                *base_values, 'fecha'
+                'id_cat_gastos__nombre', 
+                'id_cuenta_banco__id',
+                'id_cuenta_banco__numero_cuenta',
+                'id_cuenta_banco__id_banco__nombre',
+                'id_cuenta_banco__id_sucursal__nombre',
+                'fecha'
             ).annotate(
                 total_gastos=Sum('monto')
-            ).order_by('id_cuenta_banco__id', 'fecha')
+            ).order_by('id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta', 'fecha')
             
         elif periodo == 'semanal':
             balances = Gastos.objects.filter(**filters).annotate(
                 semana=TruncWeek('fecha')
             ).values(
-                *base_values, 'semana'
+                'id_cat_gastos__nombre',
+                'id_cuenta_banco__id',
+                'id_cuenta_banco__numero_cuenta',
+                'id_cuenta_banco__id_banco__nombre',
+                'id_cuenta_banco__id_sucursal__nombre',
+                'semana'
             ).annotate(
                 total_gastos=Sum('monto')
-            ).order_by('id_cuenta_banco__id', 'semana')
+            ).order_by('id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta', 'semana')
             
         elif periodo == 'mensual':
-            balances = Gastos.objects.filter(**filters).annotate(
-                mes=TruncMonth('fecha')
-            ).values(
-                *base_values, 'mes'
+            # Para mensual, agrupamos por categoría y cuenta
+            balances = Gastos.objects.filter(**filters).values(
+                'id_cat_gastos__nombre',
+                'id_cuenta_banco__id',
+                'id_cuenta_banco__numero_cuenta',
+                'id_cuenta_banco__id_banco__nombre',
+                'id_cuenta_banco__id_sucursal__nombre'
             ).annotate(
-                total_gastos=Sum('monto')
-            ).order_by('id_cuenta_banco__id', 'mes')
+                total_gastos=Sum('monto'),
+                mes=TruncMonth('fecha')  # Tomamos el primer mes para referencia
+            ).order_by('id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta')
         else:
             balances = []
         
-        return list(balances)
+        # Convertir a lista y agregar datos adicionales
+        balances_list = list(balances)
+        
+        # Agregar información adicional a cada balance
+        for i, balance in enumerate(balances_list, 1):
+            balance['numero_secuencial'] = i
+            
+            # Agregar información sobre múltiples categorías (para información)
+            categoria_nombre = balance['id_cat_gastos__nombre']
+            cuentas_count = Gastos.objects.filter(
+                **filters, 
+                id_cat_gastos__nombre=categoria_nombre
+            ).values('id_cuenta_banco').distinct().count()
+            
+            if cuentas_count > 1:
+                balance['cuenta_info'] = f"Cuenta {balance['id_cuenta_banco__numero_cuenta']} de {cuentas_count} total"
+            else:
+                balance['cuenta_info'] = "Única cuenta para esta categoría"
+        
+        return balances_list
     
     def calculate_accumulated(self, balances):
         """Calcula el acumulado de los balances"""

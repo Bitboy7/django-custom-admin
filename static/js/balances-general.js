@@ -431,4 +431,92 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // *** MOSTRAR TOAST SI HAY FILTROS APLICADOS AL CARGAR LA PÁGINA ***
   checkAndShowFilterToast();
+
+  // *** FUNCIONALIDAD EXPANDIR/COLAPSAR CUENTAS ***
+
+  // Manejar clics en botones de expansión
+  document.addEventListener("click", function (e) {
+    if (e.target.closest(".expand-btn")) {
+      e.preventDefault();
+      const button = e.target.closest(".expand-btn");
+      const categoria = button.getAttribute("data-categoria");
+      const icon = button.querySelector("i");
+
+      // Encontrar todas las sub-filas de esta categoría
+      const subRows = document.querySelectorAll(
+        `.sub-row[data-categoria="${categoria}"]`
+      );
+
+      if (subRows.length > 0) {
+        const isExpanded = button.classList.contains("expanded");
+
+        if (isExpanded) {
+          // Colapsar
+          subRows.forEach((row) => {
+            row.classList.add("hidden");
+          });
+          button.classList.remove("expanded");
+          icon.classList.remove("fa-minus-circle");
+          icon.classList.add("fa-plus-circle");
+          button.setAttribute("title", "Expandir cuentas");
+        } else {
+          // Expandir
+          subRows.forEach((row) => {
+            row.classList.remove("hidden");
+          });
+          button.classList.add("expanded");
+          icon.classList.remove("fa-plus-circle");
+          icon.classList.add("fa-minus-circle");
+          button.setAttribute("title", "Colapsar cuentas");
+        }
+      }
+    }
+  });
+
+  // Expandir/colapsar todas las categorías
+  function expandAllCategories() {
+    const allButtons = document.querySelectorAll(".expand-btn");
+    allButtons.forEach((button) => {
+      const categoria = button.getAttribute("data-categoria");
+      const subRows = document.querySelectorAll(
+        `.sub-row[data-categoria="${categoria}"]`
+      );
+      const icon = button.querySelector("i");
+
+      if (subRows.length > 0) {
+        subRows.forEach((row) => {
+          row.classList.remove("hidden");
+        });
+        button.classList.add("expanded");
+        icon.classList.remove("fa-plus-circle");
+        icon.classList.add("fa-minus-circle");
+        button.setAttribute("title", "Colapsar cuentas");
+      }
+    });
+  }
+
+  function collapseAllCategories() {
+    const allButtons = document.querySelectorAll(".expand-btn");
+    allButtons.forEach((button) => {
+      const categoria = button.getAttribute("data-categoria");
+      const subRows = document.querySelectorAll(
+        `.sub-row[data-categoria="${categoria}"]`
+      );
+      const icon = button.querySelector("i");
+
+      if (subRows.length > 0) {
+        subRows.forEach((row) => {
+          row.classList.add("hidden");
+        });
+        button.classList.remove("expanded");
+        icon.classList.remove("fa-minus-circle");
+        icon.classList.add("fa-plus-circle");
+        button.setAttribute("title", "Expandir cuentas");
+      }
+    });
+  }
+
+  // Hacer las funciones disponibles globalmente
+  window.expandAllCategories = expandAllCategories;
+  window.collapseAllCategories = collapseAllCategories;
 });
