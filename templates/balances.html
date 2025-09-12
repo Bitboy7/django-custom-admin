@@ -154,10 +154,10 @@
         
           <div class="flex-1 min-w-[200px] group">
 
-            <label for="cuenta_id" class="block font-medium mb-2 group-hover:text-blue-300 transition-colors duration-200">Seleccione la Cuenta:</label>
+            <label for="cuenta_id" class="block font-medium mb-2 group-hover:text-blue-700 transition-colors duration-200">Seleccione la Cuenta:</label>
             <div class="relative">
               <select name="cuenta_id" id="cuenta_id" 
-                class="block appearance-none w-full bg-white bg-opacity-90 border border-gray-400 hover:border-blue-500 px-4 py-2 pr-8 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                class="block appearance-none w-full bg-white bg-opacity-90 border border-gray-400 hover:border-blue-700 px-4 py-2 pr-8 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value="">Todas</option>
                 {% for cuenta in cuentas %}
                 <option value="{{ cuenta.id }}" {% if cuenta.id|stringformat:"s" == selected_cuenta_id %}selected{% endif %}>{{ cuenta.numero_cuenta }}</option>
@@ -170,10 +170,10 @@
           </div>
       
           <div class="flex-1 min-w-[200px] group">
-            <label for="year" class="block font-medium mb-2 group-hover:text-indigo-300 transition-colors duration-200">Seleccione el Año:</label>
+            <label for="year" class="block font-medium mb-2 group-hover:text-blue-700 transition-colors duration-200">Seleccione el Año:</label>
             <div class="relative">
               <select name="year" id="year" 
-                class="block appearance-none w-full bg-white bg-opacity-90 border border-gray-400 hover:border-indigo-500 px-4 py-2 pr-8 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                class="block appearance-none w-full bg-white bg-opacity-90 border border-gray-400 hover:border-blue-700 px-4 py-2 pr-8 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                 {% for year in available_years %}
                 <option value="{{ year.year|safe }}" {% if year.year|stringformat:"s" == selected_year or not selected_year and year.year == current_year %}selected{% endif %}>{{ year.year|safe }} </option>
                 {% endfor %}
@@ -186,10 +186,10 @@
       
           <div class="flex-1 min-w-[200px] group">
   
-            <label for="month" class="block font-medium mb-2 group-hover:text-pink-300 transition-colors duration-200">Seleccione el Mes:</label>
+            <label for="month" class="block font-medium mb-2 group-hover:text-blue-700 transition-colors duration-200">Seleccione el Mes:</label>
             <div class="relative">
               <select name="month" id="month" 
-                class="block appearance-none w-full bg-white bg-opacity-90 border border-gray-400 hover:border-pink-500 px-4 py-2 pr-8 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                class="block appearance-none w-full bg-white bg-opacity-90 border border-gray-400 hover:border-blue-700 px-4 py-2 pr-8 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-700 focus:border-transparent">
                 <option value="">Todos</option>
                 {% for month in months %}
                 <option value="{{ forloop.counter }}" {% if forloop.counter|stringformat:"s" == selected_month %}selected{% endif %}>{{ month }}</option>
@@ -202,10 +202,10 @@
           </div>
       
           <div class="flex-1 min-w-[200px] group">
-            <label for="periodo" class="block font-medium mb-2 group-hover:text-red-300 transition-colors duration-200">Seleccione el Periodo:</label>
+            <label for="periodo" class="block font-medium mb-2 group-hover:text-blue-700 transition-colors duration-200">Seleccione el Periodo:</label>
             <div class="relative">
               <select name="periodo" id="periodo" 
-                class="block appearance-none w-full bg-white bg-opacity-90 border border-gray-400 hover:border-red-500 px-4 py-2 pr-8 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                class="block appearance-none w-full bg-white bg-opacity-90 border border-gray-400 hover:border-blue-500 px-4 py-2 pr-8 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-700 focus:border-transparent">
                 <option value="diario" {% if selected_periodo == 'diario' %}selected{% endif %}>Diario</option>
                 <option value="semanal" {% if selected_periodo == 'semanal' %}selected{% endif %}>Semanal</option>
                 <option value="mensual" {% if selected_periodo == 'mensual' %}selected{% endif %}>Mensual</option>
@@ -506,27 +506,94 @@
 <script src="{% static 'js/balances-general.js' %}"></script>
 
 <script>
-  // Extraer categorías y totales de los balances y exponerlos como variables globales para los scripts externos
+  // Extraer categorías y totales de la tabla procesada para los gráficos
   window.balancesCategoriasLabels = [];
   window.balancesCategoriasData = [];
-  (function() {
+  
+  // Función para actualizar datos de gráficos desde la tabla
+  function updateChartsData() {
     var categorias = {};
-    {% for balance in balances %}
-      var categoria = "{{ balance.id_cat_gastos__nombre }}";
-      var monto = parseFloat("{{ balance.total_gastos }}");
-      if (categorias[categoria]) {
-        categorias[categoria] += monto;
-      } else {
-        categorias[categoria] = monto;
+    var table = $('#gastosTable').DataTable();
+    
+    // Esperar a que la tabla esté completamente cargada
+    if (table && table.data().length > 0) {
+      var data = table.rows({ search: 'applied' }).data();
+      
+      // Procesar cada fila visible para agrupar por categoría
+      for (var i = 0; i < data.length; i++) {
+        var rowData = data[i];
+        
+        // Extraer categoría (columna 1)
+        var categoryHtml = rowData[1];
+        var tempDiv = document.createElement('div');
+        tempDiv.innerHTML = categoryHtml;
+        var categoria = tempDiv.textContent || tempDiv.innerText || categoryHtml;
+        categoria = categoria.trim();
+        
+        // Obtener el total de la fila (columna 6) 
+        var totalValue = 0;
+        var totalCell = table.cell(i, 6).node();
+        if (totalCell) {
+          var totalText = totalCell.textContent || totalCell.innerText || '';
+          console.log("Texto original de celda: '" + totalText + "'");
+          
+          // Usar la función getNumericValueFromNode si está disponible
+          if (typeof getNumericValueFromNode === 'function') {
+            totalValue = getNumericValueFromNode(totalCell);
+            console.log("Valor parseado con getNumericValueFromNode: " + totalValue);
+            if (isNaN(totalValue)) totalValue = 0;
+          } else {
+            // Extraer número del texto (remover $, espacios, comas y otros símbolos monetarios)
+            var cleanNumber = totalText.replace(/[\$\s,€£¥₹₽]/g, '');
+            console.log("Número limpio: '" + cleanNumber + "'");
+            totalValue = parseFloat(cleanNumber);
+            console.log("Valor parseado con parseFloat: " + totalValue);
+            if (isNaN(totalValue)) totalValue = 0;
+          }
+        }
+        
+        // Sumar al total de la categoría
+        if (categorias[categoria]) {
+          categorias[categoria] += totalValue;
+        } else {
+          categorias[categoria] = totalValue;
+        }
       }
-    {% endfor %}
-    for (var key in categorias) {
-      if (categorias.hasOwnProperty(key)) {
-        window.balancesCategoriasLabels.push(key);
-        window.balancesCategoriasData.push(categorias[key]);
+      
+      // Limpiar arrays anteriores
+      window.balancesCategoriasLabels = [];
+      window.balancesCategoriasData = [];
+      
+      // Llenar arrays con datos agrupados
+      for (var key in categorias) {
+        if (categorias.hasOwnProperty(key) && key.trim() !== '') {
+          window.balancesCategoriasLabels.push(key);
+          window.balancesCategoriasData.push(categorias[key]);
+          // Debug: mostrar valores en consola
+          console.log("Categoría: " + key + " - Valor: " + categorias[key]);
+        }
       }
     }
-  })();
+  }
+  
+  // Inicializar datos al cargar la página
+  $(document).ready(function() {
+    // Esperar a que DataTable esté completamente inicializada
+    setTimeout(function() {
+      updateChartsData();
+      
+      // Disparar evento personalizado para que los gráficos se actualicen
+      window.dispatchEvent(new Event('chartsDataUpdated'));
+    }, 1000);
+    
+    // También actualizar cuando la tabla se redibuje (filtros, paginación, etc.)
+    $('#gastosTable').on('draw.dt', function() {
+      setTimeout(function() {
+        updateChartsData();
+        window.dispatchEvent(new Event('chartsDataUpdated'));
+      }, 100);
+    });
+  });
 </script>
 <script src="{% static 'js/balances-charts.js' %}"></script>
 

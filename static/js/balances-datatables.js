@@ -23,15 +23,21 @@ function getCleanTextFromHTML(htmlContent) {
 }
 
 // Obtiene un valor numérico robusto desde una celda (TD),
-// soportando formatos: "1,234.56", "1.234,56", "$ 1,234.56", "MXN 1.234,56", etc.
+// soportando formatos: "1,234.56", "1.234,56", "$ 1,234.56", "MXN 1.234,56", "720 749.86", etc.
 function getNumericValueFromNode(node) {
   if (!node) return NaN;
   var dataOrder = node.getAttribute && node.getAttribute("data-order");
   var source = dataOrder || node.textContent || node.innerText || "";
   if (typeof source !== "string") source = String(source);
 
+  // Primero, remover símbolos de moneda y espacios múltiples
+  var cleanSource = source
+    .replace(/[\$€£¥₹₽]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
   // Mantener solo dígitos, separadores y signo negativo
-  var s = source.replace(/[^0-9.,-]/g, "").trim();
+  var s = cleanSource.replace(/[^0-9.,-]/g, "").trim();
   if (!s) return NaN;
 
   var lastDot = s.lastIndexOf(".");
@@ -361,7 +367,7 @@ document.addEventListener("DOMContentLoaded", function () {
       ],
       dom: '<"flex justify-between items-center mb-4"<"flex-1"B><"flex items-center gap-4"l f>>rt<"flex justify-between items-center mt-4"<"flex-1"i><"flex-1 text-center"p>>',
       responsive: true,
-      order: [[6, "desc"]], // Ordenar por Total Gastos (ahora columna 6) descendente
+      order: [[7, "asc"]], // Ordenar por Total Gastos (ahora columna 6) ascendente
       paging: true,
       pageLength: 25,
       lengthMenu: [
