@@ -29,45 +29,45 @@ class BalanceAnalysisService:
             'cuentas': cuentas
         }
     
-    def build_filters(self, cuenta_id, year, month, periodo, dia, fecha_inicio, fecha_fin):
+    def build_filters(self, cuenta_id, year, month, selected_months, periodo, dia, fecha_inicio, fecha_fin):
         """Construye los filtros para la consulta con validación de tipos"""
         filters = {}
-        
         # Validar y agregar filtro de año
         if year:
             try:
                 year_int = int(year)
                 filters['fecha__year'] = year_int
             except (ValueError, TypeError):
-                # Si no se puede convertir, usar el año actual
                 filters['fecha__year'] = datetime.now().year
         else:
             filters['fecha__year'] = datetime.now().year
-        
+
         # Validar y agregar filtro de cuenta
         if cuenta_id:
             try:
                 cuenta_int = int(cuenta_id)
                 filters['id_cuenta_banco_id'] = cuenta_int
             except (ValueError, TypeError):
-                pass  # No agregar filtro si no es válido
-        
-        # Validar y agregar filtro de mes
-        if month:
+                pass
+
+        # Filtrar por múltiples meses si existen, si no por uno solo
+        if selected_months and isinstance(selected_months, list) and len(selected_months) > 0:
+            filters['fecha__month__in'] = selected_months
+        elif month:
             try:
                 month_int = int(month)
                 if 1 <= month_int <= 12:
                     filters['fecha__month'] = month_int
             except (ValueError, TypeError):
-                pass  # No agregar filtro si no es válido
-        
+                pass
+
         # Filtros específicos por periodo
         if periodo == 'diario':
             if dia:
                 filters['fecha'] = dia
             elif fecha_inicio and fecha_fin:
                 filters['fecha__range'] = [fecha_inicio, fecha_fin]
-        
+
         return filters
     
     def get_balances_by_period(self, filters, periodo):
@@ -209,6 +209,22 @@ class BalanceAnalysisService:
             except (ValueError, TypeError):
                 month = ''
         
+        # Obtener múltiples meses (para selector múltiple)
+        months_param = request.GET.get('months', '')
+        selected_months = []
+        if months_param and months_param.strip():
+            try:
+                # Dividir por comas y limpiar cada valor
+                month_values = months_param.split(',')
+                for m in month_values:
+                    m_clean = m.strip()
+                    if m_clean:
+                        month_int = int(m_clean)
+                        if 1 <= month_int <= 12:
+                            selected_months.append(month_int)
+            except (ValueError, TypeError):
+                selected_months = []
+        
         # Obtener cuenta_id y limpiarlo
         cuenta_id_param = request.GET.get('cuenta_id', '')
         cuenta_id = ''
@@ -222,6 +238,7 @@ class BalanceAnalysisService:
             'cuenta_id': cuenta_id,
             'year': year,
             'month': month,
+            'selected_months': selected_months,
             'periodo': request.GET.get('periodo', 'diario'),
             'dia': request.GET.get('dia', datetime.now().strftime('%Y-%m-%d')),
             'fecha_inicio': request.GET.get('fecha_inicio', ''),
@@ -238,7 +255,7 @@ class BalanceAnalysisService:
         
         # Construir filtros
         filters = self.build_filters(
-            params['cuenta_id'], params['year'], params['month'],
+            params['cuenta_id'], params['year'], params['month'], params.get('selected_months', []),
             params['periodo'], params['dia'], params['fecha_inicio'], params['fecha_fin']
         )
         

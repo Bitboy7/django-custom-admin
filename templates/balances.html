@@ -185,18 +185,49 @@
           </div>
       
           <div class="flex-1 min-w-[200px] group">
-  
-            <label for="month" class="block font-medium mb-2 group-hover:text-blue-700 transition-colors duration-200">Seleccione el Mes:</label>
+            <label class="block font-medium mb-2 group-hover:text-blue-700 transition-colors duration-200">Seleccione los Meses:</label>
             <div class="relative">
-              <select name="month" id="month" 
-                class="block appearance-none w-full bg-white bg-opacity-90 border border-gray-400 hover:border-blue-700 px-4 py-2 pr-8 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-700 focus:border-transparent">
-                <option value="">Todos</option>
-                {% for month in months %}
-                <option value="{{ forloop.counter }}" {% if forloop.counter|stringformat:"s" == selected_month %}selected{% endif %}>{{ month }}</option>
-                {% endfor %}
-              </select>
+              <!-- Campo oculto para almacenar valores múltiples -->
+              <input type="hidden" name="months" id="months" value="{{ selected_months|join:',' }}">
+              
+              <!-- Botón de selección que muestra los meses seleccionados -->
+              <button type="button" id="month-selector-btn" 
+                class="block w-full bg-white bg-opacity-90 border border-gray-400 hover:border-blue-700 px-4 py-2 pr-8 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-700 focus:border-transparent text-left">
+                <span id="month-selector-text">Todos los meses</span>
+              </button>
               <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-600">
                 <i class="fas fa-chevron-down text-xs"></i>
+              </div>
+              
+              <!-- Dropdown de meses con checkboxes -->
+              <div id="month-dropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg hidden">
+                <div class="p-2 max-h-80 overflow-y-auto">
+                  <!-- Opción "Todos" -->
+                  <label class="flex items-center p-2 hover:bg-blue-50 rounded cursor-pointer">
+                    <input type="checkbox" id="month-all" class="mr-3 text-blue-600 focus:ring-blue-500">
+                    <span class="text-sm font-medium text-gray-700">Todos los meses</span>
+                  </label>
+                  <hr class="my-1">
+                  
+                  <!-- Checkboxes para cada mes -->
+                  {% for month in months %}
+                  <label class="flex items-center p-2 hover:bg-blue-50 rounded cursor-pointer">
+                    <input type="checkbox" class="month-checkbox mr-3 text-blue-600 focus:ring-blue-500" 
+                           value="{{ forloop.counter }}" data-name="{{ month }}">
+                    <span class="text-sm text-gray-700">{{ month }}</span>
+                  </label>
+                  {% endfor %}
+                </div>
+                
+                <!-- Botones de acción -->
+                <div class="border-t bg-gray-50 p-3 flex justify-between">
+                  <button type="button" id="clear-months" class="text-sm text-gray-600 hover:text-gray-800">
+                    <i class="fas fa-times mr-1"></i> Limpiar
+                  </button>
+                  <button type="button" id="apply-months" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                    <i class="fas fa-check mr-1"></i> Aplicar
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -598,4 +629,5 @@
 <script src="{% static 'js/balances-charts.js' %}"></script>
 
 <script src="{% static 'js/balances-datatables.js' %}"></script>
+<script src="{% static 'js/multi-month-selector.js' %}"></script>
 {% endblock %}
