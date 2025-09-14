@@ -159,7 +159,7 @@ JAZZMIN_SETTINGS = {
     "custom_links": {
         "gastos": [{
             "name": "Subir Factura (IA)", 
-            "url": "/gastos/ingresar-gasto-factura/", 
+            "url": "/ingresar-factura/", 
             "icon": "fas fa-file-upload",
             "permissions": ["gastos.add_gastos"]
         }]
