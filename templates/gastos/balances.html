@@ -133,7 +133,7 @@
     
     <h1 class="text-3xl font-bold flex items-center mb-8 text-gray-800 border-b pb-2">
       <i class="fas fa-chart-line mr-3 text-blue-600"></i>
-      <span class="bg-clip-text text-gray-800">Análisis de gastos </span>
+      <span class="bg-clip-text text-gray-800">Acumulado de gastos </span>
     </h1>
     
     <!-- Warning -->
@@ -148,7 +148,7 @@
     </div>
 
     <!-- Formulario de filtros -->
-    <div class="bg-gradient-to-r from-gray-50 to-gray-100 text-gray-800 shadow-md rounded-lg p-5 border border-gray-200 mb-10">
+    <div class="bg-gradient-to-r from-gray-50 to-gray-200 text-gray-800 shadow-md rounded-lg p-5 border border-gray-200 mb-10">
       <form method="get" action="{% url 'balances' %}" class="space-y-6">
         <div class="flex flex-wrap gap-4 mb-4">
         
@@ -161,6 +161,22 @@
                 <option value="">Todas</option>
                 {% for cuenta in cuentas %}
                 <option value="{{ cuenta.id }}" {% if cuenta.id|stringformat:"s" == selected_cuenta_id %}selected{% endif %}>{{ cuenta.numero_cuenta }}</option>
+                {% endfor %}
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-600">
+                <i class="fas fa-chevron-down text-xs"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex-1 min-w-[200px] group">
+            <label for="sucursal_id" class="block font-medium mb-2 group-hover:text-blue-700 transition-colors duration-200">Seleccione la Sucursal:</label>
+            <div class="relative">
+              <select name="sucursal_id" id="sucursal_id" 
+                class="block appearance-none w-full bg-white bg-opacity-90 border border-gray-400 hover:border-blue-700 px-4 py-2 pr-8 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="">Todas</option>
+                {% for sucursal in sucursales %}
+                <option value="{{ sucursal.id }}" {% if sucursal.id|stringformat:"s" == selected_sucursal_id %}selected{% endif %}>{{ sucursal.nombre }}</option>
                 {% endfor %}
               </select>
               <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-600">
@@ -219,15 +235,7 @@
                   {% endfor %}
                 </div>
                 
-                <!-- Botones de acción -->
-                <div class="border-t bg-gray-50 p-3 flex justify-between">
-                  <button type="button" id="clear-months" class="text-sm text-gray-600 hover:text-gray-800">
-                    <i class="fas fa-times mr-1"></i> Limpiar
-                  </button>
-                  <button type="button" id="apply-months" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-                    <i class="fas fa-check mr-1"></i> Aplicar
-                  </button>
-                </div>
+            
               </div>
             </div>
           </div>
@@ -290,19 +298,19 @@
           </div>
         </div>
         <div class="flex items-center justify-between pt-4">
-         
           <div class="flex gap-3">
-          <button type="submit"
-            class="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-3 px-6 rounded-md shadow-md hover:shadow-lg transition-all duration-300 flex items-center group">
-            <i class="fas fa-filter mr-2 group-hover:animate-pulse"></i>Aplicar
-          </button>
-            <button type="button" id="clear-stored-filters-btn"
-                    class="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-bold py-3 px-6 rounded-md shadow-md hover:shadow-lg transition-all duration-300 flex items-center group"
-                    title="Limpiar filtros guardados automáticamente">
-              <i class="fas fa-broom mr-2 text-sm group-hover:animate-bounce"></i>Limpiar
-            </button>
+            <!-- Botones de acción -->
+            <div class="border-t bg-gray-50 p-3 flex justify-between gap-4">
+              <button type="button" id="clear-months" class="text-sm text-gray-600 hover:text-gray-800">
+          <i class="fas fa-times mr-1"></i> Limpiar
+              </button>
+              <button type="button" id="apply-months" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+          <i class="fas fa-check mr-1"></i> Aplicar
+              </button>
+            </div>
           </div>
         </div>
+
       </form>
     </div>
 

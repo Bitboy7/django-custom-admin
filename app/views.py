@@ -44,7 +44,7 @@ def balances_view(request):
     balance_service = BalanceAnalysisService()
     context = balance_service.get_full_context(request)
     
-    return render(request, 'balances.html', context)
+    return render(request, 'gastos/balances.html', context)
 
 
 @login_required

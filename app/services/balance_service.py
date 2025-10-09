@@ -7,6 +7,7 @@ from django.db.models import Sum, Avg, Max, Min
 from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
 
 from gastos.models import Gastos, Cuenta
+from catalogo.models import Sucursal
 
 
 class BalanceAnalysisService:
@@ -22,14 +23,16 @@ class BalanceAnalysisService:
         """Obtiene datos para los filtros"""
         available_years = Gastos.objects.dates('fecha', 'year')
         cuentas = Cuenta.objects.all()
+        sucursales = Sucursal.objects.all()
         
         return {
             'available_years': available_years,
             'months': self.months,
-            'cuentas': cuentas
+            'cuentas': cuentas,
+            'sucursales': sucursales
         }
     
-    def build_filters(self, cuenta_id, year, month, selected_months, periodo, dia, fecha_inicio, fecha_fin):
+    def build_filters(self, cuenta_id, year, month, selected_months, periodo, dia, fecha_inicio, fecha_fin, sucursal_id):
         """Construye los filtros para la consulta con validación de tipos"""
         filters = {}
         # Validar y agregar filtro de año
@@ -47,6 +50,14 @@ class BalanceAnalysisService:
             try:
                 cuenta_int = int(cuenta_id)
                 filters['id_cuenta_banco_id'] = cuenta_int
+            except (ValueError, TypeError):
+                pass
+
+        # Validar y agregar filtro de sucursal
+        if sucursal_id:
+            try:
+                sucursal_int = int(sucursal_id)
+                filters['id_sucursal_id'] = sucursal_int
             except (ValueError, TypeError):
                 pass
 
@@ -234,8 +245,18 @@ class BalanceAnalysisService:
             except (ValueError, TypeError):
                 cuenta_id = ''
         
+        # Obtener sucursal_id y limpiarlo
+        sucursal_id_param = request.GET.get('sucursal_id', '')
+        sucursal_id = ''
+        if sucursal_id_param:
+            try:
+                sucursal_id = int(str(sucursal_id_param).strip())
+            except (ValueError, TypeError):
+                sucursal_id = ''
+        
         return {
             'cuenta_id': cuenta_id,
+            'sucursal_id': sucursal_id,
             'year': year,
             'month': month,
             'selected_months': selected_months,
@@ -256,7 +277,7 @@ class BalanceAnalysisService:
         # Construir filtros
         filters = self.build_filters(
             params['cuenta_id'], params['year'], params['month'], params.get('selected_months', []),
-            params['periodo'], params['dia'], params['fecha_inicio'], params['fecha_fin']
+            params['periodo'], params['dia'], params['fecha_inicio'], params['fecha_fin'], params['sucursal_id']
         )
         
         # Obtener balances
@@ -278,6 +299,7 @@ class BalanceAnalysisService:
         # Renombrar parámetros para mantener compatibilidad
         context.update({
             'selected_cuenta_id': params['cuenta_id'],
+            'selected_sucursal_id': params['sucursal_id'],
             'selected_year': params['year'],
             'selected_month': params['month'],
             'selected_periodo': params['periodo'],
