@@ -1,183 +1,65 @@
-// Función para extraer texto limpio de HTML
-function getCleanTextFromHTML(htmlContent) {
-  if (!htmlContent) return "";
+/**
+ * Balances DataTables Configuration
+ *
+ * Configuración de DataTables para el módulo de gastos/balances
+ * Utiliza datatables-utils.js para funcionalidad reutilizable
+ *
+ * @requires jQuery
+ * @requires DataTables
+ * @requires datatables-utils.js
+ */
 
-  // Si ya es texto plano, devolverlo
-  if (typeof htmlContent === "string" && !htmlContent.includes("<")) {
-    return htmlContent.trim();
-  }
+// ============================================================================
+// CONFIGURACIÓN DEL MÓDULO
+// ============================================================================
 
-  var tempDiv = document.createElement("div");
-  tempDiv.innerHTML = htmlContent;
+var reportConfig = {
+  moduleName: "Reporte de Gastos",
+  filterFields: ["cuenta_id", "sucursal_id", "year", "month", "periodo"],
+};
 
-  // Extraer solo el texto de elementos específicos o todo el texto
-  var text = tempDiv.textContent || tempDiv.innerText || "";
+// ============================================================================
+// FUNCIONES AUXILIARES ESPECÍFICAS DEL MÓDULO
+// ============================================================================
 
-  // Limpiar caracteres especiales de formato
-  text = text
-    .replace(/[\n\r\t]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return text;
-}
-
-// Función para generar el título del reporte según los filtros aplicados
+/**
+ * Genera el título del reporte basado en filtros
+ * Usa la función genérica de datatables-utils.js
+ */
 function getReportTitle() {
-  var urlParams = new URLSearchParams(window.location.search);
-  var titleParts = [];
-
-  // Obtener información de los filtros
-  var cuentaId = urlParams.get("cuenta_id");
-  var sucursalId = urlParams.get("sucursal_id");
-  var year = urlParams.get("year");
-  var month = urlParams.get("month");
-  var periodo = urlParams.get("periodo");
-
-  // Agregar filtro de cuenta
-  if (cuentaId) {
-    var cuentaSelect = document.getElementById("cuenta_id");
-    if (cuentaSelect && cuentaSelect.selectedIndex >= 0) {
-      var selectedOption = cuentaSelect.options[cuentaSelect.selectedIndex];
-      if (selectedOption && selectedOption.text !== "Todas") {
-        titleParts.push("Cuenta: " + selectedOption.text);
-      }
-    }
-  }
-
-  // Agregar filtro de sucursal
-  if (sucursalId) {
-    var sucursalSelect = document.getElementById("sucursal_id");
-    if (sucursalSelect && sucursalSelect.selectedIndex >= 0) {
-      var selectedOption = sucursalSelect.options[sucursalSelect.selectedIndex];
-      if (selectedOption && selectedOption.text !== "Todas") {
-        titleParts.push("Sucursal: " + selectedOption.text);
-      }
-    }
-  }
-
-  // Agregar filtro de año
-  if (year) {
-    titleParts.push("Año: " + year);
-  }
-
-  // Agregar filtro de mes
-  if (month) {
-    var monthNames = [
-      "Enero",
-      "Febrero",
-      "Marzo",
-      "Abril",
-      "Mayo",
-      "Junio",
-      "Julio",
-      "Agosto",
-      "Septiembre",
-      "Octubre",
-      "Noviembre",
-      "Diciembre",
-    ];
-    var monthIndex = parseInt(month) - 1;
-    if (monthIndex >= 0 && monthIndex < 12) {
-      titleParts.push("Mes: " + monthNames[monthIndex]);
-    }
-  }
-
-  // Agregar filtro de periodo
-  if (periodo) {
-    var periodos = {
-      diario: "Diario",
-      semanal: "Semanal",
-      mensual: "Mensual",
-    };
-    titleParts.push("Período: " + (periodos[periodo] || periodo));
-  }
-
-  // Construir título completo
-  if (titleParts.length > 0) {
-    return "Reporte de gastos - " + titleParts.join(" | ");
-  } else {
-    return "Reporte de gastos - General";
-  }
+  return generateReportTitle(reportConfig);
 }
 
-// Función para obtener la fecha actual formateada
-function getCurrentDateFormatted() {
-  var now = new Date();
-  var day = String(now.getDate()).padStart(2, "0");
-  var month = String(now.getMonth() + 1).padStart(2, "0");
-  var year = now.getFullYear();
-  var hours = String(now.getHours()).padStart(2, "0");
-  var minutes = String(now.getMinutes()).padStart(2, "0");
-
-  return day + "/" + month + "/" + year + " " + hours + ":" + minutes;
-}
-
-// Obtiene un valor numérico robusto desde una celda (TD),
-// soportando formatos: "1,234.56", "1.234,56", "$ 1,234.56", "MXN 1.234,56", "720 749.86", etc.
-function getNumericValueFromNode(node) {
-  if (!node) return NaN;
-  var dataOrder = node.getAttribute && node.getAttribute("data-order");
-  var source = dataOrder || node.textContent || node.innerText || "";
-  if (typeof source !== "string") source = String(source);
-
-  // Primero, remover símbolos de moneda y espacios múltiples
-  var cleanSource = source
-    .replace(/[\$€£¥₹₽]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  // Mantener solo dígitos, separadores y signo negativo
-  var s = cleanSource.replace(/[^0-9.,-]/g, "").trim();
-  if (!s) return NaN;
-
-  var lastDot = s.lastIndexOf(".");
-  var lastComma = s.lastIndexOf(",");
-
-  if (lastDot > -1 && lastComma > -1) {
-    // Tiene ambos separadores: el último encontrado se asume como separador decimal
-    if (lastDot > lastComma) {
-      // Punto como decimal: quitar comas de miles
-      s = s.replace(/,/g, "");
-    } else {
-      // Coma como decimal: quitar puntos de miles y convertir coma a punto
-      s = s.replace(/\./g, "").replace(",", ".");
-    }
-  } else if (lastComma > -1) {
-    // Solo coma presente
-    if (/,-?\d{1,3}$/.test(s) || /,\d{2}$/.test(s)) {
-      // Parece decimal con coma
-      s = s.replace(/\./g, "").replace(",", ".");
-    } else {
-      // Coma como miles
-      s = s.replace(/,/g, "");
-    }
-  } else if (lastDot > -1) {
-    // Solo punto presente
-    if (/\.-?\d{1,3}$/.test(s) || /\.\d{2}$/.test(s)) {
-      // Parece decimal con punto -> ya está bien
-    } else {
-      // Punto como miles
-      s = s.replace(/\./g, "");
-    }
-  }
-
-  var num = parseFloat(s);
-  return isNaN(num) ? NaN : num;
-}
-
-// Formatea un node numérico según US, con o sin símbolo, para vistas de impresión/PDF
+/**
+ * Formatea un valor numérico con símbolo de moneda opcional
+ * Wrapper para compatibilidad con código existente
+ *
+ * @param {HTMLElement|number} node - Nodo del DOM o valor numérico
+ * @param {boolean} includeSymbol - Si se debe incluir el símbolo $
+ * @returns {string} Valor formateado
+ */
 function formatNumericValue(node, includeSymbol) {
-  var numValue = getNumericValueFromNode(node);
-  if (!isNaN(numValue)) {
-    var formatted = numValue.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    return includeSymbol ? "$" + formatted : formatted;
+  var numValue;
+
+  // Si es un nodo del DOM, extraer el valor
+  if (node && node.nodeType) {
+    numValue = getNumericValueFromNode(node);
+  } else if (typeof node === "number") {
+    numValue = node;
+  } else {
+    numValue = parseFloat(node);
   }
-  var result = "0.00";
-  return includeSymbol ? "$" + result : result;
+
+  if (isNaN(numValue)) {
+    return includeSymbol ? "$0.00" : "0.00";
+  }
+
+  var formatted = numValue.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  return includeSymbol ? "$" + formatted : formatted;
 }
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -374,43 +256,24 @@ document.addEventListener("DOMContentLoaded", function () {
               return sum + item[1];
             }, 0);
 
-            // Crear datos para Excel usando formato CSV (compatible con Excel)
-            var csvData = "\uFEFF"; // BOM para UTF-8
-            csvData += "Categoría,Total acumulado\n";
+            // Preparar datos para exportación
+            var headers = ["Categoría", "Total acumulado"];
+            var data = [];
+
             sortedCategories.forEach(function (item) {
-              csvData += '"' + item[0] + '",' + item[1].toFixed(2) + "\n";
+              data.push([item[0], item[1]]);
             });
-            csvData += '"TOTAL GENERAL",' + grandTotal.toFixed(2);
 
-            // Crear nombre de archivo
-            var now = new Date();
-            var pad = (n) => n.toString().padStart(2, "0");
-            var fecha =
-              now.getFullYear() +
-              "-" +
-              pad(now.getMonth() + 1) +
-              "-" +
-              pad(now.getDate());
-            var hora =
-              pad(now.getHours()) +
-              "-" +
-              pad(now.getMinutes()) +
-              "-" +
-              pad(now.getSeconds());
-            var filename =
-              "gastos-resumen-categorias-" + fecha + "-" + hora + ".csv";
+            // Agregar fila de total
+            data.push(["TOTAL GENERAL", grandTotal]);
 
-            // Crear y descargar el archivo
-            var blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
-            var link = document.createElement("a");
-            var url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
-            link.setAttribute("download", filename);
-            link.style.visibility = "hidden";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            // Exportar usando la utilidad
+            exportToCSV({
+              filename: "gastos-resumen-categorias",
+              headers: headers,
+              data: data,
+              separator: ",",
+            });
           },
         },
         {
@@ -419,87 +282,18 @@ document.addEventListener("DOMContentLoaded", function () {
           text: '<i class="fas fa-file-pdf mr-1"></i> PDF',
           title: "",
           customize: function (doc) {
-            // Configurar el título dinámico
+            // Obtener título dinámico basado en filtros
             var reportTitle = getReportTitle();
-            var currentDate = getCurrentDateFormatted();
 
-            // Configurar documento
-            doc.pageOrientation = "landscape";
-            doc.pageMargins = [40, 80, 40, 60];
+            // Configurar documento usando utilidades
+            configurePdfDocument(doc, {
+              reportTitle: reportTitle,
+              systemName: "2025 - Agricola de la Costa San Luis S.P.R de R.L.",
+              orientation: "landscape",
+              pageMargins: [40, 80, 40, 60],
+            });
 
-            // Personalizar encabezado con título
-            doc.header = function (currentPage, pageCount) {
-              return {
-                stack: [
-                  {
-                    text: reportTitle,
-                    style: "header",
-                    alignment: "center",
-                    margin: [0, 30, 0, 5],
-                  },
-                  {
-                    text: "Fecha de generación: " + currentDate,
-                    style: "subheader",
-                    alignment: "center",
-                  },
-                ],
-                margin: [40, 20, 40, 0],
-              };
-            };
-
-            // Personalizar pie de página
-            doc.footer = function (currentPage, pageCount) {
-              return {
-                columns: [
-                  {
-                    text: "2025 - Agricola de la Costa San Luis S.P.R de R.L.",
-                    alignment: "left",
-                    style: "footer",
-                    margin: [40, 0, 0, 0],
-                  },
-                  {
-                    text:
-                      "Página " + currentPage.toString() + " de " + pageCount,
-                    alignment: "right",
-                    style: "footer",
-                    margin: [0, 0, 40, 0],
-                  },
-                ],
-              };
-            };
-
-            // Estilos personalizados
-            doc.styles.header = {
-              fontSize: 14,
-              bold: true,
-              color: "#2c3e50",
-            };
-
-            doc.styles.subheader = {
-              fontSize: 10,
-              color: "#7f8c8d",
-              italics: true,
-            };
-
-            doc.styles.footer = {
-              fontSize: 8,
-              color: "#95a5a6",
-            };
-
-            // Estilo de la tabla
-            doc.styles.tableHeader = {
-              bold: true,
-              fontSize: 10,
-              color: "white",
-              fillColor: "#34495e",
-              alignment: "center",
-            };
-
-            doc.defaultStyle = {
-              fontSize: 9,
-            };
-
-            // Ajustar diseño de la tabla
+            // Personalización adicional específica de gastos
             if (doc.content[0].table) {
               doc.content[0].table.widths = [
                 "auto",
