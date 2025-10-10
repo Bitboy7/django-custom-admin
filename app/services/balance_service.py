@@ -91,7 +91,7 @@ class BalanceAnalysisService:
                 'id_cuenta_banco__id',
                 'id_cuenta_banco__numero_cuenta',
                 'id_cuenta_banco__id_banco__nombre',
-                'id_cuenta_banco__id_sucursal__nombre',
+                'id_sucursal__nombre',  # Sucursal del GASTO, no de la cuenta
                 'fecha'
             ).annotate(
                 total_gastos=Sum('monto')
@@ -105,7 +105,7 @@ class BalanceAnalysisService:
                 'id_cuenta_banco__id',
                 'id_cuenta_banco__numero_cuenta',
                 'id_cuenta_banco__id_banco__nombre',
-                'id_cuenta_banco__id_sucursal__nombre',
+                'id_sucursal__nombre',  # Sucursal del GASTO, no de la cuenta
                 'semana'
             ).annotate(
                 total_gastos=Sum('monto')
@@ -118,7 +118,7 @@ class BalanceAnalysisService:
                 'id_cuenta_banco__id',
                 'id_cuenta_banco__numero_cuenta',
                 'id_cuenta_banco__id_banco__nombre',
-                'id_cuenta_banco__id_sucursal__nombre'
+                'id_sucursal__nombre'  # Sucursal del GASTO, no de la cuenta
             ).annotate(
                 total_gastos=Sum('monto'),
                 mes=TruncMonth('fecha')  # Tomamos el primer mes para referencia

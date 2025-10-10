@@ -22,6 +22,97 @@ function getCleanTextFromHTML(htmlContent) {
   return text;
 }
 
+// Función para generar el título del reporte según los filtros aplicados
+function getReportTitle() {
+  var urlParams = new URLSearchParams(window.location.search);
+  var titleParts = [];
+
+  // Obtener información de los filtros
+  var cuentaId = urlParams.get("cuenta_id");
+  var sucursalId = urlParams.get("sucursal_id");
+  var year = urlParams.get("year");
+  var month = urlParams.get("month");
+  var periodo = urlParams.get("periodo");
+
+  // Agregar filtro de cuenta
+  if (cuentaId) {
+    var cuentaSelect = document.getElementById("cuenta_id");
+    if (cuentaSelect && cuentaSelect.selectedIndex >= 0) {
+      var selectedOption = cuentaSelect.options[cuentaSelect.selectedIndex];
+      if (selectedOption && selectedOption.text !== "Todas") {
+        titleParts.push("Cuenta: " + selectedOption.text);
+      }
+    }
+  }
+
+  // Agregar filtro de sucursal
+  if (sucursalId) {
+    var sucursalSelect = document.getElementById("sucursal_id");
+    if (sucursalSelect && sucursalSelect.selectedIndex >= 0) {
+      var selectedOption = sucursalSelect.options[sucursalSelect.selectedIndex];
+      if (selectedOption && selectedOption.text !== "Todas") {
+        titleParts.push("Sucursal: " + selectedOption.text);
+      }
+    }
+  }
+
+  // Agregar filtro de año
+  if (year) {
+    titleParts.push("Año: " + year);
+  }
+
+  // Agregar filtro de mes
+  if (month) {
+    var monthNames = [
+      "Enero",
+      "Febrero",
+      "Marzo",
+      "Abril",
+      "Mayo",
+      "Junio",
+      "Julio",
+      "Agosto",
+      "Septiembre",
+      "Octubre",
+      "Noviembre",
+      "Diciembre",
+    ];
+    var monthIndex = parseInt(month) - 1;
+    if (monthIndex >= 0 && monthIndex < 12) {
+      titleParts.push("Mes: " + monthNames[monthIndex]);
+    }
+  }
+
+  // Agregar filtro de periodo
+  if (periodo) {
+    var periodos = {
+      diario: "Diario",
+      semanal: "Semanal",
+      mensual: "Mensual",
+    };
+    titleParts.push("Período: " + (periodos[periodo] || periodo));
+  }
+
+  // Construir título completo
+  if (titleParts.length > 0) {
+    return "Reporte de gastos - " + titleParts.join(" | ");
+  } else {
+    return "Reporte de gastos - General";
+  }
+}
+
+// Función para obtener la fecha actual formateada
+function getCurrentDateFormatted() {
+  var now = new Date();
+  var day = String(now.getDate()).padStart(2, "0");
+  var month = String(now.getMonth() + 1).padStart(2, "0");
+  var year = now.getFullYear();
+  var hours = String(now.getHours()).padStart(2, "0");
+  var minutes = String(now.getMinutes()).padStart(2, "0");
+
+  return day + "/" + month + "/" + year + " " + hours + ":" + minutes;
+}
+
 // Obtiene un valor numérico robusto desde una celda (TD),
 // soportando formatos: "1,234.56", "1.234,56", "$ 1,234.56", "MXN 1.234,56", "720 749.86", etc.
 function getNumericValueFromNode(node) {
@@ -285,7 +376,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // Crear datos para Excel usando formato CSV (compatible con Excel)
             var csvData = "\uFEFF"; // BOM para UTF-8
-            csvData += "Categoría,Total Acumulado\n";
+            csvData += "Categoría,Total acumulado\n";
             sortedCategories.forEach(function (item) {
               csvData += '"' + item[0] + '",' + item[1].toFixed(2) + "\n";
             });
@@ -326,6 +417,128 @@ document.addEventListener("DOMContentLoaded", function () {
           extend: "pdf",
           className: "dt-button btn-pdf",
           text: '<i class="fas fa-file-pdf mr-1"></i> PDF',
+          title: "",
+          customize: function (doc) {
+            // Configurar el título dinámico
+            var reportTitle = getReportTitle();
+            var currentDate = getCurrentDateFormatted();
+
+            // Configurar documento
+            doc.pageOrientation = "landscape";
+            doc.pageMargins = [40, 80, 40, 60];
+
+            // Personalizar encabezado con título
+            doc.header = function (currentPage, pageCount) {
+              return {
+                stack: [
+                  {
+                    text: reportTitle,
+                    style: "header",
+                    alignment: "center",
+                    margin: [0, 30, 0, 5],
+                  },
+                  {
+                    text: "Fecha de generación: " + currentDate,
+                    style: "subheader",
+                    alignment: "center",
+                  },
+                ],
+                margin: [40, 20, 40, 0],
+              };
+            };
+
+            // Personalizar pie de página
+            doc.footer = function (currentPage, pageCount) {
+              return {
+                columns: [
+                  {
+                    text: "2025 - Agricola de la Costa San Luis S.P.R de R.L.",
+                    alignment: "left",
+                    style: "footer",
+                    margin: [40, 0, 0, 0],
+                  },
+                  {
+                    text:
+                      "Página " + currentPage.toString() + " de " + pageCount,
+                    alignment: "right",
+                    style: "footer",
+                    margin: [0, 0, 40, 0],
+                  },
+                ],
+              };
+            };
+
+            // Estilos personalizados
+            doc.styles.header = {
+              fontSize: 14,
+              bold: true,
+              color: "#2c3e50",
+            };
+
+            doc.styles.subheader = {
+              fontSize: 10,
+              color: "#7f8c8d",
+              italics: true,
+            };
+
+            doc.styles.footer = {
+              fontSize: 8,
+              color: "#95a5a6",
+            };
+
+            // Estilo de la tabla
+            doc.styles.tableHeader = {
+              bold: true,
+              fontSize: 10,
+              color: "white",
+              fillColor: "#34495e",
+              alignment: "center",
+            };
+
+            doc.defaultStyle = {
+              fontSize: 9,
+            };
+
+            // Ajustar diseño de la tabla
+            if (doc.content[0].table) {
+              doc.content[0].table.widths = [
+                "auto",
+                "*",
+                "auto",
+                "auto",
+                "auto",
+                "auto",
+                "auto",
+                "auto",
+              ];
+              doc.content[0].table.headerRows = 1;
+
+              // Alternar colores de las filas
+              doc.content[0].layout = {
+                fillColor: function (rowIndex) {
+                  return rowIndex === 0
+                    ? "#34495e"
+                    : rowIndex % 2 === 0
+                    ? "#ecf0f1"
+                    : null;
+                },
+                hLineWidth: function (i, node) {
+                  return i === 0 || i === 1 || i === node.table.body.length
+                    ? 1
+                    : 0.5;
+                },
+                vLineWidth: function () {
+                  return 0.5;
+                },
+                hLineColor: function () {
+                  return "#bdc3c7";
+                },
+                vLineColor: function () {
+                  return "#bdc3c7";
+                },
+              };
+            }
+          },
           exportOptions: {
             format: {
               body: function (data, row, column, node) {
