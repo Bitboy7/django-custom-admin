@@ -6,7 +6,6 @@ function createGastosCategoriasChart() {
   // Verificar que el elemento canvas exista
   var ctxCategorias = document.getElementById("gastosCategoriasChart");
   if (!ctxCategorias) {
-    console.log("Elemento canvas no encontrado aún, intentando de nuevo...");
     return false;
   }
 
@@ -16,7 +15,6 @@ function createGastosCategoriasChart() {
     !window.balancesCategoriasData ||
     window.balancesCategoriasLabels.length === 0
   ) {
-    console.log("Datos de gráfico no disponibles aún, intentando de nuevo...");
     return false;
   }
 
@@ -136,7 +134,6 @@ function createGastosCategoriasChart() {
           },
         },
       });
-      console.log("Gráfico de categorías creado exitosamente");
       return true;
     } catch (error) {
       console.error("Error al crear el gráfico de barras:", error);
@@ -154,7 +151,6 @@ function createDistribucionGastosChart() {
   var ctxDistribucion = document.getElementById("distribucionGastosChart");
 
   if (!ctxDistribucion) {
-    console.log("Elemento canvas de distribución no encontrado aún");
     return false;
   }
 
@@ -163,7 +159,6 @@ function createDistribucionGastosChart() {
     !window.balancesCategoriasData ||
     window.balancesCategoriasLabels.length === 0
   ) {
-    console.log("Datos para gráfico de distribución no disponibles aún");
     return false;
   }
 
@@ -247,7 +242,6 @@ function createDistribucionGastosChart() {
         },
       },
     });
-    console.log("Gráfico de distribución creado exitosamente");
     return true;
   } catch (error) {
     console.error("Error al crear el gráfico de distribución:", error);
@@ -257,24 +251,15 @@ function createDistribucionGastosChart() {
 
 // Función para intentar crear los gráficos con reintentos
 function tryCreateCharts(retries = 10) {
-  console.log("Intentando crear gráficos... intentos restantes:", retries);
-
   var categoriasSuccess = createGastosCategoriasChart();
   var distribucionSuccess = createDistribucionGastosChart();
 
   if (!categoriasSuccess || !distribucionSuccess) {
     if (retries > 0) {
-      console.log("Reintentando crear gráficos en 500ms...");
       setTimeout(function () {
         tryCreateCharts(retries - 1);
       }, 500);
-    } else {
-      console.warn(
-        "No se pudieron crear todos los gráficos después de varios intentos"
-      );
     }
-  } else {
-    console.log("Ambos gráficos creados exitosamente");
   }
 }
 

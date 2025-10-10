@@ -1,15 +1,31 @@
+// *** SISTEMA DE LOGGING SEGURO PARA PRODUCCIÓN ***
+const DEBUG_MODE = false; // Cambiar a true solo en desarrollo
+
+// Helper para logging condicional
+const logger = {
+  log: (...args) => DEBUG_MODE && console.log(...args),
+  error: (...args) => console.error(...args), // Siempre mostrar errores
+  warn: (...args) => DEBUG_MODE && console.warn(...args),
+};
+
 // Funciones para el toast de notificación
 function showToast(title, message, duration = 4000) {
   const toast = document.getElementById("toast-notification");
   const toastTitle = document.getElementById("toast-title");
   const toastMessage = document.getElementById("toast-message");
+
+  if (!toast || !toastTitle || !toastMessage) {
+    logger.error("Elementos del toast no encontrados");
+    return;
+  }
+
   // Actualizar contenido del toast
   toastTitle.textContent = title;
   toastMessage.textContent = message;
   // Mostrar el toast
   toast.classList.remove("translate-x-full", "opacity-0");
   toast.classList.add("translate-x-0", "opacity-100");
-  // Auto-ocultar después de 4 segundos
+  // Auto-ocultar después de la duración especificada
   setTimeout(function () {
     hideToast();
   }, duration);
@@ -17,8 +33,10 @@ function showToast(title, message, duration = 4000) {
 
 function hideToast() {
   const toast = document.getElementById("toast-notification");
-  toast.classList.remove("translate-x-0", "opacity-0");
-  toast.classList.add("translate-x-full", "opacity-100");
+  if (toast) {
+    toast.classList.remove("translate-x-0", "opacity-0");
+    toast.classList.add("translate-x-full", "opacity-100");
+  }
 }
 
 // *** SISTEMA DE PERSISTENCIA DE FILTROS ***
@@ -31,20 +49,25 @@ function saveFiltersToStorage() {
   const filterForm = document.querySelector('form[action*="balances"]');
   if (!filterForm) return;
 
-  const filters = {
-    cuenta_id: document.getElementById("cuenta_id")?.value || "",
-    year: document.getElementById("year")?.value || "",
-    month: document.getElementById("month")?.value || "",
-    periodo: document.getElementById("periodo")?.value || "",
-    dia: document.getElementById("dia")?.value || "",
-    fecha_inicio:
-      document.querySelector('input[name="fecha_inicio"]')?.value || "",
-    fecha_fin: document.querySelector('input[name="fecha_fin"]')?.value || "",
-    timestamp: new Date().getTime(), // Para evitar filtros muy antiguos
-  };
+  try {
+    const filters = {
+      cuenta_id: document.getElementById("cuenta_id")?.value || "",
+      sucursal_id: document.getElementById("sucursal_id")?.value || "",
+      year: document.getElementById("year")?.value || "",
+      month: document.getElementById("month")?.value || "",
+      periodo: document.getElementById("periodo")?.value || "",
+      dia: document.getElementById("dia")?.value || "",
+      fecha_inicio:
+        document.querySelector('input[name="fecha_inicio"]')?.value || "",
+      fecha_fin: document.querySelector('input[name="fecha_fin"]')?.value || "",
+      timestamp: new Date().getTime(),
+    };
 
-  localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
-  console.log("Filtros guardados en localStorage:", filters);
+    localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
+    logger.log("Filtros guardados correctamente");
+  } catch (error) {
+    logger.error("Error al guardar filtros:", error.message);
+  }
 }
 
 // Cargar filtros desde localStorage
@@ -60,14 +83,13 @@ function loadFiltersFromStorage() {
     const maxAge = 24 * 60 * 60 * 1000; // 24 horas en milisegundos
 
     if (filters.timestamp && now - filters.timestamp > maxAge) {
-      console.log("Filtros guardados son muy antiguos, los eliminamos");
       localStorage.removeItem(FILTERS_STORAGE_KEY);
       return null;
     }
 
     return filters;
   } catch (error) {
-    console.error("Error al cargar filtros desde localStorage:", error);
+    logger.error("Error al cargar filtros:", error.message);
     localStorage.removeItem(FILTERS_STORAGE_KEY);
     return null;
   }
@@ -80,16 +102,12 @@ function applyStoredFilters() {
 
   // Si hay parámetros en la URL, sincronizar con localStorage
   if (hasUrlParams) {
-    console.log("Parámetros URL detectados, sincronizando con localStorage");
     syncUrlParamsWithStorage();
-    // No hacer return aquí, para que también se ejecute updateFormInputsFromUrl
     return;
   }
 
   const savedFilters = loadFiltersFromStorage();
   if (!savedFilters) return;
-
-  console.log("Aplicando filtros guardados:", savedFilters);
 
   // Aplicar cada filtro al formulario
   Object.keys(savedFilters).forEach((key) => {
@@ -122,6 +140,7 @@ function syncUrlParamsWithStorage() {
 
   const currentFilters = {
     cuenta_id: urlParams.get("cuenta_id") || "",
+    sucursal_id: urlParams.get("sucursal_id") || "",
     year: urlParams.get("year") || "",
     month: urlParams.get("month") || "",
     periodo: urlParams.get("periodo") || "",
@@ -136,16 +155,18 @@ function syncUrlParamsWithStorage() {
     (key) => key !== "timestamp" && currentFilters[key] !== ""
   );
 
-  if (hasFilters) {
-    localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(currentFilters));
-    console.log("Filtros URL sincronizados con localStorage:", currentFilters);
-  } else {
-    // Si no hay filtros en URL, limpiar localStorage
-    localStorage.removeItem(FILTERS_STORAGE_KEY);
-    console.log("No hay filtros en URL, localStorage limpiado");
+  try {
+    if (hasFilters) {
+      localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(currentFilters));
+      logger.log("Filtros sincronizados con URL");
+    } else {
+      localStorage.removeItem(FILTERS_STORAGE_KEY);
+    }
+  } catch (error) {
+    logger.error("Error al sincronizar filtros:", error.message);
   }
 
-  // *** ACTUALIZAR LOS INPUTS DEL FORMULARIO INMEDIATAMENTE ***
+  // Actualizar los inputs del formulario
   updateFormInputsFromUrl();
 }
 
@@ -156,6 +177,7 @@ function updateFormInputsFromUrl() {
   // Mapear parámetros URL a elementos del formulario
   const urlToFormMapping = {
     cuenta_id: "cuenta_id",
+    sucursal_id: "sucursal_id",
     year: "year",
     month: "month",
     periodo: "periodo",
@@ -163,8 +185,6 @@ function updateFormInputsFromUrl() {
     fecha_inicio: "fecha_inicio",
     fecha_fin: "fecha_fin",
   };
-
-  console.log("Actualizando inputs del formulario con valores URL...");
 
   Object.keys(urlToFormMapping).forEach((urlParam) => {
     const formElementId = urlToFormMapping[urlParam];
@@ -176,11 +196,7 @@ function updateFormInputsFromUrl() {
       const urlValue = urlParams.get(urlParam);
 
       if (urlValue) {
-        // Actualizar valor del elemento
         element.value = urlValue;
-        console.log(`Actualizado ${formElementId}: ${urlValue}`);
-
-        // Disparar evento change para actualizar la UI
         element.dispatchEvent(new Event("change", { bubbles: true }));
       }
     }
@@ -188,29 +204,24 @@ function updateFormInputsFromUrl() {
 
   // Manejar el contenedor de día específicamente para el periodo
   const periodoValue = urlParams.get("periodo");
-  if (periodoValue === "diario") {
-    const diaContainer = document.getElementById("dia-container");
-    if (diaContainer) {
-      diaContainer.style.display = "flex";
-    }
-  } else {
-    const diaContainer = document.getElementById("dia-container");
-    if (diaContainer) {
-      diaContainer.style.display = "none";
-    }
+  const diaContainer = document.getElementById("dia-container");
+  if (diaContainer) {
+    diaContainer.style.display = periodoValue === "diario" ? "flex" : "none";
   }
 }
 
 // Limpiar filtros guardados
 function clearStoredFilters() {
-  localStorage.removeItem(FILTERS_STORAGE_KEY);
-  console.log("Filtros guardados eliminados");
-
-  showToast(
-    "🗑️ Filtros limpiados",
-    "Los filtros guardados han sido eliminados. La próxima vez comenzarás con valores por defecto.",
-    4000
-  );
+  try {
+    localStorage.removeItem(FILTERS_STORAGE_KEY);
+    showToast(
+      "🗑️ Filtros limpiados",
+      "Los filtros guardados han sido eliminados. La próxima vez comenzarás con valores por defecto.",
+      4000
+    );
+  } catch (error) {
+    logger.error("Error al limpiar filtros:", error.message);
+  }
 }
 
 // Verificar si hay filtros guardados y mostrar indicador
@@ -252,6 +263,7 @@ function checkAndShowFilterToast() {
   const urlParams = new URLSearchParams(window.location.search);
   const hasFilters =
     urlParams.has("cuenta_id") ||
+    urlParams.has("sucursal_id") ||
     urlParams.has("year") ||
     urlParams.has("month") ||
     urlParams.has("periodo") ||
@@ -264,6 +276,12 @@ function checkAndShowFilterToast() {
       const cuentaSelect = document.getElementById("cuenta_id");
       const selectedOption = cuentaSelect.options[cuentaSelect.selectedIndex];
       activeFilters.push(`Cuenta: ${selectedOption.text}`);
+    }
+    if (urlParams.get("sucursal_id")) {
+      const sucursalSelect = document.getElementById("sucursal_id");
+      const selectedOption =
+        sucursalSelect.options[sucursalSelect.selectedIndex];
+      activeFilters.push(`Sucursal: ${selectedOption.text}`);
     }
     if (urlParams.get("year")) {
       activeFilters.push(`Año: ${urlParams.get("year")}`);

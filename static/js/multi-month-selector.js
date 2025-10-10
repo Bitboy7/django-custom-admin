@@ -1,7 +1,5 @@
 // Selector múltiple de meses
 function initializeMultiMonthSelector() {
-  console.log("Inicializando selector múltiple de meses...");
-
   const monthSelectorBtn = document.getElementById("month-selector-btn");
   const monthDropdown = document.getElementById("month-dropdown");
   const monthInput = document.getElementById("months");
@@ -10,30 +8,6 @@ function initializeMultiMonthSelector() {
   const monthCheckboxes = document.querySelectorAll(".month-checkbox");
   const clearMonthsBtn = document.getElementById("clear-months");
   const applyMonthsBtn = document.getElementById("apply-months");
-
-  console.log("Elementos encontrados:", {
-    monthSelectorBtn: !!monthSelectorBtn,
-    monthDropdown: !!monthDropdown,
-    monthInput: !!monthInput,
-    monthSelectorText: !!monthSelectorText,
-    monthAllCheckbox: !!monthAllCheckbox,
-    monthCheckboxes: monthCheckboxes.length,
-    clearMonthsBtn: !!clearMonthsBtn,
-    applyMonthsBtn: !!applyMonthsBtn,
-  });
-
-  // Debug: Verificar todos los checkboxes y sus atributos
-  console.log("=== Debug de checkboxes de meses ===");
-  monthCheckboxes.forEach((checkbox, index) => {
-    console.log(`Checkbox ${index + 1}:`, {
-      value: checkbox.value,
-      dataName: checkbox.dataset.name,
-      textContent: checkbox.nextElementSibling
-        ? checkbox.nextElementSibling.textContent.trim()
-        : "no text",
-    });
-  });
-  console.log("=== Fin debug checkboxes ===");
 
   if (!monthSelectorBtn || !monthDropdown || !monthInput) {
     console.error(
@@ -46,14 +20,12 @@ function initializeMultiMonthSelector() {
 
   // Inicializar con valores existentes si los hay
   const initialValue = monthInput.value;
-  console.log("Valor inicial del input:", initialValue);
 
   if (initialValue && initialValue.trim() !== "") {
     selectedMonths = initialValue
       .split(",")
       .map((m) => parseInt(m.trim()))
       .filter((m) => !isNaN(m));
-    console.log("Meses iniciales seleccionados:", selectedMonths);
   }
 
   // Actualizar UI inicial
@@ -64,8 +36,6 @@ function initializeMultiMonthSelector() {
   monthSelectorBtn.addEventListener("click", function (e) {
     e.preventDefault();
     e.stopPropagation();
-    const isHidden = monthDropdown.classList.contains("hidden");
-    console.log("Toggle dropdown, actualmente oculto:", isHidden);
     monthDropdown.classList.toggle("hidden");
   });
 
@@ -82,7 +52,6 @@ function initializeMultiMonthSelector() {
   // Manejar "Todos los meses"
   if (monthAllCheckbox) {
     monthAllCheckbox.addEventListener("change", function () {
-      console.log("Checkbox 'Todos' cambiado a:", this.checked);
       if (this.checked) {
         selectedMonths = [];
         monthCheckboxes.forEach((checkbox) => {
@@ -97,7 +66,6 @@ function initializeMultiMonthSelector() {
   monthCheckboxes.forEach((checkbox) => {
     checkbox.addEventListener("change", function () {
       const monthValue = parseInt(this.value);
-      console.log(`Checkbox mes ${monthValue} cambiado a:`, this.checked);
 
       if (this.checked) {
         if (!selectedMonths.includes(monthValue)) {
@@ -109,7 +77,6 @@ function initializeMultiMonthSelector() {
       }
 
       selectedMonths.sort((a, b) => a - b);
-      console.log("Meses seleccionados actuales:", selectedMonths);
       updateDisplayText();
     });
   });
@@ -117,7 +84,6 @@ function initializeMultiMonthSelector() {
   // Limpiar selección
   if (clearMonthsBtn) {
     clearMonthsBtn.addEventListener("click", function () {
-      console.log("Limpiando selección de meses");
       selectedMonths = [];
       if (monthAllCheckbox) monthAllCheckbox.checked = true;
       monthCheckboxes.forEach((checkbox) => {
@@ -127,7 +93,6 @@ function initializeMultiMonthSelector() {
 
       // Actualizar el campo oculto y enviar formulario
       monthInput.value = "";
-      console.log("Campo de meses limpiado, enviando formulario...");
       const form = monthInput.closest("form");
       if (form) {
         form.submit();
@@ -140,16 +105,13 @@ function initializeMultiMonthSelector() {
   // Aplicar selección y cerrar dropdown
   if (applyMonthsBtn) {
     applyMonthsBtn.addEventListener("click", function () {
-      console.log("Aplicando selección:", selectedMonths);
       monthInput.value = selectedMonths.join(",");
-      console.log("Valor del input actualizado a:", monthInput.value);
       monthDropdown.classList.add("hidden");
       updateDisplayText();
 
       // Enviar el formulario automáticamente
       const form = monthInput.closest("form");
       if (form) {
-        console.log("Enviando formulario automáticamente...");
         form.submit();
       } else {
         console.error("No se encontró el formulario para enviar");
@@ -171,14 +133,6 @@ function initializeMultiMonthSelector() {
       const monthCheckbox = document.querySelector(
         `.month-checkbox[value="${selectedMonths[0]}"]`
       );
-      console.log(
-        `Buscando checkbox con value="${selectedMonths[0]}"`,
-        monthCheckbox
-      );
-      if (monthCheckbox) {
-        console.log("dataset.name:", monthCheckbox.dataset.name);
-        console.log("Todos los atributos data:", monthCheckbox.dataset);
-      }
       const monthName = monthCheckbox
         ? monthCheckbox.dataset.name
         : `Mes ${selectedMonths[0]}`;
@@ -188,10 +142,6 @@ function initializeMultiMonthSelector() {
         const monthCheckbox = document.querySelector(
           `.month-checkbox[value="${m}"]`
         );
-        console.log(`Buscando checkbox para mes ${m}:`, monthCheckbox);
-        if (monthCheckbox) {
-          console.log(`  - dataset.name: "${monthCheckbox.dataset.name}"`);
-        }
         return monthCheckbox ? monthCheckbox.dataset.name : `Mes ${m}`;
       });
       text = monthNames.join(", ");
@@ -199,7 +149,6 @@ function initializeMultiMonthSelector() {
       text = `${selectedMonths.length} meses seleccionados`;
     }
 
-    console.log("Actualizando texto del selector a:", text);
     if (monthSelectorText) {
       monthSelectorText.textContent = text;
     }
@@ -218,7 +167,6 @@ function initializeMultiMonthSelector() {
         checkbox.checked = selectedMonths.includes(parseInt(checkbox.value));
       });
     }
-    console.log("Estado de checkboxes actualizado");
   }
 }
 

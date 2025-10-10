@@ -96,7 +96,7 @@ JAZZMIN_SETTINGS = {
     "site_icon": "img/icon.png",
     
     # Welcome text on the login screen
-    "welcome_sign": "Bienvenido al Sistema de Gestión Integral",
+    "welcome_sign": "Ingresa tus credenciales para iniciar sesión   ",
     
     # Copyright on the footer
     "copyright": "Agricola de la Costa San Luis",
@@ -206,7 +206,7 @@ JAZZMIN_SETTINGS = {
     # UI Tweaks #
     #############
     # Relative paths to custom CSS/JS scripts (must be present in static files)
-    "custom_css": "css/money_widget.css",
+    "custom_css": "css/admin_custom.css",
     "custom_js": "js/admin_import_export.js",
     # Whether to link font from fonts.googleapis.com (use custom_css to supply font otherwise)
     "use_google_fonts_cdn": True,
