@@ -53,11 +53,13 @@ class ComprasAnalysisService(BaseReportService):
         Para Compras, agrupamos por:
         - Productor
         - Producto
+        - Sucursal
         - Cuenta (si aplica)
         """
         base_fields = [
             'productor__nombre_completo',
             'producto__nombre',
+            'productor__id_sucursal__nombre',
             'cuenta__numero_cuenta'
         ]
         

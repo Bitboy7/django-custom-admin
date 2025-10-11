@@ -521,6 +521,7 @@
               <th>Periodo</th>
               <th>Productor</th>
               <th>Producto</th>
+              <th>Sucursal</th>
               <th>Cuenta</th>
               <th>Cantidad</th>
               <th>Precio Promedio</th>
@@ -542,6 +543,7 @@
               </td>
               <td>{{ balance.productor__nombre_completo|default:"-" }}</td>
               <td>{{ balance.producto__nombre|default:"-" }}</td>
+              <td>{{ balance.productor__id_sucursal__nombre|default:"-" }}</td>
               <td>{{ balance.cuenta__numero_cuenta|default:"-" }}</td>
               <td data-order="{{ balance.cantidad_total|default:0 }}" class="text-right">
                 {{ balance.cantidad_total|us_number:2|default:"0" }}
@@ -560,7 +562,7 @@
           </tbody>
           <tfoot>
             <tr class="bg-gradient-to-r from-blue-50 to-blue-100 font-semibold text-gray-800">
-              <th colspan="6" class="px-4 py-3 text-right">Total:</th>
+              <th colspan="7" class="px-4 py-3 text-right">Total:</th>
               <th class="px-4 py-3 text-right text-blue-600">${{ total_compras|us_currency:2 }}</th>
               <th class="px-4 py-3"></th>
             </tr>

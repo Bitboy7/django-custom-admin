@@ -103,7 +103,7 @@ document.addEventListener("DOMContentLoaded", function () {
       columnDefs: [
         {
           // Columnas numéricas - alineación derecha
-          targets: [4, 5, 6, 7],
+          targets: [5, 6, 7, 8], // Actualizado para incluir la nueva columna de Sucursal
           className: "text-right",
         },
         {
@@ -117,12 +117,25 @@ document.addEventListener("DOMContentLoaded", function () {
           },
         },
         {
-          // Columnas de valores monetarios - limpiar para exportar
-          targets: [5, 6, 7],
+          // Columna de Cantidad - limpiar para exportar
+          targets: [5],
           render: function (data, type, row) {
-            if (type === "export" || type === "copy") {
+            if (type === "export" || type === "copy" || type === "sort") {
               var cleanText = getCleanTextFromHTML(data);
-              return cleanText.replace(/[$,\s]/g, "");
+              var numValue = parseFloat(cleanText.replace(/[,\s]/g, ""));
+              return isNaN(numValue) ? 0 : numValue;
+            }
+            return data;
+          },
+        },
+        {
+          // Columnas de valores monetarios - limpiar para exportar
+          targets: [6, 7, 8],
+          render: function (data, type, row) {
+            if (type === "export" || type === "copy" || type === "sort") {
+              var cleanText = getCleanTextFromHTML(data);
+              var numValue = parseFloat(cleanText.replace(/[$,\s]/g, ""));
+              return isNaN(numValue) ? 0 : numValue;
             }
             return data;
           },
@@ -165,6 +178,27 @@ document.addEventListener("DOMContentLoaded", function () {
           filename: "compras_" + new Date().toISOString().split("T")[0],
           exportOptions: {
             columns: ":visible",
+            format: {
+              body: function (data, row, column, node) {
+                // Limpiar HTML y obtener solo el texto
+                var cleanText = data;
+                if (typeof data === "string") {
+                  cleanText = data.replace(/<[^>]*>/g, "").trim();
+                }
+
+                // Para columnas numéricas (cantidad y montos)
+                if (column >= 5) {
+                  // Remover símbolos de moneda y comas
+                  cleanText = cleanText.replace(/[$,]/g, "");
+                  var numValue = parseFloat(cleanText);
+                  if (!isNaN(numValue)) {
+                    return numValue.toFixed(2);
+                  }
+                }
+
+                return cleanText;
+              },
+            },
           },
           orientation: "landscape",
           pageSize: "LEGAL",
@@ -173,11 +207,25 @@ document.addEventListener("DOMContentLoaded", function () {
             doc.styles.tableHeader.fontSize = 9;
             doc.styles.tableHeader.fillColor = "#3b82f6";
             doc.styles.tableHeader.alignment = "center";
-            doc.content[1].table.widths = Array(
-              doc.content[1].table.body[0].length + 1
-            )
-              .join("*")
-              .split("*");
+
+            // Ajustar anchos de columna dinámicamente
+            var colCount = doc.content[1].table.body[0].length;
+            var widths = [];
+            for (var i = 0; i < colCount; i++) {
+              if (i === 0) widths.push("auto"); // Periodo
+              else if (i <= 4) widths.push("*"); // Texto
+              else widths.push("auto"); // Números
+            }
+            doc.content[1].table.widths = widths;
+
+            // Alinear columnas numéricas a la derecha
+            doc.content[1].table.body.forEach(function (row, rowIndex) {
+              row.forEach(function (cell, cellIndex) {
+                if (cellIndex >= 5) {
+                  cell.alignment = "right";
+                }
+              });
+            });
           },
         },
         {
