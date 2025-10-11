@@ -4,10 +4,34 @@ from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.models import User, Group
 from django.contrib.admin import SimpleListFilter
 from django.utils.html import format_html
-
-from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
-from unfold.admin import ModelAdmin
+from django.shortcuts import render
+from django.contrib.auth.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
+from django.contrib.admin import ModelAdmin
 from .permissions import RoleManager, can_manage_users
+from .views import dashboard_callback
+
+
+# Función para sobrescribir el admin index
+def custom_admin_index(self, request, extra_context=None):
+    """
+    Vista personalizada del admin index que incluye datos del dashboard
+    """
+    # Llamar al método original para obtener el contexto
+    response = original_index(request, extra_context)
+    
+    # Si la respuesta tiene context_data, agregar nuestros datos
+    if hasattr(response, 'context_data'):
+        context = response.context_data
+        # Agregar datos del dashboard
+        context = dashboard_callback(request, context)
+        response.context_data = context
+    
+    return response
+
+
+# Guardar referencia al método original y reemplazarlo
+original_index = admin.site.index
+admin.site.index = lambda request, extra_context=None: custom_admin_index(admin.site, request, extra_context)
 
 
 class RoleFilter(SimpleListFilter):

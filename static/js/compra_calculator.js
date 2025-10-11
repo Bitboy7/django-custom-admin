@@ -6,6 +6,13 @@
 (function () {
   "use strict";
 
+  // Modo debug (cambiar a false en producción)
+  const DEBUG_MODE = false;
+  const logger = {
+    log: (...args) => DEBUG_MODE && console.log(...args),
+    error: (...args) => console.error(...args),
+  };
+
   // Configuración
   const CONFIG = {
     selectors: {
@@ -43,7 +50,7 @@
     for (const selector of selectors) {
       const element = document.querySelector(selector);
       if (element) {
-        console.log(`✅ Elemento encontrado con selector: ${selector}`);
+        logger.log(`✅ Elemento encontrado con selector: ${selector}`);
         return element;
       }
     }
@@ -107,7 +114,7 @@
     totalInput.value = formatCurrency(total);
     highlightCalculation(totalInput);
 
-    console.log(
+    logger.log(
       `💰 Cálculo: ${cantidad} × ${precio} = ${formatCurrency(total)}`
     );
 
@@ -125,7 +132,7 @@
    * Inicializa la calculadora para un conjunto de campos
    */
   function initializeCalculator() {
-    console.log("🔢 Inicializando calculadora de compras...");
+    logger.log("🔢 Inicializando calculadora de compras...");
 
     // Buscar elementos
     const cantidadInput = findElement(CONFIG.selectors.cantidad);
@@ -134,7 +141,7 @@
 
     // Verificar que todos los elementos existan
     if (!cantidadInput || !precioInput || !totalInput) {
-      console.log("⚠️ No se encontraron todos los campos necesarios:", {
+      logger.log("⚠️ No se encontraron todos los campos necesarios:", {
         cantidad: !!cantidadInput,
         precio: !!precioInput,
         total: !!totalInput,
@@ -142,7 +149,7 @@
       return false;
     }
 
-    console.log("✅ Todos los campos encontrados, configurando calculadora...");
+    logger.log("✅ Todos los campos encontrados, configurando calculadora...");
 
     // Hacer el campo total de solo lectura
     makeReadonly(totalInput, "Se calculará automáticamente");
@@ -186,7 +193,7 @@
     // Cálculo inicial si ya hay valores
     updateTotal();
 
-    console.log("🎉 Calculadora configurada exitosamente");
+    logger.log("🎉 Calculadora configurada exitosamente");
     return true;
   }
 
@@ -194,7 +201,7 @@
    * Reinicia la calculadora (útil para formularios dinámicos)
    */
   function reinitializeCalculator() {
-    console.log("🔄 Reinicializando calculadora...");
+    logger.log("🔄 Reinicializando calculadora...");
     return initializeCalculator();
   }
 
@@ -234,7 +241,7 @@
       subtree: true,
     });
 
-    console.log("👀 Observador de mutaciones configurado");
+    logger.log("👀 Observador de mutaciones configurado");
   }
 
   // API pública
@@ -255,5 +262,5 @@
     setupMutationObserver();
   }
 
-  console.log("💼 Módulo CompraCalculator cargado");
+  logger.log("💼 Módulo CompraCalculator cargado");
 })();

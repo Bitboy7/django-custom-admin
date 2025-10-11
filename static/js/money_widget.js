@@ -146,9 +146,6 @@ document.addEventListener("DOMContentLoaded", function () {
           )} ${currency}\n`;
         }
       });
-
-      // Mostrar tooltip (implementación simplificada)
-      console.log(tooltipText);
     }
 
     // Mostrar conversión cuando cambie el valor o la moneda
@@ -208,6 +205,4 @@ document.addEventListener("DOMContentLoaded", function () {
     childList: true,
     subtree: true,
   });
-
-  console.log("💰 Widgets de dinero mejorados cargados correctamente");
 });

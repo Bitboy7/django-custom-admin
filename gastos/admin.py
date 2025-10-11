@@ -1,9 +1,9 @@
 from django.contrib import admin
-from unfold.admin import ModelAdmin
+from django.contrib.admin import ModelAdmin
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from import_export.admin import ImportExportModelAdmin
-from unfold.contrib.import_export.forms import ExportForm, ImportForm, SelectableFieldsExportForm
+from import_export.forms import ExportForm, ImportForm
 from .models import CatGastos, Banco, Cuenta, Gastos, Compra, SaldoMensual
 from django.utils.html import format_html
 from catalogo.models import Sucursal
@@ -15,7 +15,7 @@ class CatGastoResource(resources.ModelResource):
         model = CatGastos
 
 @admin.register(CatGastos)
-class CatGastosAdmin(ModelAdmin, ImportExportModelAdmin):
+class CatGastosAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = CatGastoResource
     import_form_class = ImportForm
     export_form_class = ExportForm
@@ -36,7 +36,7 @@ class BancoResource(resources.ModelResource):
         fields = ('id', 'nombre', 'telefono', 'direccion', 'logotipo', 'fecha_registro')
 
 @admin.register(Banco)
-class BancoAdmin(ModelAdmin, ImportExportModelAdmin):
+class BancoAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = BancoResource
     import_form_class = ImportForm
     export_form_class = ExportForm
@@ -65,7 +65,7 @@ class CuentaResource(resources.ModelResource):
         fields = ('id', 'id_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente', 'rfc', 'clabe', 'fecha_registro')
 
 @admin.register(Cuenta)
-class CuentaAdmin(ModelAdmin, ImportExportModelAdmin):
+class CuentaAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = CuentaResource
     import_form_class = ImportForm
     export_form_class = ExportForm
@@ -123,7 +123,7 @@ class GastosResource(resources.ModelResource):
         return gasto.id_cuenta_banco.numero_cuenta
 
 @admin.register(Gastos)
-class GastosAdmin(ModelAdmin, ImportExportModelAdmin):
+class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = GastosResource
     import_form_class = ImportForm
     export_form_class = ExportForm
@@ -183,7 +183,7 @@ class ComprasResource(resources.ModelResource):
         return compra.cuenta.numero_cuenta if compra.cuenta else ""
     
 @admin.register(Compra)
-class ComprasAdmin(ModelAdmin, ImportExportModelAdmin):
+class ComprasAdmin(ImportExportModelAdmin, ModelAdmin):
         resource_class = ComprasResource
         import_form_class = ImportForm
         export_form_class = ExportForm
@@ -231,7 +231,7 @@ class SaldoMensualResource(resources.ModelResource):
         return saldo.cuenta.numero_cuenta
           
 @admin.register(SaldoMensual)
-class SaldoMensualAdmin(ModelAdmin, ImportExportModelAdmin):
+class SaldoMensualAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = SaldoMensualResource
     import_form_class = ImportForm
     export_form_class = ExportForm

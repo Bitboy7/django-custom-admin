@@ -1,54 +1,75 @@
-// Inicialización de DataTables para balances
+/**
+ * Balances DataTables Configuration
+ *
+ * Configuración de DataTables para el módulo de gastos/balances
+ * Utiliza datatables-utils.js para funcionalidad reutilizable
+ *
+ * @requires jQuery
+ * @requires DataTables
+ * @requires datatables-utils.js
+ */
 
+// ============================================================================
+// CONFIGURACIÓN DEL MÓDULO
+// ============================================================================
+
+var reportConfig = {
+  moduleName: "Reporte de Gastos",
+  filterFields: ["cuenta_id", "sucursal_id", "year", "month", "periodo"],
+};
+
+// ============================================================================
+// FUNCIONES AUXILIARES ESPECÍFICAS DEL MÓDULO
+// ============================================================================
+
+/**
+ * Genera el título del reporte basado en filtros
+ * Usa la función genérica de datatables-utils.js
+ */
+function getReportTitle() {
+  return generateReportTitle(reportConfig);
+}
+
+/**
+ * Formatea un valor numérico con símbolo de moneda opcional
+ * Wrapper para compatibilidad con código existente
+ *
+ * @param {HTMLElement|number} node - Nodo del DOM o valor numérico
+ * @param {boolean} includeSymbol - Si se debe incluir el símbolo $
+ * @returns {string} Valor formateado
+ */
 function formatNumericValue(node, includeSymbol) {
-  var dataOrder = node.getAttribute("data-order");
-  if (dataOrder) {
-    // Limpiar el valor data-order de cualquier texto adicional (MXN, $, etc.)
-    var cleanValue = dataOrder.toString().replace(/[^0-9.-]/g, "");
-    var numValue = parseFloat(cleanValue);
-    if (!isNaN(numValue)) {
-      var formatted = numValue.toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-      return includeSymbol ? "$" + formatted : formatted;
-    }
+  var numValue;
+
+  // Si es un nodo del DOM, extraer el valor
+  if (node && node.nodeType) {
+    numValue = getNumericValueFromNode(node);
+  } else if (typeof node === "number") {
+    numValue = node;
+  } else {
+    numValue = parseFloat(node);
   }
 
-  var textContent = node.textContent || node.innerText || "";
-
-  // Limpiar el texto de símbolos y espacios
-  var cleanNumber = textContent.replace(/[$\s]/g, "");
-
-  // Si ya está en formato US (1,234.56), convertir a número
-  if (cleanNumber.match(/^\d{1,3}(,\d{3})*(\.\d{2})?$/)) {
-    // Formato US válido: remover comas para parseFloat
-    var numValue = parseFloat(cleanNumber.replace(/,/g, ""));
-    if (!isNaN(numValue)) {
-      var formatted = numValue.toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-      return includeSymbol ? "$" + formatted : formatted;
-    }
+  if (isNaN(numValue)) {
+    return includeSymbol ? "$0.00" : "0.00";
   }
 
-  // Fallback: intentar parsear directamente removiendo todas las comas
-  var numValue = parseFloat(cleanNumber.replace(/,/g, ""));
-  if (!isNaN(numValue)) {
-    var formatted = numValue.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    return includeSymbol ? "$" + formatted : formatted;
-  }
+  var formatted = numValue.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
-  var result = "0.00";
-  return includeSymbol ? "$" + result : result;
+  return includeSymbol ? "$" + formatted : formatted;
 }
 
 document.addEventListener("DOMContentLoaded", function () {
   try {
+    // Verificar si ya está inicializado y destruirlo
+    if ($.fn.DataTable.isDataTable("#gastosTable")) {
+      $("#gastosTable").DataTable().destroy();
+      console.log("⚠️ DataTable anterior destruido");
+    }
+
     $("#gastosTable").DataTable({
       language: {
         processing: "",
@@ -76,13 +97,74 @@ document.addEventListener("DOMContentLoaded", function () {
       },
       columnDefs: [
         {
-          targets: [5],
+          // Columna #0: Número secuencial - limpiar HTML de botones
+          targets: [0],
           render: function (data, type, row) {
             if (type === "export" || type === "copy") {
-              var tempDiv = document.createElement("div");
-              tempDiv.innerHTML = data;
-              return tempDiv.textContent || tempDiv.innerText || "";
+              return getCleanTextFromHTML(data);
             }
+            return data;
+          },
+        },
+        {
+          // Columna #1: Categoría - limpiar HTML de spans y badges
+          targets: [1],
+          render: function (data, type, row) {
+            if (type === "export" || type === "copy") {
+              return getCleanTextFromHTML(data);
+            }
+            return data;
+          },
+        },
+        {
+          // Columnas #2-4: Cuenta, Banco, Sucursal - limpiar HTML
+          targets: [2, 3, 4],
+          render: function (data, type, row) {
+            if (type === "export" || type === "copy") {
+              return getCleanTextFromHTML(data);
+            }
+            return data;
+          },
+        },
+        {
+          // Columnas #6-7: Total y Acumulado - usar data-order para exportar
+          targets: [6, 7],
+          render: function (data, type, row, meta) {
+            if (type === "export" || type === "copy") {
+              // Obtener el elemento TD para acceder a data-order
+              var table = $("#gastosTable").DataTable();
+              var cell = table.cell(meta.row, meta.col).node();
+
+              if (cell && cell.hasAttribute("data-order")) {
+                var orderValue = cell.getAttribute("data-order");
+                var numValue = parseFloat(orderValue);
+
+                if (!isNaN(numValue)) {
+                  // Formatear con separador de miles y 2 decimales
+                  return numValue.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  });
+                }
+              }
+
+              // Fallback: usar getNumericValueFromNode
+              var n = getNumericValueFromNode(cell);
+              if (!isNaN(n)) {
+                return n.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                });
+              }
+
+              return "0.00";
+            }
+
+            if (type === "sort") {
+              // Para ordenamiento, usar data-order si existe
+              return parseFloat(data.replace(/[^0-9.-]/g, "")) || 0;
+            }
+
             return data;
           },
         },
@@ -93,39 +175,19 @@ document.addEventListener("DOMContentLoaded", function () {
           className: "dt-button btn-copy",
           text: '<i class="fas fa-copy mr-1"></i> Copiar',
           exportOptions: {
-            format: {
-              body: function (data, row, column, node) {
-                if (column === 5) {
-                  var tempDiv = document.createElement("div");
-                  tempDiv.innerHTML = data;
-                  return tempDiv.textContent || tempDiv.innerText || "";
-                }
-                if (column === 7 || column === 8) {
-                  return formatNumericValue(node, false);
-                }
-                return data;
-              },
-            },
+            columns: ":visible",
+            orthogonal: "export",
           },
         },
         {
           extend: "csv",
           className: "dt-button btn-csv",
           text: '<i class="fas fa-file-csv mr-1"></i> CSV',
+          charset: "utf-8",
+          bom: true,
           exportOptions: {
-            format: {
-              body: function (data, row, column, node) {
-                if (column === 5) {
-                  var tempDiv = document.createElement("div");
-                  tempDiv.innerHTML = data;
-                  return tempDiv.textContent || tempDiv.innerText || "";
-                }
-                if (column === 7 || column === 8) {
-                  return formatNumericValue(node, false);
-                }
-                return data;
-              },
-            },
+            columns: ":visible",
+            orthogonal: "export",
           },
         },
         {
@@ -147,42 +209,142 @@ document.addEventListener("DOMContentLoaded", function () {
               pad(now.getMinutes()) +
               "-" +
               pad(now.getSeconds());
-            return "gastos-acumulados-" + fecha + "-" + hora;
+            return "gastos-detalle-" + fecha + "-" + hora;
           },
           exportOptions: {
-            format: {
-              body: function (data, row, column, node) {
-                if (column === 5) {
-                  var tempDiv = document.createElement("div");
-                  tempDiv.innerHTML = data;
-                  return tempDiv.textContent || tempDiv.innerText || "";
-                }
-                if (column === 7 || column === 8) {
-                  return formatNumericValue(node, false);
-                }
-                return data;
-              },
-            },
+            columns: ":visible",
+            orthogonal: "export",
+          },
+        },
+        {
+          text: '<i class="fas fa-chart-pie mr-1"></i> Resumen Excel',
+          className: "dt-button btn-summary-excel",
+          action: function (e, dt, button, config) {
+            var categoryTotals = {};
+            var table = $("#gastosTable").DataTable();
+            var data = table.rows({ search: "applied" }).data();
+
+            // Procesar cada fila para agrupar por categoría
+            for (var i = 0; i < data.length; i++) {
+              var rowData = data[i];
+              // Extraer texto limpio de la categoría (columna 1)
+              var categoryHtml = rowData[1];
+              var tempDiv = document.createElement("div");
+              tempDiv.innerHTML = categoryHtml;
+              var category =
+                tempDiv.textContent || tempDiv.innerText || categoryHtml;
+              category = category.trim();
+
+              // Obtener el total de la fila (columna 6)
+              var totalValue = 0;
+              var totalCell = table.cell(i, 6).node();
+              if (totalCell) {
+                totalValue = getNumericValueFromNode(totalCell);
+                if (isNaN(totalValue)) totalValue = 0;
+              }
+
+              // Sumar al total de la categoría
+              if (categoryTotals[category]) {
+                categoryTotals[category] += totalValue;
+              } else {
+                categoryTotals[category] = totalValue;
+              }
+            }
+
+            // Convertir a array y ordenar por total descendente
+            var sortedCategories = Object.keys(categoryTotals)
+              .map(function (category) {
+                return [category, categoryTotals[category]];
+              })
+              .sort(function (a, b) {
+                return b[1] - a[1];
+              });
+
+            // Calcular gran total
+            var grandTotal = sortedCategories.reduce(function (sum, item) {
+              return sum + item[1];
+            }, 0);
+
+            // Preparar datos para exportación
+            var headers = ["Categoría", "Total acumulado"];
+            var data = [];
+
+            sortedCategories.forEach(function (item) {
+              data.push([item[0], item[1]]);
+            });
+
+            // Agregar fila de total
+            data.push(["TOTAL GENERAL", grandTotal]);
+
+            // Exportar usando la utilidad
+            exportToCSV({
+              filename: "gastos-resumen-categorias",
+              headers: headers,
+              data: data,
+              separator: ",",
+            });
           },
         },
         {
           extend: "pdf",
           className: "dt-button btn-pdf",
           text: '<i class="fas fa-file-pdf mr-1"></i> PDF',
+          title: "",
+          customize: function (doc) {
+            // Obtener título dinámico basado en filtros
+            var reportTitle = getReportTitle();
+
+            // Configurar documento usando utilidades
+            configurePdfDocument(doc, {
+              reportTitle: reportTitle,
+              systemName: "2025 - Agricola de la Costa San Luis S.P.R de R.L.",
+              orientation: "landscape",
+              pageMargins: [40, 80, 40, 60],
+            });
+
+            // Personalización adicional específica de gastos
+            if (doc.content[0].table) {
+              doc.content[0].table.widths = [
+                "auto",
+                "*",
+                "auto",
+                "auto",
+                "auto",
+                "auto",
+                "auto",
+                "auto",
+              ];
+              doc.content[0].table.headerRows = 1;
+
+              // Alternar colores de las filas
+              doc.content[0].layout = {
+                fillColor: function (rowIndex) {
+                  return rowIndex === 0
+                    ? "#34495e"
+                    : rowIndex % 2 === 0
+                    ? "#ecf0f1"
+                    : null;
+                },
+                hLineWidth: function (i, node) {
+                  return i === 0 || i === 1 || i === node.table.body.length
+                    ? 1
+                    : 0.5;
+                },
+                vLineWidth: function () {
+                  return 0.5;
+                },
+                hLineColor: function () {
+                  return "#bdc3c7";
+                },
+                vLineColor: function () {
+                  return "#bdc3c7";
+                },
+              };
+            }
+          },
           exportOptions: {
-            format: {
-              body: function (data, row, column, node) {
-                if (column === 5) {
-                  var tempDiv = document.createElement("div");
-                  tempDiv.innerHTML = data;
-                  return tempDiv.textContent || tempDiv.innerText || "";
-                }
-                if (column === 7 || column === 8) {
-                  return formatNumericValue(node, true);
-                }
-                return data;
-              },
-            },
+            columns: ":visible",
+            orthogonal: "export",
           },
         },
         {
@@ -190,25 +352,14 @@ document.addEventListener("DOMContentLoaded", function () {
           className: "dt-button btn-print",
           text: '<i class="fas fa-print mr-1"></i> Imprimir',
           exportOptions: {
-            format: {
-              body: function (data, row, column, node) {
-                if (column === 5) {
-                  var tempDiv = document.createElement("div");
-                  tempDiv.innerHTML = data;
-                  return tempDiv.textContent || tempDiv.innerText || "";
-                }
-                if (column === 7 || column === 8) {
-                  return formatNumericValue(node, true);
-                }
-                return data;
-              },
-            },
+            columns: ":visible",
+            orthogonal: "export",
           },
         },
       ],
       dom: '<"flex justify-between items-center mb-4"<"flex-1"B><"flex items-center gap-4"l f>>rt<"flex justify-between items-center mt-4"<"flex-1"i><"flex-1 text-center"p>>',
       responsive: true,
-      order: [[6, "desc"]],
+      order: [[7, "asc"]], // Ordenar por Total Gastos (ahora columna 6) ascendente
       paging: true,
       pageLength: 25,
       lengthMenu: [

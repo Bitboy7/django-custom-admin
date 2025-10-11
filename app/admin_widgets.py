@@ -1,11 +1,11 @@
-# Widgets personalizados para Django Money con Unfold
+# Widgets personalizados para Django Money con Jazzmin
 from django import forms
-from unfold.widgets import UnfoldAdminMoneyWidget
+from djmoney.forms.widgets import MoneyWidget
 
-class CustomMoneyWidget(UnfoldAdminMoneyWidget):
+class CustomMoneyWidget(MoneyWidget):
     """
     Widget personalizado para campos de dinero que integra perfectamente
-    con Django Unfold y proporciona una mejor experiencia de usuario
+    con Django Jazzmin y proporciona una mejor experiencia de usuario
     """
     class Media:
         css = {
@@ -15,7 +15,7 @@ class CustomMoneyWidget(UnfoldAdminMoneyWidget):
 
     def __init__(self, attrs=None, **kwargs):
         default_attrs = {
-            'class': 'money-field',
+            'class': 'money-field form-control',
             'style': 'border-radius: 6px; border: 1px solid #d1d5db; padding: 8px 12px;'
         }
         if attrs:

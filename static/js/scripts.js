@@ -151,12 +151,6 @@ function initializeAutoCalculation() {
       ".field-monto_total input"
   );
 
-  console.log("Inicializando cálculo automático:", {
-    cantidadInput: !!cantidadInput,
-    precioUnitarioInput: !!precioUnitarioInput,
-    montoTotalInput: !!montoTotalInput,
-  });
-
   if (cantidadInput && precioUnitarioInput && montoTotalInput) {
     const updateMontoTotal = () => {
       const cantidad = parseFloat(cantidadInput.value) || 0;
@@ -171,12 +165,6 @@ function initializeAutoCalculation() {
       setTimeout(() => {
         montoTotalInput.style.backgroundColor = "";
       }, 1000);
-
-      console.log(
-        `Cálculo automático: ${cantidad} × ${precioUnitario} = ${montoTotal.toFixed(
-          2
-        )}`
-      );
     };
 
     // Eventos para actualizar el total
@@ -193,14 +181,6 @@ function initializeAutoCalculation() {
     montoTotalInput.style.backgroundColor = "#f8f9fa";
     montoTotalInput.title =
       "Este campo se calcula automáticamente (Cantidad × Precio Unitario)";
-
-    console.log(
-      "✅ Cálculo automático de monto total configurado correctamente"
-    );
-  } else {
-    console.log(
-      "⚠️ No se encontraron todos los campos necesarios para el cálculo automático"
-    );
   }
 }
 
