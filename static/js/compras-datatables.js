@@ -100,10 +100,83 @@ document.addEventListener("DOMContentLoaded", function () {
           csv: "CSV",
         },
       },
+      columns: [
+        { data: 0 }, // Periodo
+        { data: 1 }, // Productor
+        { data: 2 }, // Producto
+        { data: 3 }, // Sucursal
+        { data: 4 }, // Cuenta
+        {
+          // Cantidad
+          data: 5,
+          render: function (data, type, row, meta) {
+            if (type === "display") {
+              return data;
+            }
+            // Para sort, export, filter - extraer el número limpio
+            var cleanText = getCleanTextFromHTML(data);
+            var numValue = parseNumericString(cleanText);
+
+            if (!isNaN(numValue)) {
+              return type === "export" ? numValue.toFixed(2) : numValue;
+            }
+            return 0;
+          },
+        },
+        {
+          // Precio Promedio
+          data: 6,
+          render: function (data, type, row, meta) {
+            if (type === "display") {
+              return data;
+            }
+            // Para sort, export, filter - extraer el número limpio
+            var cleanText = getCleanTextFromHTML(data);
+            var numValue = parseNumericString(cleanText);
+            if (!isNaN(numValue)) {
+              return type === "export" ? numValue.toFixed(2) : numValue;
+            }
+            return 0;
+          },
+        },
+        {
+          // Total
+          data: 7,
+          render: function (data, type, row, meta) {
+            if (type === "display") {
+              return data;
+            }
+            // Para sort, export, filter - extraer el número limpio
+            var cleanText = getCleanTextFromHTML(data);
+            var numValue = parseNumericString(cleanText);
+
+            if (!isNaN(numValue)) {
+              return type === "export" ? numValue.toFixed(2) : numValue;
+            }
+            return 0;
+          },
+        },
+        {
+          // Acumulado
+          data: 8,
+          render: function (data, type, row, meta) {
+            if (type === "display") {
+              return data;
+            }
+            // Para sort, export, filter - extraer el número limpio
+            var cleanText = getCleanTextFromHTML(data);
+            var numValue = parseNumericString(cleanText);
+            if (!isNaN(numValue)) {
+              return type === "export" ? numValue.toFixed(2) : numValue;
+            }
+            return 0;
+          },
+        },
+      ],
       columnDefs: [
         {
           // Columnas numéricas - alineación derecha
-          targets: [5, 6, 7, 8], // Actualizado para incluir la nueva columna de Sucursal
+          targets: [5, 6, 7, 8],
           className: "text-right",
         },
         {
@@ -112,30 +185,6 @@ document.addEventListener("DOMContentLoaded", function () {
           render: function (data, type, row) {
             if (type === "export" || type === "copy") {
               return getCleanTextFromHTML(data);
-            }
-            return data;
-          },
-        },
-        {
-          // Columna de Cantidad - limpiar para exportar
-          targets: [5],
-          render: function (data, type, row) {
-            if (type === "export" || type === "copy" || type === "sort") {
-              var cleanText = getCleanTextFromHTML(data);
-              var numValue = parseFloat(cleanText.replace(/[,\s]/g, ""));
-              return isNaN(numValue) ? 0 : numValue;
-            }
-            return data;
-          },
-        },
-        {
-          // Columnas de valores monetarios - limpiar para exportar
-          targets: [6, 7, 8],
-          render: function (data, type, row) {
-            if (type === "export" || type === "copy" || type === "sort") {
-              var cleanText = getCleanTextFromHTML(data);
-              var numValue = parseFloat(cleanText.replace(/[$,\s]/g, ""));
-              return isNaN(numValue) ? 0 : numValue;
             }
             return data;
           },
@@ -156,6 +205,7 @@ document.addEventListener("DOMContentLoaded", function () {
             "bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
           exportOptions: {
             columns: ":visible",
+            orthogonal: "export",
           },
         },
         {
@@ -163,10 +213,15 @@ document.addEventListener("DOMContentLoaded", function () {
           text: '<i class="fas fa-file-excel"></i> Excel',
           className:
             "bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
-          title: reportConfig.moduleName,
-          filename: "compras_" + new Date().toISOString().split("T")[0],
+          title: function () {
+            return getReportTitle();
+          },
+          filename: function () {
+            return "compras_" + getCurrentDateFormatted("filename");
+          },
           exportOptions: {
             columns: ":visible",
+            orthogonal: "export",
           },
         },
         {
@@ -174,58 +229,74 @@ document.addEventListener("DOMContentLoaded", function () {
           text: '<i class="fas fa-file-pdf"></i> PDF',
           className:
             "bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
-          title: reportConfig.moduleName,
-          filename: "compras_" + new Date().toISOString().split("T")[0],
+          title: "",
+          filename: function () {
+            return "compras_" + getCurrentDateFormatted("filename");
+          },
           exportOptions: {
             columns: ":visible",
-            format: {
-              body: function (data, row, column, node) {
-                // Limpiar HTML y obtener solo el texto
-                var cleanText = data;
-                if (typeof data === "string") {
-                  cleanText = data.replace(/<[^>]*>/g, "").trim();
-                }
-
-                // Para columnas numéricas (cantidad y montos)
-                if (column >= 5) {
-                  // Remover símbolos de moneda y comas
-                  cleanText = cleanText.replace(/[$,]/g, "");
-                  var numValue = parseFloat(cleanText);
-                  if (!isNaN(numValue)) {
-                    return numValue.toFixed(2);
-                  }
-                }
-
-                return cleanText;
-              },
-            },
+            orthogonal: "export",
           },
           orientation: "landscape",
           pageSize: "LEGAL",
           customize: function (doc) {
-            doc.defaultStyle.fontSize = 8;
-            doc.styles.tableHeader.fontSize = 9;
-            doc.styles.tableHeader.fillColor = "#3b82f6";
-            doc.styles.tableHeader.alignment = "center";
+            // Obtener título dinámico basado en filtros
+            var reportTitle = getReportTitle();
 
-            // Ajustar anchos de columna dinámicamente
-            var colCount = doc.content[1].table.body[0].length;
-            var widths = [];
-            for (var i = 0; i < colCount; i++) {
-              if (i === 0) widths.push("auto"); // Periodo
-              else if (i <= 4) widths.push("*"); // Texto
-              else widths.push("auto"); // Números
-            }
-            doc.content[1].table.widths = widths;
-
-            // Alinear columnas numéricas a la derecha
-            doc.content[1].table.body.forEach(function (row, rowIndex) {
-              row.forEach(function (cell, cellIndex) {
-                if (cellIndex >= 5) {
-                  cell.alignment = "right";
-                }
-              });
+            // Configurar documento usando utilidades
+            configurePdfDocument(doc, {
+              reportTitle: reportTitle,
+              systemName: "Sistema de Gestión de Compras",
+              orientation: "landscape",
+              pageMargins: [40, 80, 40, 60],
             });
+
+            // Personalización adicional específica de compras
+            if (doc.content[0].table) {
+              var colCount = doc.content[0].table.body[0].length;
+              var widths = [];
+              for (var i = 0; i < colCount; i++) {
+                if (i === 0) widths.push("auto"); // Periodo
+                else if (i <= 4) widths.push("*"); // Texto
+                else widths.push("auto"); // Números
+              }
+              doc.content[0].table.widths = widths;
+              doc.content[0].table.headerRows = 1;
+
+              // Alinear columnas numéricas a la derecha y aplicar estilos
+              doc.content[0].table.body.forEach(function (row, rowIndex) {
+                row.forEach(function (cell, cellIndex) {
+                  if (cellIndex >= 5) {
+                    cell.alignment = "right";
+                  }
+                });
+              });
+
+              // Alternar colores de las filas
+              doc.content[0].layout = {
+                fillColor: function (rowIndex) {
+                  return rowIndex === 0
+                    ? "#3b82f6"
+                    : rowIndex % 2 === 0
+                    ? "#f3f4f6"
+                    : null;
+                },
+                hLineWidth: function (i, node) {
+                  return i === 0 || i === 1 || i === node.table.body.length
+                    ? 1
+                    : 0.5;
+                },
+                vLineWidth: function () {
+                  return 0.5;
+                },
+                hLineColor: function () {
+                  return "#d1d5db";
+                },
+                vLineColor: function () {
+                  return "#d1d5db";
+                },
+              };
+            }
           },
         },
         {
@@ -233,9 +304,12 @@ document.addEventListener("DOMContentLoaded", function () {
           text: '<i class="fas fa-print"></i> Imprimir',
           className:
             "bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
-          title: reportConfig.moduleName,
+          title: function () {
+            return getReportTitle();
+          },
           exportOptions: {
             columns: ":visible",
+            orthogonal: "export",
           },
           customize: function (win) {
             $(win.document.body).css("font-size", "10pt");
@@ -254,8 +328,6 @@ document.addEventListener("DOMContentLoaded", function () {
         $(".dataTables_processing").hide();
       },
     });
-
-    console.log("✅ DataTable de compras inicializada correctamente");
   } catch (error) {
     console.error("❌ Error al inicializar DataTable de compras:", error);
   }

@@ -9,10 +9,8 @@ function initializeMultiMonthSelector() {
   const clearMonthsBtn = document.getElementById("clear-months");
   const applyMonthsBtn = document.getElementById("apply-months");
 
+  // Retornar silenciosamente si los elementos no existen (normal en páginas sin selector de meses)
   if (!monthSelectorBtn || !monthDropdown || !monthInput) {
-    console.error(
-      "No se encontraron elementos críticos para el selector de meses"
-    );
     return;
   }
 

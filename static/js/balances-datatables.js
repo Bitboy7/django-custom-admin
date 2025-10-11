@@ -95,9 +95,54 @@ document.addEventListener("DOMContentLoaded", function () {
           csv: "CSV",
         },
       },
+      columns: [
+        { data: 0 }, // #
+        { data: 1 }, // Categoría
+        { data: 2 }, // N° Cuenta
+        { data: 3 }, // Banco
+        { data: 4 }, // Sucursal
+        { data: 5 }, // Fecha
+        {
+          // Total
+          data: 6,
+          render: function (data, type, row, meta) {
+            if (type === "display") {
+              return data;
+            }
+            // Para sort, export, filter - extraer el número limpio
+            var cleanText = getCleanTextFromHTML(data);
+            var numValue = parseNumericString(cleanText);
+            if (!isNaN(numValue)) {
+              return type === "export" ? numValue.toFixed(2) : numValue;
+            }
+            return 0;
+          },
+        },
+        {
+          // Acumulado
+          data: 7,
+          render: function (data, type, row, meta) {
+            if (type === "display") {
+              return data;
+            }
+            // Para sort, export, filter - extraer el número limpio
+            var cleanText = getCleanTextFromHTML(data);
+            var numValue = parseNumericString(cleanText);
+            if (!isNaN(numValue)) {
+              return type === "export" ? numValue.toFixed(2) : numValue;
+            }
+            return 0;
+          },
+        },
+      ],
       columnDefs: [
         {
-          // Columna #0: Número secuencial - limpiar HTML de botones
+          // Columnas numéricas - alineación derecha
+          targets: [6, 7],
+          className: "text-right",
+        },
+        {
+          // Columna #0: Número secuencial - limpiar HTML
           targets: [0],
           render: function (data, type, row) {
             if (type === "export" || type === "copy") {
@@ -123,48 +168,6 @@ document.addEventListener("DOMContentLoaded", function () {
             if (type === "export" || type === "copy") {
               return getCleanTextFromHTML(data);
             }
-            return data;
-          },
-        },
-        {
-          // Columnas #6-7: Total y Acumulado - usar data-order para exportar
-          targets: [6, 7],
-          render: function (data, type, row, meta) {
-            if (type === "export" || type === "copy") {
-              // Obtener el elemento TD para acceder a data-order
-              var table = $("#gastosTable").DataTable();
-              var cell = table.cell(meta.row, meta.col).node();
-
-              if (cell && cell.hasAttribute("data-order")) {
-                var orderValue = cell.getAttribute("data-order");
-                var numValue = parseFloat(orderValue);
-
-                if (!isNaN(numValue)) {
-                  // Formatear con separador de miles y 2 decimales
-                  return numValue.toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  });
-                }
-              }
-
-              // Fallback: usar getNumericValueFromNode
-              var n = getNumericValueFromNode(cell);
-              if (!isNaN(n)) {
-                return n.toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                });
-              }
-
-              return "0.00";
-            }
-
-            if (type === "sort") {
-              // Para ordenamiento, usar data-order si existe
-              return parseFloat(data.replace(/[^0-9.-]/g, "")) || 0;
-            }
-
             return data;
           },
         },
@@ -194,22 +197,11 @@ document.addEventListener("DOMContentLoaded", function () {
           extend: "excel",
           className: "dt-button btn-excel",
           text: '<i class="fas fa-file-excel mr-1"></i> Excel',
+          title: function () {
+            return getReportTitle();
+          },
           filename: function () {
-            var now = new Date();
-            var pad = (n) => n.toString().padStart(2, "0");
-            var fecha =
-              now.getFullYear() +
-              "-" +
-              pad(now.getMonth() + 1) +
-              "-" +
-              pad(now.getDate());
-            var hora =
-              pad(now.getHours()) +
-              "-" +
-              pad(now.getMinutes()) +
-              "-" +
-              pad(now.getSeconds());
-            return "gastos-detalle-" + fecha + "-" + hora;
+            return "gastos-detalle-" + getCurrentDateFormatted("filename");
           },
           exportOptions: {
             columns: ":visible",

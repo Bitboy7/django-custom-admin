@@ -22,21 +22,26 @@
 function getCleanTextFromHTML(htmlContent) {
   if (!htmlContent) return "";
 
-  // Si ya es texto plano, devolverlo
-  if (typeof htmlContent === "string" && !htmlContent.includes("<")) {
+  // Convertir a string si no lo es
+  htmlContent = String(htmlContent);
+
+  // Si ya es texto plano (no contiene <), devolverlo directamente
+  if (!htmlContent.includes("<")) {
     return htmlContent.trim();
   }
 
+  // Crear elemento temporal para parsear HTML
   var tempDiv = document.createElement("div");
   tempDiv.innerHTML = htmlContent;
 
-  // Extraer solo el texto de elementos específicos o todo el texto
+  // Extraer solo el texto
   var text = tempDiv.textContent || tempDiv.innerText || "";
 
-  // Limpiar caracteres especiales de formato
+  // Limpiar caracteres especiales de formato pero PRESERVAR espacios normales
+  // Solo remover saltos de línea y tabs múltiples
   text = text
-    .replace(/[\n\r\t]/g, " ")
-    .replace(/\s+/g, " ")
+    .replace(/[\n\r\t]+/g, " ")
+    .replace(/\s\s+/g, " ")
     .trim();
 
   return text;
@@ -63,6 +68,7 @@ function getNumericValueFromNode(node) {
 
 /**
  * Parsea una cadena numérica con diferentes formatos
+ * Soporta: "1,234.56", "1.234,56", "1 234.56", "1&nbsp;234.56", "$ 1,234.56", etc.
  *
  * @param {string} text - Texto a parsear
  * @returns {number} Valor numérico o NaN
@@ -70,20 +76,42 @@ function getNumericValueFromNode(node) {
 function parseNumericString(text) {
   if (!text || text === "") return NaN;
 
-  // Quitar símbolos de moneda y espacios
-  text = text.replace(/[$€£¥₹₽MXN USD EUR GBP\s]/gi, "").trim();
+  // Convertir a string si no lo es
+  text = String(text);
 
-  // Detectar formato: si tiene punto antes de la última coma => formato europeo (1.234,56)
+  // Reemplazar entidades HTML y espacios no rompibles
+  text = text.replace(/&nbsp;/g, " ");
+  text = text.replace(/\u00A0/g, " "); // Non-breaking space (nbsp)
+  text = text.replace(/\u202F/g, " "); // Narrow no-break space
+  text = text.replace(/\u2009/g, " "); // Thin space
+
+  // Quitar símbolos de moneda al principio/final
+  text = text.replace(/^[$€£¥₹₽MXN USD EUR GBP]+\s*/gi, "");
+  text = text.replace(/\s*[$€£¥₹₽MXN USD EUR GBP]+$/gi, "");
+  text = text.trim();
+
+  // Detectar formato basándose en los separadores
   var lastComma = text.lastIndexOf(",");
   var lastDot = text.lastIndexOf(".");
+  var hasSpace = text.includes(" ");
 
   var cleaned;
-  if (lastComma > lastDot) {
-    // Formato europeo: 1.234,56 -> quitar puntos, reemplazar coma por punto
-    cleaned = text.replace(/\./g, "").replace(/,/g, ".");
+
+  // Si tiene coma después del punto => formato europeo (1.234,56)
+  if (lastComma > lastDot && lastComma !== -1) {
+    // Formato europeo: 1.234,56 o 1 234,56
+    // Quitar puntos y espacios (son separadores de miles), reemplazar coma por punto
+    cleaned = text.replace(/[\.\s]/g, "").replace(/,/g, ".");
+  } else if (lastDot > lastComma || (lastDot !== -1 && lastComma === -1)) {
+    // Formato americano: 1,234.56 o 1 234.56 o 32 234
+    // Quitar comas y espacios (son separadores de miles)
+    cleaned = text.replace(/[,\s]/g, "");
+  } else if (hasSpace && lastDot === -1 && lastComma === -1) {
+    // Solo espacios sin decimales: 32 234
+    cleaned = text.replace(/\s/g, "");
   } else {
-    // Formato americano: 1,234.56 -> quitar comas
-    cleaned = text.replace(/,/g, "");
+    // Sin separadores claros, quitar todos los separadores comunes
+    cleaned = text.replace(/[,\s]/g, "");
   }
 
   var parsed = parseFloat(cleaned);

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test parseNumericString</title>
+    <script src="static/js/datatables-utils.js"></script>
+</head>
+<body>
+    <h1>Test de parseNumericString</h1>
+    <div id="results"></div>
+
+    <script>
+        var testCases = [
+            { input: "$32 234.00", expected: 32234.00 },
+            { input: "$32,234.00", expected: 32234.00 },
+            { input: "32 234", expected: 32234 },
+            { input: "32 234.50", expected: 32234.50 },
+            { input: "1 234 567.89", expected: 1234567.89 },
+            { input: "$1,234.56", expected: 1234.56 },
+            { input: "€1.234,56", expected: 1234.56 },
+            { input: "1.234,56", expected: 1234.56 },
+        ];
+
+        var resultsDiv = document.getElementById('results');
+        var allPassed = true;
+
+        testCases.forEach(function(test) {
+            var result = parseNumericString(test.input);
+            var passed = Math.abs(result - test.expected) < 0.01;
+            allPassed = allPassed && passed;
+
+            var div = document.createElement('div');
+            div.style.padding = '10px';
+            div.style.margin = '5px';
+            div.style.border = '1px solid ' + (passed ? 'green' : 'red');
+            div.style.backgroundColor = passed ? '#e8f5e9' : '#ffebee';
+            
+            div.innerHTML = '<strong>Input:</strong> "' + test.input + '"<br>' +
+                          '<strong>Expected:</strong> ' + test.expected + '<br>' +
+                          '<strong>Got:</strong> ' + result + '<br>' +
+                          '<strong>Status:</strong> ' + (passed ? '✅ PASS' : '❌ FAIL');
+            
+            resultsDiv.appendChild(div);
+        });
+
+        var summary = document.createElement('h2');
+        summary.textContent = allPassed ? '✅ All tests passed!' : '❌ Some tests failed';
+        summary.style.color = allPassed ? 'green' : 'red';
+        resultsDiv.insertBefore(summary, resultsDiv.firstChild);
+    </script>
+</body>
+</html>

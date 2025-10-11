@@ -715,8 +715,6 @@
         // Limpiar campos de rango
         $('#fecha_inicio').val('');
         $('#fecha_fin').val('');
-        
-        console.log('✅ Modo: Día específico activado');
       } else if (tipoCambiado === 'rango') {
         // Mostrar campos de rango
         $('#campo-dia-especifico').slideUp(300);
@@ -724,8 +722,6 @@
         
         // Limpiar campo de día específico
         $('#dia').val('');
-        
-        console.log('✅ Modo: Rango de fechas activado');
       }
     });
 
@@ -738,8 +734,6 @@
       $('#filtro-diario-opciones').hide();
       $('#multi-month-container').show();
     }
-
-    console.log('✅ Manejador de filtros diarios inicializado');
   });
 </script>
 
