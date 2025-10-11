@@ -293,27 +293,78 @@
             <div id="months-selector" class="grid grid-cols-3 gap-2"></div>
           </div>
 
-          <!-- Día específico (solo si periodo es diario) -->
-          <div class="form-group" id="filtro-dia" style="{% if selected_periodo != 'diario' %}display: none;{% endif %}">
-            <label for="dia" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-              <i class="fas fa-calendar-day text-cyan-500 mr-2"></i> Fecha específica
+          <!-- Opciones de filtro diario (solo si periodo es diario) -->
+          <div id="filtro-diario-opciones" class="form-group" style="{% if selected_periodo != 'diario' %}display: none;{% endif %}">
+            <label class="block text-sm font-medium text-gray-700 mb-3 flex items-center">
+              <i class="fas fa-calendar text-cyan-500 mr-2"></i> 
+              Tipo de consulta diaria
             </label>
-            <input type="date" id="dia" name="dia" value="{{ selected_dia }}" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 text-sm">
-          </div>
+            
+            <!-- Radio buttons para seleccionar tipo -->
+            <div class="flex flex-wrap gap-4 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <label class="flex items-center cursor-pointer hover:text-cyan-600 transition-colors">
+                <input type="radio" 
+                       name="tipo_fecha" 
+                       value="dia" 
+                       id="radio-dia"
+                       class="w-4 h-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 cursor-pointer" 
+                       {% if selected_dia or not selected_fecha_inicio %}checked{% endif %}>
+                <span class="ml-2 text-sm text-gray-700 font-medium">
+                  <i class="fas fa-calendar-day text-cyan-500 mr-1"></i>
+                  Día específico
+                </span>
+              </label>
+              <label class="flex items-center cursor-pointer hover:text-emerald-600 transition-colors">
+                <input type="radio" 
+                       name="tipo_fecha" 
+                       value="rango" 
+                       id="radio-rango"
+                       class="w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 cursor-pointer"
+                       {% if selected_fecha_inicio %}checked{% endif %}>
+                <span class="ml-2 text-sm text-gray-700 font-medium">
+                  <i class="fas fa-calendar-alt text-emerald-500 mr-1"></i>
+                  Rango de fechas
+                </span>
+              </label>
+            </div>
 
-          <!-- Rango de fechas (solo si periodo es diario) -->
-          <div class="form-group" id="filtro-inicio" style="{% if selected_periodo != 'diario' %}display: none;{% endif %}">
-            <label for="fecha_inicio" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-              <i class="fas fa-calendar-minus text-emerald-500 mr-2"></i> Fecha desde
-            </label>
-            <input type="date" id="fecha_inicio" name="fecha_inicio" value="{{ selected_fecha_inicio }}" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-sm">
-          </div>
+            <!-- Campo para día específico -->
+            <div id="campo-dia-especifico" {% if selected_fecha_inicio %}style="display: none;"{% endif %}>
+              <label for="dia" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                <i class="fas fa-calendar-day text-cyan-500 mr-2"></i> Fecha específica
+              </label>
+              <input type="date" 
+                     id="dia" 
+                     name="dia" 
+                     value="{{ selected_dia }}" 
+                     class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 text-sm hover:border-cyan-400 transition-colors">
+            </div>
 
-          <div class="form-group" id="filtro-fin" style="{% if selected_periodo != 'diario' %}display: none;{% endif %}">
-            <label for="fecha_fin" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-              <i class="fas fa-calendar-plus text-teal-500 mr-2"></i> Fecha hasta
-            </label>
-            <input type="date" id="fecha_fin" name="fecha_fin" value="{{ selected_fecha_fin }}" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 text-sm">
+            <!-- Campos para rango de fechas -->
+            <div id="campos-rango-fechas" {% if not selected_fecha_inicio %}style="display: none;"{% endif %}>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label for="fecha_inicio" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <i class="fas fa-calendar-minus text-emerald-500 mr-2"></i> Fecha desde
+                  </label>
+                  <input type="date" 
+                         id="fecha_inicio" 
+                         name="fecha_inicio" 
+                         value="{{ selected_fecha_inicio }}" 
+                         class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-sm hover:border-emerald-400 transition-colors">
+                </div>
+                <div>
+                  <label for="fecha_fin" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <i class="fas fa-calendar-plus text-teal-500 mr-2"></i> Fecha hasta
+                  </label>
+                  <input type="date" 
+                         id="fecha_fin" 
+                         name="fecha_fin" 
+                         value="{{ selected_fecha_fin }}" 
+                         class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 text-sm hover:border-teal-400 transition-colors">
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -633,6 +684,65 @@
 <!-- Selector de múltiples meses (reutilizable) -->
 <script src="{% static 'js/multi-month-selector.js' %}"></script>
 
+<!-- Script para manejo de filtros diarios (día específico vs rango) -->
+<script>
+  $(document).ready(function() {
+    // Manejar cambio de periodo
+    $('#periodo').on('change', function() {
+      const periodo = $(this).val();
+      
+      if (periodo === 'diario') {
+        $('#filtro-diario-opciones').show();
+        $('#multi-month-container').hide();
+      } else if (periodo === 'mensual') {
+        $('#filtro-diario-opciones').hide();
+        $('#multi-month-container').show();
+      } else {
+        $('#filtro-diario-opciones').hide();
+        $('#multi-month-container').hide();
+      }
+    });
+
+    // Manejar radio buttons para día específico vs rango
+    $('input[name="tipo_fecha"]').on('change', function() {
+      const tipoCambiado = $(this).val();
+      
+      if (tipoCambiado === 'dia') {
+        // Mostrar campo de día específico
+        $('#campo-dia-especifico').slideDown(300);
+        $('#campos-rango-fechas').slideUp(300);
+        
+        // Limpiar campos de rango
+        $('#fecha_inicio').val('');
+        $('#fecha_fin').val('');
+        
+        console.log('✅ Modo: Día específico activado');
+      } else if (tipoCambiado === 'rango') {
+        // Mostrar campos de rango
+        $('#campo-dia-especifico').slideUp(300);
+        $('#campos-rango-fechas').slideDown(300);
+        
+        // Limpiar campo de día específico
+        $('#dia').val('');
+        
+        console.log('✅ Modo: Rango de fechas activado');
+      }
+    });
+
+    // Inicializar estado correcto al cargar la página
+    const periodoActual = $('#periodo').val();
+    if (periodoActual === 'diario') {
+      $('#filtro-diario-opciones').show();
+      $('#multi-month-container').hide();
+    } else if (periodoActual === 'mensual') {
+      $('#filtro-diario-opciones').hide();
+      $('#multi-month-container').show();
+    }
+
+    console.log('✅ Manejador de filtros diarios inicializado');
+  });
+</script>
+
 <!-- Script para inicializar selector de meses simple -->
 <script>
   $(document).ready(function() {
@@ -685,18 +795,6 @@
     
     // Inicializar valor
     updateMonthsInput();
-  });
-</script>
-
-<!-- Script para mostrar toast si hay filtros aplicados -->
-<script>
-  $(document).ready(function() {
-    // Mostrar toast si hay filtros aplicados
-    {% if selected_cuenta_id or selected_sucursal_id or selected_productor_id or selected_producto_id or selected_tipo_pago %}
-    setTimeout(function() {
-      showToast('Filtros aplicados', 'La información ha sido filtrada según los criterios seleccionados.');
-    }, 500);
-    {% endif %}
   });
 </script>
 

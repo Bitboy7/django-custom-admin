@@ -158,9 +158,40 @@
       <span class="relative group">
       <i class="fas fa-question-circle text-blue-500 cursor-pointer"></i>
       <div
-        class="absolute left-1/2 transform -translate-x-1/2 mt-2 w-72 bg-white border border-gray-300 rounded shadow-lg p-3 text-sm text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 pointer-events-none">
-        Utilice los filtros para ajustar la visualización de los gastos por cuenta, sucursal, año, meses y periodo.
-        Seleccione y aplique para ver resultados actualizados.
+      class="absolute left-1/2 transform -translate-x-1/2 mt-2 w-96 bg-white border border-gray-300 rounded shadow-lg p-4 text-sm text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 pointer-events-none">
+      <strong>¿Cómo usar el módulo de gastos?</strong>
+      <ul class="list-disc pl-5 mt-2 space-y-1">
+        <li>
+        <b>Cuenta:</b> Filtra los gastos por número de cuenta bancaria. Seleccione una cuenta específica o "Todas" para ver el acumulado general.
+        </li>
+        <li>
+        <b>Sucursal:</b> Permite visualizar los gastos asociados a una sucursal determinada. Elija una sucursal o "Todas" para comparar.
+        </li>
+        <li>
+        <b>Año:</b> Seleccione el año para consultar los gastos registrados en ese periodo.
+        </li>
+        <li>
+        <b>Meses:</b> Puede seleccionar uno o varios meses para analizar los gastos en esos intervalos. Use "Todos los meses" para ver el año completo.
+        </li>
+        <li>
+        <b>Periodo:</b> Elija entre <span class="font-semibold text-blue-600">Diario</span>, <span class="font-semibold text-blue-600">Semanal</span> o <span class="font-semibold text-blue-600">Mensual</span> para cambiar la agrupación de los datos.
+        <ul class="list-disc pl-5 mt-1">
+          <li>
+          <b>Diario:</b> Puede consultar por un día específico o por un rango de fechas.
+          </li>
+          <li>
+          <b>Semanal/Mensual:</b> Agrupa los gastos por semana o por mes, según la selección.
+          </li>
+        </ul>
+        </li>
+        <li>
+        <b>Aplicar/Limpiar:</b> Después de seleccionar los filtros, presione <span class="font-semibold text-blue-600">Aplicar</span> para actualizar los resultados. Use <span class="font-semibold text-blue-600">Limpiar</span> para reiniciar la selección de meses.
+        </li>
+      </ul>
+      <hr class="my-2">
+      <span class="text-xs text-gray-500">
+        Los resultados incluyen métricas, gráficos y una tabla detallada. Puede exportar los datos en Excel, PDF o imprimirlos usando las opciones de la tabla.
+      </span>
       </div>
       </span>
     </div>
@@ -272,47 +303,108 @@
           </div>
         </div>
 
-        <div class="flex flex-wrap gap-4 mb-4" id="dia-container" style="display: {% if selected_periodo == 'diario' %}flex{% else %}none{% endif %};">
-          <div class="flex-1 min-w-[200px] group">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800 mb-2">
-              <i class="fas fa-calendar-day mr-1"></i> Día específico
-            </span>
-            <label for="dia" class="block font-medium mb-2 group-hover:text-cyan-300 transition-colors duration-200">Seleccione el día:</label>
-            <div class="relative">
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                <i class="fas fa-calendar"></i>
-              </div>
-              <input type="date" name="dia" id="dia" 
-                class="block w-full pl-10 pr-3 py-2 bg-white bg-opacity-90 border border-gray-400 hover:border-cyan-500 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent" value="{{ selected_dia }}">
+        <!-- Opciones de filtro diario (solo si periodo es diario) -->
+        <div id="filtro-diario-opciones" class="mb-4" style="{% if selected_periodo != 'diario' %}display: none;{% endif %}">
+          <div class="bg-gradient-to-r from-cyan-50 to-emerald-50 rounded-lg p-4 border border-cyan-200 shadow-sm">
+            <label class="block font-medium mb-3 text-gray-700 flex items-center">
+              <i class="fas fa-calendar text-cyan-600 mr-2"></i> 
+              Tipo de consulta diaria
+            </label>
+            
+            <!-- Radio buttons para seleccionar tipo -->
+            <div class="flex flex-wrap gap-4 mb-4 bg-white bg-opacity-80 p-3 rounded-lg border border-gray-300">
+              <label class="flex items-center cursor-pointer hover:text-cyan-600 transition-colors group">
+                <input type="radio" 
+                       name="tipo_fecha" 
+                       value="dia" 
+                       id="radio-dia"
+                       class="w-4 h-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 cursor-pointer" 
+                       {% if selected_dia or not selected_fecha_inicio %}checked{% endif %}>
+                <span class="ml-2 text-sm font-medium text-gray-700 group-hover:text-cyan-600">
+                  <i class="fas fa-calendar-day text-cyan-500 mr-1"></i>
+                  Día específico
+                </span>
+              </label>
+              <label class="flex items-center cursor-pointer hover:text-emerald-600 transition-colors group">
+                <input type="radio" 
+                       name="tipo_fecha" 
+                       value="rango" 
+                       id="radio-rango"
+                       class="w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 cursor-pointer"
+                       {% if selected_fecha_inicio %}checked{% endif %}>
+                <span class="ml-2 text-sm font-medium text-gray-700 group-hover:text-emerald-600">
+                  <i class="fas fa-calendar-alt text-emerald-500 mr-1"></i>
+                  Rango de fechas
+                </span>
+              </label>
             </div>
-          </div>
-          <div class="flex-1 min-w-[200px] group">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 mb-2">
-              <i class="fas fa-calendar-minus mr-1"></i> Desde
-            </span>
-            <label for="fecha_inicio" class="block font-medium mb-2 group-hover:text-emerald-300 transition-colors duration-200">Fecha inicial:</label>
-            <div class="relative">
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                <i class="fas fa-calendar"></i>
+
+            <!-- Campo para día específico -->
+            <div id="campo-dia-especifico" {% if selected_fecha_inicio %}style="display: none;"{% endif %}>
+              <div class="group">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800 mb-2">
+                  <i class="fas fa-calendar-day mr-1"></i> Día específico
+                </span>
+                <label for="dia" class="block font-medium mb-2 text-gray-700 group-hover:text-cyan-600 transition-colors duration-200">
+                  Seleccione el día:
+                </label>
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <i class="fas fa-calendar"></i>
+                  </div>
+                  <input type="date" 
+                         name="dia" 
+                         id="dia" 
+                         value="{{ selected_dia }}"
+                         class="block w-full pl-10 pr-3 py-2 bg-white bg-opacity-90 border border-gray-300 hover:border-cyan-500 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent">
+                </div>
               </div>
-              <input type="date" name="fecha_inicio" id="fecha_inicio" 
-                class="block w-full pl-10 pr-3 py-2 bg-white bg-opacity-90 border border-gray-400 hover:border-emerald-500 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" value="{{ selected_fecha_inicio }}">
             </div>
-          </div>
-          <div class="flex-1 min-w-[200px] group">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800 mb-2">
-              <i class="fas fa-calendar-plus mr-1"></i> Hasta
-            </span>
-            <label for="fecha_fin" class="block font-medium mb-2 group-hover:text-teal-300 transition-colors duration-200">Fecha fin:</label>
-            <div class="relative">
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                <i class="fas fa-calendar"></i>
+
+            <!-- Campos para rango de fechas -->
+            <div id="campos-rango-fechas" {% if not selected_fecha_inicio %}style="display: none;"{% endif %}>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="group">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 mb-2">
+                    <i class="fas fa-calendar-minus mr-1"></i> Desde
+                  </span>
+                  <label for="fecha_inicio" class="block font-medium mb-2 text-gray-700 group-hover:text-emerald-600 transition-colors duration-200">
+                    Fecha inicial:
+                  </label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                      <i class="fas fa-calendar"></i>
+                    </div>
+                    <input type="date" 
+                           name="fecha_inicio" 
+                           id="fecha_inicio" 
+                           value="{{ selected_fecha_inicio }}"
+                           class="block w-full pl-10 pr-3 py-2 bg-white bg-opacity-90 border border-gray-300 hover:border-emerald-500 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                  </div>
+                </div>
+                <div class="group">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800 mb-2">
+                    <i class="fas fa-calendar-plus mr-1"></i> Hasta
+                  </span>
+                  <label for="fecha_fin" class="block font-medium mb-2 text-gray-700 group-hover:text-teal-600 transition-colors duration-200">
+                    Fecha fin:
+                  </label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                      <i class="fas fa-calendar"></i>
+                    </div>
+                    <input type="date" 
+                           name="fecha_fin" 
+                           id="fecha_fin" 
+                           value="{{ selected_fecha_fin }}"
+                           class="block w-full pl-10 pr-3 py-2 bg-white bg-opacity-90 border border-gray-300 hover:border-teal-500 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent">
+                  </div>
+                </div>
               </div>
-              <input type="date" name="fecha_fin" id="fecha_fin" 
-                class="block w-full pl-10 pr-3 py-2 bg-white bg-opacity-90 border border-gray-400 hover:border-teal-500 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" value="{{ selected_fecha_fin }}">
             </div>
           </div>
         </div>
+
         <div class="flex items-center justify-between pt-4">
           <div class="flex gap-3">
             <!-- Botones de acción -->
@@ -561,6 +653,52 @@
 
 <script src="{% static 'js/balances-general.js' %}"></script>
 
+<!-- Script para manejo de filtros diarios (día específico vs rango) -->
+<script>
+  $(document).ready(function() {
+    // Manejar cambio de periodo
+    $('#periodo').on('change', function() {
+      const periodo = $(this).val();
+      
+      if (periodo === 'diario') {
+        $('#filtro-diario-opciones').slideDown(300);
+      } else {
+        $('#filtro-diario-opciones').slideUp(300);
+      }
+    });
+
+    // Manejar radio buttons para día específico vs rango
+    $('input[name="tipo_fecha"]').on('change', function() {
+      const tipoCambiado = $(this).val();
+      
+      if (tipoCambiado === 'dia') {
+        // Mostrar campo de día específico
+        $('#campo-dia-especifico').slideDown(300);
+        $('#campos-rango-fechas').slideUp(300);
+        
+        // Limpiar campos de rango
+        $('#fecha_inicio').val('');
+        $('#fecha_fin').val('');
+      } else if (tipoCambiado === 'rango') {
+        // Mostrar campos de rango
+        $('#campo-dia-especifico').slideUp(300);
+        $('#campos-rango-fechas').slideDown(300);
+        
+        // Limpiar campo de día específico
+        $('#dia').val('');
+      }
+    });
+
+    // Inicializar estado correcto al cargar la página
+    const periodoActual = $('#periodo').val();
+    if (periodoActual === 'diario') {
+      $('#filtro-diario-opciones').show();
+    } else {
+      $('#filtro-diario-opciones').hide();
+    }
+  });
+</script>
+
 <script>
   // Extraer categorías y totales de la tabla procesada para los gráficos
   window.balancesCategoriasLabels = [];
@@ -591,19 +729,15 @@
         var totalCell = table.cell(i, 6).node();
         if (totalCell) {
           var totalText = totalCell.textContent || totalCell.innerText || '';
-          console.log("Texto original de celda: '" + totalText + "'");
           
           // Usar la función getNumericValueFromNode si está disponible
           if (typeof getNumericValueFromNode === 'function') {
             totalValue = getNumericValueFromNode(totalCell);
-            console.log("Valor parseado con getNumericValueFromNode: " + totalValue);
             if (isNaN(totalValue)) totalValue = 0;
           } else {
             // Extraer número del texto (remover $, espacios, comas y otros símbolos monetarios)
             var cleanNumber = totalText.replace(/[\$\s,€£¥₹₽]/g, '');
-            console.log("Número limpio: '" + cleanNumber + "'");
             totalValue = parseFloat(cleanNumber);
-            console.log("Valor parseado con parseFloat: " + totalValue);
             if (isNaN(totalValue)) totalValue = 0;
           }
         }
@@ -625,8 +759,6 @@
         if (categorias.hasOwnProperty(key) && key.trim() !== '') {
           window.balancesCategoriasLabels.push(key);
           window.balancesCategoriasData.push(categorias[key]);
-          // Debug: mostrar valores en consola
-          console.log("Categoría: " + key + " - Valor: " + categorias[key]);
         }
       }
     }

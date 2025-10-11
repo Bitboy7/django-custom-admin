@@ -64,6 +64,12 @@ function formatNumericValue(node, includeSymbol) {
 
 document.addEventListener("DOMContentLoaded", function () {
   try {
+    // Verificar si ya está inicializado y destruirlo
+    if ($.fn.DataTable.isDataTable("#gastosTable")) {
+      $("#gastosTable").DataTable().destroy();
+      console.log("⚠️ DataTable anterior destruido");
+    }
+
     $("#gastosTable").DataTable({
       language: {
         processing: "",
@@ -120,6 +126,48 @@ document.addEventListener("DOMContentLoaded", function () {
             return data;
           },
         },
+        {
+          // Columnas #6-7: Total y Acumulado - usar data-order para exportar
+          targets: [6, 7],
+          render: function (data, type, row, meta) {
+            if (type === "export" || type === "copy") {
+              // Obtener el elemento TD para acceder a data-order
+              var table = $("#gastosTable").DataTable();
+              var cell = table.cell(meta.row, meta.col).node();
+
+              if (cell && cell.hasAttribute("data-order")) {
+                var orderValue = cell.getAttribute("data-order");
+                var numValue = parseFloat(orderValue);
+
+                if (!isNaN(numValue)) {
+                  // Formatear con separador de miles y 2 decimales
+                  return numValue.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  });
+                }
+              }
+
+              // Fallback: usar getNumericValueFromNode
+              var n = getNumericValueFromNode(cell);
+              if (!isNaN(n)) {
+                return n.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                });
+              }
+
+              return "0.00";
+            }
+
+            if (type === "sort") {
+              // Para ordenamiento, usar data-order si existe
+              return parseFloat(data.replace(/[^0-9.-]/g, "")) || 0;
+            }
+
+            return data;
+          },
+        },
       ],
       buttons: [
         {
@@ -127,21 +175,8 @@ document.addEventListener("DOMContentLoaded", function () {
           className: "dt-button btn-copy",
           text: '<i class="fas fa-copy mr-1"></i> Copiar',
           exportOptions: {
-            format: {
-              body: function (data, row, column, node) {
-                // Limpiar HTML de todas las columnas
-                var cleanData = getCleanTextFromHTML(data);
-
-                // Para columnas numéricas, asegurar formato correcto
-                if (column === 6 || column === 7) {
-                  // Total y Acumulado (ahora columnas 6 y 7)
-                  var n = getNumericValueFromNode(node);
-                  return isNaN(n) ? cleanData : n.toFixed(2);
-                }
-
-                return cleanData;
-              },
-            },
+            columns: ":visible",
+            orthogonal: "export",
           },
         },
         {
@@ -151,21 +186,8 @@ document.addEventListener("DOMContentLoaded", function () {
           charset: "utf-8",
           bom: true,
           exportOptions: {
-            format: {
-              body: function (data, row, column, node) {
-                // Limpiar HTML de todas las columnas
-                var cleanData = getCleanTextFromHTML(data);
-
-                // Para columnas numéricas, asegurar formato correcto
-                if (column === 6 || column === 7) {
-                  // Total y Acumulado (ahora columnas 6 y 7)
-                  var n = getNumericValueFromNode(node);
-                  return isNaN(n) ? cleanData : n.toFixed(2);
-                }
-
-                return cleanData;
-              },
-            },
+            columns: ":visible",
+            orthogonal: "export",
           },
         },
         {
@@ -190,21 +212,8 @@ document.addEventListener("DOMContentLoaded", function () {
             return "gastos-detalle-" + fecha + "-" + hora;
           },
           exportOptions: {
-            format: {
-              body: function (data, row, column, node) {
-                // Limpiar HTML de todas las columnas
-                var cleanData = getCleanTextFromHTML(data);
-
-                // Para columnas numéricas, devolver número puro para Excel
-                if (column === 6 || column === 7) {
-                  // Total y Acumulado (ahora columnas 6 y 7)
-                  var n = getNumericValueFromNode(node);
-                  return isNaN(n) ? 0 : n;
-                }
-
-                return cleanData;
-              },
-            },
+            columns: ":visible",
+            orthogonal: "export",
           },
         },
         {
@@ -334,20 +343,8 @@ document.addEventListener("DOMContentLoaded", function () {
             }
           },
           exportOptions: {
-            format: {
-              body: function (data, row, column, node) {
-                // Limpiar HTML de todas las columnas
-                var cleanData = getCleanTextFromHTML(data);
-
-                // Para columnas numéricas con símbolo de moneda
-                if (column === 6 || column === 7) {
-                  // Total y Acumulado (ahora columnas 6 y 7)
-                  return formatNumericValue(node, true);
-                }
-
-                return cleanData;
-              },
-            },
+            columns: ":visible",
+            orthogonal: "export",
           },
         },
         {
@@ -355,20 +352,8 @@ document.addEventListener("DOMContentLoaded", function () {
           className: "dt-button btn-print",
           text: '<i class="fas fa-print mr-1"></i> Imprimir',
           exportOptions: {
-            format: {
-              body: function (data, row, column, node) {
-                // Limpiar HTML de todas las columnas
-                var cleanData = getCleanTextFromHTML(data);
-
-                // Para columnas numéricas con símbolo de moneda
-                if (column === 6 || column === 7) {
-                  // Total y Acumulado (ahora columnas 6 y 7)
-                  return formatNumericValue(node, true);
-                }
-
-                return cleanData;
-              },
-            },
+            columns: ":visible",
+            orthogonal: "export",
           },
         },
       ],
