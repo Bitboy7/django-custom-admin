@@ -96,9 +96,21 @@
         <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
             <h4 class="text-sm font-medium mb-2 opacity-90">{{ item.id_sucursal__nombre|default:"Total" }}</h4>
             <div class="space-y-1">
-                <p class="text-xs opacity-75">Entradas: ${{ item.total_entradas|floatformat:2|intcomma|default:"0.00" }}</p>
-                <p class="text-xs opacity-75">Salidas: ${{ item.total_salidas|floatformat:2|intcomma|default:"0.00" }}</p>
-                <p class="text-xl font-bold mb-1">Balance: ${{ item.balance|floatformat:2|intcomma }}</p>
+                <p class="text-xs opacity-75">Entradas: 
+                    {% if item.total_entradas %}
+                        ${{ item.total_entradas.amount|floatformat:2|intcomma }}
+                    {% else %}
+                        $0.00
+                    {% endif %}
+                </p>
+                <p class="text-xs opacity-75">Salidas: 
+                    {% if item.total_salidas %}
+                        ${{ item.total_salidas.amount|floatformat:2|intcomma }}
+                    {% else %}
+                        $0.00
+                    {% endif %}
+                </p>
+                <p class="text-xl font-bold mb-1">Balance: ${{ item.balance|floatformat:2|intcomma|default:"0.00" }}</p>
                 <p class="text-xs opacity-75">{{ item.cantidad_movimientos }} movimientos</p>
             </div>
         </div>
@@ -159,7 +171,11 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right">
                             <span class="text-sm font-semibold {% if inversion.tipo_movimiento == 'ENTRADA' %}text-green-600{% else %}text-red-600{% endif %}">
-                                ${{ inversion.monto|floatformat:2|intcomma }}
+                                {% if inversion.monto %}
+                                    ${{ inversion.monto.amount|floatformat:2|intcomma }}
+                                {% else %}
+                                    $0.00
+                                {% endif %}
                             </span>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500">

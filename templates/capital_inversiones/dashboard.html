@@ -318,7 +318,11 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right">
                             <span class="text-sm font-semibold text-gray-900">
-                                ${{ inversion.object.monto|floatformat:2|intcomma }}
+                                {% if inversion.object.monto %}
+                                    ${{ inversion.object.monto.amount|floatformat:2|intcomma }}
+                                {% else %}
+                                    $0.00
+                                {% endif %}
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right">
