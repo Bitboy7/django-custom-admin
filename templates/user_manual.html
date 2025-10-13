@@ -166,6 +166,7 @@
       <li><a href="#gestion-de-catalogos">{% trans "Gestión de Catálogos" %}</a></li>
       <li><a href="#registro-de-gastos">{% trans "Registro de Gastos" %}</a></li>
       <li><a href="#registro-de-ventas">{% trans "Registro de Ventas" %}</a></li>
+      <li><a href="#capital-inversiones">{% trans "Capital e Inversiones" %}</a></li>
       <li><a href="#balances-y-reportes">{% trans "Balances y Reportes" %}</a></li>
       <li><a href="#auditoria">{% trans "Auditoría del Sistema" %}</a></li>
       <li><a href="#configuracion">{% trans "Configuración" %}</a></li>
@@ -271,6 +272,87 @@
       <li>{% trans "El sistema calculará automáticamente los totales." %}</li>
       <li>{% trans "Guarda la venta para completar el registro." %}</li>
     </ol>
+  </div>
+
+  <div class="section" id="capital-inversiones">
+    <h2>{% trans "Capital e Inversiones" %}</h2>
+    <p>
+      {% trans "El módulo de Capital e Inversiones permite gestionar y dar seguimiento a las inversiones de capital de la empresa, calculando automáticamente el retorno sobre inversión (ROI) y generando reportes detallados de rendimientos." %}
+    </p>
+
+    <h3>{% trans "Tipos de Movimientos" %}</h3>
+    <ul>
+      <li><strong>{% trans "Entrada de Capital:" %}</strong> {% trans "Registro de aportaciones de capital, inversiones recibidas o reinversiones." %}</li>
+      <li><strong>{% trans "Salida de Capital (Inversiones):" %}</strong> {% trans "Registro de inversiones realizadas en activos, proyectos o instrumentos financieros." %}</li>
+    </ul>
+
+    <h3>{% trans "Registrar una Nueva Inversión" %}</h3>
+    <ol>
+      <li>{% trans "Navega a la sección 'Capital e Inversiones' en el menú principal." %}</li>
+      <li>{% trans "Haz clic en 'Agregar Inversión'." %}</li>
+      <li>{% trans "Selecciona el tipo de movimiento (Entrada o Salida)." %}</li>
+      <li>{% trans "Elige la categoría de inversión (Capital de trabajo, Activos fijos, Inversión financiera, etc.)." %}</li>
+      <li>{% trans "Especifica la sucursal, cuenta bancaria y monto." %}</li>
+      <li>{% trans "Adjunta documentación de soporte si es necesario." %}</li>
+      <li>{% trans "Guarda para completar el registro." %}</li>
+    </ol>
+
+    <h3>{% trans "Registrar Rendimientos" %}</h3>
+    <p>
+      {% trans "Para inversiones tipo SALIDA, puedes registrar los rendimientos obtenidos a lo largo del tiempo:" %}
+    </p>
+    <ol>
+      <li>{% trans "Accede a la inversión en el panel de administración." %}</li>
+      <li>{% trans "Desplázate a la sección 'Rendimientos' dentro del formulario." %}</li>
+      <li>{% trans "Haz clic en 'Agregar rendimiento'." %}</li>
+      <li>{% trans "Registra la fecha y monto del rendimiento." %}</li>
+      <li>{% trans "Opcionalmente, especifica el tipo de rendimiento (Dividendos, Intereses, Ganancias de capital, etc.)." %}</li>
+      <li>{% trans "El sistema calculará automáticamente el porcentaje de rendimiento." %}</li>
+    </ol>
+
+    <h3>{% trans "Cálculo del ROI (Retorno sobre Inversión)" %}</h3>
+    <div class="highlight-box">
+      <h4>{% trans "Fórmula de Cálculo" %}</h4>
+      <div class="code-block">
+        ROI (%) = (Total Rendimientos ÷ Inversión Inicial) × 100
+      </div>
+      <p><strong>{% trans "Ejemplo:" %}</strong></p>
+      <ul>
+        <li>{% trans "Inversión inicial:" %} $10,000</li>
+        <li>{% trans "Rendimientos acumulados:" %} $1,500</li>
+        <li>{% trans "ROI:" %} (1,500 ÷ 10,000) × 100 = <strong>15%</strong></li>
+      </ul>
+    </div>
+
+    <h3>{% trans "Puntos Importantes sobre el ROI" %}</h3>
+    <div class="warning-box">
+      <ul>
+        <li><strong>{% trans "Solo aplica a inversiones tipo SALIDA:" %}</strong> {% trans "El ROI únicamente se calcula para inversiones donde el dinero sale de la empresa." %}</li>
+        <li><strong>{% trans "Rendimientos acumulados:" %}</strong> {% trans "El sistema suma todos los rendimientos registrados para calcular el ROI total." %}</li>
+        <li><strong>{% trans "Múltiples registros:" %}</strong> {% trans "Puedes registrar varios rendimientos para una misma inversión a lo largo del tiempo." %}</li>
+        <li><strong>{% trans "Moneda consistente:" %}</strong> {% trans "Todos los cálculos se realizan en la misma moneda configurada." %}</li>
+        <li><strong>{% trans "ROI individual vs promedio:" %}</strong> {% trans "Cada inversión tiene su ROI individual. El dashboard muestra el ROI promedio ponderado del portafolio completo." %}</li>
+      </ul>
+    </div>
+
+    <h3>{% trans "Interpretación de Resultados" %}</h3>
+    <ul>
+      <li><strong style="color: #10b981;">{% trans "ROI Positivo:" %}</strong> {% trans "La inversión está generando ganancias. Mientras mayor el porcentaje, mejor el rendimiento." %}</li>
+      <li><strong style="color: #6c757d;">{% trans "ROI = 0%:" %}</strong> {% trans "No se han registrado rendimientos aún o la inversión está en punto de equilibrio." %}</li>
+      <li><strong style="color: #ef4444;">{% trans "ROI Negativo:" %}</strong> {% trans "La inversión ha generado pérdidas. Requiere análisis y posible ajuste de estrategia." %}</li>
+    </ul>
+
+    <h3>{% trans "Reportes Disponibles" %}</h3>
+    <ul>
+      <li><strong>{% trans "Dashboard de Inversiones:" %}</strong> {% trans "Vista general con balance por sucursal, categoría y gráficos de tendencias." %}</li>
+      <li><strong>{% trans "Reporte por Sucursal:" %}</strong> {% trans "Análisis detallado de inversiones y rendimientos por ubicación." %}</li>
+      <li><strong>{% trans "Reporte por Categoría:" %}</strong> {% trans "Distribución de inversiones según tipo (capital de trabajo, activos, financiera, etc.)." %}</li>
+      <li><strong>{% trans "Análisis de Rendimientos:" %}</strong> {% trans "Seguimiento detallado del ROI con historial de rendimientos por inversión." %}</li>
+    </ul>
+
+    <div class="highlight-box">
+      <strong>{% trans "Consejo:" %}</strong> {% trans "Actualiza los rendimientos periódicamente para mantener un seguimiento preciso del desempeño de tus inversiones. El sistema permite exportar todos los reportes a Excel para análisis más profundos." %}
+    </div>
   </div>
 
   <div class="section" id="balances-y-reportes">

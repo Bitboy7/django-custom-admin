@@ -35,6 +35,7 @@ urlpatterns += i18n_patterns(
     path('export-full-report/', export_full_report_to_excel, name='export_full_report'),
     path('', include('catalogo.urls')),
     path('', include('gastos.urls')),
+    path('capital-inversiones/', include('capital_inversiones.urls')),  # URLs del módulo de capital
     path('', redirect_to_admin, name='redirect_to_admin'),  # Redirige la raíz a admin
     prefix_default_language=True,  # Incluir idioma por defecto en la URL
 )

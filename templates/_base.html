@@ -20,6 +20,78 @@
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+  <!-- Estilos para el menú desplegable -->
+  <style>
+    /* Dropdown Menu Styles */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: #1e3a8a;
+      min-width: 220px;
+      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+      z-index: 1000;
+      border-radius: 0.375rem;
+      margin-top: 0.5rem;
+    }
+
+    .dropdown-content a {
+      color: #d1d5db;
+      padding: 12px 16px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      transition: all 0.2s ease;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .dropdown-content a:last-child {
+      border-bottom: none;
+    }
+
+    .dropdown-content a:hover {
+      background-color: #1e40af;
+      color: white;
+      padding-left: 20px;
+    }
+
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+
+    .dropdown-toggle {
+      cursor: pointer;
+    }
+
+    .dropdown-toggle:hover {
+      color: white !important;
+    }
+
+    /* Mobile dropdown styles */
+    @media (max-width: 768px) {
+      .dropdown-content {
+        position: static;
+        box-shadow: none;
+        background-color: rgba(30, 58, 138, 0.5);
+        margin-top: 0;
+        padding-left: 1rem;
+      }
+
+      .mobile-dropdown-content {
+        display: none;
+        margin-top: 0.5rem;
+      }
+
+      .mobile-dropdown-content.show {
+        display: block;
+      }
+    }
+  </style>
+
   <!-- Bloque para CSS adicional -->
   {% block extra_css %}{% endblock %}
 </head>
@@ -66,6 +138,31 @@
             </a>
           </li>
 
+          <!-- Menú desplegable de Inversiones -->
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle text-gray-300 hover:text-white flex items-center py-2">
+              <i class="fas fa-chart-line mr-1"></i> Capital e Inversiones
+              <i class="fas fa-chevron-down ml-1 text-xs"></i>
+            </a>
+            <div class="dropdown-content">
+              <a href="{% url 'capital_inversiones:dashboard' %}">
+                <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
+              </a>
+              <a href="{% url 'capital_inversiones:reporte_sucursal' %}">
+                <i class="fas fa-building mr-2"></i> Reporte por Sucursal
+              </a>
+              <a href="{% url 'capital_inversiones:reporte_categoria' %}">
+                <i class="fas fa-tags mr-2"></i> Reporte por Categoría
+              </a>
+              <a href="{% url 'capital_inversiones:reporte_rendimientos' %}">
+                <i class="fas fa-percentage mr-2"></i> Análisis de Rendimientos
+              </a>
+              <a href="{% url 'admin:capital_inversiones_inversion_changelist' %}">
+                <i class="fas fa-cog mr-2"></i> Administrar Inversiones
+              </a>
+            </div>
+          </li>
+
           <li>
             <a href="{% url 'export_full_report' %}" class="text-gray-300 hover:text-white flex items-center py-2">
               <i class="fas fa-file-excel mr-1"></i> Exportar reporte completo
@@ -109,6 +206,26 @@
             menu.classList.toggle('hidden');
           });
         }
+
+        // Manejar dropdown en móvil
+        const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+        
+        dropdownToggles.forEach(toggle => {
+          toggle.addEventListener('click', function(e) {
+            // Solo prevenir default en móvil
+            if (window.innerWidth < 768) {
+              e.preventDefault();
+              const dropdown = this.parentElement;
+              const dropdownContent = dropdown.querySelector('.dropdown-content');
+              
+              // Toggle la clase 'show' para móvil
+              if (dropdownContent) {
+                dropdownContent.classList.toggle('mobile-dropdown-content');
+                dropdownContent.classList.toggle('show');
+              }
+            }
+          });
+        });
       });
     </script>
     <!-- jQuery and DataTables JS -->

@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'catalogo.apps.CatalogoConfig',
     'gastos.apps.GastosConfig',
     'ventas.apps.VentasConfig',
+    'capital_inversiones.apps.CapitalInversionesConfig',  # Módulo de capital e inversiones
     'import_export',
 ]
 
