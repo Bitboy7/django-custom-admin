@@ -207,6 +207,15 @@ document.addEventListener("DOMContentLoaded", function () {
             columns: ":visible",
             orthogonal: "export",
           },
+          customize: function (xlsx) {
+            console.log("Iniciando customize...");
+            console.log("Estructura xlsx:", Object.keys(xlsx));
+            console.log("Estructura xlsx.xl:", Object.keys(xlsx.xl));
+
+            // Por ahora, solo retornar sin hacer cambios para verificar que funcione
+            // Una vez que funcione, agregaremos la segunda hoja
+            console.log("Excel exportado sin modificaciones");
+          },
         },
         {
           text: '<i class="fas fa-chart-pie mr-1"></i> Resumen Excel',
@@ -217,6 +226,7 @@ document.addEventListener("DOMContentLoaded", function () {
             var data = table.rows({ search: "applied" }).data();
 
             // Procesar cada fila para agrupar por categoría
+            // Sumar los valores de la columna 6 (Total) para cada categoría
             for (var i = 0; i < data.length; i++) {
               var rowData = data[i];
               // Extraer texto limpio de la categoría (columna 1)
@@ -227,12 +237,43 @@ document.addEventListener("DOMContentLoaded", function () {
                 tempDiv.textContent || tempDiv.innerText || categoryHtml;
               category = category.trim();
 
-              // Obtener el total de la fila (columna 6)
+              // Obtener el valor total de la fila (columna 6 - Total)
               var totalValue = 0;
               var totalCell = table.cell(i, 6).node();
               if (totalCell) {
-                totalValue = getNumericValueFromNode(totalCell);
+                // Extraer el texto del nodo
+                var cellText =
+                  totalCell.textContent || totalCell.innerText || "";
+                cellText = cellText.trim();
+
+                // Debug: mostrar primeras filas
+                if (i < 5) {
+                  console.log(
+                    "Fila " +
+                      i +
+                      " - Categoría: " +
+                      category +
+                      " - Texto celda: '" +
+                      cellText +
+                      "'"
+                  );
+                }
+
+                // Limpiar el texto: quitar $ y espacios, luego parsear
+                // El formato es: $1 963.00 o $550 000.00
+                cellText = cellText.replace(/[$\s]/g, ""); // Quitar $ y todos los espacios
+                totalValue = parseFloat(cellText);
+
                 if (isNaN(totalValue)) totalValue = 0;
+
+                if (i < 5) {
+                  console.log(
+                    "  -> Texto limpio: '" +
+                      cellText +
+                      "' -> Valor: " +
+                      totalValue
+                  );
+                }
               }
 
               // Sumar al total de la categoría
@@ -242,6 +283,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 categoryTotals[category] = totalValue;
               }
             }
+
+            // Mostrar primeros totales por categoría
+            console.log(
+              "Primeros totales por categoría:",
+              Object.keys(categoryTotals)
+                .slice(0, 5)
+                .map(function (k) {
+                  return k + ": " + categoryTotals[k];
+                })
+            );
 
             // Convertir a array y ordenar por total descendente
             var sortedCategories = Object.keys(categoryTotals)
@@ -257,22 +308,29 @@ document.addEventListener("DOMContentLoaded", function () {
               return sum + item[1];
             }, 0);
 
-            // Preparar datos para exportación
+            console.log("Gran Total calculado: " + grandTotal.toFixed(2));
+
+            // Preparar datos para exportación con formato numérico correcto
             var headers = ["Categoría", "Total acumulado"];
-            var data = [];
+            var exportData = [];
 
             sortedCategories.forEach(function (item) {
-              data.push([item[0], item[1]]);
+              // Asegurarse de que el valor sea numérico y formatearlo correctamente
+              var valorNumerico = parseFloat(item[1]);
+              if (isNaN(valorNumerico)) valorNumerico = 0;
+              exportData.push([item[0], valorNumerico]);
             });
 
-            // Agregar fila de total
-            data.push(["TOTAL GENERAL", grandTotal]);
+            // Agregar fila de total con valor numérico
+            var totalNumerico = parseFloat(grandTotal);
+            if (isNaN(totalNumerico)) totalNumerico = 0;
+            exportData.push(["TOTAL GENERAL", totalNumerico]);
 
             // Exportar usando la utilidad
             exportToCSV({
               filename: "gastos-resumen-categorias",
               headers: headers,
-              data: data,
+              data: exportData,
               separator: ",",
             });
           },
