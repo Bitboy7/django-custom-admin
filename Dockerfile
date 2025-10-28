@@ -39,14 +39,14 @@ RUN mkdir -p /app/static/static-only /app/media /app/logs && \
 # Dar permisos al script de entrada (ya copiado con COPY . .)
 RUN chmod +x /app/entrypoint.sh
 
-# Cambiar permisos
+# Cambiar permisos ANTES de ejecutar collectstatic
 RUN chown -R appuser:appuser /app
 
-# Ejecutar migraciones y colectar archivos estáticos
-RUN python manage.py collectstatic --noinput
-
-# Cambiar al usuario no privilegiado
+# Cambiar al usuario no privilegiado ANTES de ejecutar comandos de Django
 USER appuser
+
+# Ejecutar colectar archivos estáticos como appuser
+RUN python manage.py collectstatic --noinput
 
 # Exponer el puerto que usará la aplicación
 EXPOSE 8000
