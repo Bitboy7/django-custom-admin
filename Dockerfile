@@ -45,9 +45,6 @@ RUN chown -R appuser:appuser /app
 # Cambiar al usuario no privilegiado ANTES de ejecutar comandos de Django
 USER appuser
 
-# Ejecutar colectar archivos estáticos como appuser
-RUN python manage.py collectstatic --noinput
-
 # Exponer el puerto que usará la aplicación
 EXPOSE 8000
 
