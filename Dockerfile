@@ -42,6 +42,9 @@ RUN chmod +x /app/entrypoint.sh
 # Cambiar permisos
 RUN chown -R appuser:appuser /app
 
+# Ejecutar migraciones y colectar archivos estáticos
+RUN python manage.py collectstatic --noinput
+
 # Cambiar al usuario no privilegiado
 USER appuser
 
