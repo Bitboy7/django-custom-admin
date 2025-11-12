@@ -26,6 +26,7 @@ COPY requirements.txt .
 
 # Instalar las dependencias de Python
 RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir Cython && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir gunicorn
 
