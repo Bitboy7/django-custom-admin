@@ -221,114 +221,115 @@ document.addEventListener("DOMContentLoaded", function () {
           text: '<i class="fas fa-chart-pie mr-1"></i> Resumen Excel',
           className: "dt-button btn-summary-excel",
           action: function (e, dt, button, config) {
-            var categoryTotals = {};
+            var sucursalData = {}; // { sucursal: { categorias: {}, total: 0 } }
             var table = $("#gastosTable").DataTable();
             var data = table.rows({ search: "applied" }).data();
 
-            // Procesar cada fila para agrupar por categoría
-            // Sumar los valores de la columna 6 (Total) para cada categoría
+            // Procesar cada fila para agrupar por sucursal y categoría
             for (var i = 0; i < data.length; i++) {
               var rowData = data[i];
-              // Extraer texto limpio de la categoría (columna 1)
-              var categoryHtml = rowData[1];
+
+              // Extraer sucursal (columna 4)
+              var sucursalHtml = rowData[4];
               var tempDiv = document.createElement("div");
-              tempDiv.innerHTML = categoryHtml;
-              var category =
-                tempDiv.textContent || tempDiv.innerText || categoryHtml;
-              category = category.trim();
+              tempDiv.innerHTML = sucursalHtml;
+              var sucursal =
+                tempDiv.textContent || tempDiv.innerText || sucursalHtml;
+              sucursal = sucursal.trim();
+
+              // Extraer categoría (columna 1)
+              var categoriaHtml = rowData[1];
+              tempDiv.innerHTML = categoriaHtml;
+              var categoria =
+                tempDiv.textContent || tempDiv.innerText || categoriaHtml;
+              categoria = categoria.trim();
 
               // Obtener el valor total de la fila (columna 6 - Total)
               var totalValue = 0;
               var totalCell = table.cell(i, 6).node();
               if (totalCell) {
-                // Extraer el texto del nodo
                 var cellText =
                   totalCell.textContent || totalCell.innerText || "";
                 cellText = cellText.trim();
-
-                // Debug: mostrar primeras filas
-                if (i < 5) {
-                  console.log(
-                    "Fila " +
-                      i +
-                      " - Categoría: " +
-                      category +
-                      " - Texto celda: '" +
-                      cellText +
-                      "'"
-                  );
-                }
-
-                // Limpiar el texto: quitar $ y espacios, luego parsear
-                // El formato es: $1 963.00 o $550 000.00
-                cellText = cellText.replace(/[$\s]/g, ""); // Quitar $ y todos los espacios
+                cellText = cellText.replace(/[$\s]/g, ""); // Quitar $ y espacios
                 totalValue = parseFloat(cellText);
-
                 if (isNaN(totalValue)) totalValue = 0;
-
-                if (i < 5) {
-                  console.log(
-                    "  -> Texto limpio: '" +
-                      cellText +
-                      "' -> Valor: " +
-                      totalValue
-                  );
-                }
               }
 
-              // Sumar al total de la categoría
-              if (categoryTotals[category]) {
-                categoryTotals[category] += totalValue;
+              // Inicializar sucursal si no existe
+              if (!sucursalData[sucursal]) {
+                sucursalData[sucursal] = {
+                  categorias: {},
+                  total: 0,
+                };
+              }
+
+              // Sumar al total de la categoría dentro de la sucursal
+              if (sucursalData[sucursal].categorias[categoria]) {
+                sucursalData[sucursal].categorias[categoria] += totalValue;
               } else {
-                categoryTotals[category] = totalValue;
+                sucursalData[sucursal].categorias[categoria] = totalValue;
               }
+
+              // Sumar al total de la sucursal
+              sucursalData[sucursal].total += totalValue;
             }
 
-            // Mostrar primeros totales por categoría
-            console.log(
-              "Primeros totales por categoría:",
-              Object.keys(categoryTotals)
-                .slice(0, 5)
-                .map(function (k) {
-                  return k + ": " + categoryTotals[k];
-                })
-            );
+            // Preparar datos para exportación
+            var headers = ["Sucursal", "Categoría", "Total acumulado"];
+            var exportData = [];
+            var grandTotal = 0;
 
-            // Convertir a array y ordenar por total descendente
-            var sortedCategories = Object.keys(categoryTotals)
-              .map(function (category) {
-                return [category, categoryTotals[category]];
+            // Ordenar sucursales por total descendente
+            var sortedSucursales = Object.keys(sucursalData)
+              .map(function (suc) {
+                return [suc, sucursalData[suc].total];
               })
               .sort(function (a, b) {
                 return b[1] - a[1];
               });
 
-            // Calcular gran total
-            var grandTotal = sortedCategories.reduce(function (sum, item) {
-              return sum + item[1];
-            }, 0);
+            // Construir datos para exportación
+            sortedSucursales.forEach(function (sucItem) {
+              var sucursal = sucItem[0];
+              var sucursalTotal = sucItem[1];
+              var categorias = sucursalData[sucursal].categorias;
+
+              // Ordenar categorías por total descendente
+              var sortedCategorias = Object.keys(categorias)
+                .map(function (cat) {
+                  return [cat, categorias[cat]];
+                })
+                .sort(function (a, b) {
+                  return b[1] - a[1];
+                });
+
+              // Agregar categorías de esta sucursal
+              sortedCategorias.forEach(function (catItem) {
+                exportData.push([sucursal, catItem[0], parseFloat(catItem[1])]);
+              });
+
+              // Agregar subtotal de sucursal
+              exportData.push([
+                sucursal + " - SUBTOTAL",
+                "",
+                parseFloat(sucursalTotal),
+              ]);
+
+              // Línea en blanco para separación visual
+              exportData.push(["", "", ""]);
+
+              grandTotal += sucursalTotal;
+            });
+
+            // Agregar total general
+            exportData.push(["TOTAL GENERAL", "", parseFloat(grandTotal)]);
 
             console.log("Gran Total calculado: " + grandTotal.toFixed(2));
 
-            // Preparar datos para exportación con formato numérico correcto
-            var headers = ["Categoría", "Total acumulado"];
-            var exportData = [];
-
-            sortedCategories.forEach(function (item) {
-              // Asegurarse de que el valor sea numérico y formatearlo correctamente
-              var valorNumerico = parseFloat(item[1]);
-              if (isNaN(valorNumerico)) valorNumerico = 0;
-              exportData.push([item[0], valorNumerico]);
-            });
-
-            // Agregar fila de total con valor numérico
-            var totalNumerico = parseFloat(grandTotal);
-            if (isNaN(totalNumerico)) totalNumerico = 0;
-            exportData.push(["TOTAL GENERAL", totalNumerico]);
-
             // Exportar usando la utilidad
             exportToCSV({
-              filename: "gastos-resumen-categorias",
+              filename: "gastos-resumen-sucursales-categorias",
               headers: headers,
               data: exportData,
               separator: ",",
