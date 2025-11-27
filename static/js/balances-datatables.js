@@ -221,119 +221,191 @@ document.addEventListener("DOMContentLoaded", function () {
           text: '<i class="fas fa-chart-pie mr-1"></i> Resumen Excel',
           className: "dt-button btn-summary-excel",
           action: function (e, dt, button, config) {
-            var sucursalData = {}; // { sucursal: { categorias: {}, total: 0 } }
+            // Procesar datos para el resumen
+            var sucursalData = {};
             var table = $("#gastosTable").DataTable();
             var data = table.rows({ search: "applied" }).data();
 
-            // Procesar cada fila para agrupar por sucursal y categoría
+            // Agrupar por sucursal → cuenta → categoría
             for (var i = 0; i < data.length; i++) {
               var rowData = data[i];
-
-              // Extraer sucursal (columna 4)
-              var sucursalHtml = rowData[4];
               var tempDiv = document.createElement("div");
-              tempDiv.innerHTML = sucursalHtml;
-              var sucursal =
-                tempDiv.textContent || tempDiv.innerText || sucursalHtml;
-              sucursal = sucursal.trim();
 
-              // Extraer categoría (columna 1)
-              var categoriaHtml = rowData[1];
-              tempDiv.innerHTML = categoriaHtml;
-              var categoria =
-                tempDiv.textContent || tempDiv.innerText || categoriaHtml;
-              categoria = categoria.trim();
+              tempDiv.innerHTML = rowData[4];
+              var sucursal = (
+                tempDiv.textContent ||
+                tempDiv.innerText ||
+                rowData[4]
+              ).trim();
 
-              // Obtener el valor total de la fila (columna 6 - Total)
-              var totalValue = 0;
+              tempDiv.innerHTML = rowData[2];
+              var cuenta = (
+                tempDiv.textContent ||
+                tempDiv.innerText ||
+                rowData[2]
+              ).trim();
+
+              tempDiv.innerHTML = rowData[1];
+              var categoria = (
+                tempDiv.textContent ||
+                tempDiv.innerText ||
+                rowData[1]
+              ).trim();
+
               var totalCell = table.cell(i, 6).node();
-              if (totalCell) {
-                var cellText =
-                  totalCell.textContent || totalCell.innerText || "";
-                cellText = cellText.trim();
-                cellText = cellText.replace(/[$\s]/g, ""); // Quitar $ y espacios
-                totalValue = parseFloat(cellText);
-                if (isNaN(totalValue)) totalValue = 0;
-              }
+              var cellText = (
+                totalCell.textContent ||
+                totalCell.innerText ||
+                ""
+              ).trim();
+              var totalValue = parseFloat(cellText.replace(/[$\s]/g, ""));
+              if (isNaN(totalValue)) totalValue = 0;
 
-              // Inicializar sucursal si no existe
               if (!sucursalData[sucursal]) {
-                sucursalData[sucursal] = {
+                sucursalData[sucursal] = { cuentas: {}, total: 0 };
+              }
+              if (!sucursalData[sucursal].cuentas[cuenta]) {
+                sucursalData[sucursal].cuentas[cuenta] = {
                   categorias: {},
                   total: 0,
                 };
               }
-
-              // Sumar al total de la categoría dentro de la sucursal
-              if (sucursalData[sucursal].categorias[categoria]) {
-                sucursalData[sucursal].categorias[categoria] += totalValue;
-              } else {
-                sucursalData[sucursal].categorias[categoria] = totalValue;
+              if (
+                !sucursalData[sucursal].cuentas[cuenta].categorias[categoria]
+              ) {
+                sucursalData[sucursal].cuentas[cuenta].categorias[
+                  categoria
+                ] = 0;
               }
 
-              // Sumar al total de la sucursal
+              sucursalData[sucursal].cuentas[cuenta].categorias[categoria] +=
+                totalValue;
+              sucursalData[sucursal].cuentas[cuenta].total += totalValue;
               sucursalData[sucursal].total += totalValue;
             }
 
-            // Preparar datos para exportación
-            var headers = ["Sucursal", "Categoría", "Total acumulado"];
-            var exportData = [];
+            // Preparar datos para exportación HTML
+            var headers = ["Sucursal", "Cuenta", "Categoría", "Total"];
+            var htmlData = [];
             var grandTotal = 0;
 
             // Ordenar sucursales por total descendente
-            var sortedSucursales = Object.keys(sucursalData)
-              .map(function (suc) {
-                return [suc, sucursalData[suc].total];
-              })
-              .sort(function (a, b) {
-                return b[1] - a[1];
+            var sortedSucursales = Object.keys(sucursalData).sort(function (
+              a,
+              b
+            ) {
+              return sucursalData[b].total - sucursalData[a].total;
+            });
+
+            // Construir HTML para cada fila
+            sortedSucursales.forEach(function (sucursal) {
+              var sucData = sucursalData[sucursal];
+              var sortedCuentas = Object.keys(sucData.cuentas).sort(function (
+                a,
+                b
+              ) {
+                return sucData.cuentas[b].total - sucData.cuentas[a].total;
               });
 
-            // Construir datos para exportación
-            sortedSucursales.forEach(function (sucItem) {
-              var sucursal = sucItem[0];
-              var sucursalTotal = sucItem[1];
-              var categorias = sucursalData[sucursal].categorias;
+              sortedCuentas.forEach(function (cuenta) {
+                var cuentaData = sucData.cuentas[cuenta];
+                var sortedCategorias = Object.keys(cuentaData.categorias).sort(
+                  function (a, b) {
+                    return cuentaData.categorias[b] - cuentaData.categorias[a];
+                  }
+                );
 
-              // Ordenar categorías por total descendente
-              var sortedCategorias = Object.keys(categorias)
-                .map(function (cat) {
-                  return [cat, categorias[cat]];
-                })
-                .sort(function (a, b) {
-                  return b[1] - a[1];
+                // Agregar categorías
+                sortedCategorias.forEach(function (categoria) {
+                  htmlData.push({
+                    sucursal: sucursal,
+                    cuenta: cuenta,
+                    categoria: categoria,
+                    total: cuentaData.categorias[categoria],
+                    isSubtotal: false,
+                  });
                 });
 
-              // Agregar categorías de esta sucursal
-              sortedCategorias.forEach(function (catItem) {
-                exportData.push([sucursal, catItem[0], parseFloat(catItem[1])]);
+                // Subtotal de cuenta
+                htmlData.push({
+                  sucursal: sucursal,
+                  cuenta: cuenta + " - SUBTOTAL",
+                  categoria: "",
+                  total: cuentaData.total,
+                  isSubtotal: true,
+                });
               });
 
-              // Agregar subtotal de sucursal
-              exportData.push([
-                sucursal + " - SUBTOTAL",
-                "",
-                parseFloat(sucursalTotal),
-              ]);
+              // Subtotal de sucursal
+              htmlData.push({
+                sucursal: sucursal + " - SUBTOTAL",
+                cuenta: "",
+                categoria: "",
+                total: sucData.total,
+                isSubtotal: true,
+              });
 
-              // Línea en blanco para separación visual
-              exportData.push(["", "", ""]);
+              // Línea en blanco
+              htmlData.push({
+                sucursal: "",
+                cuenta: "",
+                categoria: "",
+                total: "",
+                isSubtotal: false,
+              });
 
-              grandTotal += sucursalTotal;
+              grandTotal += sucData.total;
             });
 
-            // Agregar total general
-            exportData.push(["TOTAL GENERAL", "", parseFloat(grandTotal)]);
-
-            console.log("Gran Total calculado: " + grandTotal.toFixed(2));
-
-            // Exportar usando la utilidad
-            exportToCSV({
-              filename: "gastos-resumen-sucursales-categorias",
-              headers: headers,
-              data: exportData,
-              separator: ",",
+            // Total general
+            htmlData.push({
+              sucursal: "TOTAL GENERAL",
+              cuenta: "",
+              categoria: "",
+              total: grandTotal,
+              isSubtotal: true,
             });
+
+            // Crear tabla HTML con encoding UTF-8
+            var html = '<html><head><meta charset="UTF-8"></head><body>';
+            html += "<table>";
+            html += "<thead><tr>";
+            html +=
+              "<th>Sucursal</th><th>Cuenta</th><th>Categoría</th><th>Total</th>";
+            html += "</tr></thead><tbody>";
+
+            htmlData.forEach(function (row) {
+              var style = row.isSubtotal
+                ? ' style="background-color: #E6F3FF; font-weight: bold;"'
+                : "";
+              html += "<tr" + style + ">";
+              html += "<td>" + row.sucursal + "</td>";
+              html += "<td>" + row.cuenta + "</td>";
+              html += "<td>" + row.categoria + "</td>";
+              html +=
+                "<td>" +
+                (row.total !== ""
+                  ? "$" +
+                    row.total.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })
+                  : "") +
+                "</td>";
+              html += "</tr>";
+            });
+
+            html += "</tbody></table></body></html>";
+
+            // Crear blob con BOM para UTF-8 y descargar
+            var BOM = "\uFEFF";
+            var blob = new Blob([BOM + html], {
+              type: "application/vnd.ms-excel;charset=utf-8",
+            });
+            var link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "gastos-resumen-detallado.xls";
+            link.click();
           },
         },
         {
