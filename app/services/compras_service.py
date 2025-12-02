@@ -238,10 +238,11 @@ class ComprasAnalysisService(BaseReportService):
             periodo: Tipo de periodo ('diario', 'semanal', 'mensual')
             
         Returns:
-            QuerySet con periodo, group_fields, total_compras, cantidad_total, 
+            Lista con periodo, group_fields, total_compras, cantidad_total, 
             precio_promedio y acumulado
         """
         from django.db.models import Sum, Avg
+        from django.db.models.functions import TruncMonth, TruncDay, TruncWeek
         
         # Generar clave de cache
         cache_key = cache_service._generate_cache_key(
@@ -257,17 +258,37 @@ class ComprasAnalysisService(BaseReportService):
         # Ejecutar consulta
         logger.debug(f"Cache miss para balances compras: {cache_key}")
         
-        # Obtener balances base del padre
-        balances = super().get_balances_by_period(filters, periodo)
+        # Hacer agregación manual completa
+        model = self.get_model()
+        queryset = model.objects.filter(**filters)
+        group_fields = self.get_group_fields(periodo)
+        date_field = self.get_date_field()
         
-        # Añadir anotaciones adicionales específicas de compras
-        balances = balances.annotate(
-            cantidad_total=Sum('cantidad'),
-            precio_promedio=Avg('precio_unitario')
+        # Mapeo de períodos a funciones de truncamiento
+        truncators = {
+            'diario': TruncDay,
+            'semanal': TruncWeek,
+            'mensual': TruncMonth
+        }
+        truncator = truncators.get(periodo.lower(), TruncMonth)
+        
+        # Anotar con período truncado
+        queryset = queryset.annotate(
+            periodo=truncator(date_field)
         )
         
+        # Campos para values() - periodo + campos de agrupación
+        value_fields = ['periodo'] + group_fields
+        
+        # Agrupar y agregar todos los campos necesarios
+        balances = queryset.values(*value_fields).annotate(
+            total_compras=Sum('monto_total'),
+            cantidad_total=Sum('cantidad'),
+            precio_promedio=Avg('precio_unitario')
+        ).order_by('periodo', *group_fields)
+        
         # Convertir a lista para cache
-        balances_list = list(balances.values())
+        balances_list = list(balances)
         
         # Cachear resultado
         timeout = cache_service.timeouts.get('compras', 900)
