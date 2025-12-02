@@ -2,10 +2,8 @@
 Middleware para cache automático de vistas
 """
 
-from django.utils.cache import get_cache_key
 from django.utils.deprecation import MiddlewareMixin
 from django.core.cache import cache
-from django.http import HttpResponse
 import time
 import logging
 
@@ -139,11 +137,12 @@ class DatabaseCacheInvalidationMiddleware(MiddlewareMixin):
     
     def _invalidate_related_caches(self, request):
         """Invalida caches basado en la URL de la operación"""
-        from app.services.cache_service import cache_service
-        
-        path = request.path
-        
         try:
+            # Importación diferida para evitar importación circular
+            from app.services.cache_service import cache_service
+            
+            path = request.path
+            
             # Admin de gastos
             if '/admin/gastos/gastos/' in path:
                 cache_service.invalidate_related_caches('gastos')
@@ -166,6 +165,8 @@ class DatabaseCacheInvalidationMiddleware(MiddlewareMixin):
             
             logger.info(f"Cache invalidado para operación: {path}")
             
+        except ImportError:
+            logger.warning("Cache service no disponible - saltando invalidación")
         except Exception as e:
             logger.error(f"Error invalidando cache: {e}")
 

@@ -275,15 +275,14 @@ MIDDLEWARE = [
     # Cache middlewares
     "app.middleware.cache_middleware.CacheMiddleware",
     "app.middleware.cache_middleware.DatabaseCacheInvalidationMiddleware",
-    "app.middleware.cache_middleware.QueryCountDebugMiddleware",
     # Middlewares de auditoría
     "auditoria.middleware.AuthAuditMiddleware",  # Registro de login/logout
     "auditoria.admin_middleware.AdminAuditMiddleware",  # Registro de actividad en admin
 ]
 
 # Agregar middleware para servir archivos media en producción
-if not DEBUG:
-    MIDDLEWARE.insert(-2, "app.middleware.MediaServeMiddleware")  # Insertar antes de los middlewares de auditoría
+# if not DEBUG:
+#     MIDDLEWARE.insert(-2, "app.middleware.MediaServeMiddleware")  # Insertar antes de los middlewares de auditoría
 
 ROOT_URLCONF = "app.urls"
 
