@@ -3,10 +3,16 @@ Servicio para análisis de compras de fruta
 
 Este servicio utiliza la arquitectura base modular para proporcionar
 funcionalidad completa de reportes con código mínimo.
+OPTIMIZADO: Implementa cache Redis para mejorar rendimiento.
 """
 from datetime import datetime
 from django.db.models import Sum
+import logging
+
 from .base_report_service import BaseReportService
+from .cache_service import cache_service, cache_result
+
+logger = logging.getLogger(__name__)
 
 
 class ComprasAnalysisService(BaseReportService):
@@ -225,6 +231,7 @@ class ComprasAnalysisService(BaseReportService):
     def get_balances_by_period(self, filters, periodo='mensual'):
         """
         Override para añadir cantidad_total y precio_promedio a los balances
+        Con cache Redis para mejorar rendimiento
         
         Args:
             filters: Diccionario de filtros
@@ -236,6 +243,20 @@ class ComprasAnalysisService(BaseReportService):
         """
         from django.db.models import Sum, Avg
         
+        # Generar clave de cache
+        cache_key = cache_service._generate_cache_key(
+            'balances_compras', periodo, **filters
+        )
+        
+        # Intentar obtener del cache
+        cached_data = cache_service.get(cache_key)
+        if cached_data is not None:
+            logger.debug(f"Cache hit para balances compras: {cache_key}")
+            return cached_data
+        
+        # Ejecutar consulta
+        logger.debug(f"Cache miss para balances compras: {cache_key}")
+        
         # Obtener balances base del padre
         balances = super().get_balances_by_period(filters, periodo)
         
@@ -245,7 +266,14 @@ class ComprasAnalysisService(BaseReportService):
             precio_promedio=Avg('precio_unitario')
         )
         
-        return balances
+        # Convertir a lista para cache
+        balances_list = list(balances.values())
+        
+        # Cachear resultado
+        timeout = cache_service.timeouts.get('compras', 900)
+        cache_service.set(cache_key, balances_list, timeout)
+        
+        return balances_list
     
     def get_compras_por_productor(self, filters):
         """
@@ -280,9 +308,11 @@ class ComprasAnalysisService(BaseReportService):
             group_field='tipo_pago'
         )
     
+    @cache_result('compras', 900, 'estadisticas_compras')
     def calculate_statistics(self, filters):
         """
         Override para añadir estadísticas específicas de compras
+        Con cache para mejorar rendimiento
         
         Añade información sobre productor y producto con compra máxima/mínima
         """

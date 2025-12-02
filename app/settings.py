@@ -272,6 +272,10 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Cache middlewares
+    "app.middleware.cache_middleware.CacheMiddleware",
+    "app.middleware.cache_middleware.DatabaseCacheInvalidationMiddleware",
+    "app.middleware.cache_middleware.QueryCountDebugMiddleware",
     # Middlewares de auditoría
     "auditoria.middleware.AuthAuditMiddleware",  # Registro de login/logout
     "auditoria.admin_middleware.AdminAuditMiddleware",  # Registro de actividad en admin
@@ -447,24 +451,116 @@ LOGGING = {
     },
 }
 
-# Configuración de cache para producción
-if not DEBUG:
+# ===============================
+# CONFIGURACIÓN REDIS CACHE
+# ===============================
+
+# Configuración de Redis Cache con fallback
+REDIS_URL = os.getenv('REDIS_URL', None)
+
+if REDIS_URL and not DEBUG:
+    # Configuración Redis para producción
+    try:
+        CACHES = {
+            'default': {
+                'BACKEND': 'django_redis.cache.RedisCache',
+                'LOCATION': REDIS_URL,
+                'OPTIONS': {
+                    'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                    'CONNECTION_POOL_KWARGS': {
+                        'max_connections': 50,
+                        'retry_on_timeout': True,
+                        'socket_connect_timeout': 5,
+                        'socket_timeout': 5,
+                    },
+                    'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+                    'SERIALIZER': 'django_redis.serializers.json.JSONSerializer',
+                    'IGNORE_EXCEPTIONS': True,  # No fallar si Redis no está disponible
+                },
+                'TIMEOUT': 300,  # 5 minutos por defecto
+                'VERSION': 1,
+                'KEY_PREFIX': 'agricola',
+            },
+            # Cache específico para sesiones
+            'sessions': {
+                'BACKEND': 'django_redis.cache.RedisCache',
+                'LOCATION': REDIS_URL.replace('/1', '/2') if '/1' in REDIS_URL else REDIS_URL + '/2',
+                'OPTIONS': {
+                    'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                    'CONNECTION_POOL_KWARGS': {
+                        'max_connections': 20,
+                        'socket_connect_timeout': 5,
+                        'socket_timeout': 5,
+                    },
+                    'IGNORE_EXCEPTIONS': True,
+                },
+                'TIMEOUT': 86400,  # 24 horas para sesiones
+                'KEY_PREFIX': 'agricola_session',
+            },
+            # Cache de largo plazo para datos estáticos
+            'static_data': {
+                'BACKEND': 'django_redis.cache.RedisCache',
+                'LOCATION': REDIS_URL.replace('/1', '/3') if '/1' in REDIS_URL else REDIS_URL + '/3',
+                'OPTIONS': {
+                    'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                    'IGNORE_EXCEPTIONS': True,
+                },
+                'TIMEOUT': 3600,  # 1 hora para datos estáticos
+                'KEY_PREFIX': 'agricola_static',
+            }
+        }
+        
+        # Usar Redis para sesiones
+        SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+        SESSION_CACHE_ALIAS = 'sessions'
+        
+    except Exception as e:
+        print(f"Warning: Could not configure Redis cache: {e}")
+        # Fallback a cache local
+        CACHES = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'LOCATION': 'default-cache',
+                'TIMEOUT': 300,
+                'OPTIONS': {
+                    'MAX_ENTRIES': 1000,
+                }
+            }
+        }
+else:
+    # Configuración para desarrollo (sin Redis requerido)
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-            'LOCATION': 'unique-snowflake',
+            'LOCATION': 'default-cache',
             'TIMEOUT': 300,
             'OPTIONS': {
                 'MAX_ENTRIES': 1000,
             }
+        },
+        'sessions': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'sessions-cache',
+            'TIMEOUT': 86400,
+        },
+        'static_data': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'static-cache',
+            'TIMEOUT': 3600,
         }
     }
-else:
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
-        }
-    }
+
+# Configuración de timeout específicos por tipo de cache
+CACHE_TIMEOUTS = {
+    'balances': 900,          # 15 minutos - Balances de gastos
+    'compras': 900,           # 15 minutos - Balances de compras  
+    'ventas': 900,            # 15 minutos - Balances de ventas
+    'reportes': 1800,         # 30 minutos - Reportes complejos
+    'catalogos': 3600,        # 1 hora - Productores, productos, etc
+    'usuarios': 1800,         # 30 minutos - Datos de usuarios
+    'saldos_mensuales': 1800, # 30 minutos - Saldos mensuales
+    'dashboard': 300,         # 5 minutos - Dashboard principal
+}
 
 # ===============================
 # CONFIGURACIÓN DJANGO MONEY
