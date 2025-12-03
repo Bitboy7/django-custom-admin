@@ -1,0 +1,122 @@
+{
+    "emptyTable": "No hay datos disponibles en la tabla",
+    "info": "Mostrando _START_ a _END_ de _TOTAL_ entradas",
+    "infoEmpty": "Mostrando 0 a 0 de 0 entradas",
+    "infoFiltered": "(filtrado de _MAX_ entradas totales)",
+    "infoPostFix": "",
+    "infoThousands": ",",
+    "lengthMenu": "Mostrar _MENU_ entradas",
+    "loadingRecords": "Cargando...",
+    "processing": "Procesando...",
+    "search": "Buscar:",
+    "searchPlaceholder": "Término de búsqueda",
+    "zeroRecords": "No se encontraron registros coincidentes",
+    "paginate": {
+        "first": "Primero",
+        "last": "Último",
+        "next": "Siguiente",
+        "previous": "Anterior"
+    },
+    "aria": {
+        "sortAscending": ": activar para ordenar la columna de manera ascendente",
+        "sortDescending": ": activar para ordenar la columna de manera descendente"
+    },
+    "buttons": {
+        "copy": "Copiar",
+        "colvis": "Visibilidad de columnas",
+        "collection": "Colección",
+        "colvisRestore": "Restaurar visibilidad",
+        "copyKeys": "Presiona ctrl o u2318 + C para copiar los datos de la tabla al portapapeles del sistema. <br><br>Para cancelar, haz clic en este mensaje o presiona escape.",
+        "copySuccess": {
+            "1": "Copiada 1 fila al portapapeles",
+            "_": "Copiadas %ds filas al portapapeles"
+        },
+        "copyTitle": "Copiar al portapapeles",
+        "csv": "CSV",
+        "excel": "Excel",
+        "pageLength": {
+            "-1": "Mostrar todas las filas",
+            "_": "Mostrar %d filas"
+        },
+        "pdf": "PDF",
+        "print": "Imprimir",
+        "renameState": "Renombrar",
+        "updateState": "Actualizar",
+        "createState": "Crear estado",
+        "removeAllStates": "Eliminar todos los estados",
+        "removeState": "Eliminar",
+        "savedStates": "Estados guardados",
+        "stateRestore": "Estado %d"
+    },
+    "select": {
+        "rows": {
+            "_": "%d filas seleccionadas",
+            "0": "Ninguna fila seleccionada",
+            "1": "1 fila seleccionada"
+        }
+    },
+    "thousands": ",",
+    "datetime": {
+        "previous": "Anterior",
+        "next": "Siguiente",
+        "hours": "Horas",
+        "minutes": "Minutos",
+        "seconds": "Segundos",
+        "unknown": "-",
+        "amPm": [
+            "am",
+            "pm"
+        ],
+        "months": {
+            "0": "Enero",
+            "1": "Febrero",
+            "10": "Noviembre",
+            "11": "Diciembre",
+            "2": "Marzo",
+            "3": "Abril",
+            "4": "Mayo",
+            "5": "Junio",
+            "6": "Julio",
+            "7": "Agosto",
+            "8": "Septiembre",
+            "9": "Octubre"
+        },
+        "weekdays": [
+            "Domingo",
+            "Lunes",
+            "Martes",
+            "Miércoles",
+            "Jueves",
+            "Viernes",
+            "Sábado"
+        ]
+    },
+    "editor": {
+        "close": "Cerrar",
+        "create": {
+            "button": "Nuevo",
+            "title": "Crear nueva entrada",
+            "submit": "Crear"
+        },
+        "edit": {
+            "button": "Editar",
+            "title": "Editar entrada",
+            "submit": "Actualizar"
+        },
+        "remove": {
+            "button": "Eliminar",
+            "title": "Eliminar",
+            "submit": "Eliminar",
+            "confirm": {
+                "_": "¿Está seguro de que desea eliminar %d filas?",
+                "1": "¿Está seguro de que desea eliminar 1 fila?"
+            }
+        },
+        "multi": {
+            "title": "Valores múltiples",
+            "info": "Los elementos seleccionados contienen diferentes valores para esta entrada. Para editar y establecer todos los elementos de esta entrada al mismo valor, haz clic o toca aquí, de lo contrario conservarán sus valores individuales.",
+            "restore": "Deshacer cambios",
+            "noMulti": "Esta entrada se puede editar individualmente, pero no como parte de un grupo."
+        }
+    }
+}

@@ -12,7 +12,7 @@ $.extend(true, $.fn.dataTable.defaults, {
     [10, 25, 50, 100, "Todos"],
   ],
   language: {
-    url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/Spanish.json",
+    url: "/static/js/datatables-spanish.json",
   },
   dom: "Bfrtip",
   buttons: [
@@ -420,6 +420,11 @@ $(document).ready(function () {
 
   // Inicializar DataTable si existe
   if ($("#ventasTable").length) {
+    // Destruir instancia existente si existe
+    if ($.fn.DataTable.isDataTable("#ventasTable")) {
+      $("#ventasTable").DataTable().destroy();
+    }
+
     const table = $("#ventasTable").DataTable({
       responsive: true,
       pageLength: 25,
@@ -435,7 +440,7 @@ $(document).ready(function () {
           className: "text-right",
         },
         {
-          targets: [9], // Columna de transacciones
+          targets: [9], // Columna de estado/fecha límite
           className: "text-center",
         },
       ],
@@ -458,7 +463,7 @@ $(document).ready(function () {
           orientation: "landscape",
           pageSize: "A4",
           exportOptions: {
-            columns: [0, 1, 2, 3, 4, 5, 6, 7, 8], // Excluir algunas columnas para PDF
+            columns: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], // Incluir todas las columnas relevantes para PDF
           },
         },
         {
@@ -467,12 +472,12 @@ $(document).ready(function () {
           text: '<i class="fas fa-print"></i> Imprimir',
           className: "btn btn-info btn-sm",
           exportOptions: {
-            columns: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+            columns: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
           },
         },
       ],
       language: {
-        url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/Spanish.json",
+        url: "/static/js/datatables-spanish.json",
       },
     });
 

@@ -620,7 +620,7 @@
               <th class="px-4 py-3 text-right">Total Ventas</th>
               <th class="px-4 py-3 text-right">Total Pagado</th>
               <th class="px-4 py-3 text-right">Saldo Pendiente</th>
-              <th class="px-4 py-3 text-right">Transacciones</th>
+              <th class="px-4 py-3 text-center">Estado / Vencimiento</th>
               <th class="px-4 py-3 text-right">Acumulado</th>
             </tr>
           </thead>
@@ -665,8 +665,14 @@
                 ${{ balance.saldo_pendiente|us_currency:2 }}
               </td>
               
-              <td class="px-4 py-3 text-center text-gray-600" data-order="{{ balance.numero_transacciones }}">
-                {{ balance.numero_transacciones }}
+              <td class="px-4 py-3 text-center" data-order="{{ balance.estado_cobranza }}">
+                {% load ventas_tags %}
+                <div class="flex flex-col items-center space-y-1">
+                  <span class="{{ balance.estado_cobranza|estado_badge_class }}">{{ balance.estado_cobranza }}</span>
+                  {% if balance.fecha_vencimiento %}
+                    <small class="text-xs text-gray-500">{{ balance.fecha_vencimiento|date:"d/m/Y" }}</small>
+                  {% endif %}
+                </div>
               </td>
               
               <td class="px-4 py-3 text-right font-medium text-purple-600" data-order="{{ balance.acumulado }}">
@@ -715,9 +721,9 @@
 <!-- Scripts específicos para ventas -->
 <script>
 // Datos para gráficos desde el backend
-window.ventasModalidadData = {{ ventas_por_modalidad|safe }};
-window.ventasEstadosData = {{ ventas_por_estado|safe }};
-window.ventasClientesData = {{ ventas_por_cliente|safe }};
+window.ventasModalidadData = JSON.parse('{{ ventas_por_modalidad|escapejs }}');
+window.ventasEstadosData = JSON.parse('{{ ventas_por_estado|escapejs }}');
+window.ventasClientesData = JSON.parse('{{ ventas_por_cliente|escapejs }}');
 
 // Función para ocultar toast
 function hideToast() {
@@ -766,51 +772,7 @@ $(document).ready(function() {
     }
   });
 
-  // Inicializar DataTable
-  const table = $('#ventasTable').DataTable({
-    responsive: true,
-    pageLength: 25,
-    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
-    order: [[0, 'asc']],
-    columnDefs: [
-      { 
-        targets: [6, 7, 8, 10], 
-        type: 'num-fmt',
-        className: 'text-right'
-      },
-      { 
-        targets: [9], 
-        className: 'text-center'
-      }
-    ],
-    dom: 'Bfrtip',
-    buttons: [
-      {
-        extend: 'excel',
-        title: 'Análisis de Ventas',
-        text: '<i class="fas fa-file-excel"></i> Excel',
-        className: 'btn btn-success btn-sm'
-      },
-      {
-        extend: 'pdf',
-        title: 'Análisis de Ventas',
-        text: '<i class="fas fa-file-pdf"></i> PDF',
-        className: 'btn btn-danger btn-sm'
-      },
-      {
-        extend: 'print',
-        title: 'Análisis de Ventas',
-        text: '<i class="fas fa-print"></i> Imprimir',
-        className: 'btn btn-info btn-sm'
-      }
-    ],
-    language: {
-      url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/Spanish.json'
-    }
-  });
-
-  // Inicializar gráficos
-  initVentasCharts();
+  // Los gráficos y DataTable se inicializan desde ventas-balances.js
 
   // Mostrar toast si hay filtros aplicados
   const urlParams = new URLSearchParams(window.location.search);

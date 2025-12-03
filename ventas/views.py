@@ -5,6 +5,7 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 from decimal import Decimal
 from collections import defaultdict, OrderedDict
+import json
 from .models import Anticipo, Ventas, Cliente, TerminoCredito, MercadoDestino, PagoVenta
 from .forms import AnticipoForm
 from catalogo.models import Sucursal, Pais
@@ -123,7 +124,8 @@ def ventas_balances(request):
         ).annotate(
             total_ventas=Sum('monto'),
             total_pagado=Sum('monto_pagado'),
-            numero_transacciones=Count('id'),
+            estado_cobranza_principal=Max('estado_cobranza'),
+            fecha_vencimiento_proxima=Min('fecha_vencimiento'),
             venta_maxima=Max('monto'),
             venta_minima=Min('monto'),
             venta_promedio=Avg('monto')
@@ -144,7 +146,8 @@ def ventas_balances(request):
                 'total_ventas': total,
                 'total_pagado': float(grupo['total_pagado'] or 0),
                 'saldo_pendiente': total - float(grupo['total_pagado'] or 0),
-                'numero_transacciones': grupo['numero_transacciones'],
+                'estado_cobranza': grupo.get('estado_cobranza_principal', 'Pendiente') or 'Pendiente',
+                'fecha_vencimiento': grupo.get('fecha_vencimiento_proxima'),
                 'venta_maxima': float(grupo['venta_maxima'] or 0),
                 'venta_minima': float(grupo['venta_minima'] or 0),
                 'venta_promedio': float(grupo['venta_promedio'] or 0),
@@ -182,7 +185,8 @@ def ventas_balances(request):
                 'total_ventas': total,
                 'total_pagado': float(grupo['total_pagado'] or 0),
                 'saldo_pendiente': total - float(grupo['total_pagado'] or 0),
-                'numero_transacciones': grupo['numero_transacciones'],
+                'estado_cobranza': grupo.get('estado_cobranza_principal', 'Pendiente') or 'Pendiente',
+                'fecha_vencimiento': grupo.get('fecha_vencimiento_proxima'),
                 'venta_maxima': float(grupo['venta_maxima'] or 0),
                 'venta_minima': float(grupo['venta_minima'] or 0),
                 'venta_promedio': float(grupo['venta_promedio'] or 0),
@@ -220,7 +224,8 @@ def ventas_balances(request):
                 'total_ventas': total,
                 'total_pagado': float(grupo['total_pagado'] or 0),
                 'saldo_pendiente': total - float(grupo['total_pagado'] or 0),
-                'numero_transacciones': grupo['numero_transacciones'],
+                'estado_cobranza': grupo.get('estado_cobranza_principal', 'Pendiente') or 'Pendiente',
+                'fecha_vencimiento': grupo.get('fecha_vencimiento_proxima'),
                 'venta_maxima': float(grupo['venta_maxima'] or 0),
                 'venta_minima': float(grupo['venta_minima'] or 0),
                 'venta_promedio': float(grupo['venta_promedio'] or 0),
@@ -250,15 +255,33 @@ def ventas_balances(request):
         total=Sum('monto')
     ).order_by('-total')
     
+    # Convertir Decimal a float para JavaScript
+    ventas_por_modalidad = [
+        {'modalidad_pago': item['modalidad_pago'], 'total': float(item['total'] or 0)}
+        for item in ventas_por_modalidad
+    ]
+    
     # Calcular ventas por estado de cobranza para gráficos
     ventas_por_estado = ventas_queryset.values('estado_cobranza').annotate(
         total=Sum('monto')
     ).order_by('-total')
     
+    # Convertir Decimal a float para JavaScript
+    ventas_por_estado = [
+        {'estado_cobranza': item['estado_cobranza'], 'total': float(item['total'] or 0)}
+        for item in ventas_por_estado
+    ]
+    
     # Calcular ventas por cliente para gráficos
     ventas_por_cliente = ventas_queryset.values('cliente__nombre').annotate(
         total=Sum('monto')
     ).order_by('-total')[:10]  # Top 10 clientes
+    
+    # Convertir Decimal a float para JavaScript
+    ventas_por_cliente = [
+        {'cliente__nombre': item['cliente__nombre'], 'total': float(item['total'] or 0)}
+        for item in ventas_por_cliente
+    ]
     
     # Calcular métricas adicionales
     ventas_contado = ventas_queryset.filter(modalidad_pago='Contado').aggregate(
@@ -318,10 +341,10 @@ def ventas_balances(request):
         'ventas_vencidas_total': float(ventas_vencidas['total'] or 0),
         'ventas_vencidas_count': ventas_vencidas['count'] or 0,
         
-        # Datos para gráficos
-        'ventas_por_modalidad': list(ventas_por_modalidad),
-        'ventas_por_estado': list(ventas_por_estado),
-        'ventas_por_cliente': list(ventas_por_cliente),
+        # Datos para gráficos (serializados como JSON)
+        'ventas_por_modalidad': json.dumps(ventas_por_modalidad),
+        'ventas_por_estado': json.dumps(ventas_por_estado),
+        'ventas_por_cliente': json.dumps(ventas_por_cliente),
         
         # Opciones para filtros
         'modalidad_choices': Ventas.ModalidadPago.choices,

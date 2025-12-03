@@ -45,6 +45,25 @@ def percentage(value, total):
         return 0
 
 @register.filter
+def estado_badge_class(estado):
+    """
+    Devuelve las clases CSS para el estado de cobranza
+    Uso: {{ estado|estado_badge_class }}
+    """
+    if not estado:
+        return 'px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600'
+    
+    class_map = {
+        'Pagado': 'px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 font-medium',
+        'Pendiente': 'px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 font-medium', 
+        'Parcial': 'px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 font-medium',
+        'Vencido': 'px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 font-medium',
+        'Incobrable': 'px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600 font-medium'
+    }
+    
+    return class_map.get(estado, 'px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600')
+
+@register.filter
 def estado_cobranza_badge(estado):
     """
     Convierte el estado de cobranza en un badge HTML con colores
