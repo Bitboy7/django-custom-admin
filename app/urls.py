@@ -36,6 +36,7 @@ urlpatterns += i18n_patterns(
     path('', include('catalogo.urls')),
     path('', include('gastos.urls')),
     path('capital-inversiones/', include('capital_inversiones.urls')),  # URLs del módulo de capital
+    path('ventas/', include('ventas.urls')),  # URLs del módulo de ventas
     path('', redirect_to_admin, name='redirect_to_admin'),  # Redirige la raíz a admin
     prefix_default_language=True,  # Incluir idioma por defecto en la URL
 )
