@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-from catalogo.models import Sucursal, Productor
+from catalogo.models import Sucursal, Productor, Producto
 from django.db.models import Sum
 from django.utils.html import format_html
 from djmoney.models.fields import MoneyField
@@ -81,7 +81,6 @@ class Gastos(models.Model):
         ordering = ["-fecha_registro"]
 
 class Compra(models.Model):
-        from catalogo.models import Producto
         fecha_compra = models.DateField()
         productor = models.ForeignKey(Productor, on_delete=models.CASCADE)
         producto = models.ForeignKey(Producto, on_delete=models.CASCADE)

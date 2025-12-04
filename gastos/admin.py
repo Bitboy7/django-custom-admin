@@ -6,7 +6,7 @@ from import_export.admin import ImportExportModelAdmin
 from import_export.forms import ExportForm, ImportForm
 from .models import CatGastos, Banco, Cuenta, Gastos, Compra, SaldoMensual
 from django.utils.html import format_html
-from catalogo.models import Sucursal
+from catalogo.models import Sucursal, Productor, Producto
 from app.widgets import MoneyWidget
 
 class CatGastoResource(resources.ModelResource):
@@ -141,7 +141,6 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
     actions = ['export_to_excel']
     
 class ComprasResource(resources.ModelResource):
-    from catalogo.models import Productor, Producto  # Add this import at the top
     
     productor = fields.Field(
         column_name='productor',
