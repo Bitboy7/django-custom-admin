@@ -120,7 +120,8 @@ body.jazzmin-login-page::before {
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: radial-gradient(
+  background-image:
+    radial-gradient(
       circle at 20% 50%,
       rgba(255, 255, 255, 0.05) 0%,
       transparent 50%
@@ -154,7 +155,8 @@ body.jazzmin-login-page .card {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3),
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.3),
     0 0 0 1px rgba(255, 255, 255, 0.1) inset;
   border: none;
   overflow: hidden;
@@ -177,8 +179,8 @@ body.jazzmin-login-page .card {
 /* Header del card de login - Colores sobrios */
 body.jazzmin-login-page .card-header,
 body.jazzmin-login-page .login-logo {
-  background: linear-gradient(135deg, #445e78 0%, #2c3e50 100%);
-  color: #2c3e50;
+  background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
+  color: #161616;
   border: none;
   padding: 2rem 1.5rem;
   text-align: center;
@@ -250,7 +252,7 @@ body.jazzmin-login-page .form-control,
 body.jazzmin-login-page input[type="text"],
 body.jazzmin-login-page input[type="password"],
 body.jazzmin-login-page input[type="email"] {
-  border: 2px solid #d1d5db;
+  border: 2px solid #a5c5f4;
   border-radius: 10px;
   padding: 0.85rem 1rem 0.85rem 3rem;
   font-size: 1rem;
@@ -285,7 +287,7 @@ body.jazzmin-login-page .input-group-text {
   background: transparent;
   border: none;
   z-index: 10;
-  color: #5a6c7d;
+  color: #2e3032;
   font-size: 1.2rem;
   pointer-events: none;
 }
@@ -305,7 +307,7 @@ body.jazzmin-login-page .input-group:focus-within .fa {
 /* Botón de login - Colores sobrios */
 body.jazzmin-login-page .btn-primary,
 body.jazzmin-login-page button[type="submit"] {
-  background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+  background: linear-gradient(135deg, #000000 0%, #2c3e50 100%);
   border: none;
   border-radius: 10px;
   padding: 0.9rem 2rem;
@@ -359,7 +361,7 @@ body.jazzmin-login-page .form-check {
 
 body.jazzmin-login-page .icheck-primary label,
 body.jazzmin-login-page .form-check-label {
-  color: #4b5563;
+  color: #262728;
   font-weight: 500;
   cursor: pointer;
   user-select: none;
@@ -393,13 +395,13 @@ body.jazzmin-login-page a::after {
 }
 
 body.jazzmin-login-page a:hover {
-  color: #2c3e50;
+  color: #0d0e0f;
 }
 
 body.jazzmin-login-page a:hover::after {
   width: 100%;
 }
-
+ss
 /* Mensajes de error */
 body.jazzmin-login-page .alert,
 body.jazzmin-login-page .errorlist {
@@ -543,7 +545,8 @@ body.jazzmin-login-page .btn-primary {
 /* Efecto hover en el card completo */
 body.jazzmin-login-page .login-box:hover,
 body.jazzmin-login-page .card:hover {
-  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35),
+  box-shadow:
+    0 25px 70px rgba(0, 0, 0, 0.35),
     0 0 0 1px rgba(255, 255, 255, 0.15) inset;
   transform: translateY(-5px);
   transition: all 0.3s ease;
@@ -616,21 +619,24 @@ body.jazzmin-login-page .text-center {
 }
 
 .password-toggle-btn:active {
-  transform: translateY(-50%) scale(0.95);
-}
-
-.password-toggle-btn.active {
-  color: #3498db;
-  background: rgba(52, 152, 219, 0.15);
-}
-
-.password-toggle-btn:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
-}
-
-/* Animación del icono */
-.password-toggle-btn i {
+  content: attr(title);
+  position: absolute;
+  bottom: -48px;
+  left: 50%;
+  transform: translateX(-50%) scale(0);
+  background: #f1f5f9;
+  color: #1e293b;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: 0 4px 16px rgba(30, 41, 59, 0.1);
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1000;
   transition: all 0.3s ease;
 }
 
@@ -651,7 +657,7 @@ body.jazzmin-login-page input[type="text"][name="password"] {
   bottom: -35px;
   left: 50%;
   transform: translateX(-50%) scale(0);
-  background: #2c3e50;
+  background: #e7ecf1;
   color: white;
   padding: 6px 12px;
   border-radius: 6px;
@@ -672,16 +678,16 @@ body.jazzmin-login-page input[type="text"][name="password"] {
 .password-toggle-btn::before {
   content: "";
   position: absolute;
-  bottom: -8px;
+  bottom: -18px;
   left: 50%;
   transform: translateX(-50%) scale(0);
   width: 0;
   height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-bottom: 6px solid #2c3e50;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid #f1f5f9;
   opacity: 0;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
   z-index: 1001;
 }
@@ -709,5 +715,207 @@ body.jazzmin-login-page input[type="text"][name="password"] {
   .password-toggle-btn::after,
   .password-toggle-btn::before {
     display: none;
+  }
+}
+
+/* ============================================
+   Alegra-style overrides (clean, centered, teal CTA)
+   Adds a lightweight, white login panel with centered logo,
+   pill primary button, subtle separators and social buttons.
+   ============================================ */
+
+body.jazzmin-login-page {
+  background: #ffffff !important;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3.5rem 1rem;
+}
+
+/* Disable previous animated/background effects so the page looks clean */
+body.jazzmin-login-page::before,
+body.jazzmin-login-page::after {
+  display: none !important;
+}
+
+/* Centered narrow card */
+body.jazzmin-login-page .login-box,
+body.jazzmin-login-page .card {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  max-width: 420px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Inner white panel that holds form contents */
+body.jazzmin-login-page .card-body,
+body.jazzmin-login-page .login-card-body {
+  background: #ffffff;
+  padding: 2rem 2.25rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(16, 24, 40, 0.06);
+}
+
+/* Top logo and heading */
+body.jazzmin-login-page .login-logo a,
+body.jazzmin-login-page .brand-link {
+  color: #0f172a !important;
+  font-weight: 700;
+  font-size: 1.9rem;
+  text-align: center;
+  display: block;
+}
+
+body.jazzmin-login-page .login-logo img,
+body.jazzmin-login-page .brand-image {
+  max-width: 130px;
+  display: block;
+  margin: 0 auto 10px;
+}
+
+body.jazzmin-login-page .card-header h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+body.jazzmin-login-page .card-header p {
+  color: #6b7280;
+  margin-bottom: 0.9rem;
+}
+
+/* Inputs: subtle border, rounded, light background */
+body.jazzmin-login-page .form-control,
+body.jazzmin-login-page input[type="text"],
+body.jazzmin-login-page input[type="password"],
+body.jazzmin-login-page input[type="email"] {
+  border: 1px solid #e6eef1;
+  border-radius: 8px;
+  padding: 0.85rem 1rem 0.85rem 3.75rem;
+  font-size: 1rem;
+  background: #ffffff;
+}
+
+body.jazzmin-login-page .form-control::placeholder {
+  color: #94a3b8;
+}
+
+/* Ensure inputs inside an input-group leave room for the left icon */
+body.jazzmin-login-page .input-group .form-control,
+body.jazzmin-login-page .input-group input {
+  padding-left: calc(3rem + 0.75rem) !important;
+}
+
+/* Make sure the input-group icon area has a fixed width and sits above the input */
+body.jazzmin-login-page .input-group .input-group-text {
+  width: 3rem;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 12;
+}
+
+body.jazzmin-login-page .form-control:focus,
+body.jazzmin-login-page input:focus {
+  border-color: #2fb3ab;
+  box-shadow: 0 0 0 4px rgba(47, 179, 171, 0.06);
+}
+
+/* Primary button: teal, pill */
+body.jazzmin-login-page .btn-primary,
+body.jazzmin-login-page button[type="submit"] {
+  background: linear-gradient(90deg, #22b8ae 0%, #1fa79d 100%) !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 0.85rem 1.25rem !important;
+  height: 48px;
+  font-weight: 700;
+  color: #ffffff !important;
+  letter-spacing: 0.3px;
+}
+
+/* Add spacing after CTA */
+.login-cta-row {
+  margin-top: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+
+/* Separator with small circle */
+.login-separator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 1rem 0;
+}
+.login-separator hr {
+  flex: 1;
+  height: 1px;
+  border: none;
+  background: #eef2f3;
+}
+.login-separator span {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #eef2f3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #9aa6a6;
+}
+
+/* Social buttons */
+.social-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #e6eef1;
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  color: #0f172a;
+  width: 100%;
+  box-shadow: none;
+}
+.social-btn img,
+.social-btn .icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Small help link top-right */
+body.jazzmin-login-page .help-link {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Adjust password toggle inside cleaned inputs */
+body.jazzmin-login-page .password-toggle-btn {
+  right: 12px;
+}
+
+/* Mobile tweaks */
+@media (max-width: 576px) {
+  body.jazzmin-login-page {
+    padding: 2rem 0.75rem;
+  }
+  body.jazzmin-login-page .card-body {
+    padding: 1.5rem;
+  }
+  .login-separator span {
+    width: 26px;
+    height: 26px;
   }
 }

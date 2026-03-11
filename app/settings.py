@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     'django.contrib.humanize',
+    'django_extensions',
     'compressor',
     'djmoney',  # Django Money para manejo de monedas
     'app',  # Agregamos la app principal para los comandos de gestión
@@ -97,7 +98,7 @@ JAZZMIN_SETTINGS = {
     "site_icon": "img/icon.png",
     
     # Welcome text on the login screen
-    "welcome_sign": "Ingresa tus credenciales para iniciar sesión   ",
+    "welcome_sign": "Por favor, inicia sesión para continuar",
     
     # Copyright on the footer
     "copyright": "Agricola de la Costa San Luis",
