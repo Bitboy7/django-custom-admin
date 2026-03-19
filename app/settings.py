@@ -71,6 +71,15 @@ INSTALLED_APPS = [
     'import_export',
 ]
 
+# Callable para Jazzmin: devuelve la URL del avatar del usuario
+def _get_user_avatar(user):
+    try:
+        url = user.profile.avatar_url
+        return url if url else None
+    except Exception:
+        return None
+
+
 # Configuración completa para Django Jazzmin
 JAZZMIN_SETTINGS = {
     # title of the window (Will default to current_admin_site.site_title if absent or None)
@@ -107,7 +116,7 @@ JAZZMIN_SETTINGS = {
     "search_model": ["auth.User", "auth.Group"],
     
     # Field name on user model that contains avatar ImageField/URLField/Charfield or a callable that receives the user
-    "user_avatar": None,
+    "user_avatar": _get_user_avatar,
     
     ############
     # Top Menu #
@@ -159,12 +168,20 @@ JAZZMIN_SETTINGS = {
     
     # Custom links to append to app groups, keyed on app name
     "custom_links": {
-        "gastos": [{
-            "name": "Subir Factura (IA)", 
-            "url": "/ingresar-factura/", 
-            "icon": "fas fa-file-upload",
-            "permissions": ["gastos.add_gastos"]
-        }]
+        "gastos": [
+            {
+                "name": "Acumulado de Gastos",
+                "url": "admin:gastos_gastos_balances",
+                "icon": "fas fa-chart-line",
+                "permissions": ["gastos.view_gastos"]
+            },
+            {
+                "name": "Subir Factura (IA)",
+                "url": "/ingresar-factura/",
+                "icon": "fas fa-file-upload",
+                "permissions": ["gastos.add_gastos"]
+            },
+        ]
     },
     
     # Custom icons for side menu apps/models See https://fontawesome.com/icons?d=gallery&m=free&v=5.0.0,5.0.1,5.0.10,5.0.11,5.0.12,5.0.13,5.0.2,5.0.3,5.0.4,5.0.5,5.0.6,5.0.7,5.0.8,5.0.9,5.1.0,5.1.1,5.2.0,5.3.0,5.3.1,5.4.0,5.4.1,5.4.2,5.5.0,5.6.0,5.6.1,5.6.3,5.7.0,5.7.1,5.7.2,5.8.0,5.8.1,5.8.2,5.9.0,5.10.0,5.10.1,5.10.2,5.11.0,5.11.1,5.11.2,5.12.0,5.12.1,5.13.0,5.13.1,5.14.0,5.15.0,5.15.1,5.15.2,5.15.3,5.15.4&s=solid

@@ -11,144 +11,35 @@
 
 {% block extrahead %}
 {{ block.super }}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css" />
-<link rel="stylesheet" href="{% static 'css/dashboard-custom.css' %}">
 {% endblock %}
 
 {% block styles %}
 {{ block.super }}
 <style>
-  /* Layout fixes */
-  #content-main {
-    padding: 20px;
-  }
+  #content-main { padding: 20px; }
+  canvas { max-width: 100%; }
+  .gap-3 { gap: .75rem; }
+  .space-x-3 > * + * { margin-left: .75rem; }
 
-  .space-y-6>*+* {
-    margin-top: 1.5rem;
-  }
-
-  /* Grid utilities */
-  .grid {
-    display: grid;
-  }
-
-  .grid-cols-1 {
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-  }
-
-  .gap-3 {
-    gap: 0.75rem;
-  }
-
-  .gap-4 {
-    gap: 1rem;
-  }
-
-  .gap-6 {
-    gap: 1.5rem;
-  }
-
-  @media (min-width: 768px) {
-    .md\\:grid-cols-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .lg\\:grid-cols-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .lg\\:grid-cols-4 {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
-
-  /* Chart containers */
-  canvas {
-    max-width: 100%;
-    height: auto !important;
-  }
-
-  /* Toast Styles */
-  .toast-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 9999;
-  }
-
-  .toast {
-    background: linear-gradient(135deg, #101429 0%, #152a85 100%) !important;
-    color: white !important;
-    padding: 16px 24px !important;
-    border-radius: 12px !important;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2) !important;
-    margin-bottom: 12px !important;
-    transform: translateX(400px) !important;
-    opacity: 0 !important;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-    min-width: 350px !important;
-    position: relative !important;
-    overflow: hidden !important;
-    display: block !important;
-  }
-
-  .toast.show {
-    transform: translateX(0) !important;
-    opacity: 1 !important;
-  }
-
+  /* Toast inner elements */
   .toast::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.5);
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    background: rgba(255,255,255,.5);
   }
-
-  .toast-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
+  .toast-header { display: flex; align-items: center; margin-bottom: 8px; }
+  .toast-icon   { font-size: 20px; margin-right: 12px; color: #e0f2fe; }
+  .toast-title  { font-weight: 600; font-size: 16px; margin: 0; }
+  .toast-message{ margin: 0; opacity: .95; line-height: 1.5; }
+  .toast-close  {
+    position: absolute; top: 8px; right: 12px;
+    background: none; border: none;
+    color: rgba(255,255,255,.7); font-size: 18px;
+    cursor: pointer; padding: 4px; transition: color .2s;
   }
-
-  .toast-icon {
-    font-size: 20px;
-    margin-right: 12px;
-    color: #e0f2fe;
-  }
-
-  .toast-title {
-    font-weight: 600;
-    font-size: 16px;
-    margin: 0;
-  }
-
-  .toast-message {
-    margin: 0;
-    opacity: 0.95;
-    line-height: 1.5;
-  }
-
-  .toast-close {
-    position: absolute;
-    top: 8px;
-    right: 12px;
-    background: none;
-    border: none;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 18px;
-    cursor: pointer;
-    padding: 4px;
-    transition: color 0.2s;
-  }
-
-  .toast-close:hover {
-    color: white;
-  }
+  .toast-close:hover { color: white; }
 </style>
 {% endblock %}
 {% block content %}
@@ -917,4 +808,123 @@
     }
   });
   </script>
+
+  <!-- Dashboard de Ventas - Sección adicional -->
+  <div class="space-y-6" style="margin-top: 30px;">
+    <!-- Header Ventas -->
+    <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-sm p-6 text-white">
+      <h2 class="text-2xl font-bold mb-1">
+        <i class="fas fa-chart-line mr-2"></i>
+        📊 Dashboard de Ventas
+      </h2>
+      <p class="text-blue-100">
+        Gestión integral de ventas y cuentas por cobrar
+      </p>
+    </div>
+
+    <!-- Métricas de Ventas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+              <i class="fas fa-dollar-sign text-green-600"></i>
+            </div>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm font-medium text-gray-600">Ventas del Mes</p>
+            <p class="text-lg font-semibold text-gray-900">$0</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+              <i class="fas fa-clock text-orange-600"></i>
+            </div>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm font-medium text-gray-600">Ctas. por Cobrar</p>
+            <p class="text-lg font-semibold text-gray-900">$0</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+              <i class="fas fa-exclamation-triangle text-red-600"></i>
+            </div>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm font-medium text-gray-600">Vencidas</p>
+            <p class="text-lg font-semibold text-gray-900">$0</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <i class="fas fa-calendar-alt text-blue-600"></i>
+            </div>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm font-medium text-gray-600">DSO</p>
+            <p class="text-lg font-semibold text-gray-900">0 días</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Acciones Rápidas de Ventas -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+          <i class="fas fa-tachometer-alt mr-2 text-blue-600"></i>
+          Dashboard Completo
+        </h3>
+        <div class="space-y-3">
+          <a href="/admin/ventas/ventas/dashboard-ventas/" class="flex items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+            <i class="fas fa-chart-pie mr-3 text-blue-600"></i>
+            <span class="font-medium text-blue-700">Ver Dashboard Completo</span>
+          </a>
+          <a href="/admin/ventas/ventas/?vencimiento=vencido" class="flex items-center p-3 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
+            <i class="fas fa-exclamation-circle mr-3 text-red-600"></i>
+            <span class="font-medium text-red-700">Cuentas Vencidas</span>
+          </a>
+          <a href="/admin/ventas/ventas/?vencimiento=vence_hoy" class="flex items-center p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors">
+            <i class="fas fa-bell mr-3 text-yellow-600"></i>
+            <span class="font-medium text-yellow-700">Vencimientos Hoy</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+          <i class="fas fa-users mr-2 text-green-600"></i>
+          Gestión de Clientes
+        </h3>
+        <div class="space-y-3">
+          <a href="/admin/ventas/cliente/" class="flex items-center p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+            <i class="fas fa-user-friends mr-3 text-green-600"></i>
+            <span class="font-medium text-green-700">Ver Todos los Clientes</span>
+          </a>
+          <a href="/admin/ventas/cliente/?tipo_cliente=Credito" class="flex items-center p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
+            <i class="fas fa-credit-card mr-3 text-orange-600"></i>
+            <span class="font-medium text-orange-700">Clientes a Crédito</span>
+          </a>
+          <a href="/admin/ventas/cliente/add/" class="flex items-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
+            <i class="fas fa-user-plus mr-3 text-purple-600"></i>
+            <span class="font-medium text-purple-700">Nuevo Cliente</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
   {% endblock %}

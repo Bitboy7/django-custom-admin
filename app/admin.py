@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.models import User, Group
+from auditoria.models import UserProfile
 from django.contrib.admin import SimpleListFilter
 from django.utils.html import format_html
 from django.shortcuts import render
@@ -53,8 +54,17 @@ admin.site.unregister(User)
 admin.site.unregister(Group)
 
 
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name = 'Foto de perfil'
+    verbose_name_plural = 'Foto de perfil'
+    fields = ('avatar',)
+
+
 @admin.register(User)
 class UserAdmin(BaseUserAdmin, ModelAdmin):
+    inlines = (UserProfileInline,)
     # Formularios cargados desde `unfold.forms`
     form = UserChangeForm
     add_form = UserCreationForm

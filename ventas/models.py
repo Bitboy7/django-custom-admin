@@ -389,4 +389,520 @@ class PagoVenta(models.Model):
     class Meta:
         verbose_name = 'Pago de Venta'
         verbose_name_plural = 'Pagos de Ventas'
-        ordering = ['-fecha_pago']        
+        ordering = ['-fecha_pago']
+
+
+# =============================================================================
+# MODELOS DE CUENTAS POR COBRAR - EXTENSION DEL SISTEMA
+# =============================================================================
+
+class SaldoCliente(models.Model):
+    """
+    RF1: Tabla central para el control de saldos por cliente.
+    Se crea automáticamente cuando hay una venta a crédito.
+    RF2: Actualiza saldo instantáneamente con cada abono registrado.
+    """
+    from django.contrib.auth.models import User
+    
+    # Relaciones principales
+    cliente = models.ForeignKey(
+        Cliente, 
+        on_delete=models.PROTECT,
+        related_name='saldos_cxc',
+        help_text="Cliente asociado al saldo"
+    )
+    venta = models.OneToOneField(
+        Ventas,
+        on_delete=models.PROTECT,
+        related_name='saldo_cxc',
+        unique=True,
+        help_text="Venta que origina este saldo"
+    )
+    
+    # Montos y fechas
+    monto_original = MoneyField(
+        max_digits=12, 
+        decimal_places=2,
+        default_currency='MXN',
+        help_text="Monto original de la venta a crédito"
+    )
+    saldo_pendiente = MoneyField(
+        max_digits=12, 
+        decimal_places=2,
+        default_currency='MXN',
+        help_text="Saldo actual después de abonos"
+    )
+    fecha_creacion = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Momento en que se registró la deuda"
+    )
+    fecha_vencimiento = models.DateField(
+        help_text="Fecha límite para pago sin intereses"
+    )
+    fecha_ultimo_pago = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="Fecha del último pago registrado"
+    )
+    
+    # Control de estado
+    class EstadosSaldo(models.TextChoices):
+        PENDIENTE = 'PENDIENTE', 'Pendiente'
+        PARCIAL = 'PARCIAL', 'Parcial'
+        PAGADO = 'PAGADO', 'Pagado'
+        VENCIDO = 'VENCIDO', 'Vencido'
+        INCOBRABLE = 'INCOBRABLE', 'Incobrable'
+    
+    estado = models.CharField(
+        max_length=20, 
+        choices=EstadosSaldo.choices, 
+        default=EstadosSaldo.PENDIENTE,
+        help_text="Estado actual del saldo"
+    )
+    
+    # Metadatos
+    moneda = models.CharField(
+        max_length=3, 
+        default='MXN',
+        help_text="Moneda del saldo (MXN, USD, etc.)"
+    )
+    notas = models.TextField(
+        blank=True,
+        help_text="Notas adicionales sobre el saldo o gestiones de cobranza"
+    )
+    
+    def __str__(self):
+        return f"{self.cliente.nombre} - {self.monto_original} ({self.estado})"
+    
+    class Meta:
+        db_table = 'ventas_saldo_cliente'
+        verbose_name = 'Saldo por Cobrar'
+        verbose_name_plural = 'Saldos por Cobrar'
+        indexes = [
+            models.Index(fields=['cliente', 'estado']),
+            models.Index(fields=['fecha_vencimiento']),
+            models.Index(fields=['estado', 'fecha_vencimiento']),
+            models.Index(fields=['cliente', 'fecha_creacion']),
+        ]
+        ordering = ['-fecha_creacion']
+    
+    def dias_vencido(self):
+        """RF3: Calcula días transcurridos desde vencimiento"""
+        if self.fecha_vencimiento <= timezone.now().date():
+            return (timezone.now().date() - self.fecha_vencimiento).days
+        return 0
+    
+    def categoria_antiguedad(self):
+        """RF3: Determina categoría de antigüedad del saldo según días vencidos"""
+        dias = self.dias_vencido()
+        if dias <= 0:
+            return 'CORRIENTE'
+        elif dias <= 30:
+            return 'CORRIENTE'
+        elif dias <= 60:
+            return 'VENCIDO_1'  # 31-60 días
+        elif dias <= 90:
+            return 'VENCIDO_2'  # 61-90 días
+        else:
+            return 'VENCIDO_3'  # +90 días
+    
+    def porcentaje_pagado(self):
+        """Calcula porcentaje pagado del total"""
+        if self.monto_original.amount > 0:
+            pagado = self.monto_original.amount - self.saldo_pendiente.amount
+            return round((pagado / self.monto_original.amount) * 100, 2)
+        return 0
+    
+    def interes_moratorio_acumulado(self):
+        """Calcula interés moratorio acumulado si aplica"""
+        if (self.dias_vencido() > 0 and 
+            self.venta.termino_credito and 
+            self.saldo_pendiente.amount > 0):
+            
+            dias_mora = self.dias_vencido()
+            meses_mora = dias_mora / 30.0
+            tasa_mensual = float(self.venta.termino_credito.tasa_interes_mensual)
+            interes = float(self.saldo_pendiente.amount) * tasa_mensual * meses_mora
+            return round(interes, 2)
+        return 0
+    
+    def monto_total_con_intereses(self):
+        """Calcula monto total incluyendo intereses moratorios"""
+        return float(self.saldo_pendiente.amount) + self.interes_moratorio_acumulado()
+
+
+class AntigüedadSaldo(models.Model):
+    """
+    RF3: Snapshot de antigüedad de saldos por cliente en una fecha específica.
+    Se calcula periódicamente (diario/semanal) para análisis histórico y trending.
+    """
+    
+    # Identificación y fecha de cálculo
+    cliente = models.ForeignKey(
+        Cliente, 
+        on_delete=models.CASCADE,
+        related_name='historico_aging',
+        help_text="Cliente analizado"
+    )
+    fecha_calculo = models.DateField(
+        default=timezone.now,
+        help_text="Fecha en que se calculó este aging"
+    )
+    
+    # Distribución por buckets de aging (RF3)
+    corriente = MoneyField(
+        max_digits=12, 
+        decimal_places=2, 
+        default_currency='MXN',
+        default=0,
+        help_text="Saldos 0-30 días desde vencimiento"
+    )
+    vencido_1 = MoneyField(
+        max_digits=12, 
+        decimal_places=2, 
+        default_currency='MXN',
+        default=0,
+        help_text="Saldos 31-60 días vencidos"
+    )
+    vencido_2 = MoneyField(
+        max_digits=12, 
+        decimal_places=2, 
+        default_currency='MXN',
+        default=0,
+        help_text="Saldos 61-90 días vencidos"
+    )
+    vencido_3 = MoneyField(
+        max_digits=12, 
+        decimal_places=2, 
+        default_currency='MXN',
+        default=0,
+        help_text="Saldos +90 días vencidos (morosos críticos)"
+    )
+    
+    # Totales y métricas derivadas
+    total_saldo = MoneyField(
+        max_digits=12, 
+        decimal_places=2, 
+        default_currency='MXN',
+        default=0,
+        help_text="Total de saldos pendientes"
+    )
+    numero_facturas = models.PositiveIntegerField(
+        default=0,
+        help_text="Cantidad de facturas pendientes"
+    )
+    promedio_dias_pago = models.FloatField(
+        null=True, 
+        blank=True,
+        help_text="Promedio histórico de días para pago completo"
+    )
+    
+    # Metadatos
+    moneda = models.CharField(
+        max_length=3, 
+        default='MXN',
+        help_text="Moneda base para los cálculos"
+    )
+    calculado_por = models.CharField(
+        max_length=100,
+        default='Sistema',
+        help_text="Sistema o usuario que ejecutó el cálculo"
+    )
+    
+    def __str__(self):
+        return f"{self.cliente.nombre} - Aging {self.fecha_calculo} - Total: {self.total_saldo}"
+    
+    class Meta:
+        db_table = 'ventas_antiguedad_saldo'
+        verbose_name = 'Análisis de Antigüedad'
+        verbose_name_plural = 'Análisis de Antigüedad de Saldos'
+        unique_together = [('cliente', 'fecha_calculo')]
+        indexes = [
+            models.Index(fields=['fecha_calculo']),
+            models.Index(fields=['cliente', 'fecha_calculo']),
+            models.Index(fields=['fecha_calculo', 'total_saldo']),
+        ]
+        ordering = ['-fecha_calculo', '-total_saldo']
+    
+    @property
+    def porcentaje_corriente(self):
+        """% del total que está corriente (no vencido)"""
+        if self.total_saldo.amount > 0:
+            return round((self.corriente.amount / self.total_saldo.amount) * 100, 2)
+        return 0
+    
+    @property
+    def porcentaje_vencido_critico(self):
+        """% del total en categorías críticas (61+ días)"""
+        if self.total_saldo.amount > 0:
+            critico = self.vencido_2.amount + self.vencido_3.amount
+            return round((critico / self.total_saldo.amount) * 100, 2)
+        return 0
+    
+    @property 
+    def clasificacion_riesgo(self):
+        """Califica el riesgo del cliente basado en distribución de aging"""
+        if self.total_saldo.amount == 0:
+            return 'SIN_SALDO'
+        
+        pct_vencido_critico = self.porcentaje_vencido_critico
+        
+        if pct_vencido_critico >= 50:
+            return 'ALTO'
+        elif pct_vencido_critico >= 25:
+            return 'MEDIO'
+        elif pct_vencido_critico > 0:
+            return 'BAJO'
+        else:
+            return 'EXCELENTE'
+    
+    def distribucion_porcentual(self):
+        """Retorna dict con distribución porcentual por categoría"""
+        if self.total_saldo.amount > 0:
+            total = float(self.total_saldo.amount)
+            return {
+                'corriente': round((float(self.corriente.amount) / total) * 100, 2),
+                'vencido_1': round((float(self.vencido_1.amount) / total) * 100, 2),
+                'vencido_2': round((float(self.vencido_2.amount) / total) * 100, 2),
+                'vencido_3': round((float(self.vencido_3.amount) / total) * 100, 2),
+            }
+        return {'corriente': 0, 'vencido_1': 0, 'vencido_2': 0, 'vencido_3': 0}
+
+
+class EstadoCuentaCliente(models.Model):
+    """
+    RF4: Registra la generación de estados de cuenta para auditoría
+    y facilita regeneración o consulta de reportes históricos.
+    """
+    from django.contrib.auth.models import User
+    
+    # Identificación del estado de cuenta
+    cliente = models.ForeignKey(
+        Cliente, 
+        on_delete=models.CASCADE,
+        related_name='estados_cuenta',
+        help_text="Cliente del estado de cuenta"
+    )
+    fecha_generacion = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Momento en que se generó el reporte"
+    )
+    
+    # Período del reporte
+    periodo_inicio = models.DateField(
+        help_text="Fecha de inicio del período analizado"
+    )
+    periodo_fin = models.DateField(
+        help_text="Fecha de fin del período analizado"
+    )
+    
+    # Resumen financiero del estado de cuenta (RF4: Venta Original - Suma de Abonos = Saldo Pendiente)
+    total_ventas = MoneyField(
+        max_digits=12, 
+        decimal_places=2, 
+        default_currency='MXN',
+        default=0,
+        help_text="Total de ventas a crédito en el período"
+    )
+    total_abonos = MoneyField(
+        max_digits=12, 
+        decimal_places=2, 
+        default_currency='MXN',
+        default=0,
+        help_text="Total de abonos/pagos recibidos en el período"
+    )
+    saldo_final = MoneyField(
+        max_digits=12, 
+        decimal_places=2, 
+        default_currency='MXN',
+        default=0,
+        help_text="Saldo pendiente al final del período (Ventas - Abonos)"
+    )
+    numero_facturas = models.PositiveIntegerField(
+        default=0,
+        help_text="Cantidad de facturas incluidas en el período"
+    )
+    
+    # Control de generación y formato
+    class FormatoEstado(models.TextChoices):
+        WEB = 'WEB', 'Vista Web'
+        PDF = 'PDF', 'Documento PDF'
+        EXCEL = 'EXCEL', 'Hoja de Excel'
+    
+    formato_generado = models.CharField(
+        max_length=10,
+        choices=FormatoEstado.choices,
+        default=FormatoEstado.WEB,
+        help_text="Formato en que se generó el estado de cuenta"
+    )
+    
+    archivo_generado = models.FileField(
+        upload_to='estados_cuenta/%Y/%m/', 
+        null=True, 
+        blank=True,
+        help_text="Archivo generado (PDF o Excel) si aplica"
+    )
+    
+    # Metadatos de auditoría
+    generado_por = models.CharField(
+        max_length=150,
+        help_text="Usuario que generó el estado de cuenta"
+    )
+    notas = models.TextField(
+        blank=True,
+        help_text="Notas adicionales sobre el estado de cuenta"
+    )
+    
+    def __str__(self):
+        return f"Estado {self.cliente.nombre} - {self.periodo_inicio} a {self.periodo_fin}"
+    
+    class Meta:
+        db_table = 'ventas_estado_cuenta_cliente'
+        verbose_name = 'Estado de Cuenta'
+        verbose_name_plural = 'Estados de Cuenta de Clientes'
+        indexes = [
+            models.Index(fields=['cliente', 'fecha_generacion']),
+            models.Index(fields=['periodo_inicio', 'periodo_fin']),
+            models.Index(fields=['fecha_generacion']),
+        ]
+        ordering = ['-fecha_generacion']
+    
+    @property
+    def duracion_periodo(self):
+        """Calcula la duración del período en días"""
+        return (self.periodo_fin - self.periodo_inicio).days
+    
+    @property
+    def porcentaje_recuperacion(self):
+        """Calcula el % de recuperación (abonos vs ventas)"""
+        if self.total_ventas.amount > 0:
+            return round((self.total_abonos.amount / self.total_ventas.amount) * 100, 2)
+        return 0
+    
+    @property
+    def promedio_por_factura(self):
+        """Calcula el monto promedio por factura"""
+        if self.numero_facturas > 0:
+            return round(self.total_ventas.amount / self.numero_facturas, 2)
+        return 0
+    
+    def nombre_archivo_sugerido(self):
+        """Genera nombre sugerido para archivo de descarga"""
+        fecha_inicio = self.periodo_inicio.strftime('%Y%m%d')
+        fecha_fin = self.periodo_fin.strftime('%Y%m%d')
+        cliente_limpio = ''.join(c for c in self.cliente.nombre if c.isalnum() or c in ' -_')[:20]
+        return f"EstadoCuenta_{cliente_limpio}_{fecha_inicio}_{fecha_fin}"
+
+
+class ConfiguracionCuentasPorCobrar(models.Model):
+    """
+    Configuraciones globales del módulo de cuentas por cobrar.
+    Permite ajustar comportamiento sin cambios de código.
+    Solo debe existir UN registro de configuración en el sistema.
+    """
+    
+    # Parámetros de aging (RF3)
+    dias_corriente = models.PositiveIntegerField(
+        default=30,
+        help_text="Días máximos para considerar saldo como 'Corriente'"
+    )
+    dias_vencido_1 = models.PositiveIntegerField(
+        default=60,
+        help_text="Días máximos para 'Vencido 1' (31-60 días)"
+    )
+    dias_vencido_2 = models.PositiveIntegerField(
+        default=90,
+        help_text="Días máximos para 'Vencido 2' (61-90 días)"
+    )
+    # Nota: Todo lo que exceda dias_vencido_2 se considera 'Vencido 3' (+90 días)
+    
+    # Automatización de procesos
+    calculo_automatico_aging = models.BooleanField(
+        default=True,
+        help_text="Activar cálculo automático diario de aging"
+    )
+    hora_calculo_aging = models.TimeField(
+        default='02:00:00',
+        help_text="Hora del día para ejecutar cálculo automático"
+    )
+    
+    class FrecuenciaCalculo(models.TextChoices):
+        DIARIO = 'DIARIO', 'Diario'
+        SEMANAL = 'SEMANAL', 'Semanal'
+    
+    frecuencia_calculo = models.CharField(
+        max_length=10,
+        choices=FrecuenciaCalculo.choices,
+        default=FrecuenciaCalculo.DIARIO,
+        help_text="Frecuencia para cálculo automático de aging"
+    )
+    
+    # Alertas y notificaciones
+    enviar_alertas_vencimiento = models.BooleanField(
+        default=True,
+        help_text="Enviar alertas automáticas por vencimientos próximos"
+    )
+    dias_previos_alerta = models.PositiveIntegerField(
+        default=5,
+        help_text="Días antes del vencimiento para enviar alerta"
+    )
+    email_responsable_cobranza = models.EmailField(
+        blank=True,
+        help_text="Email del responsable de cobranza para recibir alertas"
+    )
+    
+    # Límites y validaciones
+    permitir_sobregiro_credito = models.BooleanField(
+        default=False,
+        help_text="Permitir ventas que excedan límite de crédito (con autorización)"
+    )
+    porcentaje_sobregiro_permitido = models.FloatField(
+        default=10.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        help_text="Porcentaje máximo de sobregiro permitido sobre límite de crédito"
+    )
+    
+    # Metadatos
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Configuración CxC - Aging cada {self.frecuencia_calculo.lower()}"
+    
+    class Meta:
+        db_table = 'ventas_configuracion_cxc'
+        verbose_name = 'Configuración de Cuentas por Cobrar'
+        verbose_name_plural = 'Configuraciones de Cuentas por Cobrar'
+    
+    def save(self, *args, **kwargs):
+        """Asegurar que solo existe una configuración"""
+        if not self.pk and ConfiguracionCuentasPorCobrar.objects.exists():
+            raise ValueError("Solo se permite una configuración de Cuentas por Cobrar")
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def obtener_configuracion(cls):
+        """Obtiene o crea la configuración única del sistema"""
+        config, created = cls.objects.get_or_create(
+            pk=1,
+            defaults={
+                'dias_corriente': 30,
+                'dias_vencido_1': 60,
+                'dias_vencido_2': 90,
+                'calculo_automatico_aging': True,
+                'enviar_alertas_vencimiento': True,
+                'dias_previos_alerta': 5,
+                'permitir_sobregiro_credito': False,
+                'porcentaje_sobregiro_permitido': 10.0
+            }
+        )
+        return config
+    
+    def rangos_aging_configurados(self):
+        """Retorna dict con los rangos de aging configurados"""
+        return {
+            'corriente': f"0-{self.dias_corriente} días",
+            'vencido_1': f"{self.dias_corriente + 1}-{self.dias_vencido_1} días",
+            'vencido_2': f"{self.dias_vencido_1 + 1}-{self.dias_vencido_2} días",
+            'vencido_3': f"{self.dias_vencido_2 + 1}+ días (moroso crítico)"
+        }

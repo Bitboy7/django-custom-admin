@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
+from django.template.response import TemplateResponse
+from django.urls import path
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from import_export.admin import ImportExportModelAdmin
@@ -139,6 +141,30 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
     )
     
     actions = ['export_to_excel']
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                'balances/',
+                self.admin_site.admin_view(self.balances_admin_view),
+                name='gastos_gastos_balances',
+            ),
+        ]
+        return custom_urls + urls
+
+    def balances_admin_view(self, request):
+        from app.services.balance_service import BalanceAnalysisService
+        balance_service = BalanceAnalysisService()
+        context = balance_service.get_full_context(request)
+        context.update(self.admin_site.each_context(request))
+        context.update({
+            'title': 'Acumulado de Gastos',
+            'subtitle': None,
+            'opts': self.model._meta,
+            'has_view_permission': self.has_view_permission(request),
+        })
+        return TemplateResponse(request, 'admin/gastos/balances.html', context)
     
 class ComprasResource(resources.ModelResource):
     

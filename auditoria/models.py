@@ -103,3 +103,34 @@ class LogActividad(models.Model):
     
     def __str__(self):
         return f"{self.get_tipo_accion_display()} - {self.nombre_usuario} - {self.fecha_hora}"
+
+
+class UserProfile(models.Model):
+    """Perfil extendido de usuario — almacena la foto de perfil."""
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='profile',
+        verbose_name=_('Usuario'),
+    )
+    avatar = models.ImageField(
+        upload_to='avatars/',
+        null=True,
+        blank=True,
+        verbose_name=_('Foto de perfil'),
+        help_text=_('Imagen cuadrada recomendada, mín. 80×80 px.'),
+    )
+
+    class Meta:
+        verbose_name = _('Perfil de usuario')
+        verbose_name_plural = _('Perfiles de usuario')
+
+    def __str__(self):
+        return f'Perfil de {self.user.username}'
+
+    @property
+    def avatar_url(self):
+        """Devuelve la URL del avatar o vacío si no tiene."""
+        if self.avatar and hasattr(self.avatar, 'url'):
+            return self.avatar.url
+        return ''
