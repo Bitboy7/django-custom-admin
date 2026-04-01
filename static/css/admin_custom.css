@@ -1,8 +1,5 @@
 /*
  * =========================================================
- *  SISTEMA DE DISEÑO UNIFICADO — Agrícola de la Costa
- *  admin_custom.css  |  Jazzmin custom_css
- * =========================================================
  *  Fuente única de estilos para todo el admin:
  *    1. Design tokens (CSS custom properties)
  *    2. Base & chrome guard
@@ -675,6 +672,7 @@ label,
   font-family: var(--font) !important;
   font-size: 0.82rem !important;
   font-weight: 600 !important;
+  color: #fff !important;
   padding: 0.4rem 0.9rem !important;
   border-radius: var(--r-md) !important;
   border: none !important;
@@ -720,6 +718,10 @@ label,
   background: var(--c-text-soft) !important;
   color: #fff !important;
 }
+.dt-button.btn-summary-excel {
+  background: #6d28d9 !important;
+  color: #fff !important;
+}
 
 .dt-button.btn-copy:hover {
   background: var(--c-blue-hover) !important;
@@ -735,6 +737,9 @@ label,
 }
 .dt-button.btn-print:hover {
   background: var(--c-navy-light) !important;
+}
+.dt-button.btn-summary-excel:hover {
+  background: #5b21b6 !important;
 }
 
 .dataTables_wrapper .dataTables_paginate .paginate_button {
@@ -825,14 +830,16 @@ label,
    --------------------------------------------------------- */
 .card,
 .card-default {
-  background: var(--c-card) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
   border: 1px solid var(--c-border) !important;
   border-radius: var(--r-lg) !important;
   box-shadow: var(--s-sm) !important;
 }
 
 .card-header {
-  background: var(--c-white) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(10px) !important;
   border-bottom: 1px solid var(--c-border) !important;
   padding: 0.85rem 1.25rem !important;
   font-weight: 700;
@@ -864,18 +871,13 @@ label,
    11. LOGIN PAGE
    --------------------------------------------------------- */
 body.jazzmin-login-page {
-  background: linear-gradient(
-    135deg,
-    var(--c-navy-dark) 0%,
-    var(--c-navy) 55%,
-    #193458 100%
-  );
+  background-image: url("https://images.pexels.com/photos/539282/pexels-photo-539282.jpeg");
   background-attachment: fixed;
+  background-size: cover;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
   overflow: hidden;
 }
 
@@ -904,7 +906,8 @@ body.jazzmin-login-page::before {
 
 body.jazzmin-login-page .login-box,
 body.jazzmin-login-page .card {
-  background: var(--c-white) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
   border-radius: 16px !important;
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.28),
@@ -955,7 +958,8 @@ body.jazzmin-login-page .card::before {
 
 body.jazzmin-login-page .card-header,
 body.jazzmin-login-page .login-logo {
-  background: var(--c-white) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(10px) !important;
   border-bottom: 1px solid var(--c-border) !important;
   padding: 1.75rem 1.5rem 1.25rem !important;
   text-align: center;
@@ -989,6 +993,7 @@ body.jazzmin-login-page .card-body,
 body.jazzmin-login-page .login-card-body {
   padding: 2.25rem 2rem !important;
   background: var(--c-white) !important;
+  backdrop-filter: blur(10px) !important;
 }
 
 body.jazzmin-login-page .form-control,
@@ -1483,33 +1488,92 @@ body.jazzmin-login-page .errorlist {
 
 .toast-container {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: 24px;
+  right: 24px;
   z-index: 9999;
 }
 
 .toast {
   background: linear-gradient(
-    135deg,
-    var(--c-navy-dark) 0%,
-    var(--c-navy-light) 100%
+    145deg,
+    #0f2640 0%,
+    #1e3a5f 55%,
+    #2a5080 100%
   ) !important;
   color: white !important;
-  padding: 14px 20px !important;
-  border-radius: var(--r-lg) !important;
-  box-shadow: var(--s-lg) !important;
-  margin-bottom: 10px !important;
-  transform: translateX(360px) !important;
+  padding: 0 !important;
+  border-radius: 16px !important;
+  box-shadow:
+    0 24px 64px rgba(15, 38, 64, 0.55),
+    0 6px 20px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  margin-bottom: 12px !important;
+  transform: translateX(420px) scale(0.96) !important;
   opacity: 0 !important;
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-  min-width: 320px !important;
+  transition:
+    transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    opacity 0.3s ease !important;
+  min-width: 340px !important;
+  max-width: 380px !important;
   position: relative !important;
   overflow: hidden !important;
   display: block !important;
+  border-left: 4px solid #f59e0b !important;
 }
 
 .toast.show {
-  transform: translateX(0) !important;
+  transform: translateX(0) scale(1) !important;
+  opacity: 1 !important;
+}
+
+/* Toast inner overrides — neutraliza estilos Bootstrap/AdminLTE */
+.toast .toast-body,
+.toast .toast-header {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+}
+
+.toast .toast-header {
+  display: flex !important;
+  align-items: center !important;
+  margin-bottom: 11px !important;
+  padding-right: 28px !important;
+}
+
+.toast .toast-body {
+  padding: 18px 18px 14px 18px !important;
+}
+
+.toast .toast-title {
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  margin: 0 !important;
+  color: white !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.toast .toast-message {
+  color: rgba(255, 255, 255, 0.85) !important;
+  background: transparent !important;
+}
+
+.toast .toast-icon-wrap {
+  background: rgba(245, 158, 11, 0.18) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  border-radius: 10px !important;
+}
+
+.toast .toast-divider {
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  margin: 0 0 11px !important;
   opacity: 1 !important;
 }
 
@@ -1559,4 +1623,100 @@ body.jazzmin-login-page .errorlist {
   .dt-buttons {
     justify-content: center;
   }
+}
+
+/*
+ * datatables-buttons.css
+ * Estilos de botones de exportación de DataTables
+ * Usa los tokens del sistema de diseño definidos en admin_custom.css
+ */
+
+/* Base unificado */
+.dt-button {
+  font-family: var(--font, inherit) !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+  line-height: 1.5 !important;
+  padding: 0.4rem 0.9rem !important;
+  border-radius: var(--r-md, 6px) !important;
+  border: none !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  transition: all var(--t, 0.18s ease) !important;
+  box-shadow: var(--s-sm, 0 1px 3px rgba(30, 58, 95, 0.08)) !important;
+  margin-right: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.dt-button:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: var(--s-md, 0 4px 12px rgba(30, 58, 95, 0.12)) !important;
+}
+
+.dt-button:focus {
+  outline: 2px solid rgba(37, 99, 235, 0.45) !important;
+  outline-offset: 2px !important;
+}
+
+/* Contenedor */
+.dt-buttons {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  margin-bottom: 0.75rem !important;
+}
+
+/* Copiar */
+.dt-button.btn-copy {
+  background-color: var(--c-blue, #2563eb) !important;
+  color: #fff !important;
+}
+.dt-button.btn-copy:hover {
+  background-color: var(--c-blue-hover, #1d4ed8) !important;
+}
+
+/* CSV */
+.dt-button.btn-csv {
+  background-color: var(--c-green, #059669) !important;
+  color: #fff !important;
+}
+.dt-button.btn-csv:hover {
+  background-color: #047857 !important;
+}
+
+/* Excel */
+.dt-button.btn-excel {
+  background-color: #166534 !important;
+  color: #fff !important;
+}
+.dt-button.btn-excel:hover {
+  background-color: #14532d !important;
+}
+
+/* PDF */
+.dt-button.btn-pdf {
+  background-color: var(--c-red, #dc2626) !important;
+  color: #fff !important;
+}
+.dt-button.btn-pdf:hover {
+  background-color: #b91c1c !important;
+}
+
+/* Imprimir */
+.dt-button.btn-print {
+  background-color: var(--c-text-soft, #475569) !important;
+  color: #fff !important;
+}
+.dt-button.btn-print:hover {
+  background-color: var(--c-navy-light, #2e5c8a) !important;
+}
+
+/* Resumen Excel */
+.dt-button.btn-summary-excel {
+  background-color: #6d28d9 !important;
+  color: #fff !important;
+}
+.dt-button.btn-summary-excel:hover {
+  background-color: #5b21b6 !important;
 }
