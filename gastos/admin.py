@@ -72,7 +72,7 @@ class CuentaAdmin(ImportExportModelAdmin, ModelAdmin):
     import_form_class = ImportForm
     export_form_class = ExportForm
     list_display = ('id', 'mostrar_logotipo_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente', 'rfc', 'clabe')
-    search_fields = ('id_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente',)
+    search_fields = ('id_banco__nombre', 'id_sucursal__nombre', 'numero_cuenta', 'numero_cliente')
     list_filter = ('id_banco', 'id_sucursal', 'numero_cuenta', 'numero_cliente', 'rfc')
     list_per_page = 12
     fieldsets = (
@@ -131,7 +131,7 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
     export_form_class = ExportForm
     list_display = ('id', 'id_sucursal', 'id_cat_gastos',
                     'id_cuenta_banco', 'monto', 'descripcion', 'fecha', 'fecha_registro')
-    search_fields = ('id' ,'monto', 'fecha_registro', 'id_sucursal', 'id_cat_gastos', 'id_cuenta_banco')
+    search_fields = ('descripcion', 'id_sucursal__nombre', 'id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta')
     list_filter = ('id_sucursal', 'id_cat_gastos','id_cuenta_banco', 'fecha')
     list_per_page = 20
     fieldsets = (
@@ -213,7 +213,7 @@ class ComprasAdmin(ImportExportModelAdmin, ModelAdmin):
         import_form_class = ImportForm
         export_form_class = ExportForm
         list_display = ('id', 'fecha_compra','fecha_registro', 'productor', 'producto', 'cantidad', 'precio_unitario', 'monto_total', 'cuenta', 'tipo_pago')
-        search_fields = ('fecha_compra',  'monto_total', 'productor', 'producto', 'cuenta','tipo_pago')
+        search_fields = ('tipo_pago', 'productor__nombre', 'producto__nombre', 'cuenta__numero_cuenta')
         list_filter = ('fecha_compra', 'productor', 'producto', 'monto_total')
         list_per_page = 20
         fieldsets = (

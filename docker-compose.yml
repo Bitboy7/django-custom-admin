@@ -1,4 +1,4 @@
-services:
+﻿services:
   db:
     image: mysql:8.0
     restart: unless-stopped
@@ -10,7 +10,7 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     ports:
-      - "3307:3306"
+      - "127.0.0.1:3308:3306"
     healthcheck:
       test:
         [
@@ -22,10 +22,50 @@ services:
           "-uroot",
           "-p${DB_ROOT_PASSWORD}",
         ]
+      interval: 10s
       timeout: 20s
       retries: 10
+      start_period: 30s
     networks:
       - app-network
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    user: "999:999"
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --save 300 100
+      --save 900 1
+      --appendonly yes
+      --appendfsync everysec
+      --no-appendfsync-on-rewrite yes
+      --tcp-backlog 511
+      --timeout 300
+      --tcp-keepalive 60
+      --loglevel notice
+      --databases 4
+      --bind 0.0.0.0
+    volumes:
+      - redis_data:/data
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
 
   web:
     build:
@@ -38,21 +78,28 @@ services:
       - media_volume:/app/media
       - logs_volume:/app/logs
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     env_file: .env
+    environment:
+      REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379/1"
+      DB_HOST: db
+      DB_PORT: "3306"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/admin/"]
       interval: 30s
       timeout: 30s
       retries: 3
-      start_period: 40s
+      start_period: 60s
+    security_opt:
+      - no-new-privileges:true
     networks:
       - app-network
 
-  # Nginx para servir archivos estáticos (opcional)
   nginx:
     image: nginx:alpine
     restart: unless-stopped
@@ -72,6 +119,7 @@ services:
 
 volumes:
   mysql_data:
+  redis_data:
   static_volume:
   media_volume:
   logs_volume:
@@ -79,3 +127,4 @@ volumes:
 networks:
   app-network:
     driver: bridge
+    internal: false

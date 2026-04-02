@@ -257,6 +257,17 @@ class Ventas(models.Model):
         help_text="Tipo de cambio aplicado al momento de la venta"
     )
 
+    class TipoRegistro(models.TextChoices):
+        VENTA = 'VENTA', 'Venta'
+        MAQUILA = 'MAQUILA', 'Maquila'
+
+    tipo_registro = models.CharField(
+        max_length=10,
+        choices=TipoRegistro.choices,
+        default=TipoRegistro.VENTA,
+        help_text="Tipo de registro: Venta normal o Maquila"
+    )
+
     def __str__(self):
         return f"-{self.carga} - {self.fecha_salida_manifiesto} - {self.monto} - {self.cliente.nombre}- {self.producto.nombre}"
     
@@ -897,7 +908,55 @@ class ConfiguracionCuentasPorCobrar(models.Model):
             }
         )
         return config
-    
+
+
+# =============================================================================
+# OBLIGACIONES FISCALES
+# =============================================================================
+
+class ObligacionFiscal(models.Model):
+    """
+    Registro manual de obligaciones fiscales por período semestral.
+    Se captura desde el admin para incluirlo en el reporte global de cobranza.
+    """
+    periodo = models.CharField(
+        max_length=100,
+        help_text="Ej: Semestre Julio-Diciembre 2025"
+    )
+    isr_ingresos_propios = MoneyField(
+        max_digits=14, decimal_places=2, default_currency='MXN', default=0,
+        help_text="ISR Ingresos Propios"
+    )
+    isr_resico = MoneyField(
+        max_digits=14, decimal_places=2, default_currency='MXN', default=0,
+        help_text="ISR RESICO Servicios Profesionales"
+    )
+    isr_retenciones_salarios = MoneyField(
+        max_digits=14, decimal_places=2, default_currency='MXN', default=0,
+        help_text="ISR Retenciones por Salarios"
+    )
+    iva_retenciones_profesionales = MoneyField(
+        max_digits=14, decimal_places=2, default_currency='MXN', default=0,
+        help_text="IVA Retenciones Servicios Profesionales"
+    )
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    def total_impuestos(self):
+        return (
+            self.isr_ingresos_propios.amount
+            + self.isr_resico.amount
+            + self.isr_retenciones_salarios.amount
+            + self.iva_retenciones_profesionales.amount
+        )
+
+    def __str__(self):
+        return f"Impuestos {self.periodo}"
+
+    class Meta:
+        verbose_name = 'Obligación Fiscal'
+        verbose_name_plural = 'Obligaciones Fiscales'
+        ordering = ['-fecha_registro']
+
     def rangos_aging_configurados(self):
         """Retorna dict con los rangos de aging configurados"""
         return {

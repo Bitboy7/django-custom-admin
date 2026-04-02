@@ -314,3 +314,14 @@ def months_between(start_date, end_date):
         # Fallback si dateutil no está disponible
         days_diff = (end_date - start_date).days
         return round(days_diff / 30.44)  # Promedio de días por mes
+
+
+@register.filter
+def get_item(dictionary, key):
+    """
+    Permite acceder a un diccionario por clave dinámica en templates.
+    Uso: {{ mi_dict|get_item:clave }}
+    """
+    if isinstance(dictionary, dict):
+        return dictionary.get(key)
+    return None

@@ -6,7 +6,8 @@ from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.utils import unquote
 from .models import (
     Cliente, Agente, Ventas, Anticipo, TerminoCredito, MercadoDestino, PagoVenta,
-    SaldoCliente, AntigüedadSaldo, EstadoCuentaCliente, ConfiguracionCuentasPorCobrar
+    SaldoCliente, AntigüedadSaldo, EstadoCuentaCliente, ConfiguracionCuentasPorCobrar,
+    ObligacionFiscal
 )
 from catalogo.models import Sucursal, Pais, Producto
 from gastos.models import Cuenta
@@ -376,7 +377,7 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
     )
     
     list_filter = (
-        VencimientoFilter, MontoVentaFilter, 'modalidad_pago', 'estado_cobranza', 
+        VencimientoFilter, MontoVentaFilter, 'tipo_registro', 'modalidad_pago', 'estado_cobranza',
         'tipo_venta', 'fecha_salida_manifiesto', 'mercado_destino', 'termino_credito',
         'cliente__calificacion_credito', 'cliente__tipo_cliente'
     )
@@ -418,6 +419,10 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
         ('Contabilidad', {
             'fields': ('cuenta', 'anticipo'),
             'classes': ('collapse',)
+        }),
+        ('Tipo de Registro', {
+            'fields': ('tipo_registro',),
+            'description': 'Indica si este registro es una Venta normal o una Maquila.'
         }),
     )
     
@@ -1289,3 +1294,36 @@ class PagoVentaInline(admin.TabularInline):
     extra = 0
     readonly_fields = ('fecha_registro',)
     fields = ('fecha_pago', 'monto_pago', 'cuenta_destino', 'metodo_pago', 'referencia', 'notas')
+
+
+# =============================================================================
+# OBLIGACIONES FISCALES
+# =============================================================================
+
+@admin.register(ObligacionFiscal)
+class ObligacionFiscalAdmin(ModelAdmin):
+    list_display = ('periodo', 'isr_ingresos_propios', 'isr_resico',
+                    'isr_retenciones_salarios', 'iva_retenciones_profesionales',
+                    'get_total', 'fecha_registro')
+    list_filter = ('fecha_registro',)
+    search_fields = ('periodo',)
+    readonly_fields = ('fecha_registro',)
+
+    fieldsets = (
+        ('Período', {
+            'fields': ('periodo', 'fecha_registro')
+        }),
+        ('Impuestos', {
+            'fields': (
+                'isr_ingresos_propios',
+                'isr_resico',
+                'isr_retenciones_salarios',
+                'iva_retenciones_profesionales',
+            )
+        }),
+    )
+
+    def get_total(self, obj):
+        total = obj.total_impuestos()
+        return format_html('<strong>${:,.2f}</strong>', total)
+    get_total.short_description = 'Total Impuestos'

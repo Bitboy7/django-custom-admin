@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Sum, Count, Avg, Max, Min, Q
 from django.db.models.functions import Extract, TruncMonth, TruncWeek, TruncDate
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from decimal import Decimal
 from collections import defaultdict, OrderedDict
 import json
@@ -10,6 +10,7 @@ from .models import Anticipo, Ventas, Cliente, TerminoCredito, MercadoDestino, P
 from .forms import AnticipoForm
 from catalogo.models import Sucursal, Pais
 from gastos.models import Cuenta
+from .services.reporte_cobranza_service import generar_reporte_cobranza
 
 def lista_anticipos(request):
     anticipos = Anticipo.objects.all()
@@ -352,3 +353,56 @@ def ventas_balances(request):
     }
     
     return render(request, 'ventas/ventas_balances.html', context)
+
+
+def reporte_cobranza_global(request):
+    """
+    Vista principal del Reporte Global de Cobranza.
+
+    GET params:
+        fecha_inicio  (YYYY-MM-DD)  — inicio del período
+        fecha_fin     (YYYY-MM-DD)  — fin del período
+        tipo_cambio   (decimal)     — override manual del tipo de cambio USD→MXN
+    """
+    hoy = date.today()
+    # Default: temporada / año fiscal actual (1-ene al 31-dic)
+    default_inicio = date(hoy.year, 1, 1)
+    default_fin = date(hoy.year, 12, 31)
+
+    fecha_inicio_str = request.GET.get('fecha_inicio', default_inicio.isoformat())
+    fecha_fin_str = request.GET.get('fecha_fin', default_fin.isoformat())
+    tipo_cambio_str = request.GET.get('tipo_cambio', '')
+
+    # Parsear fechas
+    try:
+        fecha_inicio = date.fromisoformat(fecha_inicio_str)
+    except (ValueError, TypeError):
+        fecha_inicio = default_inicio
+
+    try:
+        fecha_fin = date.fromisoformat(fecha_fin_str)
+    except (ValueError, TypeError):
+        fecha_fin = default_fin
+
+    # Parsear tipo de cambio
+    tipo_cambio_override = None
+    if tipo_cambio_str:
+        try:
+            tipo_cambio_override = Decimal(tipo_cambio_str)
+        except Exception:
+            pass
+
+    datos = generar_reporte_cobranza(
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin,
+        tipo_cambio_override=tipo_cambio_override,
+    )
+
+    context = {
+        **datos,
+        'fecha_inicio_str': fecha_inicio.isoformat(),
+        'fecha_fin_str': fecha_fin.isoformat(),
+        'tipo_cambio_input': tipo_cambio_str,
+        'hoy': hoy,
+    }
+    return render(request, 'ventas/reporte_cobranza.html', context)
