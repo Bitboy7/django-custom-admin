@@ -14,7 +14,7 @@
 // ============================================================================
 
 var reportConfig = {
-  moduleName: "Reporte de Gastos",
+  moduleName: "Reporte de gastos",
   filterFields: ["cuenta_id", "sucursal_id", "year", "month", "periodo"],
 };
 
@@ -273,9 +273,8 @@ document.addEventListener("DOMContentLoaded", function () {
               if (
                 !sucursalData[sucursal].cuentas[cuenta].categorias[categoria]
               ) {
-                sucursalData[sucursal].cuentas[cuenta].categorias[
-                  categoria
-                ] = 0;
+                sucursalData[sucursal].cuentas[cuenta].categorias[categoria] =
+                  0;
               }
 
               sucursalData[sucursal].cuentas[cuenta].categorias[categoria] +=
@@ -290,29 +289,27 @@ document.addEventListener("DOMContentLoaded", function () {
             var grandTotal = 0;
 
             // Ordenar sucursales por total descendente
-            var sortedSucursales = Object.keys(sucursalData).sort(function (
-              a,
-              b
-            ) {
-              return sucursalData[b].total - sucursalData[a].total;
-            });
+            var sortedSucursales = Object.keys(sucursalData).sort(
+              function (a, b) {
+                return sucursalData[b].total - sucursalData[a].total;
+              },
+            );
 
             // Construir HTML para cada fila
             sortedSucursales.forEach(function (sucursal) {
               var sucData = sucursalData[sucursal];
-              var sortedCuentas = Object.keys(sucData.cuentas).sort(function (
-                a,
-                b
-              ) {
-                return sucData.cuentas[b].total - sucData.cuentas[a].total;
-              });
+              var sortedCuentas = Object.keys(sucData.cuentas).sort(
+                function (a, b) {
+                  return sucData.cuentas[b].total - sucData.cuentas[a].total;
+                },
+              );
 
               sortedCuentas.forEach(function (cuenta) {
                 var cuentaData = sucData.cuentas[cuenta];
                 var sortedCategorias = Object.keys(cuentaData.categorias).sort(
                   function (a, b) {
                     return cuentaData.categorias[b] - cuentaData.categorias[a];
-                  }
+                  },
                 );
 
                 // Agregar categorías
@@ -420,7 +417,7 @@ document.addEventListener("DOMContentLoaded", function () {
             // Configurar documento usando utilidades
             configurePdfDocument(doc, {
               reportTitle: reportTitle,
-              systemName: "2025 - Agricola de la Costa San Luis S.P.R de R.L.",
+              systemName: "2026 - Agricola de la Costa San Luis S.P.R de R.L.",
               orientation: "landscape",
               pageMargins: [40, 80, 40, 60],
             });
@@ -445,8 +442,8 @@ document.addEventListener("DOMContentLoaded", function () {
                   return rowIndex === 0
                     ? "#34495e"
                     : rowIndex % 2 === 0
-                    ? "#ecf0f1"
-                    : null;
+                      ? "#ecf0f1"
+                      : null;
                 },
                 hLineWidth: function (i, node) {
                   return i === 0 || i === 1 || i === node.table.body.length
@@ -592,13 +589,23 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       var printBtn = document.querySelector(".dt-button.btn-print");
       if (printBtn) {
-        printBtn.style.backgroundColor = "#8B5CF6";
+        printBtn.style.backgroundColor = "#1f1e20";
         printBtn.style.color = "white";
         printBtn.style.border = "none";
         printBtn.style.padding = "6px 12px";
         printBtn.style.borderRadius = "6px";
         printBtn.style.marginRight = "8px";
         printBtn.style.fontWeight = "500";
+      }
+      var summaryBtn = document.querySelector(".dt-button.btn-summary-excel");
+      if (summaryBtn) {
+        summaryBtn.style.backgroundColor = "#1f1e20";
+        summaryBtn.style.color = "white";
+        summaryBtn.style.border = "none";
+        summaryBtn.style.padding = "6px 12px";
+        summaryBtn.style.borderRadius = "6px";
+        summaryBtn.style.marginRight = "8px";
+        summaryBtn.style.fontWeight = "500";
       }
     }, 100);
   } catch (error) {

@@ -181,6 +181,14 @@ JAZZMIN_SETTINGS = {
                 "icon": "fas fa-file-upload",
                 "permissions": ["gastos.add_gastos"]
             },
+        ],
+        "ventas": [
+            {
+                "name": "Análisis de Ventas",
+                "url": "admin:ventas_ventas_balances",
+                "icon": "fas fa-chart-line",
+                "permissions": ["ventas.view_ventas"]
+            },
         ]
     },
     

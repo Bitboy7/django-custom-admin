@@ -1,6 +1,7 @@
 {% extends "_base.html" %}
 
 {% load static %}
+{% load l10n %}
 {% load humanize %}
 {% load gastos_tags %}
 {% block extra_css %}
@@ -602,11 +603,11 @@
                 {% endif %}
               </td>
               
-              <td class="px-4 py-3 text-right font-medium text-blue-600" data-order="{{ balance.total_gastos }}">
+              <td class="px-4 py-3 text-right font-medium text-blue-600" data-order="{{ balance.total_gastos|unlocalize }}">
                 ${{ balance.total_gastos|us_currency:2 }}
               </td>
               
-              <td class="px-4 py-3 text-right font-medium text-green-600" data-order="{{ balance.acumulado }}">
+              <td class="px-4 py-3 text-right font-medium text-green-600" data-order="{{ balance.acumulado|unlocalize }}">
                 ${{ balance.acumulado|us_currency:2 }}
               </td>
             </tr>

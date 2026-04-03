@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", function () {
           (node) =>
             node.nodeType === 1 &&
             (node.classList?.contains("import_export_menu") ||
-              node.querySelector?.(".import_export_menu"))
+              node.querySelector?.(".import_export_menu")),
         );
 
         if (hasImportExportMenu) {
@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Agregar animaciones sutiles a los botones
     const buttons = document.querySelectorAll(
-      '.button, .submit-row input[type="submit"]'
+      '.button, .submit-row input[type="submit"]',
     );
     buttons.forEach(function (button) {
       button.addEventListener("mouseenter", function () {
@@ -136,11 +136,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Mejorar la navegación por teclado
     const focusableElements = document.querySelectorAll(
-      "a, button, input, select, textarea"
+      "a, button, input, select, textarea",
     );
     focusableElements.forEach(function (element) {
       element.addEventListener("focus", function () {
-        this.style.outline = "2px solid #4f46e5";
+        this.style.outline = "2px solid #837896";
         this.style.outlineOffset = "2px";
       });
 
@@ -178,7 +178,7 @@ function initLoginEnhancements() {
  */
 function initPasswordToggle() {
   const passwordInput = document.querySelector(
-    'input[type="password"][name="password"]'
+    'input[type="password"][name="password"]',
   );
 
   if (!passwordInput) {
@@ -261,7 +261,7 @@ function togglePasswordVisibility(input, button) {
  */
 function initLoginFormValidation() {
   const inputs = document.querySelectorAll(
-    '.jazzmin-login-page input[type="text"], .jazzmin-login-page input[type="password"], .jazzmin-login-page input[type="email"]'
+    '.jazzmin-login-page input[type="text"], .jazzmin-login-page input[type="password"], .jazzmin-login-page input[type="email"]',
   );
 
   inputs.forEach(function (input) {

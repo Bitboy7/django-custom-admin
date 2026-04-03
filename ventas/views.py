@@ -31,8 +31,8 @@ def detalle_venta(request, venta_id):
     monto_final = venta.calcular_monto_final()
     return render(request, 'detalle_venta.html', {'venta': venta, 'monto_final': monto_final})
 
-def ventas_balances(request):
-    """Vista para mostrar balances y análisis de ventas con filtros avanzados"""
+def build_ventas_balances_context(request):
+    """Construye y retorna el contexto para la vista de balances de ventas."""
     
     # Obtener parámetros de filtro
     selected_cliente_id = request.GET.get('cliente_id', '')
@@ -352,6 +352,12 @@ def ventas_balances(request):
         'estado_choices': Ventas.EstadoCobranza.choices,
     }
     
+    return context
+
+
+def ventas_balances(request):
+    """Vista para mostrar balances y análisis de ventas con filtros avanzados"""
+    context = build_ventas_balances_context(request)
     return render(request, 'ventas/ventas_balances.html', context)
 
 

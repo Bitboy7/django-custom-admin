@@ -432,6 +432,11 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
         urls = super().get_urls()
         custom_urls = [
             path(
+                'balances/',
+                self.admin_site.admin_view(self.ventas_balances_admin_view),
+                name='ventas_ventas_balances',
+            ),
+            path(
                 'dashboard-ventas/',
                 self.admin_site.admin_view(self.dashboard_ventas),
                 name='ventas_dashboard',
@@ -642,7 +647,23 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
     # =============================================================================
     # VISTAS PERSONALIZADAS DE REPORTES
     # =============================================================================
-    
+
+    def ventas_balances_admin_view(self, request):
+        """Vista de análisis de balances de ventas integrada en el admin de Django."""
+        from ventas.views import build_ventas_balances_context
+        from app.services.filter_utils import FilterOptionsProvider
+
+        context = build_ventas_balances_context(request)
+        context.update(self.admin_site.each_context(request))
+        context.update({
+            'title': 'Análisis de Ventas',
+            'subtitle': None,
+            'opts': self.model._meta,
+            'has_view_permission': self.has_view_permission(request),
+            'months': FilterOptionsProvider.get_months_list(),
+        })
+        return TemplateResponse(request, 'admin/ventas/ventas_balances.html', context)
+
     def dashboard_ventas(self, request):
         """Dashboard principal de ventas con métricas clave"""
         try:
