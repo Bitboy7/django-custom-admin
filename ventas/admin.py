@@ -437,6 +437,11 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
                 name='ventas_ventas_balances',
             ),
             path(
+                'reporte-cobranza/',
+                self.admin_site.admin_view(self.reporte_cobranza_admin_view),
+                name='ventas_reporte_cobranza',
+            ),
+            path(
                 'dashboard-ventas/',
                 self.admin_site.admin_view(self.dashboard_ventas),
                 name='ventas_dashboard',
@@ -663,6 +668,58 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
             'months': FilterOptionsProvider.get_months_list(),
         })
         return TemplateResponse(request, 'admin/ventas/ventas_balances.html', context)
+
+    def reporte_cobranza_admin_view(self, request):
+        """Vista del Reporte Global de Cobranza integrada en el admin de Django."""
+        from ventas.views import reporte_cobranza_global
+        from datetime import date
+        from decimal import Decimal
+        from ventas.services.reporte_cobranza_service import generar_reporte_cobranza
+
+        hoy = date.today()
+        default_inicio = date(hoy.year, 1, 1)
+        default_fin = date(hoy.year, 12, 31)
+
+        fecha_inicio_str = request.GET.get('fecha_inicio', default_inicio.isoformat())
+        fecha_fin_str = request.GET.get('fecha_fin', default_fin.isoformat())
+        tipo_cambio_str = request.GET.get('tipo_cambio', '')
+
+        try:
+            fecha_inicio = date.fromisoformat(fecha_inicio_str)
+        except (ValueError, TypeError):
+            fecha_inicio = default_inicio
+
+        try:
+            fecha_fin = date.fromisoformat(fecha_fin_str)
+        except (ValueError, TypeError):
+            fecha_fin = default_fin
+
+        tipo_cambio_override = None
+        if tipo_cambio_str:
+            try:
+                tipo_cambio_override = Decimal(tipo_cambio_str)
+            except Exception:
+                pass
+
+        datos = generar_reporte_cobranza(
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            tipo_cambio_override=tipo_cambio_override,
+        )
+
+        context = {**datos}
+        context.update(self.admin_site.each_context(request))
+        context.update({
+            'title': 'Reporte Global de Cobranza',
+            'subtitle': None,
+            'opts': self.model._meta,
+            'has_view_permission': self.has_view_permission(request),
+            'fecha_inicio_str': fecha_inicio.isoformat(),
+            'fecha_fin_str': fecha_fin.isoformat(),
+            'tipo_cambio_input': tipo_cambio_str,
+            'hoy': hoy,
+        })
+        return TemplateResponse(request, 'admin/ventas/reporte_cobranza.html', context)
 
     def dashboard_ventas(self, request):
         """Dashboard principal de ventas con métricas clave"""

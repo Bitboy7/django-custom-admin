@@ -189,6 +189,12 @@ JAZZMIN_SETTINGS = {
                 "icon": "fas fa-chart-line",
                 "permissions": ["ventas.view_ventas"]
             },
+            {
+                "name": "Reporte de Cobranza",
+                "url": "admin:ventas_reporte_cobranza",
+                "icon": "fas fa-file-invoice-dollar",
+                "permissions": ["ventas.view_ventas"]
+            },
         ]
     },
     

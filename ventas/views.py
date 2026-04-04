@@ -33,7 +33,27 @@ def detalle_venta(request, venta_id):
 
 def build_ventas_balances_context(request):
     """Construye y retorna el contexto para la vista de balances de ventas."""
-    
+
+    def _derive_estado(total_ventas, total_pagado, estado_stored, fecha_vencimiento):
+        """
+        Deriva el estado de cobranza real a partir de los totales agregados,
+        replicando la lógica de Ventas.actualizar_estado_cobranza().
+        Para grupos de contado el estado almacenado ya es Pagado; para crédito
+        lo calculamos desde el saldo.
+        """
+        saldo = total_ventas - total_pagado
+        if saldo <= 0:
+            return 'Pagado'
+        if total_pagado > 0:
+            # Hay pagos parciales — verificar vencimiento
+            hoy = timezone.now().date()
+            vencida = (fecha_vencimiento and fecha_vencimiento < hoy)
+            return 'Vencido' if vencida else 'Parcial'
+        # Sin pagos
+        hoy = timezone.now().date()
+        vencida = (fecha_vencimiento and fecha_vencimiento < hoy)
+        return 'Vencido' if vencida else 'Pendiente'
+
     # Obtener parámetros de filtro
     selected_cliente_id = request.GET.get('cliente_id', '')
     selected_cuenta_id = request.GET.get('cuenta_id', '')
@@ -137,6 +157,8 @@ def build_ventas_balances_context(request):
             total = float(grupo['total_ventas'] or 0)
             acumulado += total
             
+            _pagado = float(grupo['total_pagado'] or 0)
+            _venc   = grupo.get('fecha_vencimiento_proxima')
             balances.append({
                 'numero_secuencial': idx + 1,
                 'cliente_nombre': grupo['cliente__nombre'],
@@ -145,10 +167,10 @@ def build_ventas_balances_context(request):
                 'sucursal_nombre': grupo['sucursal_id__nombre'],
                 'fecha': grupo['fecha_grupo'],
                 'total_ventas': total,
-                'total_pagado': float(grupo['total_pagado'] or 0),
-                'saldo_pendiente': total - float(grupo['total_pagado'] or 0),
-                'estado_cobranza': grupo.get('estado_cobranza_principal', 'Pendiente') or 'Pendiente',
-                'fecha_vencimiento': grupo.get('fecha_vencimiento_proxima'),
+                'total_pagado': _pagado,
+                'saldo_pendiente': total - _pagado,
+                'estado_cobranza': _derive_estado(total, _pagado, grupo.get('estado_cobranza_principal', 'Pendiente'), _venc),
+                'fecha_vencimiento': _venc,
                 'venta_maxima': float(grupo['venta_maxima'] or 0),
                 'venta_minima': float(grupo['venta_minima'] or 0),
                 'venta_promedio': float(grupo['venta_promedio'] or 0),
@@ -168,7 +190,8 @@ def build_ventas_balances_context(request):
             numero_transacciones=Count('id'),
             venta_maxima=Max('monto'),
             venta_minima=Min('monto'),
-            venta_promedio=Avg('monto')
+            venta_promedio=Avg('monto'),
+            fecha_vencimiento_proxima=Min('fecha_vencimiento')
         ).order_by('fecha_grupo', 'cliente__nombre')
         
         acumulado = 0
@@ -176,6 +199,8 @@ def build_ventas_balances_context(request):
             total = float(grupo['total_ventas'] or 0)
             acumulado += total
             
+            _pagado = float(grupo['total_pagado'] or 0)
+            _venc   = grupo.get('fecha_vencimiento_proxima')
             balances.append({
                 'numero_secuencial': idx + 1,
                 'cliente_nombre': grupo['cliente__nombre'],
@@ -184,10 +209,10 @@ def build_ventas_balances_context(request):
                 'sucursal_nombre': grupo['sucursal_id__nombre'],
                 'fecha': grupo['fecha_grupo'],
                 'total_ventas': total,
-                'total_pagado': float(grupo['total_pagado'] or 0),
-                'saldo_pendiente': total - float(grupo['total_pagado'] or 0),
-                'estado_cobranza': grupo.get('estado_cobranza_principal', 'Pendiente') or 'Pendiente',
-                'fecha_vencimiento': grupo.get('fecha_vencimiento_proxima'),
+                'total_pagado': _pagado,
+                'saldo_pendiente': total - _pagado,
+                'estado_cobranza': _derive_estado(total, _pagado, None, _venc),
+                'fecha_vencimiento': _venc,
                 'venta_maxima': float(grupo['venta_maxima'] or 0),
                 'venta_minima': float(grupo['venta_minima'] or 0),
                 'venta_promedio': float(grupo['venta_promedio'] or 0),
@@ -207,7 +232,8 @@ def build_ventas_balances_context(request):
             numero_transacciones=Count('id'),
             venta_maxima=Max('monto'),
             venta_minima=Min('monto'),
-            venta_promedio=Avg('monto')
+            venta_promedio=Avg('monto'),
+            fecha_vencimiento_proxima=Min('fecha_vencimiento')
         ).order_by('fecha_grupo', 'cliente__nombre')
         
         acumulado = 0
@@ -215,6 +241,8 @@ def build_ventas_balances_context(request):
             total = float(grupo['total_ventas'] or 0)
             acumulado += total
             
+            _pagado = float(grupo['total_pagado'] or 0)
+            _venc   = grupo.get('fecha_vencimiento_proxima')
             balances.append({
                 'numero_secuencial': idx + 1,
                 'cliente_nombre': grupo['cliente__nombre'],
@@ -223,10 +251,10 @@ def build_ventas_balances_context(request):
                 'sucursal_nombre': grupo['sucursal_id__nombre'],
                 'fecha': grupo['fecha_grupo'],
                 'total_ventas': total,
-                'total_pagado': float(grupo['total_pagado'] or 0),
-                'saldo_pendiente': total - float(grupo['total_pagado'] or 0),
-                'estado_cobranza': grupo.get('estado_cobranza_principal', 'Pendiente') or 'Pendiente',
-                'fecha_vencimiento': grupo.get('fecha_vencimiento_proxima'),
+                'total_pagado': _pagado,
+                'saldo_pendiente': total - _pagado,
+                'estado_cobranza': _derive_estado(total, _pagado, None, _venc),
+                'fecha_vencimiento': _venc,
                 'venta_maxima': float(grupo['venta_maxima'] or 0),
                 'venta_minima': float(grupo['venta_minima'] or 0),
                 'venta_promedio': float(grupo['venta_promedio'] or 0),
