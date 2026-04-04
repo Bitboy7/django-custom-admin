@@ -1,8 +1,14 @@
-{% extends "_base.html" %}
+{% extends "admin/base_site.html" %}
+{% load i18n %}
 {% load gastos_tags %}
+{% block breadcrumbs %}{% endblock %}
+{% block title %}Estado de Cuenta Procesado{% endblock %}
+{% block extrahead %}{{ block.super }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50 py-8">
+<div>
     <div class="max-w-7xl mx-auto px-6">
         <!-- Header Section -->
         <div class="text-center mb-8">

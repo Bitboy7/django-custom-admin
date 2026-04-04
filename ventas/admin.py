@@ -1402,6 +1402,6 @@ class ObligacionFiscalAdmin(ModelAdmin):
     )
 
     def get_total(self, obj):
-        total = obj.total_impuestos()
-        return format_html('<strong>${:,.2f}</strong>', total)
+        total = float(obj.total_impuestos())
+        return format_html('<strong>${}</strong>', f'{total:,.2f}')
     get_total.short_description = 'Total Impuestos'

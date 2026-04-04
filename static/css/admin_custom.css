@@ -604,10 +604,10 @@ label,
   transition: background var(--t);
 }
 
-.paginator a:hover {
+paginator a:hover {
   background: var(--c-blue-tint) !important;
 }
-.paginator .this-page {
+paginator .this-page {
   background: var(--c-blue) !important;
   color: #fff !important;
   border-radius: var(--r-sm);
@@ -1714,9 +1714,19 @@ body.jazzmin-login-page .errorlist {
 
 /* Resumen Excel */
 .dt-button.btn-summary-excel {
-  background-color: #6d28d9 !important;
+  background-color: #5d5669 !important;
   color: #fff !important;
 }
 .dt-button.btn-summary-excel:hover {
-  background-color: #5b21b6 !important;
+  background-color: #5d5669 !important;
+}
+
+/* Pestaña activa en formularios */
+#jazzy-tabs .nav-link.active {
+  color: var(--c-navy-dark) !important;
+}
+
+/* Pestaña inactiva */
+#jazzy-tabs .nav-link {
+  color: var(--c-text-soft) !important;
 }

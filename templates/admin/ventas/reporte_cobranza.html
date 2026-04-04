@@ -85,6 +85,15 @@
     color: #9ca3af;
   }
 
+  /* Moneda por fila */
+  .rc-row-usd td { background-color: #f0fdf4; }
+  .rc-mon { text-align: center; font-weight: 700; font-size: 0.7rem; padding: 2px 5px; border-radius: 3px; white-space: nowrap; }
+  .rc-mon-usd { color: #166534; background-color: #bbf7d0; }
+  .rc-mon-mxn { color: #1e40af; background-color: #bfdbfe; }
+  /* Footer cartera */
+  .rc-equiv-row td { background-color: #dcfce7; color: #14532d; font-weight: 600; }
+  .rc-grand-total td { background-color: #0c4a6e; color: #fff; font-weight: 700; font-size: 0.9rem; }
+
   .rc-scroll {
     overflow-x: auto;
   }
@@ -229,7 +238,7 @@
           </tr>
           <tr>
             <th class="rc-header-col" style="min-width:200px;">CLIENTE / CONCEPTO</th>
-            <th class="rc-header-col"></th>
+            <th class="rc-header-col" style="min-width:55px;">MON.</th>
             {% for suc in sucursales %}
             <th class="rc-header-col" style="min-width:130px;">{{ suc.nombre|upper }}</th>
             {% endfor %}
@@ -251,17 +260,19 @@
           {% endif %}
 
           {% for fila in ventas_por_cliente %}
-          <tr class="rc-row">
+          <tr class="rc-row {% if fila.moneda == 'USD' %}rc-row-usd{% endif %}">
             <td style="font-weight:500; color:#1f2937;">{{ fila.cliente.nombre|upper }}</td>
-            <td class="rc-num" style="color:#9ca3af; font-size:0.7rem;">$</td>
+            <td class="rc-mon">
+              {% if fila.moneda == 'USD' %}<span class="rc-mon-usd">USD</span>{% else %}<span class="rc-mon-mxn">MXN</span>{% endif %}
+            </td>
             {% for suc in sucursales %}
               {% with monto=fila.por_sucursal|get_item:suc.id %}
               <td class="rc-num {% if not monto or monto == 0 %}rc-zero{% endif %}">
-                {% if monto and monto > 0 %}$ {{ monto|floatformat:2|intcomma }}{% else %}-{% endif %}
+                {% if monto and monto > 0 %}{% if fila.moneda == 'USD' %}US{% endif %}$ {{ monto|floatformat:2|intcomma }}{% else %}-{% endif %}
               </td>
               {% endwith %}
             {% endfor %}
-            <td class="rc-num rc-col-total">$ {{ fila.total|floatformat:2|intcomma }}</td>
+            <td class="rc-num rc-col-total">{% if fila.moneda == 'USD' %}US{% endif %}$ {{ fila.total|floatformat:2|intcomma }}</td>
             {% if total_anticipos > 0 %}
             <td class="rc-num" style="background-color:#dbeafe;">
               {% if fila.anticipo > 0 %}$ {{ fila.anticipo|floatformat:2|intcomma }}{% else %}-{% endif %}
@@ -277,20 +288,58 @@
           {% endfor %}
         </tbody>
         <tfoot>
+          {% if total_ventas_usd > 0 %}
+          <!-- SUBTOTAL EXPORTACIÓN USD -->
           <tr class="rc-total">
-            <td>TOTAL VENTAS X COBRAR TODO LOS ESTADOS</td>
-            <td class="rc-num">$</td>
+            <td>SUBTOTAL EXPORTACIÓN (USD)</td>
+            <td class="rc-mon"><span class="rc-mon-usd">USD</span></td>
             {% for suc in sucursales %}
-              {% with monto=totales_ventas.por_sucursal|get_item:suc.id %}
-              <td class="rc-num">
-                {% if monto and monto > 0 %}$ {{ monto|floatformat:2|intcomma }}{% else %}-{% endif %}
-              </td>
+              {% with monto=totales_ventas_usd.por_sucursal|get_item:suc.id %}
+              <td class="rc-num">{% if monto and monto > 0 %}US$ {{ monto|floatformat:2|intcomma }}{% else %}-{% endif %}</td>
               {% endwith %}
             {% endfor %}
-            <td class="rc-num">$ {{ totales_ventas.total|floatformat:2|intcomma }}</td>
+            <td class="rc-num">US$ {{ total_ventas_usd|floatformat:2|intcomma }}</td>
+            {% if total_anticipos > 0 %}<td></td>{% endif %}
+          </tr>
+          <!-- TIPO DE CAMBIO -->
+          <tr class="rc-subtotal">
+            <td>TIPO DE CAMBIO {{ hoy|date:"d-m-Y" }} USD → MXN</td>
+            <td class="rc-num">{{ tipo_cambio_ventas|floatformat:4 }}</td>
+            {% for suc in sucursales %}<td></td>{% endfor %}
+            <td></td>
+            {% if total_anticipos > 0 %}<td></td>{% endif %}
+          </tr>
+          <!-- EQUIVALENTE MXN -->
+          <tr class="rc-equiv-row">
+            <td>EQUIVALENTE EN PESOS MEXICANOS</td>
+            <td class="rc-mon"><span class="rc-mon-mxn">MXN</span></td>
+            {% for suc in sucursales %}<td></td>{% endfor %}
+            <td class="rc-num">$ {{ total_ventas_equiv_mxn|floatformat:2|intcomma }}</td>
+            {% if total_anticipos > 0 %}<td></td>{% endif %}
+          </tr>
+          {% endif %}
+          {% if total_ventas_mxn_nat > 0 %}
+          <!-- SUBTOTAL NACIONALES MXN -->
+          <tr class="rc-subtotal">
+            <td>SUBTOTAL VENTAS NACIONALES</td>
+            <td class="rc-mon"><span class="rc-mon-mxn">MXN</span></td>
+            {% for suc in sucursales %}
+              {% with monto=totales_ventas_mxn_obj.por_sucursal|get_item:suc.id %}
+              <td class="rc-num">{% if monto and monto > 0 %}$ {{ monto|floatformat:2|intcomma }}{% else %}-{% endif %}</td>
+              {% endwith %}
+            {% endfor %}
+            <td class="rc-num">$ {{ total_ventas_mxn_nat|floatformat:2|intcomma }}</td>
             {% if total_anticipos > 0 %}
             <td class="rc-num" style="background-color:#93c5fd;">SALDO TOTAL FVR</td>
             {% endif %}
+          </tr>
+          {% endif %}
+          <!-- TOTAL CARTERA MXN -->
+          <tr class="rc-grand-total">
+            <td colspan="2">TOTAL CARTERA A COBRAR (EQUIVALENTE MXN)</td>
+            {% for suc in sucursales %}<td></td>{% endfor %}
+            <td class="rc-num" style="font-size:1rem; letter-spacing:0.02em;">$ {{ total_cartera_ventas_mxn|floatformat:2|intcomma }}</td>
+            {% if total_anticipos > 0 %}<td></td>{% endif %}
           </tr>
         </tfoot>
       </table>

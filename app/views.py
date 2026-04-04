@@ -16,7 +16,7 @@ from .services.excel_service import ExcelReportService
 from .services.balance_service import BalanceAnalysisService
 from .services.utils import UtilService
 from gastos.models import Gastos, Compra
-from ventas.models import Ventas
+from ventas.models import Ventas, Cliente
 from auditoria.models import LogActividad
 
 logger = logging.getLogger(__name__)
@@ -188,9 +188,64 @@ def dashboard_callback(request, context):
                 }
             ]
         
+        # Conteos del mes
+        gastos_count = Gastos.objects.filter(
+            fecha__month=current_month, fecha__year=current_year
+        ).count()
+        ventas_count = Ventas.objects.filter(
+            fecha_salida_manifiesto__month=current_month,
+            fecha_salida_manifiesto__year=current_year
+        ).count()
+        compras_count = Compra.objects.filter(
+            fecha_compra__month=current_month, fecha_compra__year=current_year
+        ).count()
+
+        # Cuentas por cobrar: ventas pendientes / vencidas
+        ventas_vigentes = Ventas.objects.filter(
+            estado_cobranza__in=['Pendiente', 'Parcial']
+        ).aggregate(total=Sum('monto'))['total'] or 0
+        ventas_vigentes_count = Ventas.objects.filter(
+            estado_cobranza__in=['Pendiente', 'Parcial']
+        ).count()
+        ventas_vencidas = Ventas.objects.filter(
+            estado_cobranza='Vencido'
+        ).aggregate(total=Sum('monto'))['total'] or 0
+        ventas_vencidas_count = Ventas.objects.filter(
+            estado_cobranza='Vencido'
+        ).count()
+
+        # Clientes nuevos este mes vs mes anterior
+        clientes_nuevos = Cliente.objects.filter(
+            fecha_registro__month=current_month, fecha_registro__year=current_year
+        ).count()
+        clientes_mes_anterior = Cliente.objects.filter(
+            fecha_registro__month=last_month, fecha_registro__year=last_month_year
+        ).count()
+        clientes_trend = 0
+        if clientes_mes_anterior > 0:
+            clientes_trend = ((clientes_nuevos - clientes_mes_anterior) / clientes_mes_anterior) * 100
+
+        # Productos comprados (toneladas/unidades) este mes
+        productos_mes = Compra.objects.filter(
+            fecha_compra__month=current_month, fecha_compra__year=current_year
+        ).aggregate(total=Sum('cantidad'))['total'] or 0
+        productos_mes_anterior = Compra.objects.filter(
+            fecha_compra__month=last_month, fecha_compra__year=last_month_year
+        ).aggregate(total=Sum('cantidad'))['total'] or 0
+        productos_trend = 0
+        if productos_mes_anterior > 0:
+            productos_trend = ((productos_mes - productos_mes_anterior) / productos_mes_anterior) * 100
+
+        # Tendencia del balance neto
+        balance_mes_anterior = ventas_mes_anterior - gastos_mes_anterior - compras_mes_anterior
+        balance_trend = 0
+        if balance_mes_anterior != 0:
+            balance_trend = ((balance_neto - balance_mes_anterior) / abs(balance_mes_anterior)) * 100
+
         # Total de usuarios
         total_users = User.objects.count()
-        
+        total_clientes = Cliente.objects.filter(activo=True).count()
+
     except Exception as e:
         # En caso de error, usar valores por defecto
         total_gastos = 0
@@ -200,6 +255,19 @@ def dashboard_callback(request, context):
         ventas_trend = 0
         compras_trend = 0
         balance_neto = 0
+        balance_trend = 0
+        gastos_count = 0
+        ventas_count = 0
+        compras_count = 0
+        ventas_vigentes = 0
+        ventas_vigentes_count = 0
+        ventas_vencidas = 0
+        ventas_vencidas_count = 0
+        clientes_nuevos = 0
+        clientes_trend = 0
+        productos_mes = 0
+        productos_trend = 0
+        total_clientes = 0
         gastos_categorias_labels = []
         gastos_categorias_data = []
         meses_labels = ['01/2025', '02/2025', '03/2025', '04/2025', '05/2025', '06/2025']
@@ -207,7 +275,7 @@ def dashboard_callback(request, context):
         ventas_mensuales = [0, 0, 0, 0, 0, 0]
         recent_activities = []
         total_users = User.objects.count()
-    
+
     # Actualizar el contexto con los datos del dashboard
     context.update({
         'total_gastos': total_gastos,
@@ -217,6 +285,19 @@ def dashboard_callback(request, context):
         'ventas_trend': ventas_trend,
         'compras_trend': compras_trend,
         'balance_neto': balance_neto,
+        'balance_trend': balance_trend,
+        'gastos_count': gastos_count,
+        'ventas_count': ventas_count,
+        'compras_count': compras_count,
+        'ventas_vigentes': ventas_vigentes,
+        'ventas_vigentes_count': ventas_vigentes_count,
+        'ventas_vencidas': ventas_vencidas,
+        'ventas_vencidas_count': ventas_vencidas_count,
+        'clientes_nuevos': clientes_nuevos,
+        'clientes_trend': clientes_trend,
+        'productos_vendidos': productos_mes,
+        'productos_trend': productos_trend,
+        'total_clientes': total_clientes,
         'gastos_categorias_labels': json.dumps(gastos_categorias_labels),
         'gastos_categorias_data': json.dumps(gastos_categorias_data),
         'meses_labels': json.dumps(meses_labels),
@@ -226,8 +307,8 @@ def dashboard_callback(request, context):
         'total_users': total_users,
         'last_login': request.user.last_login,
         'last_update': now.date(),
-        'current_year': current_year,
-        'current_month_name': calendar.month_name[current_month],
+        'current_year': str(current_year),
+        'current_month_name': now.strftime('%B'),
         'total_categorias': len(gastos_categorias_labels)
     })
     

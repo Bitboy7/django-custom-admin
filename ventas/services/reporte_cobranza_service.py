@@ -72,16 +72,23 @@ def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_over
     )
 
     # -------------------------------------------------------------------------
-    # 3. Tabla Ventas x Cobrar
+    # 3. Tabla Ventas x Cobrar (agrupada por cliente × moneda_venta)
     # -------------------------------------------------------------------------
-    ventas_por_cliente = _calcular_saldos_por_cliente(qs_ventas, sucursales, moneda='MXN')
+    ventas_por_cliente = _calcular_saldos_por_cliente(qs_ventas, sucursales)
 
-    totales_ventas = _calcular_totales(ventas_por_cliente, sucursales)
+    # Tipo de cambio para convertir ventas USD → MXN
+    avg_tc_ventas = qs_ventas.filter(moneda_venta='USD').aggregate(avg=Avg('tipo_cambio'))['avg']
+
+    filas_venta_usd = [f for f in ventas_por_cliente if f['moneda'] == 'USD']
+    filas_venta_mxn = [f for f in ventas_por_cliente if f['moneda'] == 'MXN']
+    totales_ventas_usd = _calcular_totales(filas_venta_usd, sucursales)
+    totales_ventas_mxn_obj = _calcular_totales(filas_venta_mxn, sucursales)
+    totales_ventas = _calcular_totales(ventas_por_cliente, sucursales)  # suma mixta (legacy)
 
     # -------------------------------------------------------------------------
     # 4. Tabla Maquila x Cobrar
     # -------------------------------------------------------------------------
-    maquila_por_cliente = _calcular_saldos_por_cliente(qs_maquila, sucursales, moneda='USD')
+    maquila_por_cliente = _calcular_saldos_por_cliente(qs_maquila, sucursales)
 
     # Tipo de cambio: usar override manual o promedio de los registros
     if tipo_cambio_override and Decimal(str(tipo_cambio_override)) > 0:
@@ -105,10 +112,13 @@ def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_over
     for a in anticipos_qs:
         anticipos_por_cliente[a.cliente_id] += float(a.monto.amount)
 
-    # Inyectar saldo FVR en las filas de ventas
+    # Inyectar saldo FVR en las filas de ventas (solo en la primera fila por cliente)
+    seen_anticipo_ids = set()
     for fila in ventas_por_cliente:
         cliente_id = fila['cliente'].id
-        fila['anticipo'] = anticipos_por_cliente.get(cliente_id, 0.0)
+        if cliente_id not in seen_anticipo_ids:
+            fila['anticipo'] = anticipos_por_cliente.get(cliente_id, 0.0)
+            seen_anticipo_ids.add(cliente_id)
 
     # Total global de anticipos (encabezado "PANORAMA ANTICIPOS")
     total_anticipos = sum(anticipos_por_cliente.values())
@@ -118,11 +128,32 @@ def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_over
     # -------------------------------------------------------------------------
     obligacion_fiscal = ObligacionFiscal.objects.order_by('-fecha_registro').first()
 
+    # -------------------------------------------------------------------------
+    # 7. Equivalencias y cartera consolidada de Ventas (como un banco)
+    # -------------------------------------------------------------------------
+    # Tipo de cambio ventas: promedio real del período o fallback a TC maquila
+    if avg_tc_ventas:
+        tipo_cambio_ventas = Decimal(str(avg_tc_ventas)).quantize(Decimal('0.0001'))
+    else:
+        tipo_cambio_ventas = tipo_cambio
+
+    total_ventas_usd      = totales_ventas_usd['total']
+    total_ventas_mxn_nat  = totales_ventas_mxn_obj['total']
+    total_ventas_equiv_mxn = total_ventas_usd * float(tipo_cambio_ventas)
+    total_cartera_ventas_mxn = total_ventas_mxn_nat + total_ventas_equiv_mxn
+
     return {
         'sucursales': sucursales,
         'ventas_por_cliente': ventas_por_cliente,
         'maquila_por_cliente': maquila_por_cliente,
         'totales_ventas': totales_ventas,
+        'totales_ventas_usd': totales_ventas_usd,
+        'totales_ventas_mxn_obj': totales_ventas_mxn_obj,
+        'tipo_cambio_ventas': tipo_cambio_ventas,
+        'total_ventas_usd': total_ventas_usd,
+        'total_ventas_mxn_nat': total_ventas_mxn_nat,
+        'total_ventas_equiv_mxn': total_ventas_equiv_mxn,
+        'total_cartera_ventas_mxn': total_cartera_ventas_mxn,
         'totales_maquila': totales_maquila,
         'tipo_cambio': tipo_cambio,
         'anticipos_por_cliente': dict(anticipos_por_cliente),
@@ -137,19 +168,14 @@ def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_over
 # Helpers
 # =============================================================================
 
-def _calcular_saldos_por_cliente(qs, sucursales, moneda='MXN'):
+def _calcular_saldos_por_cliente(qs, sucursales):
     """
-    Agrupa el queryset de Ventas por (cliente, sucursal) y
-    retorna una lista de dicts, uno por cliente.
-
-    Cada dict:
-        cliente         — instancia Cliente
-        por_sucursal    — {sucursal.id: saldo_float}
-        total           — saldo total del cliente
+    Agrupa por (cliente, moneda_venta) — una fila por combinación.
+    El campo 'moneda' en cada fila es la moneda real del saldo ('USD' o 'MXN').
+    Esto permite calcular correctamente equivalencias sin mezclar divisas.
     """
-    # Agrupar en Python para poder llamar saldo_pendiente() sin duplicar lógica SQL
-    # (el saldo = monto - monto_pagado, ya calculado en el modelo)
-    acum = defaultdict(lambda: defaultdict(float))   # {cliente_id: {sucursal_id: saldo}}
+    # acum[cliente_id][moneda][sucursal_id] = saldo_float
+    acum = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
     clientes_map = {}
 
     for v in qs:
@@ -158,22 +184,25 @@ def _calcular_saldos_por_cliente(qs, sucursales, moneda='MXN'):
             continue
         cid = v.cliente_id
         sid = v.sucursal_id_id
-        acum[cid][sid] += saldo
+        mon = 'USD' if (getattr(v, 'moneda_venta', 'MXN') or 'MXN').upper() == 'USD' else 'MXN'
+        acum[cid][mon][sid] += saldo
         clientes_map[cid] = v.cliente
 
     filas = []
-    for cid, por_suc in acum.items():
-        total = sum(por_suc.values())
-        filas.append({
-            'cliente': clientes_map[cid],
-            'por_sucursal': dict(por_suc),
-            'total': total,
-            'anticipo': 0.0,   # se rellena más abajo para ventas
-            'moneda': moneda,
-        })
+    for cid, por_moneda in acum.items():
+        for mon, por_suc in por_moneda.items():
+            total = sum(por_suc.values())
+            if total > 0:
+                filas.append({
+                    'cliente': clientes_map[cid],
+                    'por_sucursal': dict(por_suc),
+                    'total': total,
+                    'moneda': mon,
+                    'anticipo': 0.0,
+                })
 
-    # Ordenar por nombre del cliente
-    filas.sort(key=lambda r: r['cliente'].nombre)
+    # Ordenar por nombre del cliente, luego por moneda (MXN < USD)
+    filas.sort(key=lambda r: (r['cliente'].nombre, r['moneda']))
     return filas
 
 
