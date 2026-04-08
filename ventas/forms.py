@@ -1,5 +1,27 @@
 from django import forms
-from .models import Anticipo
+from .models import Anticipo, Ventas
+
+
+class VentasAdminForm(forms.ModelForm):
+    """Form for Ventas admin with smart validation rules."""
+
+    class Meta:
+        model = Ventas
+        fields = '__all__'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        modalidad = cleaned_data.get('modalidad_pago')
+        termino = cleaned_data.get('termino_credito')
+
+        if modalidad == Ventas.ModalidadPago.CREDITO and not termino:
+            self.add_error(
+                'termino_credito',
+                'El término de crédito es obligatorio para ventas a crédito.'
+            )
+
+        return cleaned_data
+
 
 class AnticipoForm(forms.ModelForm):
     class Meta:

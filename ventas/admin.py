@@ -10,6 +10,7 @@ from .models import (
     SaldoCliente, AntigüedadSaldo, EstadoCuentaCliente, ConfiguracionCuentasPorCobrar,
     ObligacionFiscal
 )
+from .forms import VentasAdminForm
 from catalogo.models import Sucursal, Pais, Producto
 from gastos.models import Cuenta
 from import_export import resources
@@ -370,6 +371,10 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = VentasResource
     import_form_class = ImportForm
     export_form_class = ExportForm
+    form = VentasAdminForm
+
+    class Media:
+        js = ('js/ventas_form_logic.js',)
     
     list_display = (
         'fecha_salida_manifiesto', 'carga', 'get_cliente_info', 'get_monto_formateado', 
@@ -482,8 +487,54 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
                 self.admin_site.admin_view(self.exportar_excel_personalizado),
                 name='ventas_exportar_excel',
             ),
+            path(
+                'api/cliente-info/<int:pk>/',
+                self.admin_site.admin_view(self.api_cliente_info),
+                name='ventas_api_cliente_info',
+            ),
+            path(
+                'api/termino-credito-info/<int:pk>/',
+                self.admin_site.admin_view(self.api_termino_credito_info),
+                name='ventas_api_termino_credito_info',
+            ),
         ]
         return custom_urls + urls
+
+    def api_cliente_info(self, request, pk):
+        """Returns client data for form auto-fill logic (JSON)."""
+        try:
+            cliente = Cliente.objects.select_related(
+                'pais', 'mercado_destino', 'termino_credito_predeterminado'
+            ).get(pk=pk)
+        except Cliente.DoesNotExist:
+            return JsonResponse({'error': 'Not found'}, status=404)
+
+        pais_nombre = cliente.pais.nombre if cliente.pais else ''
+        es_extranjero = pais_nombre.lower() not in ('méxico', 'mexico')
+
+        mercado_id = None
+        if cliente.mercado_destino_id:
+            mercado_id = cliente.mercado_destino_id
+        elif es_extranjero:
+            md = MercadoDestino.objects.filter(
+                paises=cliente.pais, activo=True
+            ).first()
+            mercado_id = md.pk if md else None
+
+        return JsonResponse({
+            'es_extranjero': es_extranjero,
+            'pais_nombre': pais_nombre,
+            'mercado_destino_id': mercado_id,
+            'termino_credito_id': cliente.termino_credito_predeterminado_id,
+        })
+
+    def api_termino_credito_info(self, request, pk):
+        """Returns dias_credito for a TerminoCredito so JS can calculate due date."""
+        try:
+            tc = TerminoCredito.objects.get(pk=pk)
+        except TerminoCredito.DoesNotExist:
+            return JsonResponse({'error': 'Not found'}, status=404)
+        return JsonResponse({'dias_credito': tc.dias_credito})
     
     def get_cliente_info(self, obj):
         """Información del cliente con indicador de riesgo"""

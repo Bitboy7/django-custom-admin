@@ -142,6 +142,289 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
     
     actions = ['export_to_excel']
 
+    def export_to_excel(self, request, queryset):
+        from django.http import HttpResponse
+        import openpyxl
+        import datetime
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.utils import get_column_letter
+        from openpyxl.worksheet.table import Table, TableStyleInfo
+        from collections import defaultdict
+
+        NAVY  = "1E3A5F"
+        TEAL  = "1AADBC"
+        LIGHT = "D6EAF8"
+        WHITE = "FFFFFF"
+        MONEY = '"$"#,##0.00'
+
+        def _nav_hdr(cell, bg=NAVY):
+            cell.font      = Font(bold=True, color=WHITE)
+            cell.fill      = PatternFill("solid", fgColor=bg)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        def _section_title(ws, row, col_start, col_end, text):
+            cell = ws.cell(row=row, column=col_start, value=text)
+            cell.font = Font(bold=True, color=WHITE, size=11)
+            cell.fill = PatternFill("solid", fgColor=NAVY)
+            cell.alignment = Alignment(horizontal="left", vertical="center")
+            if col_end > col_start:
+                ws.merge_cells(
+                    start_row=row, start_column=col_start,
+                    end_row=row,   end_column=col_end,
+                )
+            ws.row_dimensions[row].height = 20
+
+        def _add_table(ws, name, hdr_row, data_end_row, col_end):
+            if data_end_row < hdr_row + 1:
+                return
+            tab = Table(
+                displayName=name,
+                ref=f"A{hdr_row}:{get_column_letter(col_end)}{data_end_row}",
+            )
+            tab.tableStyleInfo = TableStyleInfo(
+                name="TableStyleLight2",
+                showFirstColumn=False, showLastColumn=False,
+                showRowStripes=True,   showColumnStripes=False,
+            )
+            ws.add_table(tab)
+
+        queryset = queryset.select_related(
+            'id_sucursal', 'id_cat_gastos', 'id_cuenta_banco'
+        ).order_by('fecha')
+        data = list(queryset)
+
+        wb = openpyxl.Workbook()
+
+        # ── HOJA 1 — Detalle ─────────────────────────────────────────────────
+        ws = wb.active
+        ws.title = "Detalle"
+
+        COLUMNS = [
+            ("Fecha",        lambda g: g.fecha,                          14,  "DD/MM/YYYY"),
+            ("Sucursal",     lambda g: g.id_sucursal.nombre,             22,  "@"),
+            ("Categoría",    lambda g: g.id_cat_gastos.nombre,           22,  "@"),
+            ("Cuenta",       lambda g: g.id_cuenta_banco.numero_cuenta,  22,  "@"),
+            ("Monto",        lambda g: float(g.monto.amount),            16,  MONEY),
+            ("Descripción",  lambda g: g.descripcion or "",              40,  "@"),
+        ]
+
+        for ci, (hdr, _, width, _) in enumerate(COLUMNS, 1):
+            cell = ws.cell(row=1, column=ci, value=hdr)
+            _nav_hdr(cell)
+            ws.column_dimensions[get_column_letter(ci)].width = width
+
+        for ri, gasto in enumerate(data, 2):
+            for ci, (_, getter, _, fmt) in enumerate(COLUMNS, 1):
+                cell = ws.cell(row=ri, column=ci, value=getter(gasto))
+                cell.number_format = fmt
+                cell.alignment = Alignment(vertical="center")
+
+        last_data = len(data) + 1  # last row containing data
+
+        # Tabla dinámica de Excel (activa filtros, ordenamiento y bandas)
+        if data:
+            tab_main = Table(
+                displayName="TablaGastos",
+                ref=f"A1:{get_column_letter(len(COLUMNS))}{last_data}",
+            )
+            tab_main.tableStyleInfo = TableStyleInfo(
+                name="TableStyleMedium2",
+                showFirstColumn=False, showLastColumn=False,
+                showRowStripes=True,   showColumnStripes=False,
+            )
+            ws.add_table(tab_main)
+
+        # Fila TOTAL fuera de la tabla
+        total_r = last_data + 1
+        mc = 5
+        lbl = ws.cell(row=total_r, column=mc - 1, value="TOTAL")
+        lbl.font = Font(bold=True)
+        lbl.alignment = Alignment(horizontal="right")
+        mc_ltr = get_column_letter(mc)
+        tc = ws.cell(row=total_r, column=mc,
+                     value=f"=SUM({mc_ltr}2:{mc_ltr}{last_data})")
+        tc.number_format = MONEY
+        tc.font = Font(bold=True)
+        tc.fill = PatternFill("solid", fgColor=LIGHT)
+
+        ws.freeze_panes = "A2"
+
+        # ── HOJA 2 — Resumen ejecutivo ───────────────────────────────────────
+        ws2 = wb.create_sheet("Resumen")
+
+        if not data:
+            ws2.cell(row=1, column=1, value="Sin datos seleccionados.")
+        else:
+            grand_total = sum(float(g.monto.amount) for g in data)
+            dates = [g.fecha for g in data]
+            fecha_min, fecha_max = min(dates), max(dates)
+            avg = grand_total / len(data)
+
+            by_cat   = defaultdict(lambda: {'count': 0, 'total': 0.0})
+            by_suc   = defaultdict(lambda: {'count': 0, 'total': 0.0})
+            by_month = defaultdict(lambda: {'count': 0, 'total': 0.0})
+
+            for g in data:
+                amt  = float(g.monto.amount)
+                cat  = g.id_cat_gastos.nombre
+                suc  = g.id_sucursal.nombre
+                mkey = f"{g.fecha.year}-{g.fecha.month:02d}"
+                by_cat[cat]['count']    += 1
+                by_cat[cat]['total']    += amt
+                by_suc[suc]['count']    += 1
+                by_suc[suc]['total']    += amt
+                by_month[mkey]['count'] += 1
+                by_month[mkey]['total'] += amt
+
+            # Anchos de columnas
+            for col, w in zip('ABCD', [28, 14, 18, 14]):
+                ws2.column_dimensions[col].width = w
+
+            # ── Encabezado del reporte ────────────────────────────────────────
+            r = 1
+            hdr_cell = ws2.cell(row=r, column=1,
+                                value="  REPORTE EJECUTIVO DE GASTOS")
+            hdr_cell.font      = Font(bold=True, color=WHITE, size=14)
+            hdr_cell.fill      = PatternFill("solid", fgColor=NAVY)
+            hdr_cell.alignment = Alignment(horizontal="left", vertical="center")
+            ws2.merge_cells(f"A{r}:D{r}")
+            ws2.row_dimensions[r].height = 30
+            r += 1
+
+            sub = ws2.cell(
+                row=r, column=1,
+                value=(f"  Generado: {datetime.date.today().strftime('%d/%m/%Y')}"
+                       f"   |   Período: {fecha_min.strftime('%d/%m/%Y')}"
+                       f" – {fecha_max.strftime('%d/%m/%Y')}"),
+            )
+            sub.font = Font(italic=True, size=9, color="555555")
+            sub.fill = PatternFill("solid", fgColor="EBF5FB")
+            ws2.merge_cells(f"A{r}:D{r}")
+            r += 2  # blank row separator
+
+            # ── KPIs — (value, number_format) tuples so cells stay numeric ──
+            kpis = [
+                ("Total Gastos",       grand_total,     MONEY),
+                ("N° de Registros",    len(data),       "0"),
+                ("Promedio por Gasto", avg,             MONEY),
+                ("Categorías",         len(by_cat),     "0"),
+                ("Sucursales",         len(by_suc),     "0"),
+                ("Meses con gastos",   len(by_month),   "0"),
+            ]
+            # 2 KPIs per row, 3 rows
+            for i, (label, value, fmt) in enumerate(kpis):
+                kpi_row = r + (i // 2)
+                kpi_col = 1 + (i % 2) * 2
+                lc = ws2.cell(row=kpi_row, column=kpi_col, value=label)
+                lc.font      = Font(bold=True, size=9, color="666666")
+                lc.alignment = Alignment(horizontal="left")
+                lc.fill      = PatternFill("solid", fgColor="F8FBFD")
+                vc = ws2.cell(row=kpi_row, column=kpi_col + 1, value=value)
+                vc.number_format = fmt
+                vc.font      = Font(bold=True, size=11, color=NAVY)
+                vc.alignment = Alignment(horizontal="right")
+                vc.fill      = PatternFill("solid", fgColor="F8FBFD")
+            r += 3 + 1  # 3 KPI rows + blank separator
+
+            # ── Sección: Por Categoría ────────────────────────────────────────
+            _section_title(ws2, r, 1, 4, "  RESUMEN POR CATEGORÍA")
+            r += 1
+            for ci, h in enumerate(["Categoría", "N° Gastos", "Total", "% del Total"], 1):
+                _nav_hdr(ws2.cell(row=r, column=ci, value=h), TEAL)
+            cat_hdr = r
+            r += 1
+            cat_start = r
+            for cat, v in sorted(by_cat.items(), key=lambda x: -x[1]['total']):
+                pct = v['total'] / grand_total if grand_total else 0
+                ws2.cell(row=r, column=1, value=cat)
+                ws2.cell(row=r, column=2, value=v['count']).alignment = Alignment(horizontal="center")
+                c3 = ws2.cell(row=r, column=3, value=v['total'])
+                c3.number_format = MONEY
+                c4 = ws2.cell(row=r, column=4, value=pct)
+                c4.number_format = '0.00%'
+                r += 1
+            cat_end = r - 1
+            # total row
+            ws2.cell(row=r, column=1, value="TOTAL").font = Font(bold=True)
+            ws2.cell(row=r, column=2, value=len(data)).font = Font(bold=True)
+            ct = ws2.cell(row=r, column=3, value=grand_total)
+            ct.number_format = MONEY
+            ct.font = Font(bold=True)
+            ct.fill = PatternFill("solid", fgColor=LIGHT)
+            cp = ws2.cell(row=r, column=4, value=1.0)
+            cp.number_format = '0.00%'
+            cp.font = Font(bold=True)
+            r += 2
+
+            _add_table(ws2, "TablaCategorias", cat_hdr, cat_end, 4)
+
+            # ── Sección: Por Sucursal ─────────────────────────────────────────
+            _section_title(ws2, r, 1, 4, "  RESUMEN POR SUCURSAL")
+            r += 1
+            for ci, h in enumerate(["Sucursal", "N° Gastos", "Total", "% del Total"], 1):
+                _nav_hdr(ws2.cell(row=r, column=ci, value=h), TEAL)
+            suc_hdr = r
+            r += 1
+            suc_start = r
+            for suc, v in sorted(by_suc.items(), key=lambda x: -x[1]['total']):
+                pct = v['total'] / grand_total if grand_total else 0
+                ws2.cell(row=r, column=1, value=suc)
+                ws2.cell(row=r, column=2, value=v['count']).alignment = Alignment(horizontal="center")
+                s3 = ws2.cell(row=r, column=3, value=v['total'])
+                s3.number_format = MONEY
+                s4 = ws2.cell(row=r, column=4, value=pct)
+                s4.number_format = '0.00%'
+                r += 1
+            suc_end = r - 1
+            ws2.cell(row=r, column=1, value="TOTAL").font = Font(bold=True)
+            ws2.cell(row=r, column=2, value=len(data)).font = Font(bold=True)
+            st = ws2.cell(row=r, column=3, value=grand_total)
+            st.number_format = MONEY
+            st.font = Font(bold=True)
+            st.fill = PatternFill("solid", fgColor=LIGHT)
+            sp = ws2.cell(row=r, column=4, value=1.0)
+            sp.number_format = '0.00%'
+            sp.font = Font(bold=True)
+            r += 2
+
+            _add_table(ws2, "TablaSucursales", suc_hdr, suc_end, 4)
+
+            # ── Sección: Evolución Mensual ────────────────────────────────────
+            _section_title(ws2, r, 1, 3, "  EVOLUCIÓN MENSUAL")
+            r += 1
+            for ci, h in enumerate(["Mes", "N° Gastos", "Total"], 1):
+                _nav_hdr(ws2.cell(row=r, column=ci, value=h), TEAL)
+            mon_hdr = r
+            r += 1
+            mon_start = r
+            for mkey in sorted(by_month):
+                v = by_month[mkey]
+                ws2.cell(row=r, column=1, value=mkey)
+                ws2.cell(row=r, column=2, value=v['count']).alignment = Alignment(horizontal="center")
+                m3 = ws2.cell(row=r, column=3, value=v['total'])
+                m3.number_format = MONEY
+                r += 1
+            mon_end = r - 1
+            ws2.cell(row=r, column=1, value="TOTAL").font = Font(bold=True)
+            ws2.cell(row=r, column=2, value=len(data)).font = Font(bold=True)
+            mt = ws2.cell(row=r, column=3, value=grand_total)
+            mt.number_format = MONEY
+            mt.font = Font(bold=True)
+            mt.fill = PatternFill("solid", fgColor=LIGHT)
+
+            _add_table(ws2, "TablaMensual", mon_hdr, mon_end, 3)
+
+            ws2.freeze_panes = "A4"
+
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = 'attachment; filename="gastos.xlsx"'
+        wb.save(response)
+        return response
+
+    export_to_excel.short_description = "Exportar a Excel (.xlsx)"
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
