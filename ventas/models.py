@@ -141,6 +141,11 @@ class Anticipo(models.Model):
     monto = MoneyField(max_digits=10, decimal_places=2, default_currency='MXN')
     fecha = models.DateField()
     descripcion = models.TextField(blank=True, null=True, default='Sin descripción')
+    folio_factura_anticipo = models.CharField(
+        max_length=50, null=True, blank=True,
+        verbose_name='Folio factura anticipo',
+        help_text="Folio del CFDI de anticipo (ej: B 1980)"
+    )
     fecha_registro = models.DateTimeField(auto_now_add=True)
     class Estado_anticipo(models.TextChoices):
         Pendiente = 'Pendiente'
@@ -268,6 +273,40 @@ class Ventas(models.Model):
         help_text="Tipo de registro: Venta normal o Maquila"
     )
 
+    # ── Documentación Fiscal ──────────────────────────────────────────────
+    fecha_emision_cfdi = models.DateField(
+        null=True, blank=True,
+        verbose_name='Fecha emisión CFDI',
+        help_text="Fecha de emisión del CFDI de exportación"
+    )
+    folio_factura = models.CharField(
+        max_length=50, null=True, blank=True,
+        verbose_name='Folio factura',
+        help_text="Folio del CFDI (ej: B 1996)"
+    )
+    cfdi_cancelado = models.CharField(
+        max_length=100, null=True, blank=True,
+        verbose_name='CFDIs cancelados',
+    )
+    nota_credito = models.CharField(
+        max_length=50, null=True, blank=True,
+        verbose_name='Nota de crédito',
+    )
+    nota_cargo = models.CharField(
+        max_length=50, null=True, blank=True,
+        verbose_name='Nota de cargo',
+    )
+    # ── Referencia comprador / ajustes ────────────────────────────────────
+    numero_carga_comprador = models.CharField(
+        max_length=50, null=True, blank=True,
+        verbose_name='Carga comprador (PANORAMA LOAD)',
+    )
+    ajuste = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0,
+        verbose_name='Ajuste',
+        help_text="Ajuste positivo (cargo) o negativo (descuento)"
+    )
+
     def __str__(self):
         return f"-{self.carga} - {self.fecha_salida_manifiesto} - {self.monto} - {self.cliente.nombre}- {self.producto.nombre}"
     
@@ -334,11 +373,45 @@ class Ventas(models.Model):
             return self.mercado_destino.requiere_documentacion_especial
         return self.es_exportacion
     
+    @staticmethod
+    def derive_estado_desde_totales(total_ventas, total_pagado, fecha_vencimiento):
+        """
+        Deriva el estado de cobranza a partir de totales agregados.
+        Fuente de verdad única usada por views y management commands.
+        """
+        from django.utils import timezone as tz
+        saldo = total_ventas - total_pagado
+        if saldo <= 0:
+            return 'Pagado'
+        hoy = tz.now().date()
+        vencida = bool(fecha_vencimiento and fecha_vencimiento < hoy)
+        if total_pagado > 0:
+            return 'Vencido' if vencida else 'Parcial'
+        return 'Vencido' if vencida else 'Pendiente'
+
+    def _sync_saldo_cxc(self):
+        """Mantiene SaldoCliente sincronizado con el estado real de Ventas."""
+        try:
+            saldo = self.saldo_cxc  # reverse OneToOne accessor
+            saldo.saldo_pendiente = self.monto - self.monto_pagado
+            saldo.estado = self.estado_cobranza.upper()
+            ultimo_pago = self.pagos.order_by('-fecha_pago').first()
+            if ultimo_pago:
+                saldo.fecha_ultimo_pago = ultimo_pago.fecha_registro
+            saldo.save(update_fields=[
+                'saldo_pendiente_amount', 'saldo_pendiente_currency',
+                'estado', 'fecha_ultimo_pago',
+            ])
+        except Exception:
+            pass  # SaldoCliente no existe en ventas de contado
+
     def actualizar_estado_cobranza(self):
         """Actualiza el estado de cobranza basado en los pagos registrados"""
         if self.modalidad_pago == self.ModalidadPago.CONTADO:
             return
-            
+
+        estado_anterior = self.estado_cobranza
+
         total_pagos = sum(pago.monto_pago.amount for pago in self.pagos.all())
         self.monto_pagado.amount = total_pagos
         
@@ -356,7 +429,25 @@ class Ventas(models.Model):
                 self.estado_cobranza = self.EstadoCobranza.VENCIDO
             else:
                 self.estado_cobranza = self.EstadoCobranza.PENDIENTE
-                
+
+        if self.estado_cobranza != estado_anterior:
+            try:
+                from auditoria.models import LogActividad
+                LogActividad.objects.create(
+                    usuario=None,
+                    nombre_usuario='Sistema',
+                    tipo_accion='update',
+                    descripcion=f'Estado de cobranza cambió de {estado_anterior} a {self.estado_cobranza}',
+                    modelo_afectado='Ventas',
+                    objeto_id=str(self.pk),
+                    campos_modificados={
+                        'estado_cobranza': {'de': estado_anterior, 'a': self.estado_cobranza}
+                    },
+                )
+            except Exception:
+                pass
+
+        self._sync_saldo_cxc()
         self.save()
         
     class Meta:
@@ -872,6 +963,15 @@ class ConfiguracionCuentasPorCobrar(models.Model):
         validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
         help_text="Porcentaje máximo de sobregiro permitido sobre límite de crédito"
     )
+
+    # Tipo de cambio de referencia
+    tipo_cambio_usd = models.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        default=17.0000,
+        validators=[MinValueValidator(0.0001)],
+        help_text="Tipo de cambio USD→MXN vigente (actualizar manualmente cada día)"
+    )
     
     # Metadatos
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -904,7 +1004,8 @@ class ConfiguracionCuentasPorCobrar(models.Model):
                 'enviar_alertas_vencimiento': True,
                 'dias_previos_alerta': 5,
                 'permitir_sobregiro_credito': False,
-                'porcentaje_sobregiro_permitido': 10.0
+                'porcentaje_sobregiro_permitido': 10.0,
+                'tipo_cambio_usd': 17.0000,
             }
         )
         return config

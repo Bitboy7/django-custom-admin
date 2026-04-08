@@ -1,4 +1,4 @@
-﻿{% extends 'admin/base.html' %}
+{% extends 'admin/base.html' %}
 {% load i18n %}
 {% load humanize %}
 {% load static %}
@@ -9,672 +9,501 @@
   {% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}
 {% endblock %}
 
-{% block extrahead %}{{ block.super }}{% endblock %}
-
-{% block styles %}
+{# ── Tailwind CDN + critical overrides loaded in <head> ─────────────── #}
+{% block extrahead %}
 {{ block.super }}
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          teal:  { DEFAULT:'#1aadbc', dark:'#0d8fa2', light:'#c4f0f5' },
+          navy:  { DEFAULT:'#1e3a5f', mid:'#2d5282' },
+          dash:  { bg:'#f2f4f7', card:'#ffffff', border:'#dde3ec', txt:'#1a2332', muted:'#7a8899' }
+        }
+      }
+    }
+  }
+</script>
 <style>
-  /* ── Layout ─────────────────────────────────────────── */
-  #content-main { padding: 20px 24px 40px; max-width: 100% !important; width: 100% !important; box-sizing: border-box; }
-  #content { max-width: 100% !important; }
-  .content-wrapper { overflow-x: hidden; }
-  canvas { max-width: 100%; }
-
-  /* ── KPI Cards ──────────────────────────────────────── */
-  .kpi-card {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    padding: 20px 22px;
-    box-shadow: 0 1px 3px rgba(0,0,0,.06);
-    position: relative;
-    overflow: hidden;
-    transition: box-shadow .2s, transform .15s;
+  /* ── Force Jazzmin layout to full-width ───────────────────────── */
+  body                { background:#f2f4f7 !important; }
+  #content-main       { padding:16px 20px 40px !important; max-width:100% !important; width:100% !important; box-sizing:border-box !important; }
+  #content            { max-width:100% !important; }
+  #main-content       { padding:0 !important; }
+  canvas              { max-width:100% !important; display:block; }
+  /* ── Toast animations ─────────────────────────────────────────── */
+  @keyframes tProg    { from{width:100%} to{width:0%} }
+  .t-prog             { animation:tProg 4.2s linear forwards; }
+  .t-slide            { transform:translateX(110%); transition:transform .3s ease; }
+  .t-slide.t-show     { transform:translateX(0); }
+  /* ── KPI strip responsive dividers ───────────────────────────── */
+  @media(max-width:1279px){
+    .ks:nth-child(4n)  { border-right:0 !important; }
+    .ks:nth-child(n+5) { border-top:1px solid #dde3ec !important; }
   }
-  .kpi-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,.10); transform: translateY(-1px); }
-  .kpi-card .accent-bar {
-    position: absolute; top: 0; left: 0; width: 4px; height: 100%;
-    border-radius: 10px 0 0 10px;
+  @media(max-width:639px){
+    .ks:nth-child(2n)  { border-right:0 !important; }
+    .ks:nth-child(n+3) { border-top:1px solid #dde3ec !important; }
   }
-  .kpi-icon {
-    width: 44px; height: 44px; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; flex-shrink: 0;
-  }
-  .trend-badge {
-    display: inline-flex; align-items: center; gap: 3px;
-    font-size: 12px; font-weight: 600;
-    padding: 2px 8px; border-radius: 20px;
-  }
-  .trend-up      { background: #dcfce7; color: #16a34a; }
-  .trend-down    { background: #fee2e2; color: #dc2626; }
-  .trend-neutral { background: #f3f4f6; color: #6b7280; }
-
-  /* ── Section cards ──────────────────────────────────── */
-  .section-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.06); overflow: hidden; }
-  .section-card-header { padding: 16px 20px 14px; border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; justify-content: space-between; }
-  .section-card-body   { padding: 20px; }
-
-  /* ── Progress bar ───────────────────────────────────── */
-  .progress-track { background: #f3f4f6; border-radius: 4px; height: 6px; overflow: hidden; }
-  .progress-fill  { height: 100%; border-radius: 4px; }
-
-  /* ── Quick-access buttons ───────────────────────────── */
-  .quick-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 8px; border: 1.5px solid #e5e7eb; border-radius: 10px; text-decoration: none; transition: all .2s; gap: 7px; min-height: 86px; cursor: pointer; }
-  .quick-btn:hover { text-decoration: none; opacity: .9; transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,.08); }
-  .quick-btn .q-icon  { font-size: 20px; line-height: 1; }
-  .quick-btn .q-label { font-size: 11.5px; font-weight: 600; text-align: center; line-height: 1.3; }
-
-  /* ── Activity feed ──────────────────────────────────── */
-  .activity-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
-  .activity-item:last-child { border-bottom: none; }
-  .activity-dot  { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; }
-
-  /* ── Welcome banner ─────────────────────────────────── */
-  .welcome-banner {
-    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 55%, #3b82f6 100%);
-    border-radius: 12px; padding: 22px 28px; color: #fff;
-    position: relative; overflow: hidden;
-    box-shadow: 0 4px 16px rgba(37,99,235,.28);
-  }
-  .welcome-banner::after {
-    content: ''; position: absolute; right: -40px; top: -40px;
-    width: 200px; height: 200px;
-    background: radial-gradient(circle, rgba(255,255,255,.10) 0%, transparent 70%);
-    border-radius: 50%; pointer-events: none;
-  }
-
-  /* ── Toast ──────────────────────────────────────────── */
-  .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; width: 320px; }
-  .toast { background: #1e293b; color: #f1f5f9; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.25); position: relative; overflow: hidden; opacity: 0; transform: translateX(30px); transition: opacity .35s ease, transform .35s ease; }
-  .toast.show { opacity: 1; transform: translateX(0); }
-  .toast-body    { padding: 16px 16px 12px; }
-  .toast-header  { display: flex; align-items: center; margin-bottom: 8px; padding-right: 24px; }
-  .toast-icon-wrap { width: 36px; height: 36px; flex-shrink: 0; background: rgba(245,158,11,.18); border: 1px solid rgba(245,158,11,.3); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 10px; }
-  .toast-icon    { font-size: 15px; color: #fbbf24; }
-  .toast-title   { font-weight: 700; font-size: 14px; margin: 0; }
-  .toast-divider { border: none; border-top: 1px solid rgba(255,255,255,.1); margin: 0 0 9px; }
-  .toast-message { margin: 0; opacity: .82; line-height: 1.5; font-size: 12.5px; }
-  .toast-close   { position: absolute; top: 8px; right: 10px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15); color: rgba(255,255,255,.7); font-size: 12px; cursor: pointer; padding: 3px 6px; border-radius: 5px; transition: background .2s; }
-  .toast-close:hover { background: rgba(255,255,255,.2); }
-  .toast-progress { position: absolute; bottom: 0; left: 0; height: 3px; background: linear-gradient(90deg, #f59e0b, #fbbf24); animation: toastProgress linear forwards; }
-  @keyframes toastProgress { from { width: 100%; } to { width: 0%; } }
-
-  /* ── Responsive ─────────────────────────────────────── */
-  .grid-kpi    { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
-  .grid-2      { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; }
-  .grid-charts { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }
-  .grid-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .grid-footer { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
-  @media (max-width: 1100px) { .grid-kpi { grid-template-columns: repeat(2,1fr); } .grid-charts { grid-template-columns: 1fr; } }
-  @media (max-width: 700px)  { .grid-kpi, .grid-2, .grid-bottom, .grid-footer { grid-template-columns: 1fr; } }
 </style>
 {% endblock %}
 
+{% block styles %}{{ block.super }}{% endblock %}
+
 {% block content %}
-<div style="display:flex; flex-direction:column; gap:18px;">
-  <!-- DASHBOARD START -->
+<div class="px-1 pb-10">
 
-  {# ── Welcome Banner ──────────────────────────────────── #}
-  <div class="welcome-banner">
-    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-      <div>
-        <h1 style="font-size:22px; font-weight:700; margin:0 0 4px;">
-          Bienvenido, {{ request.user.get_full_name|default:request.user.username }}
-        </h1>
-        <p style="margin:0; opacity:.85; font-size:13px;">
-          <i class="fas fa-calendar-alt" style="margin-right:5px;"></i>
-          {% now "l d \d\e F, Y" %} &nbsp;|&nbsp;
-          <i class="fas fa-clock" style="margin-right:5px;"></i>
-          Último acceso: {{ last_login|date:"d/m/Y H:i"|default:"—" }}
-        </p>
+  {# ═══════════════════════════════════════════════════════════════ #}
+  {# WELCOME STRIP                                                   #}
+  {# ═══════════════════════════════════════════════════════════════ #}
+  <div class="rounded-2xl p-5 mb-5 flex flex-wrap items-center justify-between gap-4 text-white"
+       style="background:linear-gradient(135deg,#1e3a5f 0%,#0d8fa2 100%)">
+    <div>
+      <div class="text-base font-bold tracking-wide">
+        &#128075; &#161;Bienvenido,
+        {% if request.user.get_full_name %}{{ request.user.get_full_name }}{% else %}{{ request.user.username }}{% endif %}!
       </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <a href="{% url 'admin:ventas_ventas_add' %}" style="background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.25); color:#fff; text-decoration:none; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; display:flex; align-items:center; gap:6px;" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">
-          <i class="fas fa-plus"></i> Nueva Venta
-        </a>
-        <a href="{% url 'admin:gastos_gastos_add' %}" style="background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.20); color:#fff; text-decoration:none; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; display:flex; align-items:center; gap:6px;" onmouseover="this.style.background='rgba(255,255,255,.20)'" onmouseout="this.style.background='rgba(255,255,255,.10)'">
-          <i class="fas fa-file-invoice"></i> Nuevo Gasto
-        </a>
+      <div class="text-xs mt-1 opacity-80">{{ current_month_name }} {{ current_year }} &mdash; Panel de Control Ejecutivo</div>
+    </div>
+    <div class="flex items-center gap-4 shrink-0">
+      <div class="text-right text-xs opacity-75">
+        <div>&#218;ltima actualizaci&#243;n</div>
+        <div class="font-bold text-sm mt-0.5">{{ last_update }}</div>
       </div>
+      <a href="javascript:location.reload()"
+         class="px-4 py-2 rounded-xl text-xs font-semibold text-white no-underline transition-all"
+         style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4)">
+        &#8635; Actualizar
+      </a>
     </div>
   </div>
 
-  {# ── KPI Principal Row ────────────────────────────────── #}
-  <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px;">
+  {# ═══════════════════════════════════════════════════════════════ #}
+  {# KPI STRIP — 7 metrics                                          #}
+  {# ═══════════════════════════════════════════════════════════════ #}
+  <div class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 bg-white rounded-2xl border border-[#dde3ec] shadow-sm mb-5 overflow-hidden">
 
-    {# Balance Neto #}
-    <div class="kpi-card" style="padding-left:26px;">
-      <div class="accent-bar" style="background:#2563eb;"></div>
-      <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px;">
-        <p style="margin:0; font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:.06em;">Balance Neto</p>
-        <div class="kpi-icon" style="background:#eff6ff; color:#2563eb;"><i class="fas fa-balance-scale"></i></div>
-      </div>
-      <p style="margin:0 0 6px; font-size:26px; font-weight:700; color:{% if balance_neto >= 0 %}#111827{% else %}#dc2626{% endif %};">${{ balance_neto|us_currency:0 }}</p>
-      <div style="display:flex; align-items:center; justify-content:space-between;">
-        <span style="font-size:11px; color:#9ca3af;">{% now "F" %} {% now "Y" %}</span>
-        {% if balance_trend %}
-          <span class="trend-badge {% if balance_trend > 0 %}trend-up{% else %}trend-down{% endif %}">
-            <i class="fas fa-arrow-{% if balance_trend > 0 %}up{% else %}down{% endif %}"></i>
-            {% if balance_trend < 0 %}{{ balance_trend|floatformat:1|slice:"1:" }}{% else %}{{ balance_trend|floatformat:1 }}{% endif %}%
-          </span>
-        {% endif %}
-      </div>
+    {# 1 — Ventas del Mes #}
+    <div class="ks relative p-4 border-r border-[#dde3ec]">
+      <div class="absolute top-0 left-0 w-1 h-full bg-[#1aadbc] rounded-l-2xl"></div>
+      <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">Ventas del Mes</div>
+      <div class="text-xl font-bold text-[#1a2332] my-1.5 leading-none pl-1">{{ total_ventas|us_currency:0 }}</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if ventas_trend >= 0 %} bg-green-100 text-green-700{% else %} bg-red-100 text-red-700{% endif %}">
+        {% if ventas_trend >= 0 %}&#9650;{% else %}&#9660;{% endif %} {{ ventas_trend|floatformat:1 }}%
+      </span>
     </div>
 
-    {# Total Ventas #}
-    <div class="kpi-card" style="padding-left:26px;">
-      <div class="accent-bar" style="background:#059669;"></div>
-      <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px;">
-        <p style="margin:0; font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:.06em;">Ventas del Mes</p>
-        <div class="kpi-icon" style="background:#ecfdf5; color:#059669;"><i class="fas fa-dollar-sign"></i></div>
-      </div>
-      <p style="margin:0 0 6px; font-size:26px; font-weight:700; color:#111827;">${{ total_ventas|us_currency:0 }}</p>
-      <div style="display:flex; align-items:center; justify-content:space-between;">
-        <span style="font-size:11px; color:#9ca3af;">{{ ventas_count }} facturas</span>
-        {% if ventas_trend %}
-          <span class="trend-badge {% if ventas_trend > 0 %}trend-up{% else %}trend-down{% endif %}">
-            <i class="fas fa-arrow-{% if ventas_trend > 0 %}up{% else %}down{% endif %}"></i>
-            {% if ventas_trend < 0 %}{{ ventas_trend|floatformat:1|slice:"1:" }}{% else %}{{ ventas_trend|floatformat:1 }}{% endif %}%
-          </span>
-        {% endif %}
-      </div>
+    {# 2 — Gastos del Mes #}
+    <div class="ks relative p-4 border-r border-[#dde3ec]">
+      <div class="absolute top-0 left-0 w-1 h-full bg-[#1e3a5f] rounded-l-2xl"></div>
+      <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">Gastos del Mes</div>
+      <div class="text-xl font-bold text-[#1a2332] my-1.5 leading-none pl-1">{{ total_gastos|us_currency:0 }}</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if gastos_trend <= 0 %} bg-green-100 text-green-700{% else %} bg-red-100 text-red-700{% endif %}">
+        {% if gastos_trend <= 0 %}&#9660;{% else %}&#9650;{% endif %} {{ gastos_trend|floatformat:1 }}%
+      </span>
     </div>
 
-    {# Total Gastos #}
-    <div class="kpi-card" style="padding-left:26px;">
-      <div class="accent-bar" style="background:#dc2626;"></div>
-      <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px;">
-        <p style="margin:0; font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:.06em;">Gastos del Mes</p>
-        <div class="kpi-icon" style="background:#fef2f2; color:#dc2626;"><i class="fas fa-receipt"></i></div>
-      </div>
-      <p style="margin:0 0 6px; font-size:26px; font-weight:700; color:#111827;">${{ total_gastos|us_currency:0 }}</p>
-      <div style="display:flex; align-items:center; justify-content:space-between;">
-        <span style="font-size:11px; color:#9ca3af;">{{ gastos_count }} registros</span>
-        {% if gastos_trend %}
-          <span class="trend-badge {% if gastos_trend > 0 %}trend-down{% else %}trend-up{% endif %}">
-            <i class="fas fa-arrow-{% if gastos_trend > 0 %}up{% else %}down{% endif %}"></i>
-            {% if gastos_trend < 0 %}{{ gastos_trend|floatformat:1|slice:"1:" }}{% else %}{{ gastos_trend|floatformat:1 }}{% endif %}%
-          </span>
-        {% endif %}
-      </div>
+    {# 3 — Balance Neto #}
+    <div class="ks relative p-4 border-r border-[#dde3ec]">
+      <div class="absolute top-0 left-0 w-1 h-full rounded-l-2xl{% if balance_neto >= 0 %} bg-green-500{% else %} bg-red-500{% endif %}"></div>
+      <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">Balance Neto</div>
+      <div class="text-xl font-bold my-1.5 leading-none pl-1{% if balance_neto >= 0 %} text-green-600{% else %} text-red-600{% endif %}">{{ balance_neto|us_currency:0 }}</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if balance_trend >= 0 %} bg-green-100 text-green-700{% else %} bg-red-100 text-red-700{% endif %}">
+        {% if balance_trend >= 0 %}&#9650;{% else %}&#9660;{% endif %} {{ balance_trend|floatformat:1 }}%
+      </span>
     </div>
 
-    {# Total Compras #}
-    <div class="kpi-card" style="padding-left:26px;">
-      <div class="accent-bar" style="background:#d97706;"></div>
-      <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px;">
-        <p style="margin:0; font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:.06em;">Compras del Mes</p>
-        <div class="kpi-icon" style="background:#fffbeb; color:#d97706;"><i class="fas fa-shopping-basket"></i></div>
-      </div>
-      <p style="margin:0 0 6px; font-size:26px; font-weight:700; color:#111827;">${{ total_compras|us_currency:0 }}</p>
-      <div style="display:flex; align-items:center; justify-content:space-between;">
-        <span style="font-size:11px; color:#9ca3af;">{{ compras_count }} órdenes</span>
-        {% if compras_trend %}
-          <span class="trend-badge {% if compras_trend > 0 %}trend-down{% else %}trend-up{% endif %}">
-            <i class="fas fa-arrow-{% if compras_trend > 0 %}up{% else %}down{% endif %}"></i>
-            {% if compras_trend < 0 %}{{ compras_trend|floatformat:1|slice:"1:" }}{% else %}{{ compras_trend|floatformat:1 }}{% endif %}%
-          </span>
-        {% endif %}
-      </div>
+    {# 4 — Margen Neto (JS computed) #}
+    <div class="ks relative p-4 border-r border-[#dde3ec]">
+      <div class="absolute top-0 left-0 w-1 h-full bg-[#0d8fa2] rounded-l-2xl"></div>
+      <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold pl-1">Margen Neto</div>
+      <div class="text-xl font-bold text-[#1a2332] my-1.5 leading-none pl-1" id="kpiMargen">&#8212;</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500" id="kpiMargenBdg">calc&#8230;</span>
     </div>
 
-  </div>
-
-  {# ── Cuentas por Cobrar / Indicadores Operativos ──────── #}
-  <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:16px;">
-
-    {# Cuentas por Cobrar #}
-    <div class="section-card">
-      <div class="section-card-header">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <div style="width:36px; height:36px; border-radius:8px; background:#ecfdf5; display:flex; align-items:center; justify-content:center; color:#059669;">
-            <i class="fas fa-hand-holding-usd"></i>
-          </div>
-          <div>
-            <p style="margin:0; font-weight:700; font-size:14px; color:#111827;">Cuentas por Cobrar</p>
-            <p style="margin:0; font-size:11px; color:#9ca3af;">Cartera activa total</p>
-          </div>
-        </div>
-        <a href="{% url 'admin:ventas_ventas_changelist' %}" style="font-size:12px; color:#2563eb; text-decoration:none; font-weight:600;">
-          Ver todas <i class="fas fa-arrow-right" style="font-size:10px;"></i>
-        </a>
-      </div>
-      <div class="section-card-body">
-        <p style="font-size:32px; font-weight:700; color:#111827; margin:0 0 4px;">${{ total_ventas|us_currency:0 }}</p>
-        <p style="font-size:12px; color:#9ca3af; margin:0 0 16px;">Total ventas {% now "F" %} {% now "Y" %}</p>
-        <div class="progress-track" style="margin-bottom:14px;">
-          <div class="progress-fill" style="background:linear-gradient(90deg,#059669,#34d399); width:70%;"></div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-          <div style="border-left:3px solid #059669; padding-left:10px;">
-            <p style="margin:0 0 2px; font-size:11px; color:#9ca3af;">Pendientes / Parciales</p>
-            <p style="margin:0; font-size:17px; font-weight:700; color:#111827;">${{ ventas_vigentes|us_currency:0 }}</p>
-            <p style="margin:0; font-size:11px; color:#9ca3af;">{{ ventas_vigentes_count }} documentos</p>
-          </div>
-          <div style="border-left:3px solid #dc2626; padding-left:10px;">
-            <p style="margin:0 0 2px; font-size:11px; color:#9ca3af;">Vencidas</p>
-            <p style="margin:0; font-size:17px; font-weight:700; color:{% if ventas_vencidas > 0 %}#dc2626{% else %}#111827{% endif %};">${{ ventas_vencidas|us_currency:0 }}</p>
-            <p style="margin:0; font-size:11px; color:#9ca3af;">{{ ventas_vencidas_count }} documentos</p>
-          </div>
-        </div>
-      </div>
+    {# 5 — CxC Vigentes #}
+    <div class="ks relative p-4 border-r border-[#dde3ec]">
+      <div class="absolute top-0 left-0 w-1 h-full bg-amber-400 rounded-l-2xl"></div>
+      <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">CxC Vigentes</div>
+      <div class="text-xl font-bold text-[#1a2332] my-1.5 leading-none pl-1">{{ ventas_vigentes|us_currency:0 }}</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">{{ ventas_vigentes_count }} fact.</span>
     </div>
 
-    {# Indicadores Operativos #}
-    <div class="section-card">
-      <div class="section-card-header">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <div style="width:36px; height:36px; border-radius:8px; background:#eff6ff; display:flex; align-items:center; justify-content:center; color:#2563eb;">
-            <i class="fas fa-chart-bar"></i>
-          </div>
-          <div>
-            <p style="margin:0; font-weight:700; font-size:14px; color:#111827;">Indicadores Operativos</p>
-            <p style="margin:0; font-size:11px; color:#9ca3af;">{% now "F" %} {% now "Y" %}</p>
-          </div>
-        </div>
-        <a href="{% url 'balances' %}" style="font-size:12px; color:#2563eb; text-decoration:none; font-weight:600;">
-          Ver balances <i class="fas fa-arrow-right" style="font-size:10px;"></i>
-        </a>
-      </div>
-      <div class="section-card-body">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-
-          <div style="background:#f8fafc; border-radius:8px; padding:14px;">
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-              <div style="width:30px; height:30px; border-radius:7px; background:#ecfdf5; display:flex; align-items:center; justify-content:center; color:#059669; font-size:13px;"><i class="fas fa-users"></i></div>
-              <p style="margin:0; font-size:11px; color:#6b7280; font-weight:600;">Clientes Nuevos</p>
-            </div>
-            <p style="margin:0 0 5px; font-size:22px; font-weight:700; color:#111827;">{{ clientes_nuevos }}</p>
-            {% if clientes_trend %}
-              <span class="trend-badge {% if clientes_trend > 0 %}trend-up{% else %}trend-down{% endif %}">
-                <i class="fas fa-arrow-{% if clientes_trend > 0 %}up{% else %}down{% endif %}"></i>
-                {% if clientes_trend < 0 %}{{ clientes_trend|floatformat:0|slice:"1:" }}{% else %}{{ clientes_trend|floatformat:0 }}{% endif %}% vs mes ant.
-              </span>
-            {% else %}
-              <span class="trend-badge trend-neutral">Sin variación</span>
-            {% endif %}
-          </div>
-
-          <div style="background:#f8fafc; border-radius:8px; padding:14px;">
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-              <div style="width:30px; height:30px; border-radius:7px; background:#fffbeb; display:flex; align-items:center; justify-content:center; color:#d97706; font-size:13px;"><i class="fas fa-box"></i></div>
-              <p style="margin:0; font-size:11px; color:#6b7280; font-weight:600;">Unidades Compradas</p>
-            </div>
-            <p style="margin:0 0 5px; font-size:22px; font-weight:700; color:#111827;">{{ productos_vendidos|floatformat:0 }}</p>
-            {% if productos_trend %}
-              <span class="trend-badge {% if productos_trend > 0 %}trend-up{% else %}trend-down{% endif %}">
-                <i class="fas fa-arrow-{% if productos_trend > 0 %}up{% else %}down{% endif %}"></i>
-                {% if productos_trend < 0 %}{{ productos_trend|floatformat:0|slice:"1:" }}{% else %}{{ productos_trend|floatformat:0 }}{% endif %}% vs mes ant.
-              </span>
-            {% else %}
-              <span class="trend-badge trend-neutral">Sin variación</span>
-            {% endif %}
-          </div>
-
-          <div style="background:#f8fafc; border-radius:8px; padding:14px;">
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-              <div style="width:30px; height:30px; border-radius:7px; background:#eff6ff; display:flex; align-items:center; justify-content:center; color:#2563eb; font-size:13px;"><i class="fas fa-user-check"></i></div>
-              <p style="margin:0; font-size:11px; color:#6b7280; font-weight:600;">Clientes Activos</p>
-            </div>
-            <p style="margin:0 0 5px; font-size:22px; font-weight:700; color:#111827;">{{ total_clientes }}</p>
-            <span class="trend-badge trend-neutral">Total registrados</span>
-          </div>
-
-          <div style="background:#f8fafc; border-radius:8px; padding:14px;">
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-              <div style="width:30px; height:30px; border-radius:7px; background:#fef2f2; display:flex; align-items:center; justify-content:center; color:#dc2626; font-size:13px;"><i class="fas fa-exclamation-circle"></i></div>
-              <p style="margin:0; font-size:11px; color:#6b7280; font-weight:600;">Cartera Vencida</p>
-            </div>
-            <p style="margin:0 0 5px; font-size:22px; font-weight:700; color:{% if ventas_vencidas_count > 0 %}#dc2626{% else %}#111827{% endif %};">{{ ventas_vencidas_count }}</p>
-            <span class="trend-badge {% if ventas_vencidas_count > 0 %}trend-down{% else %}trend-up{% endif %}">
-              {% if ventas_vencidas_count > 0 %}Requiere atención{% else %}Todo al corriente{% endif %}
-            </span>
-          </div>
-
-        </div>
-      </div>
+    {# 6 — CxC Vencidas #}
+    <div class="ks relative p-4 border-r border-[#dde3ec]">
+      <div class="absolute top-0 left-0 w-1 h-full bg-red-500 rounded-l-2xl"></div>
+      <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">CxC Vencidas</div>
+      <div class="text-xl font-bold text-red-600 my-1.5 leading-none pl-1">{{ ventas_vencidas|us_currency:0 }}</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">&#9650; {{ ventas_vencidas_count }} fact.</span>
     </div>
-  </div>
 
-  {# ── Charts ───────────────────────────────────────────── #}
-  <div style="display:grid; grid-template-columns:3fr 2fr; gap:16px;">
+    {# 7 — Clientes Activos #}
+    <div class="ks relative p-4">
+      <div class="absolute top-0 left-0 w-1 h-full bg-[#2d5282] rounded-l-2xl"></div>
+      <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">Clientes Activos</div>
+      <div class="text-xl font-bold text-[#1a2332] my-1.5 leading-none pl-1">{{ total_clientes }}</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if clientes_trend >= 0 %} bg-green-100 text-green-700{% else %} bg-red-100 text-red-700{% endif %}">
+        {% if clientes_trend >= 0 %}+{% endif %}{{ clientes_nuevos }} nuevos
+      </span>
+    </div>
 
-    {# Tendencia 6 meses #}
-    <div class="section-card">
-      <div class="section-card-header">
+  </div>{# /kpi-strip #}
+
+  {# ═══════════════════════════════════════════════════════════════ #}
+  {# ROW 1 — 3 Charts                                               #}
+  {# ═══════════════════════════════════════════════════════════════ #}
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+
+    {# Chart 1 — Ventas por Mes Bar #}
+    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm overflow-hidden">
+      <div class="flex items-start justify-between px-5 pt-4 pb-3 border-b border-[#dde3ec]">
         <div>
-          <p style="margin:0; font-weight:700; font-size:14px; color:#111827;">
-            <i class="fas fa-chart-line" style="color:#2563eb; margin-right:6px;"></i>
-            Tendencia — Últimos 6 Meses
-          </p>
-          <p style="margin:0; font-size:11px; color:#9ca3af;">Comparativa ventas vs gastos acumulados</p>
+          <div class="text-[13px] font-bold text-[#1a2332]">Ventas por Mes</div>
+          <div class="text-xs text-[#7a8899] mt-0.5">Facturaci&#243;n mensual</div>
         </div>
-        <div style="display:flex; gap:14px; font-size:12px; color:#6b7280;">
-          <span style="display:flex; align-items:center; gap:5px;">
-            <span style="width:10px; height:3px; background:#2563eb; border-radius:2px; display:inline-block;"></span> Ventas
-          </span>
-          <span style="display:flex; align-items:center; gap:5px;">
-            <span style="width:10px; height:3px; background:#dc2626; border-radius:2px; display:inline-block;"></span> Gastos
-          </span>
-        </div>
+        <a href="/admin/ventas/ventas/" class="text-xs font-semibold text-[#1aadbc] no-underline">Ver todo &#8250;</a>
       </div>
-      <div class="section-card-body" style="padding-top:10px;">
-        <div style="height:280px; position:relative;">
-          <canvas id="tendenciasChart"></canvas>
-        </div>
+      <div class="p-4" style="height:210px;position:relative">
+        <canvas id="ventasBarChart"></canvas>
       </div>
     </div>
 
-    {# Gastos por Categoría #}
-    <div class="section-card">
-      <div class="section-card-header">
+    {# Chart 2 — Cartera Donut #}
+    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm overflow-hidden">
+      <div class="flex items-start justify-between px-5 pt-4 pb-3 border-b border-[#dde3ec]">
         <div>
-          <p style="margin:0; font-weight:700; font-size:14px; color:#111827;">
-            <i class="fas fa-chart-pie" style="color:#d97706; margin-right:6px;"></i>
-            Gastos por Categoría
-          </p>
-          <p style="margin:0; font-size:11px; color:#9ca3af;">{% now "F" %} {% now "Y" %} · {{ total_categorias }} categorías</p>
+          <div class="text-[13px] font-bold text-[#1a2332]">Cartera de Cobro</div>
+          <div class="text-xs text-[#7a8899] mt-0.5">Vigente vs Vencida</div>
         </div>
       </div>
-      <div class="section-card-body" style="padding-top:10px;">
-        <div style="height:280px; position:relative;">
-          <canvas id="gastosChart"></canvas>
-        </div>
+      <div class="flex items-center justify-center p-4" style="height:170px;position:relative">
+        <canvas id="carteraDonut" style="max-height:170px"></canvas>
+      </div>
+      <div class="flex flex-wrap gap-3 px-5 py-3 border-t border-[#dde3ec] text-xs text-[#7a8899] items-center">
+        <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#1aadbc]"></span>Vigente</span>
+        <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#1e3a5f]"></span>Vencida</span>
+        <span class="ml-auto font-bold text-[#1a2332]" id="kpiMorosidad">&#8212;</span>
+        <span>morosidad</span>
       </div>
     </div>
 
-  </div>
-
-  {# ── Actividad Reciente + Accesos Rápidos ─────────────── #}
-  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-
-    {# Actividad Reciente #}
-    <div class="section-card">
-      <div class="section-card-header">
-        <p style="margin:0; font-weight:700; font-size:14px; color:#111827;">
-          <i class="fas fa-history" style="color:#7c3aed; margin-right:6px;"></i>
-          Actividad Reciente
-        </p>
-        <a href="{% url 'admin:auditoria_logactividad_changelist' %}" style="font-size:12px; color:#2563eb; text-decoration:none; font-weight:600;">
-          Ver todo <i class="fas fa-arrow-right" style="font-size:10px;"></i>
-        </a>
+    {# Chart 3 — Gastos Donut #}
+    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm overflow-hidden">
+      <div class="flex items-start justify-between px-5 pt-4 pb-3 border-b border-[#dde3ec]">
+        <div>
+          <div class="text-[13px] font-bold text-[#1a2332]">Gastos por Categor&#237;a</div>
+          <div class="text-xs text-[#7a8899] mt-0.5">Distribuci&#243;n actual</div>
+        </div>
+        <a href="/admin/gastos/gasto/" class="text-xs font-semibold text-[#1aadbc] no-underline">Ver todo &#8250;</a>
       </div>
-      <div class="section-card-body" style="padding-top:10px;">
-        {% for activity in recent_activities %}
-          <div class="activity-item">
-            <div class="activity-dot" style="background:
-              {% if activity.color == 'green' %}#ecfdf5
-              {% elif activity.color == 'red' %}#fef2f2
-              {% elif activity.color == 'yellow' %}#fffbeb
-              {% else %}#eff6ff{% endif %};">
-              <i class="fas fa-{{ activity.icon }}" style="color:
-                {% if activity.color == 'green' %}#059669
-                {% elif activity.color == 'red' %}#dc2626
-                {% elif activity.color == 'yellow' %}#d97706
-                {% else %}#2563eb{% endif %}; font-size:13px;"></i>
-            </div>
-            <div style="flex:1; min-width:0;">
-              <p style="margin:0 0 1px; font-size:13px; font-weight:600; color:#111827; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ activity.description }}</p>
-              <p style="margin:0; font-size:11px; color:#9ca3af;">{{ activity.user }} · {{ activity.timestamp|timesince }} {% trans "atrás" %}</p>
-            </div>
-            <span style="flex-shrink:0; font-size:11px; padding:2px 8px; border-radius:20px; font-weight:600;
-              {% if activity.status == 'success' %}background:#ecfdf5; color:#059669;
-              {% elif activity.status == 'pending' %}background:#fffbeb; color:#d97706;
-              {% else %}background:#f3f4f6; color:#6b7280;{% endif %}">
-              {{ activity.status|title }}
-            </span>
+      <div class="flex items-center justify-center p-4" style="height:170px;position:relative">
+        <canvas id="gastosDonut" style="max-height:170px"></canvas>
+      </div>
+      <div class="flex flex-wrap gap-1.5 px-5 py-3 border-t border-[#dde3ec]" id="gastosLgnd"></div>
+    </div>
+
+  </div>{# /row1 #}
+
+  {# ═══════════════════════════════════════════════════════════════ #}
+  {# ROW 2 — 2 Charts                                               #}
+  {# ═══════════════════════════════════════════════════════════════ #}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+
+    {# Chart 4 — Tendencias Line #}
+    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm overflow-hidden">
+      <div class="px-5 pt-4 pb-3 border-b border-[#dde3ec]">
+        <div class="text-[13px] font-bold text-[#1a2332]">Tendencias</div>
+        <div class="text-xs text-[#7a8899] mt-0.5">Ventas vs Gastos &mdash; &#250;ltimos 6 meses</div>
+      </div>
+      <div class="p-4" style="height:240px;position:relative">
+        <canvas id="tendenciasChart"></canvas>
+      </div>
+    </div>
+
+    {# Chart 5 — Balance Bar #}
+    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm overflow-hidden">
+      <div class="px-5 pt-4 pb-3 border-b border-[#dde3ec]">
+        <div class="text-[13px] font-bold text-[#1a2332]">Balance Mensual</div>
+        <div class="text-xs text-[#7a8899] mt-0.5">Resultado neto por mes</div>
+      </div>
+      <div class="p-4" style="height:240px;position:relative">
+        <canvas id="balanceBarChart"></canvas>
+      </div>
+    </div>
+
+  </div>{# /row2 #}
+
+  {# ═══════════════════════════════════════════════════════════════ #}
+  {# ROW 3 — Activity Feed + Quick Access                           #}
+  {# ═══════════════════════════════════════════════════════════════ #}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+
+    {# Activity Feed #}
+    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm overflow-hidden">
+      <div class="px-5 pt-4 pb-3 border-b border-[#dde3ec]">
+        <div class="text-[13px] font-bold text-[#1a2332]">Actividad Reciente</div>
+        <div class="text-xs text-[#7a8899] mt-0.5">&#218;ltimas acciones en el sistema</div>
+      </div>
+      <div class="px-5 py-2">
+        {% for act in recent_activities %}
+        <div class="flex items-start gap-3 py-3{% if not forloop.last %} border-b border-[#f0f2f5]{% endif %}">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0"
+               style="background:{{ act.color }}20;color:{{ act.color }}">{{ act.icon }}</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[13px] text-[#1a2332] leading-snug">{{ act.description }}</div>
+            <div class="text-xs text-[#7a8899] mt-0.5">{{ act.user }} &middot; {{ act.timestamp }}</div>
           </div>
+          <span class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full
+            {% if act.status == 'success' %}bg-green-100 text-green-700
+            {% elif act.status == 'warning' %}bg-amber-100 text-amber-700
+            {% elif act.status == 'error' %}bg-red-100 text-red-700
+            {% else %}bg-slate-100 text-slate-500{% endif %}">
+            {{ act.status }}
+          </span>
+        </div>
         {% empty %}
-          <div style="text-align:center; padding:32px 0; color:#9ca3af;">
-            <i class="fas fa-inbox" style="font-size:28px; margin-bottom:8px; display:block;"></i>
-            <p style="margin:0; font-size:13px;">{% trans "Sin actividad reciente" %}</p>
-          </div>
+        <p class="text-xs text-[#7a8899] text-center py-6">Sin actividad reciente</p>
         {% endfor %}
       </div>
     </div>
 
-    {# Accesos Rápidos #}
-    <div class="section-card">
-      <div class="section-card-header">
-        <p style="margin:0; font-weight:700; font-size:14px; color:#111827;">
-          <i class="fas fa-bolt" style="color:#d97706; margin-right:6px;"></i>
-          {% trans "Accesos Rápidos" %}
-        </p>
+    {# Quick Access #}
+    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm overflow-hidden">
+      <div class="px-5 pt-4 pb-3 border-b border-[#dde3ec]">
+        <div class="text-[13px] font-bold text-[#1a2332]">Acceso R&#225;pido</div>
+        <div class="text-xs text-[#7a8899] mt-0.5">M&#243;dulos principales</div>
       </div>
-      <div class="section-card-body">
-        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
-
-          <a href="{% url 'admin:ventas_ventas_add' %}" class="quick-btn" style="color:#059669; border-color:#d1fae5; background:#f0fdf4;">
-            <div class="q-icon"><i class="fas fa-plus-circle"></i></div>
-            <div class="q-label">Nueva Venta</div>
+      <div class="p-5">
+        <div class="grid grid-cols-3 gap-3">
+          {% with btns=''%}
+          <a href="/admin/ventas/ventas/add/"
+             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline bg-[#f8fafb] border border-[#dde3ec] hover:bg-[#c4f0f5] hover:border-[#1aadbc] transition-all">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg bg-green-100 text-green-600">&#128196;</div>
+            <span class="text-xs font-semibold text-[#1a2332] text-center leading-tight">Nueva Venta</span>
           </a>
-
-          <a href="{% url 'admin:gastos_gastos_add' %}" class="quick-btn" style="color:#dc2626; border-color:#fee2e2; background:#fff5f5;">
-            <div class="q-icon"><i class="fas fa-file-invoice-dollar"></i></div>
-            <div class="q-label">Nuevo Gasto</div>
+          <a href="/admin/gastos/gasto/add/"
+             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline bg-[#f8fafb] border border-[#dde3ec] hover:bg-[#c4f0f5] hover:border-[#1aadbc] transition-all">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg bg-red-100 text-red-500">&#128184;</div>
+            <span class="text-xs font-semibold text-[#1a2332] text-center leading-tight">Nuevo Gasto</span>
           </a>
-
-          <a href="{% url 'admin:gastos_compra_add' %}" class="quick-btn" style="color:#d97706; border-color:#fde68a; background:#fffbeb;">
-            <div class="q-icon"><i class="fas fa-shopping-basket"></i></div>
-            <div class="q-label">Nueva Compra</div>
+          <a href="/admin/ventas/ventas/?estado_cobranza__in=Vencida"
+             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline bg-[#f8fafb] border border-[#dde3ec] hover:bg-[#c4f0f5] hover:border-[#1aadbc] transition-all">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg bg-amber-100 text-amber-600">&#9888;&#65039;</div>
+            <span class="text-xs font-semibold text-[#1a2332] text-center leading-tight">CxC Vencidas</span>
           </a>
-
-          <a href="{% url 'admin:ventas_cliente_add' %}" class="quick-btn" style="color:#7c3aed; border-color:#ede9fe; background:#f5f3ff;">
-            <div class="q-icon"><i class="fas fa-user-plus"></i></div>
-            <div class="q-label">Nuevo Cliente</div>
+          <a href="/admin/catalogo/"
+             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline bg-[#f8fafb] border border-[#dde3ec] hover:bg-[#c4f0f5] hover:border-[#1aadbc] transition-all">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg bg-blue-100 text-blue-600">&#128230;</div>
+            <span class="text-xs font-semibold text-[#1a2332] text-center leading-tight">Cat&#225;logo</span>
           </a>
-
-          <a href="{% url 'balances' %}" class="quick-btn" style="color:#2563eb; border-color:#bfdbfe; background:#eff6ff;">
-            <div class="q-icon"><i class="fas fa-chart-bar"></i></div>
-            <div class="q-label">Ver Balances</div>
+          <a href="/admin/compras/compra/add/"
+             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline bg-[#f8fafb] border border-[#dde3ec] hover:bg-[#c4f0f5] hover:border-[#1aadbc] transition-all">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg bg-purple-100 text-purple-600">&#128722;</div>
+            <span class="text-xs font-semibold text-[#1a2332] text-center leading-tight">Nueva Compra</span>
           </a>
-
-          <a href="{% url 'export_full_report' %}" class="quick-btn" style="color:#0891b2; border-color:#cffafe; background:#ecfeff;">
-            <div class="q-icon"><i class="fas fa-file-excel"></i></div>
-            <div class="q-label">Exportar Reporte</div>
+          <a href="/admin/auditoria/"
+             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline bg-[#f8fafb] border border-[#dde3ec] hover:bg-[#c4f0f5] hover:border-[#1aadbc] transition-all">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg bg-teal-100 text-teal-600">&#128269;</div>
+            <span class="text-xs font-semibold text-[#1a2332] text-center leading-tight">Auditor&#237;a</span>
           </a>
-
-          <a href="{% url 'admin:ventas_ventas_changelist' %}" class="quick-btn" style="color:#059669; border-color:#d1fae5; background:#f0fdf4;">
-            <div class="q-icon"><i class="fas fa-list-alt"></i></div>
-            <div class="q-label">Listado Ventas</div>
-          </a>
-
-          <a href="{% url 'admin:gastos_gastos_changelist' %}" class="quick-btn" style="color:#dc2626; border-color:#fee2e2; background:#fff5f5;">
-            <div class="q-icon"><i class="fas fa-list"></i></div>
-            <div class="q-label">Listado Gastos</div>
-          </a>
-
-          <a href="{% url 'user_manual' %}" target="_blank" class="quick-btn" style="color:#374151; border-color:#e5e7eb; background:#f9fafb;">
-            <div class="q-icon"><i class="fas fa-book"></i></div>
-            <div class="q-label">Manual de Usuario</div>
-          </a>
-
+          {% endwith %}
         </div>
       </div>
     </div>
-  </div>
 
-  {# ── Footer info ──────────────────────────────────────── #}
-  <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px;">
-    <div style="background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px; text-align:center;">
-      <p style="margin:0 0 4px; font-size:11px; color:#9ca3af; text-transform:uppercase; letter-spacing:.06em;">Versión</p>
-      <p style="margin:0; font-size:15px; font-weight:700; color:#111827;">1.0.0</p>
-    </div>
-    <div style="background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px; text-align:center;">
-      <p style="margin:0 0 4px; font-size:11px; color:#9ca3af; text-transform:uppercase; letter-spacing:.06em;">Usuarios del Sistema</p>
-      <p style="margin:0; font-size:15px; font-weight:700; color:#111827;">{{ total_users }}</p>
-    </div>
-    <div style="background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px; text-align:center;">
-      <p style="margin:0 0 4px; font-size:11px; color:#9ca3af; text-transform:uppercase; letter-spacing:.06em;">Última Actualización</p>
-      <p style="margin:0; font-size:15px; font-weight:700; color:#111827;">{{ last_update|date:"d/m/Y" }}</p>
-    </div>
-    <div style="background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px; text-align:center;">
-      <p style="margin:0 0 4px; font-size:11px; color:#9ca3af; text-transform:uppercase; letter-spacing:.06em;">Categorías de Gasto</p>
-      <p style="margin:0; font-size:15px; font-weight:700; color:#111827;">{{ total_categorias }}</p>
-    </div>
-  </div>
+  </div>{# /row3 #}
 
-</div>{# end outer wrapper #}
+  {# ═══════════════════════════════════════════════════════════════ #}
+  {# FOOTER STATS — 4 cards                                         #}
+  {# ═══════════════════════════════════════════════════════════════ #}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
 
-{# ── Toast container ──────────────────────────────────── #}
-<div id="toastContainer" class="toast-container"></div>
+    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm p-5 flex items-center gap-4">
+      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl bg-blue-100 shrink-0">&#128100;</div>
+      <div>
+        <div class="text-2xl font-bold text-[#1a2332]">{{ total_users }}</div>
+        <div class="text-xs text-[#7a8899] mt-0.5">Usuarios activos</div>
+      </div>
+    </div>
 
-{# ── Scripts ──────────────────────────────────────────── #}
+    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm p-5 flex items-center gap-4">
+      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl bg-green-100 shrink-0">&#128230;</div>
+      <div>
+        <div class="text-2xl font-bold text-[#1a2332]">{{ productos_vendidos }}</div>
+        <div class="text-xs text-[#7a8899] mt-0.5">Productos vendidos</div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm p-5 flex items-center gap-4">
+      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl bg-amber-100 shrink-0">&#127991;&#65039;</div>
+      <div>
+        <div class="text-2xl font-bold text-[#1a2332]">{{ total_categorias }}</div>
+        <div class="text-xs text-[#7a8899] mt-0.5">Categor&#237;as activas</div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm p-5 flex items-center gap-4">
+      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0" style="background:#c4f0f5;color:#0d8fa2">&#128197;</div>
+      <div>
+        <div class="text-sm font-bold text-[#1a2332] leading-snug">{{ last_update }}</div>
+        <div class="text-xs text-[#7a8899] mt-0.5">&#218;ltima actualizaci&#243;n</div>
+      </div>
+    </div>
+
+  </div>{# /footer-stats #}
+
+</div>{# /main wrapper #}
+
+{# ── Toast container ─────────────────────────────────────────────── #}
+<div class="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 pointer-events-none" id="toastWrap"></div>
+
+{# ── Chart.js ─────────────────────────────────────────────────────── #}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+(function () {
+  'use strict';
+  const TEAL = '#1aadbc', NAVY = '#1e3a5f';
+  const PAL  = ['#1aadbc','#1e3a5f','#5dd0d7','#2d6a9f','#82dce0','#4e8bc4','#b3edf2','#35435a'];
 
-  /* ─── Theme helpers ─── */
-  function isDarkMode() {
-    return (document.documentElement.getAttribute('data-theme') === 'dark') ||
-           document.documentElement.classList.contains('dark') ||
-           document.body.classList.contains('dark');
+  const meses   = {{ meses_labels|safe }};
+  const ventas  = {{ ventas_mensuales|safe }};
+  const gastos  = {{ gastos_mensuales|safe }};
+  const catLbls = {{ gastos_categorias_labels|safe }};
+  const catData = {{ gastos_categorias_data|safe }};
+  const cxcVig  = parseFloat('{{ ventas_vigentes }}')  || 0;
+  const cxcVen  = parseFloat('{{ ventas_vencidas }}')  || 0;
+  const tvTotal = parseFloat('{{ total_ventas }}')     || 0;
+  const tvBal   = parseFloat('{{ balance_neto }}')     || 0;
+
+  /* ── Computed KPIs ─────────────────────────────────────────────── */
+  const margenPct = tvTotal > 0 ? (tvBal / tvTotal * 100) : 0;
+  const morosPct  = (cxcVig + cxcVen) > 0 ? (cxcVen / (cxcVig + cxcVen) * 100) : 0;
+
+  const elMargen = document.getElementById('kpiMargen');
+  const elMBdg   = document.getElementById('kpiMargenBdg');
+  const elMoros  = document.getElementById('kpiMorosidad');
+
+  if (elMargen) {
+    elMargen.textContent = margenPct.toFixed(1) + '%';
+    const up = margenPct >= 0;
+    elMBdg.className = 'inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ' +
+      (up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700');
+    elMBdg.textContent = (up ? '\u25b2 ' : '\u25bc ') + Math.abs(margenPct).toFixed(1) + '%';
   }
-  function getThemeColors() {
-    const d = isDarkMode();
-    return {
-      text:   d ? '#9ca3af' : '#6b7280',
-      grid:   d ? '#374151' : '#f3f4f6',
-      legend: d ? '#d1d5db' : '#374151'
-    };
-  }
+  if (elMoros) elMoros.textContent = morosPct.toFixed(1) + '%';
 
-  const c = getThemeColors();
+  /* ── Chart.js defaults ──────────────────────────────────────────── */
+  Chart.defaults.font.family = "'Inter','Segoe UI',system-ui,sans-serif";
+  Chart.defaults.font.size   = 11;
+  Chart.defaults.color       = '#7a8899';
+  const base = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } };
 
-  /* ─── Tendencias chart ─── */
-  const tendenciasCtx = document.getElementById('tendenciasChart');
-  if (tendenciasCtx) {
-    new Chart(tendenciasCtx.getContext('2d'), {
-      type: 'line',
-      data: {
-        labels: {{ meses_labels|safe }},
-        datasets: [
-          {
-            label: 'Ventas',
-            data: {{ ventas_mensuales|safe }},
-            borderColor: '#2563eb',
-            backgroundColor: 'rgba(37,99,235,0.08)',
-            tension: 0.4, fill: true, borderWidth: 2,
-            pointRadius: 4, pointHoverRadius: 7,
-            pointBackgroundColor: '#2563eb', pointBorderColor: '#fff', pointBorderWidth: 2
-          },
-          {
-            label: 'Gastos',
-            data: {{ gastos_mensuales|safe }},
-            borderColor: '#dc2626',
-            backgroundColor: 'rgba(220,38,38,0.06)',
-            tension: 0.4, fill: true, borderWidth: 2,
-            pointRadius: 4, pointHoverRadius: 7,
-            pointBackgroundColor: '#dc2626', pointBorderColor: '#fff', pointBorderWidth: 2
-          }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { position: 'top', labels: { color: c.legend, usePointStyle: true, padding: 18, font: { size: 12, weight: '600' } } },
-          tooltip: {
-            backgroundColor: 'rgba(17,24,39,0.9)',
-            titleColor: '#f9fafb', bodyColor: '#d1d5db', borderColor: '#374151', borderWidth: 1, padding: 12,
-            callbacks: {
-              label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString('en-US', {minimumFractionDigits:0})}`,
-              afterBody: ctx => {
-                if (ctx.length === 2) {
-                  const bal = ctx[0].parsed.y - ctx[1].parsed.y;
-                  return [``, `Balance: $${bal.toLocaleString('en-US', {minimumFractionDigits:0})}`];
-                }
-                return [];
-              }
-            }
-          }
-        },
-        scales: {
-          x: { ticks: { color: c.text, font: { size: 11 } }, grid: { color: c.grid, drawBorder: false } },
-          y: {
-            beginAtZero: true,
-            ticks: { color: c.text, font: { size: 11 }, callback: v => v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(0)+'K' : v },
-            grid: { color: c.grid, drawBorder: false }
-          }
-        }
-      }
-    });
-  }
+  /* ── 1. Ventas Bar ──────────────────────────────────────────────── */
+  new Chart('ventasBarChart', {
+    type: 'bar',
+    data: {
+      labels: meses,
+      datasets: [{
+        label: 'Ventas',
+        data: ventas,
+        backgroundColor: ventas.map((_,i) => i === ventas.length-1 ? TEAL : TEAL+'70'),
+        borderRadius: 6,
+        borderSkipped: false
+      }]
+    },
+    options: { ...base, scales: {
+      y: { grid:{ color:'#eef1f5' }, ticks:{ callback: v => '$'+(v/1000).toFixed(0)+'k' } },
+      x: { grid:{ display:false } }
+    }}
+  });
 
-  /* ─── Gastos por categoría chart ─── */
-  const gastosCtx = document.getElementById('gastosChart');
-  if (gastosCtx) {
-    const catLabels = {{ gastos_categorias_labels|safe }};
-    const catData   = {{ gastos_categorias_data|safe }};
-    const palette   = ['#2563eb','#059669','#d97706','#dc2626','#7c3aed','#0891b2','#db2777','#65a30d','#9333ea','#ea580c'];
-
-    if (catData.length > 0) {
-      new Chart(gastosCtx.getContext('2d'), {
-        type: 'doughnut',
-        data: {
-          labels: catLabels,
-          datasets: [{ data: catData, backgroundColor: palette.slice(0, catData.length), borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'bottom', labels: { color: c.legend, padding: 12, usePointStyle: true, font: { size: 11 }, boxWidth: 10 } },
-            tooltip: {
-              backgroundColor: 'rgba(17,24,39,0.9)', titleColor: '#f9fafb', bodyColor: '#d1d5db', padding: 10,
-              callbacks: {
-                label: ctx => {
-                  const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                  const pct   = ((ctx.parsed / total) * 100).toFixed(1);
-                  return ` $${ctx.parsed.toLocaleString('en-US', {minimumFractionDigits:0})} (${pct}%)`;
-                }
-              }
-            }
-          },
-          cutout: '62%'
-        }
-      });
-    } else {
-      gastosCtx.parentElement.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#9ca3af;flex-direction:column;gap:8px;"><i class="fas fa-chart-pie" style="font-size:36px;opacity:.3;"></i><p style="margin:0;font-size:13px;">Sin datos este mes</p></div>';
+  /* ── 2. Cartera Donut ───────────────────────────────────────────── */
+  new Chart('carteraDonut', {
+    type: 'doughnut',
+    data: {
+      labels: ['Vigente','Vencida'],
+      datasets: [{ data:[cxcVig,cxcVen], backgroundColor:[TEAL,NAVY], borderWidth:2, borderColor:'#fff', hoverOffset:8 }]
+    },
+    options: { ...base, cutout:'65%',
+      plugins: { legend:{ display:false }, tooltip:{ callbacks:{ label: ctx => ' '+ctx.label+': $'+ctx.raw.toLocaleString() } } }
     }
+  });
+
+  /* ── 3. Gastos Donut ────────────────────────────────────────────── */
+  new Chart('gastosDonut', {
+    type: 'doughnut',
+    data: {
+      labels: catLbls,
+      datasets: [{ data:catData, backgroundColor:PAL.slice(0,catData.length), borderWidth:2, borderColor:'#fff', hoverOffset:8 }]
+    },
+    options: { ...base, cutout:'60%' }
+  });
+  const lgnd = document.getElementById('gastosLgnd');
+  if (lgnd && catLbls.length) {
+    lgnd.innerHTML = catLbls.map((l,i) =>
+      '<span class="flex items-center gap-1 text-[11px] text-[#7a8899]">'+
+      '<span style="width:9px;height:9px;border-radius:50%;background:'+PAL[i%PAL.length]+';display:inline-block"></span>'+l+'</span>'
+    ).join('');
   }
 
-  /* ─── Toast de bienvenida (una vez por sesión) ─── */
-  const toastKey = 'welcome_{{ request.user.pk }}';
-  if (!sessionStorage.getItem(toastKey)) {
-    setTimeout(function() {
-      showToast('¡Bienvenido!', 'Hola {{ request.user.get_full_name|default:request.user.username }}, bienvenido al sistema de gestión.', 5000);
-      sessionStorage.setItem(toastKey, '1');
-    }, 900);
+  /* ── 4. Tendencias Line ─────────────────────────────────────────── */
+  new Chart('tendenciasChart', {
+    type: 'line',
+    data: { labels: meses, datasets: [
+      { label:'Ventas', data:ventas, borderColor:TEAL, backgroundColor:TEAL+'18', borderWidth:2.5, fill:true, tension:.35, pointRadius:4, pointHoverRadius:6, pointBackgroundColor:TEAL },
+      { label:'Gastos', data:gastos, borderColor:NAVY, backgroundColor:NAVY+'12', borderWidth:2.5, fill:true, tension:.35, pointRadius:4, pointHoverRadius:6, pointBackgroundColor:NAVY }
+    ]},
+    options: { ...base,
+      plugins: { legend:{ display:true, position:'top', labels:{ usePointStyle:true, boxWidth:8, padding:16 } } },
+      scales: {
+        y: { grid:{ color:'#eef1f5' }, ticks:{ callback: v => '$'+(v/1000).toFixed(0)+'k' } },
+        x: { grid:{ display:false } }
+      }
+    }
+  });
+
+  /* ── 5. Balance Bar ─────────────────────────────────────────────── */
+  const balance = ventas.map((v,i) => v - (gastos[i]||0));
+  new Chart('balanceBarChart', {
+    type: 'bar',
+    data: { labels:meses, datasets:[{
+      label: 'Balance',
+      data: balance,
+      backgroundColor: balance.map(v => v>=0?'#22c55e70':'#ef444470'),
+      borderColor:      balance.map(v => v>=0?'#22c55e':'#ef4444'),
+      borderWidth: 1.5, borderRadius: 6, borderSkipped: false
+    }]},
+    options: { ...base, scales:{
+      y: { grid:{ color:'#eef1f5' }, ticks:{ callback: v => '$'+(v/1000).toFixed(0)+'k' } },
+      x: { grid:{ display:false } }
+    }}
+  });
+
+  /* ── Toast helper ───────────────────────────────────────────────── */
+  function showToast(title, msg, type) {
+    const icons  = {success:'\u2705',warning:'\u26a0\ufe0f',error:'\u274c',info:'\u2139\ufe0f'};
+    const colors = {success:'#22c55e',warning:'#f59e0b',error:'#ef4444',info:'#1aadbc'};
+    const t = type||'info';
+    const el = document.createElement('div');
+    el.className = 'pointer-events-auto bg-white rounded-xl border border-[#dde3ec] shadow-lg p-3 flex items-start gap-3 min-w-[220px] max-w-[300px] relative overflow-hidden t-slide';
+    el.innerHTML =
+      '<div style="width:28px;height:28px;border-radius:8px;background:'+colors[t]+'20;color:'+colors[t]+';display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">'+icons[t]+'</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:12.5px;font-weight:700;color:#1a2332">'+title+'</div>'+
+        '<div style="font-size:11.5px;color:#7a8899;margin-top:2px;line-height:1.4">'+msg+'</div>'+
+      '</div>'+
+      '<button onclick="this.closest(\'.t-slide\').remove()" style="font-size:14px;color:#7a8899;background:none;border:none;cursor:pointer;line-height:1">&times;</button>'+
+      '<div class="t-prog" style="position:absolute;bottom:0;left:0;height:3px;background:'+colors[t]+';border-radius:0 0 10px 10px"></div>';
+    document.getElementById('toastWrap').appendChild(el);
+    requestAnimationFrame(() => el.classList.add('t-show'));
+    setTimeout(() => { el.classList.remove('t-show'); setTimeout(() => el.remove(), 380); }, 4400);
   }
+  window.addEventListener('load', function() {
+    showToast('Dashboard cargado', 'Datos actualizados correctamente.', 'success');
+  });
 
-  /* ─── Theme observer ─── */
-  const obs = new MutationObserver(() => location.reload());
-  obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme','class'] });
-});
-
-/* ─── Toast helpers ─── */
-function showToast(title, message, duration) {
-  duration = duration || 5000;
-  const container = document.getElementById('toastContainer');
-  if (!container) return;
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.innerHTML =
-    '<div class="toast-body">' +
-    '<button class="toast-close" onclick="hideToast(this.closest(\'.toast\'))">&times;</button>' +
-    '<div class="toast-header"><div class="toast-icon-wrap"><i class="fas fa-home toast-icon"></i></div><h4 class="toast-title">' + title + '</h4></div>' +
-    '<hr class="toast-divider"/><p class="toast-message">' + message + '</p>' +
-    '</div><div class="toast-progress" style="animation-duration:' + duration + 'ms"></div>';
-  container.appendChild(toast);
-  setTimeout(function() { toast.classList.add('show'); }, 80);
-  setTimeout(function() { hideToast(toast); }, duration);
-}
-function hideToast(toast) {
-  if (!toast) return;
-  toast.classList.remove('show');
-  setTimeout(function() { if (toast.parentElement) toast.parentElement.removeChild(toast); }, 380);
-}
+})();
 </script>
-
 {% endblock %}

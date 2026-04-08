@@ -4,6 +4,7 @@ from django.contrib.admin.filters import SimpleListFilter
 from django.contrib.admin.views.main import ChangeList
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.utils import unquote
+from django.db import transaction
 from .models import (
     Cliente, Agente, Ventas, Anticipo, TerminoCredito, MercadoDestino, PagoVenta,
     SaldoCliente, AntigüedadSaldo, EstadoCuentaCliente, ConfiguracionCuentasPorCobrar,
@@ -399,25 +400,30 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
     
     fieldsets = (
         ('Información Básica', {
-            'fields': ('fecha_salida_manifiesto', 'agente_id', 'fecha_deposito', 
-                      'carga', 'PO', 'pedimento')
+            'fields': ('fecha_salida_manifiesto', 'agente_id', 'fecha_deposito',
+                       'carga', 'PO', 'pedimento')
+        }),
+        ('Documentación Fiscal', {
+            'fields': ('fecha_emision_cfdi', 'folio_factura', 'cfdi_cancelado',
+                       'nota_credito', 'nota_cargo'),
+            'classes': ('collapse',)
         }),
         ('Producto y Cliente', {
-            'fields': ('producto', 'cantidad', 'monto', 'cliente', 
-                      'sucursal_id', 'descripcion')
+            'fields': ('producto', 'cantidad', 'monto', 'cliente',
+                       'sucursal_id', 'descripcion')
         }),
         ('Modalidad de Pago', {
             'fields': ('modalidad_pago', 'termino_credito', 'fecha_vencimiento',
-                      'estado_cobranza', 'monto_pagado'),
+                       'estado_cobranza', 'monto_pagado'),
             'classes': ('wide',)
         }),
         ('Mercado y Exportación', {
-            'fields': ('tipo_venta', 'mercado_destino', 'incoterm', 
-                      'moneda_venta', 'tipo_cambio'),
+            'fields': ('tipo_venta', 'mercado_destino', 'incoterm',
+                       'moneda_venta', 'tipo_cambio', 'numero_carga_comprador'),
             'classes': ('collapse',)
         }),
         ('Contabilidad', {
-            'fields': ('cuenta', 'anticipo'),
+            'fields': ('cuenta', 'anticipo', 'ajuste'),
             'classes': ('collapse',)
         }),
         ('Tipo de Registro', {
@@ -427,7 +433,22 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
     )
     
     readonly_fields = ('fecha_registro', 'monto_pagado')
-    
+
+    def save_model(self, request, obj, form, change):
+        if obj.modalidad_pago == 'Credito' and not change and obj.cliente_id:
+            try:
+                monto = float(obj.monto.amount)
+                if not obj.cliente.puede_otorgar_credito(monto):
+                    disponible = obj.cliente.credito_disponible()
+                    messages.warning(
+                        request,
+                        f"Límite de crédito insuficiente para {obj.cliente}. "
+                        f"Disponible: ${disponible:,.2f}. La venta se guardó igualmente."
+                    )
+            except Exception:
+                pass  # No bloquear el guardado por errores de validación
+        super().save_model(request, obj, form, change)
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
@@ -435,6 +456,11 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
                 'balances/',
                 self.admin_site.admin_view(self.ventas_balances_admin_view),
                 name='ventas_ventas_balances',
+            ),
+            path(
+                'balances/export/',
+                self.admin_site.admin_view(self.exportar_balances_xlsx_admin_view),
+                name='ventas_exportar_balances_xlsx',
             ),
             path(
                 'reporte-cobranza/',
@@ -669,6 +695,11 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
         })
         return TemplateResponse(request, 'admin/ventas/ventas_balances.html', context)
 
+    def exportar_balances_xlsx_admin_view(self, request):
+        """Exporta los balances filtrados a XLSX desde el admin."""
+        from ventas.views import exportar_balances_xlsx
+        return exportar_balances_xlsx(request)
+
     def reporte_cobranza_admin_view(self, request):
         """Vista del Reporte Global de Cobranza integrada en el admin de Django."""
         from ventas.views import reporte_cobranza_global
@@ -724,14 +755,17 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
     def dashboard_ventas(self, request):
         """Dashboard principal de ventas con métricas clave"""
         try:
+            from dateutil.relativedelta import relativedelta
+
             # Obtener métricas usando el servicio
             dso_metrics = CuentasPorCobrarMetrics.calcular_dso()
-            
-            # Métricas adicionales del período
+
             hoy = timezone.now().date()
             inicio_mes = hoy.replace(day=1)
             inicio_año = hoy.replace(month=1, day=1)
-            
+            inicio_mes_anterior = inicio_mes - relativedelta(months=1)
+            fin_mes_anterior = inicio_mes - timedelta(days=1)
+
             # Ventas del mes actual
             ventas_mes = Ventas.objects.filter(
                 fecha_salida_manifiesto__gte=inicio_mes
@@ -739,7 +773,7 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
                 total=Sum('monto'),
                 count=Count('id')
             )
-            
+
             # Cuentas por cobrar vencidas
             vencidas = Ventas.objects.filter(
                 modalidad_pago='Credito',
@@ -749,7 +783,45 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
                 total=Sum('monto'),
                 count=Count('id')
             )
-            
+
+            # ── KPI: Tasa de morosidad ────────────────────────────────────
+            total_credito_activo = Ventas.objects.filter(
+                modalidad_pago='Credito',
+                estado_cobranza__in=['Pendiente', 'Parcial', 'Vencido'],
+            ).aggregate(total=Sum('monto'))['total'] or 0
+            total_vencido = float(vencidas['total'] or 0)
+            tasa_morosidad = (
+                round((total_vencido / float(total_credito_activo)) * 100, 2)
+                if total_credito_activo else 0
+            )
+
+            # ── KPI: Cartera Aging ────────────────────────────────────────
+            credito_qs = Ventas.objects.filter(
+                modalidad_pago='Credito',
+                estado_cobranza__in=['Pendiente', 'Parcial', 'Vencido'],
+            ).only('fecha_vencimiento', 'monto', 'monto_pagado')
+            aging = {'corriente': 0.0, 'vencida_30': 0.0, 'vencida_60': 0.0, 'vencida_90': 0.0}
+            for v in credito_qs:
+                saldo = float(v.monto.amount) - float(v.monto_pagado.amount)
+                if saldo <= 0 or not v.fecha_vencimiento:
+                    continue
+                dias = (hoy - v.fecha_vencimiento).days
+                if dias <= 0:
+                    aging['corriente'] += saldo
+                elif dias <= 30:
+                    aging['vencida_30'] += saldo
+                elif dias <= 60:
+                    aging['vencida_60'] += saldo
+                else:
+                    aging['vencida_90'] += saldo
+
+            # ── KPI: Recuperación del mes anterior ───────────────────────
+            recuperacion_mes_anterior = float(
+                PagoVenta.objects.filter(
+                    fecha_pago__range=[inicio_mes_anterior, fin_mes_anterior]
+                ).aggregate(total=Sum('monto_pago'))['total'] or 0
+            )
+
             # Top 5 clientes por volumen
             top_clientes = Ventas.objects.filter(
                 fecha_salida_manifiesto__gte=inicio_año
@@ -757,18 +829,21 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
                 total_ventas=Sum('monto'),
                 num_ventas=Count('id')
             ).order_by('-total_ventas')[:5]
-            
+
             context = dict(
                 self.admin_site.each_context(request),
                 dso_metrics=dso_metrics,
                 ventas_mes=ventas_mes,
                 vencidas=vencidas,
                 top_clientes=top_clientes,
-                title='Dashboard de Ventas'
+                tasa_morosidad=tasa_morosidad,
+                cartera_aging=aging,
+                recuperacion_mes_anterior=recuperacion_mes_anterior,
+                title='Dashboard de Ventas',
             )
-            
+
             return TemplateResponse(request, 'admin/ventas/dashboard.html', context)
-            
+
         except Exception as e:
             messages.error(request, f'Error al generar dashboard: {str(e)}')
             return redirect('admin:ventas_ventas_changelist')
@@ -918,10 +993,67 @@ class AnticipoAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = AnticiposResource
     import_form_class = ImportForm
     export_form_class = ExportForm
-    list_display = ('fecha', 'cliente', 'sucursal', 'cuenta', 'monto', 'descripcion','estado_anticipo')
+    list_display = ('fecha', 'cliente', 'sucursal', 'cuenta', 'monto', 'folio_factura_anticipo', 'descripcion', 'estado_anticipo')
     list_per_page = 20
     list_filter = ('fecha', 'cliente', 'sucursal', 'cuenta', 'monto', 'estado_anticipo')
-    fields = ('fecha', 'cliente', 'sucursal', 'cuenta', 'monto', 'descripcion', 'estado_anticipo')        
+    fields = ('fecha', 'cliente', 'sucursal', 'cuenta', 'monto', 'folio_factura_anticipo', 'descripcion', 'estado_anticipo')
+    actions = ['aplicar_anticipo_a_ventas_pendientes']
+
+    def aplicar_anticipo_a_ventas_pendientes(self, request, queryset):
+        """Aplica los anticipos seleccionados a las ventas pendientes del cliente."""
+        aplicados = 0
+        omitidos = 0
+        for anticipo in queryset.filter(estado_anticipo='Pendiente').select_related('cliente'):
+            ventas_pendientes = Ventas.objects.filter(
+                cliente=anticipo.cliente,
+                modalidad_pago='Credito',
+                estado_cobranza__in=['Pendiente', 'Parcial'],
+            ).order_by('fecha_vencimiento')
+
+            if not ventas_pendientes.exists():
+                omitidos += 1
+                continue
+
+            try:
+                with transaction.atomic():
+                    saldo_anticipo = float(anticipo.monto.amount)
+                    for venta in ventas_pendientes:
+                        if saldo_anticipo <= 0:
+                            break
+                        saldo_venta = float(venta.monto.amount) - float(venta.monto_pagado.amount)
+                        if saldo_venta <= 0:
+                            continue
+                        abono = min(saldo_anticipo, saldo_venta)
+                        venta.monto_pagado = venta.monto_pagado + abono
+                        venta.actualizar_estado_cobranza()
+                        venta.save(update_fields=['monto_pagado_amount', 'estado_cobranza'])
+                        saldo_anticipo -= abono
+
+                    anticipo.estado_anticipo = 'Aplicado'
+                    anticipo.save(update_fields=['estado_anticipo'])
+                    aplicados += 1
+            except Exception as exc:
+                self.message_user(
+                    request,
+                    f"Error al aplicar anticipo #{anticipo.pk}: {exc}",
+                    messages.ERROR,
+                )
+                omitidos += 1
+
+        if aplicados:
+            self.message_user(
+                request,
+                f"{aplicados} anticipo(s) aplicado(s) exitosamente.",
+                messages.SUCCESS,
+            )
+        if omitidos:
+            self.message_user(
+                request,
+                f"{omitidos} anticipo(s) omitido(s) (sin ventas pendientes o error).",
+                messages.WARNING,
+            )
+
+    aplicar_anticipo_a_ventas_pendientes.short_description = "Aplicar anticipo a ventas pendientes del cliente"
 
 # Administración para TerminoCredito
 @admin.register(TerminoCredito)
@@ -1339,6 +1471,10 @@ class ConfiguracionCuentasPorCobrarAdmin(ModelAdmin):
         }),
         ('Automatización', {
             'fields': ('calculo_automatico_aging', 'hora_calculo_aging', 'frecuencia_calculo')
+        }),
+        ('Tipo de Cambio', {
+            'fields': ('tipo_cambio_usd',),
+            'description': 'Tipo de cambio USD→MXN vigente. Actualizar diariamente.'
         }),
         ('Alertas y Notificaciones', {
             'fields': ('enviar_alertas_vencimiento', 'dias_previos_alerta', 'email_responsable_cobranza')

@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse
 from django.db.models import Sum, Count, Avg, Max, Min, Q
 from django.db.models.functions import Extract, TruncMonth, TruncWeek, TruncDate
 from django.utils import timezone
@@ -32,29 +33,7 @@ def detalle_venta(request, venta_id):
     return render(request, 'detalle_venta.html', {'venta': venta, 'monto_final': monto_final})
 
 def build_ventas_balances_context(request):
-    """Construye y retorna el contexto para la vista de balances de ventas."""
-
-    def _derive_estado(total_ventas, total_pagado, estado_stored, fecha_vencimiento):
-        """
-        Deriva el estado de cobranza real a partir de los totales agregados,
-        replicando la lógica de Ventas.actualizar_estado_cobranza().
-        Para grupos de contado el estado almacenado ya es Pagado; para crédito
-        lo calculamos desde el saldo.
-        """
-        saldo = total_ventas - total_pagado
-        if saldo <= 0:
-            return 'Pagado'
-        if total_pagado > 0:
-            # Hay pagos parciales — verificar vencimiento
-            hoy = timezone.now().date()
-            vencida = (fecha_vencimiento and fecha_vencimiento < hoy)
-            return 'Vencido' if vencida else 'Parcial'
-        # Sin pagos
-        hoy = timezone.now().date()
-        vencida = (fecha_vencimiento and fecha_vencimiento < hoy)
-        return 'Vencido' if vencida else 'Pendiente'
-
-    # Obtener parámetros de filtro
+    """Construye y retorna el contexto para la vista de balances de ventas."""    # Obtener parámetros de filtro
     selected_cliente_id = request.GET.get('cliente_id', '')
     selected_cuenta_id = request.GET.get('cuenta_id', '')
     selected_sucursal_id = request.GET.get('sucursal_id', '')
@@ -169,7 +148,7 @@ def build_ventas_balances_context(request):
                 'total_ventas': total,
                 'total_pagado': _pagado,
                 'saldo_pendiente': total - _pagado,
-                'estado_cobranza': _derive_estado(total, _pagado, grupo.get('estado_cobranza_principal', 'Pendiente'), _venc),
+                'estado_cobranza': Ventas.derive_estado_desde_totales(total, _pagado, _venc),
                 'fecha_vencimiento': _venc,
                 'venta_maxima': float(grupo['venta_maxima'] or 0),
                 'venta_minima': float(grupo['venta_minima'] or 0),
@@ -211,7 +190,7 @@ def build_ventas_balances_context(request):
                 'total_ventas': total,
                 'total_pagado': _pagado,
                 'saldo_pendiente': total - _pagado,
-                'estado_cobranza': _derive_estado(total, _pagado, None, _venc),
+                'estado_cobranza': Ventas.derive_estado_desde_totales(total, _pagado, _venc),
                 'fecha_vencimiento': _venc,
                 'venta_maxima': float(grupo['venta_maxima'] or 0),
                 'venta_minima': float(grupo['venta_minima'] or 0),
@@ -253,7 +232,7 @@ def build_ventas_balances_context(request):
                 'total_ventas': total,
                 'total_pagado': _pagado,
                 'saldo_pendiente': total - _pagado,
-                'estado_cobranza': _derive_estado(total, _pagado, None, _venc),
+                'estado_cobranza': Ventas.derive_estado_desde_totales(total, _pagado, _venc),
                 'fecha_vencimiento': _venc,
                 'venta_maxima': float(grupo['venta_maxima'] or 0),
                 'venta_minima': float(grupo['venta_minima'] or 0),
@@ -387,6 +366,86 @@ def ventas_balances(request):
     """Vista para mostrar balances y análisis de ventas con filtros avanzados"""
     context = build_ventas_balances_context(request)
     return render(request, 'ventas/ventas_balances.html', context)
+
+
+def exportar_balances_xlsx(request):
+    """Exporta los balances filtrados actuales a un archivo XLSX."""
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.utils import get_column_letter
+
+    context = build_ventas_balances_context(request)
+    balances = context['balances']
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Balances de Ventas"
+
+    # Encabezados
+    headers = [
+        '#', 'Cliente', 'Cuenta', 'Banco', 'Sucursal', 'Fecha',
+        'Total Ventas', 'Total Pagado', 'Saldo Pendiente',
+        'Estado Cobranza', 'Fecha Vencimiento', 'Acumulado',
+    ]
+    header_fill = PatternFill(start_color='1F4E79', end_color='1F4E79', fill_type='solid')
+    header_font = Font(color='FFFFFF', bold=True)
+
+    for col_num, header in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col_num, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center')
+
+    # Filas de datos
+    estado_colores = {
+        'Pagado': 'C6EFCE',
+        'Parcial': 'FFEB9C',
+        'Pendiente': 'FFEB9C',
+        'Vencido': 'FFC7CE',
+    }
+
+    for row_num, balance in enumerate(balances, start=2):
+        estado = balance.get('estado_cobranza', '')
+        row_fill = PatternFill(
+            start_color=estado_colores.get(estado, 'FFFFFF'),
+            end_color=estado_colores.get(estado, 'FFFFFF'),
+            fill_type='solid',
+        )
+        fila = [
+            balance.get('numero_secuencial', row_num - 1),
+            balance.get('cliente_nombre', ''),
+            balance.get('cuenta_numero', ''),
+            balance.get('banco_nombre', ''),
+            balance.get('sucursal_nombre', ''),
+            str(balance.get('fecha', '')),
+            balance.get('total_ventas', 0),
+            balance.get('total_pagado', 0),
+            balance.get('saldo_pendiente', 0),
+            estado,
+            str(balance.get('fecha_vencimiento', '') or ''),
+            balance.get('acumulado', 0),
+        ]
+        for col_num, value in enumerate(fila, start=1):
+            cell = ws.cell(row=row_num, column=col_num, value=value)
+            cell.fill = row_fill
+
+    # Ajustar anchos de columna
+    for col_num in range(1, len(headers) + 1):
+        ws.column_dimensions[get_column_letter(col_num)].auto_size = True
+
+    # Totals row
+    total_row = ws.max_row + 1
+    ws.cell(row=total_row, column=1, value='TOTAL').font = Font(bold=True)
+    ws.cell(row=total_row, column=7, value=context['total_ventas']).font = Font(bold=True)
+    ws.cell(row=total_row, column=8, value=context['total_pagado']).font = Font(bold=True)
+    ws.cell(row=total_row, column=9, value=context['saldo_pendiente_total']).font = Font(bold=True)
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="balances_ventas.xlsx"'
+    wb.save(response)
+    return response
 
 
 def reporte_cobranza_global(request):

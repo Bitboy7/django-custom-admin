@@ -101,7 +101,7 @@ def reconocer_factura_pdf(pdf_file):
 
         # Configurar el modelo de Gemini
         logger.info("Configurando modelo Google Gemini...")
-        model = ChatGoogleGenerativeAI(model="gemini-2.0-flash-exp", temperature=0)
+        model = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0)
 
         # Configurar el parser para obtener una salida JSON
         logger.info("Configurando parser JSON con modelo Pydantic...")
@@ -209,7 +209,7 @@ def asignar_categoria_automatica(descripcion_movimiento, categorias_disponibles)
         logger.info(f"Asignando categoría automática para: '{descripcion_movimiento}'")
         
         # Configurar el modelo de Gemini
-        model = ChatGoogleGenerativeAI(model="gemini-2.0-flash-exp", temperature=0)
+        model = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0)
         
         # Preparar lista de categorías para el prompt
         categorias_lista = "\n".join([f"- {cat_id}: {nombre}" for cat_id, nombre in categorias_disponibles.items()])

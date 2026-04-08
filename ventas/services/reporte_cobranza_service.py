@@ -12,7 +12,7 @@ from collections import defaultdict
 from django.db.models import Sum, Avg, Q
 
 from catalogo.models import Sucursal
-from ventas.models import Anticipo, ObligacionFiscal, Ventas
+from ventas.models import Anticipo, ObligacionFiscal, Ventas, ConfiguracionCuentasPorCobrar
 
 
 # Estados que representan deuda pendiente de cobro
@@ -90,12 +90,12 @@ def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_over
     # -------------------------------------------------------------------------
     maquila_por_cliente = _calcular_saldos_por_cliente(qs_maquila, sucursales)
 
-    # Tipo de cambio: usar override manual o promedio de los registros
+    # Tipo de cambio: usar override manual o valor centralizado en configuración
     if tipo_cambio_override and Decimal(str(tipo_cambio_override)) > 0:
         tipo_cambio = Decimal(str(tipo_cambio_override))
     else:
-        avg = qs_maquila.aggregate(avg=Avg('tipo_cambio'))['avg']
-        tipo_cambio = Decimal(str(avg)) if avg else Decimal('1.0000')
+        config_tc = ConfiguracionCuentasPorCobrar.obtener_configuracion().tipo_cambio_usd
+        tipo_cambio = Decimal(str(config_tc))
 
     totales_maquila = _calcular_totales(maquila_por_cliente, sucursales, tipo_cambio=tipo_cambio)
 

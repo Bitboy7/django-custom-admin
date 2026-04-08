@@ -27,7 +27,7 @@ django.setup()
 from decimal import Decimal
 from datetime import date, timedelta
 from djmoney.money import Money
-from ventas.models import Ventas, Cliente, Agente, TerminoCredito
+from ventas.models import Ventas, Anticipo, Cliente, Agente, TerminoCredito
 from catalogo.models import Sucursal, Producto
 from gastos.models import Cuenta
 
@@ -416,10 +416,167 @@ VENTAS_DATA = [
     ),
 ]
 
+# ---------------------------------------------------------------------------
+# Ventas con campos fiscales nuevos — Q2 2025 (prueba de nuevos campos)
+# ---------------------------------------------------------------------------
+VENTAS_DATA += [
+
+    # =========================================================
+    # ABRIL 2025 — Campos fiscales CFDI + PANORAMA LOAD + ajustes
+    # =========================================================
+
+    # Panorama — Manila Tapachula — CONTADO — con folio_factura + numero_carga_comprador
+    dict(
+        fecha_salida_manifiesto=date(2025, 4,  2),
+        fecha_deposito=date(2025, 4,  4),
+        agente_id=LIBRADO, pedimento='25-TAP-0030', carga='C030-ABR25',
+        PO='PO-PANO-0401',
+        producto=MANILA, cantidad='1,250 cajas',
+        monto=Money(Decimal('13125.00'), 'USD'),
+        moneda_venta='USD', tipo_cambio=TC,
+        descripcion='Manila Tapachula Abr-25 — CFDI registrado',
+        cliente=PANORAMA, sucursal_id=TAPACHULA, cuenta=CTA_SNTD_TAP,
+        tipo_venta='Exportación', modalidad_pago='Contado',
+        tipo_registro='VENTA',
+        # ── Nuevos campos fiscales ──
+        fecha_emision_cfdi=date(2025, 4, 3),
+        folio_factura='B 1996',
+        numero_carga_comprador='LOAD-PANO-2025-041',
+    ),
+
+    # Agromod — Ataulfo SLL — CONTADO — con folio_factura + ajuste negativo (descuento)
+    dict(
+        fecha_salida_manifiesto=date(2025, 4,  7),
+        fecha_deposito=date(2025, 4,  9),
+        agente_id=VIDAL, pedimento='25-SLL-0030', carga='C031-ABR25',
+        PO='PO-AGRO-0402',
+        producto=ATAULFO, cantidad='800 cajas',
+        monto=Money(Decimal('10400.00'), 'USD'),
+        moneda_venta='USD', tipo_cambio=TC,
+        descripcion='Ataulfo SLL Abr-25 — ajuste por calidad',
+        cliente=AGROMOD, sucursal_id=SLL, cuenta=CTA_MONEX,
+        tipo_venta='Exportación', modalidad_pago='Contado',
+        tipo_registro='VENTA',
+        # ── Nuevos campos fiscales ──
+        fecha_emision_cfdi=date(2025, 4, 8),
+        folio_factura='B 1997',
+        nota_credito='NC-001-2025',
+        ajuste=Decimal('-520.00'),   # descuento por merma de calidad
+    ),
+
+    # GM Produce — Tommy Nayarit — CRÉDITO Net 60 — PENDIENTE — con CFDI cancelado + nota cargo
+    dict(
+        fecha_salida_manifiesto=date(2025, 4, 11),
+        fecha_deposito=date(2025, 4, 14),
+        agente_id=VIDAL, pedimento='25-NAY-0030', carga='C032-ABR25',
+        PO='PO-GM-0403',
+        producto=TOMMY, cantidad='1,050 cajas',
+        monto=Money(Decimal('9450.00'), 'USD'),
+        moneda_venta='USD', tipo_cambio=TC,
+        descripcion='Tommy Nayarit crédito 60d Abr-25 — CFDI con sustitución',
+        cliente=GM_PRODUCE, sucursal_id=NAYARIT, cuenta=CTA_SNTD_NAY,
+        tipo_venta='Exportación', modalidad_pago='Credito',
+        termino_credito=NET60,
+        monto_pagado=Money(Decimal('0.00'), 'USD'),
+        estado_cobranza='Pendiente',
+        tipo_registro='VENTA',
+        # ── Nuevos campos fiscales ──
+        fecha_emision_cfdi=date(2025, 4, 13),
+        folio_factura='B 2001',
+        cfdi_cancelado='B 1999',
+        nota_cargo='NCG-002-2025',
+        numero_carga_comprador='LOAD-GM-2025-044',
+    ),
+
+    # Marabella — Haden Nayarit — CRÉDITO Net 60 — PARCIAL — folio + ajuste positivo (flete extra)
+    dict(
+        fecha_salida_manifiesto=date(2025, 4, 16),
+        fecha_deposito=date(2025, 4, 18),
+        agente_id=LIBRADO, pedimento='25-NAY-0031', carga='C033-ABR25',
+        PO='PO-MAR-0404',
+        producto=HADEN, cantidad='900 cajas',
+        monto=Money(Decimal('9000.00'), 'USD'),
+        moneda_venta='USD', tipo_cambio=TC,
+        descripcion='Haden Nayarit crédito 60d Abr-25',
+        cliente=MARABELLA, sucursal_id=NAYARIT_HAD, cuenta=CTA_SNTD_HAD,
+        tipo_venta='Exportación', modalidad_pago='Credito',
+        termino_credito=NET60,
+        monto_pagado=Money(Decimal('3000.00'), 'USD'),
+        estado_cobranza='Parcial',
+        tipo_registro='VENTA',
+        # ── Nuevos campos fiscales ──
+        fecha_emision_cfdi=date(2025, 4, 17),
+        folio_factura='B 2005',
+        numero_carga_comprador='LOAD-MAR-2025-046',
+        ajuste=Decimal('250.00'),    # cargo por flete adicional
+    ),
+
+    # Frutas 5 hermanos — Keitt nacional — CONTADO — folio con nota de crédito
+    dict(
+        fecha_salida_manifiesto=date(2025, 4, 22),
+        fecha_deposito=date(2025, 4, 23),
+        agente_id=LIBRADO, pedimento=None, carga='C034-ABR25',
+        PO=None,
+        producto=KEITT, cantidad='400 cajas',
+        monto=Money(Decimal('112000.00'), 'MXN'),
+        moneda_venta='MXN', tipo_cambio=Decimal('1.0000'),
+        descripcion='Keitt mercado nacional Abr-25',
+        cliente=FRUTAS5, sucursal_id=TAPACHULA, cuenta=CTA_SNTD_TAP,
+        tipo_venta='Nacional', modalidad_pago='Contado',
+        tipo_registro='VENTA',
+        # ── Nuevos campos fiscales ──
+        fecha_emision_cfdi=date(2025, 4, 23),
+        folio_factura='A 0452',
+        nota_credito='NC-002-2025',
+    ),
+]
 
 # ---------------------------------------------------------------------------
-# Inserción en BD
+# Anticipos con folio_factura_anticipo
 # ---------------------------------------------------------------------------
+ANTICIPOS_DATA = [
+    dict(
+        fecha=date(2025, 1, 5),
+        cliente=PANORAMA,
+        sucursal=TAPACHULA,
+        cuenta=CTA_SNTD_TAP,
+        monto=Money(Decimal('5000.00'), 'USD'),
+        descripcion='Anticipo temporada Manila Ene-25',
+        folio_factura_anticipo='B 1980',
+        estado_anticipo='Pendiente',
+    ),
+    dict(
+        fecha=date(2025, 2,  1),
+        cliente=AGROMOD,
+        sucursal=NAYARIT,
+        cuenta=CTA_SNTD_NAY,
+        monto=Money(Decimal('7000.00'), 'USD'),
+        descripcion='Anticipo Ataulfo peak season Feb-25',
+        folio_factura_anticipo='B 1985',
+        estado_anticipo='Aplicado',
+    ),
+    dict(
+        fecha=date(2025, 3, 10),
+        cliente=GM_PRODUCE,
+        sucursal=ESCUINAPA,
+        cuenta=CTA_SNTD_NAY,
+        monto=Money(Decimal('3500.00'), 'USD'),
+        descripcion='Anticipo Tommy/Haden Mar-25',
+        folio_factura_anticipo='B 1992',
+        estado_anticipo='Pendiente',
+    ),
+    dict(
+        fecha=date(2025, 4, 5),
+        cliente=MARABELLA,
+        sucursal=NAYARIT_HAD,
+        cuenta=CTA_SNTD_HAD,
+        monto=Money(Decimal('50000.00'), 'MXN'),
+        descripcion='Anticipo Haden Nayarit Abr-25 MXN',
+        folio_factura_anticipo='A 0440',
+        estado_anticipo='Pendiente',
+    ),
+]
+
 
 def insertar_ventas():
     creadas = 0
@@ -472,11 +629,44 @@ def insertar_ventas():
     print(f"Resultado: {creadas} creadas, {omitidas} omitidas.")
 
 
+def insertar_anticipos():
+    creados = 0
+    omitidos = 0
+
+    for d in ANTICIPOS_DATA:
+        existe = Anticipo.objects.filter(
+            cliente=d['cliente'],
+            fecha=d['fecha'],
+            descripcion=d['descripcion'],
+        ).exists()
+
+        if existe:
+            print(f"  ⏭  Anticipo {d['folio_factura_anticipo']} {d['cliente'].nombre[:20]:<20}  →  ya existe, omitido")
+            omitidos += 1
+            continue
+
+        anticipo = Anticipo(**d)
+        anticipo.save()
+
+        monto_str = f"{float(anticipo.monto.amount):>10,.2f} {anticipo.monto.currency}"
+        print(f"  ✅ Anticipo  {d['folio_factura_anticipo']:<10} {d['cliente'].nombre[:22]:<22}  {monto_str}")
+        creados += 1
+
+    print()
+    print(f"Resultado anticipos: {creados} creados, {omitidos} omitidos.")
+
+
 if __name__ == "__main__":
     print()
     print("=" * 68)
-    print("  SEED — Ventas Q1 2025 (Ene / Feb / Mar)")
+    print("  SEED — Ventas Q1-Q2 2025 + Anticipos")
     print("=" * 68)
     print()
     insertar_ventas()
+    print()
+    print("-" * 68)
+    print("  SEED — Anticipos")
+    print("-" * 68)
+    print()
+    insertar_anticipos()
     print()
