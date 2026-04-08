@@ -23,21 +23,36 @@
    1. DESIGN TOKENS
    --------------------------------------------------------- */
 :root {
+  /* Navy palette (sidebar, tables, modules) */
   --c-navy: #1e3a5f;
   --c-navy-dark: #152d4a;
   --c-navy-light: #2e5c8a;
+
+  /* Teal — color primario de marca del dashboard */
+  --c-teal: #1aadbc;
+  --c-teal-dark: #0d8fa2;
+  --c-teal-light: #e0f7fa;
+  --c-teal-mid: #26c6da;
+
+  /* Blue — acento secundario, foco, botones de acción */
   --c-blue: #2563eb;
   --c-blue-hover: #1d4ed8;
   --c-blue-tint: #eff6ff;
   --c-blue-mid: #3b82f6;
+
+  /* Estado */
   --c-green: #059669;
   --c-amber: #d97706;
   --c-red: #dc2626;
+
+  /* Superficie */
   --c-surface: #f1f5f9;
   --c-white: #ffffff;
   --c-card: #ffffff;
   --c-border: #e2e8f0;
   --c-border-mid: #cbd5e1;
+
+  /* Texto */
   --c-text: #1e293b;
   --c-text-soft: #475569;
   --c-text-muted: #94a3b8;
@@ -66,62 +81,254 @@ body {
 
 /* ---------------------------------------------------------
    3. BARRA DE NAVEGACIÓN SUPERIOR
+   Diseño limpio y accesible:
+   - Fondo navy-dark unificado con sidebar
+   - Acento teal en la línea inferior de marca
+   - Un solo buscador, sin dropdowns redundantes
+   - Hover con teal semitransparente (WCAG AA: contraste >4.5:1)
    --------------------------------------------------------- */
 .main-header.navbar,
 .navbar.navbar-expand-md {
   background-color: var(--c-navy-dark) !important;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.06) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
-  min-height: 56px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3) !important;
+  min-height: 54px !important;
 }
 
+/* Links de navegación superior */
 .navbar-nav .nav-link,
 .nav-item .nav-link {
-  color: rgba(255, 255, 255, 0.8) !important;
+  color: rgba(255, 255, 255, 0.82) !important;
   font-size: 0.875rem;
   font-weight: 500;
-  padding: 0.5rem 0.85rem !important;
-  border-radius: var(--r-sm);
+  padding: 0.45rem 0.9rem !important;
+  border-radius: var(--r-md);
   transition: all var(--t);
+  letter-spacing: 0.01em;
 }
 
 .navbar-nav .nav-link:hover,
 .nav-item .nav-link:hover {
   color: #fff !important;
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(26, 173, 188, 0.18) !important; /* teal translúcido */
 }
 
+.navbar-nav .nav-link.active,
+.nav-item.active .nav-link {
+  color: var(--c-teal-mid) !important;
+  background: rgba(26, 173, 188, 0.14) !important;
+}
+
+/* Buscador único */
 .form-control-navbar {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(255, 255, 255, 0.14) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
   color: #fff !important;
   border-radius: var(--r-md) !important;
+  font-size: 0.875rem;
+  transition: all var(--t);
 }
 
 .form-control-navbar::placeholder {
-  color: rgba(255, 255, 255, 0.45) !important;
-}
-.form-control-navbar:focus {
-  background: rgba(255, 255, 255, 0.15) !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35) !important;
+  color: rgba(255, 255, 255, 0.38) !important;
 }
 
+.form-control-navbar:focus {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: var(--c-teal) !important;
+  box-shadow: 0 0 0 3px rgba(26, 173, 188, 0.28) !important;
+  outline: none !important;
+}
+
+/* Botón de búsqueda */
+.input-group-append .btn,
+.navbar-search .btn {
+  background: rgba(26, 173, 188, 0.2) !important;
+  border-color: rgba(26, 173, 188, 0.35) !important;
+  color: var(--c-teal-mid) !important;
+  transition: all var(--t);
+}
+
+.input-group-append .btn:hover,
+.navbar-search .btn:hover {
+  background: var(--c-teal) !important;
+  color: #fff !important;
+}
+
+/* Brand / logo */
 .brand-link {
-  background-color: var(--c-navy) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
-  padding: 0.75rem 1rem !important;
-  color: rgba(255, 255, 255, 0.9) !important;
+  background: linear-gradient(
+    135deg,
+    var(--c-navy) 0%,
+    var(--c-navy-dark) 100%
+  ) !important;
+  border-bottom: 2px solid var(--c-teal) !important; /* acento teal */
+  padding: 0.7rem 1rem !important;
+  color: rgba(255, 255, 255, 0.92) !important;
   font-weight: 700;
   letter-spacing: 0.02em;
   transition: background var(--t);
 }
 
 .brand-link:hover {
-  background-color: var(--c-navy-light) !important;
+  background: var(--c-navy-light) !important;
   color: #fff !important;
 }
+
 .brand-text {
-  font-size: 0.95rem !important;
+  font-size: 0.92rem !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+/* Ocultar el globo de idioma si solo hay uno — reduce ruido visual */
+.navbar .language-form {
+  margin-left: 4px;
+}
+
+/* ---------------------------------------------------------
+   3b. NAVBAR — AVATAR PILL DE USUARIO
+   Estilos para el botón de usuario en la barra superior:
+   - Pill con foto circular o iniciales en gradiente teal
+   - Hover/focus con acento teal WCAG AA
+   - Dropdown "Mi Perfil" con vista previa del usuario
+   --------------------------------------------------------- */
+
+/* Botón pill completo (reemplaza al icono <i class="far fa-user">) */
+.jaz-avatar-btn {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 4px 12px 4px 4px !important;
+  border-radius: 24px !important;
+  transition:
+    background 0.18s ease,
+    box-shadow 0.18s ease !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+}
+.jaz-avatar-btn:hover,
+.jaz-avatar-btn:focus {
+  background: rgba(26, 173, 188, 0.18) !important;
+  box-shadow: 0 0 0 2px rgba(26, 173, 188, 0.35) !important;
+  outline: none !important;
+}
+
+/* Foto de perfil circular */
+.jaz-avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(26, 173, 188, 0.7);
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Iniciales — fallback cuando no hay foto */
+.jaz-avatar-initials {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--c-teal) 0%,
+    var(--c-teal-dark) 100%
+  );
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.06em;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  user-select: none;
+  line-height: 1;
+}
+
+/* Nombre visible junto al avatar */
+.jaz-avatar-name {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.83rem;
+  font-weight: 500;
+  max-width: 130px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 767px) {
+  .jaz-avatar-name {
+    display: none !important;
+  }
+}
+
+/* ─ "Mi Perfil" en el dropdown del usuario ─────────────────────── */
+.jazzy-profile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  text-decoration: none !important;
+  color: #1e293b !important;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+.jazzy-profile-link:hover {
+  background: #f0fdfe;
+  color: var(--c-teal-dark) !important;
+}
+.jazzy-profile-link .profile-mini-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--c-teal);
+  flex-shrink: 0;
+}
+.jazzy-profile-link .profile-mini-initials {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--c-teal) 0%,
+    var(--c-teal-dark) 100%
+  );
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+}
+.jazzy-profile-meta {
+  display: flex;
+  flex-direction: column;
+}
+.jazzy-profile-meta .pname {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #1e293b;
+}
+.jazzy-profile-meta .pemail {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Logo de empresa dinámico (sube desde SiteConfiguration) */
+.brand-logo-dyn {
+  height: 30px !important;
+  width: auto !important;
+  object-fit: contain !important;
+  border-radius: 3px !important;
 }
 
 /* ---------------------------------------------------------
@@ -133,11 +340,16 @@ body {
   background-color: var(--c-navy) !important;
 }
 
+/* ---------------------------------------------------------
+   Sidebar — ítem padre (sección colapsable)
+   Hover:  teal translúcido + indicador izquierdo
+   Active: teal sólido (identifica la sección abierta)
+   --------------------------------------------------------- */
 .nav-sidebar .nav-item > .nav-link {
-  color: rgba(255, 255, 255, 0.72) !important;
+  color: rgba(255, 255, 255, 0.75) !important;
   border-radius: var(--r-md) !important;
   margin: 1px 6px !important;
-  padding: 0.55rem 0.85rem !important;
+  padding: 0.52rem 0.85rem !important;
   font-size: 0.875rem;
   font-weight: 500;
   transition: all var(--t);
@@ -145,23 +357,27 @@ body {
 }
 
 .nav-sidebar .nav-item > .nav-link:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(26, 173, 188, 0.15) !important;
   color: #fff !important;
-  border-left-color: rgba(255, 255, 255, 0.3) !important;
+  border-left-color: var(--c-teal) !important;
 }
 
+/* Sección activa / abierta */
 .nav-sidebar .nav-item > .nav-link.active,
 .nav-sidebar .nav-item.menu-open > .nav-link {
-  background: var(--c-blue) !important;
+  background: rgba(26, 173, 188, 0.22) !important;
   color: #fff !important;
-  border-left-color: #fff !important;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4) !important;
+  border-left-color: var(--c-teal) !important;
+  box-shadow: none !important;
 }
 
+/* ---------------------------------------------------------
+   Sidebar — ítems hijo (modelos dentro de la sección)
+   --------------------------------------------------------- */
 .nav-treeview .nav-item > .nav-link {
-  color: rgba(255, 255, 255, 0.65) !important;
+  color: rgba(255, 255, 255, 0.62) !important;
   font-size: 0.82rem;
-  padding-left: 2.1rem !important;
+  padding-left: 2rem !important;
   border-left: 2px solid transparent !important;
   margin: 0 6px !important;
   border-radius: var(--r-sm) !important;
@@ -169,15 +385,17 @@ body {
 }
 
 .nav-treeview .nav-item > .nav-link:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(26, 173, 188, 0.12) !important;
   color: #fff !important;
-  border-left-color: var(--c-blue-mid) !important;
+  border-left-color: var(--c-teal) !important;
 }
 
+/* Ítem hijo activo (página actual) */
 .nav-treeview .nav-item > .nav-link.active {
-  background: rgba(37, 99, 235, 0.25) !important;
+  background: var(--c-teal) !important;
   color: #fff !important;
-  border-left-color: var(--c-blue-mid) !important;
+  border-left-color: #fff !important;
+  font-weight: 600 !important;
 }
 
 .nav-sidebar .nav-header {
@@ -441,8 +659,8 @@ input[type="number"]:focus,
 input[type="date"]:focus,
 textarea:focus,
 select:focus {
-  border-color: var(--c-blue) !important;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14) !important;
+  border-color: var(--c-teal) !important;
+  box-shadow: 0 0 0 3px rgba(26, 173, 188, 0.18) !important;
   outline: none !important;
   background: var(--c-white) !important;
 }
@@ -579,7 +797,7 @@ label,
 
 #result_list tr:hover td,
 .results table tr:hover td {
-  background: var(--c-blue-tint) !important;
+  background: var(--c-teal-light) !important;
 }
 
 #result_list tr td.action-checkbox input[type="checkbox"],
@@ -656,11 +874,11 @@ paginator .this-page {
 }
 
 #changelist-filter li a:hover {
-  background: var(--c-blue-tint) !important;
-  color: var(--c-blue) !important;
+  background: var(--c-teal-light) !important;
+  color: var(--c-teal-dark) !important;
 }
 #changelist-filter li.selected a {
-  color: var(--c-blue) !important;
+  color: var(--c-teal-dark) !important;
   font-weight: 700;
 }
 
@@ -756,20 +974,20 @@ paginator .this-page {
 }
 
 .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-  background: var(--c-blue-tint) !important;
-  border-color: var(--c-blue-mid) !important;
-  color: var(--c-blue) !important;
+  background: var(--c-teal-light) !important;
+  border-color: var(--c-teal) !important;
+  color: var(--c-teal-dark) !important;
 }
 
 .dataTables_wrapper .dataTables_paginate .paginate_button.current {
-  background: var(--c-blue) !important;
-  border-color: var(--c-blue) !important;
+  background: var(--c-teal) !important;
+  border-color: var(--c-teal) !important;
   color: #fff !important;
   font-weight: 700 !important;
 }
 
 .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
-  background: var(--c-blue-hover) !important;
+  background: var(--c-teal-dark) !important;
 }
 
 .dataTables_wrapper .dataTables_paginate .paginate_button.disabled,
@@ -814,8 +1032,8 @@ paginator .this-page {
 
 .dataTables_wrapper .dataTables_filter input:focus {
   outline: none !important;
-  border-color: var(--c-blue) !important;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14) !important;
+  border-color: var(--c-teal) !important;
+  box-shadow: 0 0 0 3px rgba(26, 173, 188, 0.18) !important;
 }
 
 .dataTables_processing {

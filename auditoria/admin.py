@@ -1,6 +1,9 @@
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
-from .models import LogActividad
+from django.contrib import messages
+from django.shortcuts import redirect
+from django.urls import reverse
+from .models import LogActividad, SiteConfiguration
 
 
 @admin.register(LogActividad)
@@ -59,3 +62,51 @@ class LogActividadAdmin(ModelAdmin):
         css = {
             'all': ('css/admin/auditoria.css',)
         }
+
+
+@admin.register(SiteConfiguration)
+class SiteConfigurationAdmin(ModelAdmin):
+    """Admin singleton para la configuración global del sitio.
+    Solo hay un registro; el listado redirige directamente al formulario.
+    Acceso exclusivo para superusuarios.
+    """
+
+    fieldsets = (
+        ('Logo e identidad', {
+            'fields': ('company_logo',),
+            'description': 'Imagen que aparece en la barra lateral y en la pantalla de login. '
+                           'Usa PNG o SVG con fondo transparente (≥ 200 × 60 px recomendado).',
+        }),
+        ('Textos del sitio', {
+            'fields': ('site_title', 'site_header', 'site_brand'),
+            'description': 'Personaliza los textos que identifican tu empresa en el sistema.',
+        }),
+        ('Barra lateral', {
+            'fields': ('navigation_expanded',),
+        }),
+    )
+
+    def has_add_permission(self, request):
+        return False  # Singleton: no se puede agregar otro.
+
+    def has_delete_permission(self, request, obj=None):
+        return False  # No se puede eliminar.
+
+    def has_module_permission(self, request):
+        return request.user.is_superuser
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def changelist_view(self, request, extra_context=None):
+        """Redirige siempre al formulario del registro singleton."""
+        obj = SiteConfiguration.load()
+        return redirect(
+            reverse('admin:auditoria_siteconfiguration_change', args=[obj.pk])
+        )
+
+    def response_change(self, request, obj):
+        messages.success(request, 'Configuración del sitio actualizada correctamente.')
+        return redirect(
+            reverse('admin:auditoria_siteconfiguration_change', args=[obj.pk])
+        )

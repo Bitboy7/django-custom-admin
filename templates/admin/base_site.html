@@ -1,0 +1,230 @@
+{% extends "admin/base.html" %}
+{% load static i18n %}
+
+{# ── Dynamic page title from SiteConfiguration ─────────────────── #}
+{% block title %}
+  {% if site_config_global and site_config_global.site_title %}
+    {{ site_config_global.site_title }}
+  {% else %}
+    {{ block.super }}
+  {% endif %}
+{% endblock %}
+
+{# ── Inline styles for avatar pill (no extra HTTP request) ─────── #}
+{% block extrastyle %}
+{{ block.super }}
+<style>
+/* ─ Navbar user button → avatar pill ─────────────────────────── */
+.jaz-avatar-btn {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 4px 12px 4px 4px !important;
+  border-radius: 24px !important;
+  transition: background 0.18s ease, box-shadow 0.18s ease !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+}
+.jaz-avatar-btn:hover,
+.jaz-avatar-btn:focus {
+  background: rgba(26, 173, 188, 0.18) !important;
+  box-shadow: 0 0 0 2px rgba(26, 173, 188, 0.35) !important;
+  outline: none !important;
+}
+.jaz-avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(26, 173, 188, 0.7);
+  display: block;
+  flex-shrink: 0;
+}
+.jaz-avatar-initials {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1aadbc 0%, #0d8fa2 100%);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.06em;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  user-select: none;
+  line-height: 1;
+}
+.jaz-avatar-name {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.83rem;
+  font-weight: 500;
+  max-width: 130px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 767px) { .jaz-avatar-name { display: none !important; } }
+
+/* ─ "Mi Perfil" shortcut in dropdown ─────────────────────────── */
+.jazzy-profile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  text-decoration: none !important;
+  color: #1e293b !important;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+.jazzy-profile-link:hover { background: #f0fdfe; color: #0d8fa2 !important; }
+.jazzy-profile-link .profile-mini-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #1aadbc;
+  flex-shrink: 0;
+}
+.jazzy-profile-link .profile-mini-initials {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1aadbc, #0d8fa2);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+}
+.jazzy-profile-meta { display: flex; flex-direction: column; }
+.jazzy-profile-meta .pname { font-weight: 600; font-size: 0.875rem; color: #1e293b; }
+.jazzy-profile-meta .pemail { font-size: 0.75rem; color: #64748b; }
+
+/* ─ Dynamic brand logo ────────────────────────────────────────── */
+.brand-logo-dyn { height: 30px !important; width: auto !important; object-fit: contain !important; border-radius: 3px !important; }
+</style>
+{% endblock %}
+
+{# ── JS: avatar pill + dynamic logo + "Mi Perfil" link ─────────── #}
+{% block extrajs %}
+{{ block.super }}
+<script>
+(function () {
+  var AV       = "{{ user_avatar_url|escapejs }}";
+  var INIT     = "{{ user_initials|escapejs }}";
+  var NAME     = "{{ user_display_name|escapejs }}";
+  var EMAIL    = "{{ request.user.email|escapejs }}";
+  var LOGO     = "{{ site_config_global.company_logo_url|default:''|escapejs }}";
+  var BRAND    = "{{ site_config_global.site_brand|default:''|escapejs }}";
+  var NAV_EXP  = {% if site_config_global and site_config_global.navigation_expanded %}true{% else %}false{% endif %};
+  var PROF_URL = "{% url 'profile_settings' %}";
+
+  function ready(fn) {
+    if (document.readyState !== 'loading') { fn(); }
+    else { document.addEventListener('DOMContentLoaded', fn); }
+  }
+
+  function avatarEl(size) {
+    /* Returns an HTMLElement: img if we have a URL, else initials span */
+    if (AV) {
+      var img = document.createElement('img');
+      img.src = AV;
+      img.alt = NAME;
+      img.className = size === 'lg' ? 'profile-mini-avatar' : 'jaz-avatar-img';
+      img.onerror = function () {
+        var sp = initialsEl(size);
+        this.parentNode.insertBefore(sp, this);
+        this.remove();
+      };
+      return img;
+    }
+    return initialsEl(size);
+  }
+
+  function initialsEl(size) {
+    var sp = document.createElement('span');
+    sp.className = size === 'lg' ? 'profile-mini-initials' : 'jaz-avatar-initials';
+    sp.textContent = INIT;
+    sp.setAttribute('aria-hidden', 'true');
+    return sp;
+  }
+
+  ready(function () {
+    /* ── 1. Navbar top-right user button → avatar pill ── */
+    var userBtn = (
+      document.querySelector('.navbar-nav.ml-auto .nav-link[data-toggle="dropdown"]') ||
+      document.querySelector('#jazzy-usermenu')?.closest('.nav-item')?.querySelector('.nav-link') ||
+      document.querySelector('.navbar-nav.ml-auto .nav-item.dropdown > .nav-link')
+    );
+
+    if (userBtn) {
+      userBtn.classList.add('jaz-avatar-btn');
+      userBtn.setAttribute('aria-label', NAME ? 'Usuario: ' + NAME : 'Menú de usuario');
+      userBtn.setAttribute('title', '');
+      userBtn.innerHTML = '';
+      userBtn.appendChild(avatarEl('sm'));
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'jaz-avatar-name';
+      nameSpan.textContent = NAME;
+      userBtn.appendChild(nameSpan);
+    }
+
+    /* ── 2. Inject "Mi Perfil" at the top of the user dropdown ── */
+    var dropMenu = document.querySelector('#jazzy-usermenu');
+    if (dropMenu) {
+      var link = document.createElement('a');
+      link.href = PROF_URL;
+      link.className = 'jazzy-profile-link';
+      link.setAttribute('aria-label', 'Ir a Mi Perfil');
+
+      var ava = avatarEl('lg');
+      var meta = document.createElement('div');
+      meta.className = 'jazzy-profile-meta';
+      meta.innerHTML =
+        '<span class="pname">' + (NAME || 'Usuario') + '</span>' +
+        (EMAIL ? '<span class="pemail">' + EMAIL + '</span>' : '');
+
+      link.appendChild(ava);
+      link.appendChild(meta);
+      dropMenu.insertBefore(link, dropMenu.firstChild);
+    }
+
+    /* ── 3. Dynamic company logo (if configured in SiteConfiguration) ── */
+    if (LOGO) {
+      document.querySelectorAll('.brand-link .brand-image, .brand-link img').forEach(function (img) {
+        img.src = LOGO;
+        img.classList.add('brand-logo-dyn');
+      });
+    }
+
+    /* ── 4. Dynamic brand text (if configured in SiteConfiguration) ── */
+    if (BRAND) {
+      document.querySelectorAll('.brand-text').forEach(function (el) {
+        el.textContent = BRAND;
+      });
+    }
+
+    /* ── 5. navigation_expanded: auto-open all sidebar sections on load ── */
+    if (NAV_EXP) {
+      document.querySelectorAll('.nav-sidebar .nav-item .nav-treeview').forEach(function (sub) {
+        sub.style.display = 'block';
+        var parent = sub.closest('.nav-item');
+        if (parent) {
+          parent.classList.add('menu-open');
+          var link = parent.querySelector(':scope > .nav-link');
+          if (link) link.classList.add('active');
+        }
+      });
+    }
+  });
+})();
+</script>
+{% endblock %}

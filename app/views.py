@@ -1,10 +1,11 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.db.models import Sum, Count
 from django.utils import timezone
 from django.http import JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib import admin, messages
 from datetime import datetime, timedelta
 import json
 import os
@@ -17,9 +18,65 @@ from .services.balance_service import BalanceAnalysisService
 from .services.utils import UtilService
 from gastos.models import Gastos, Compra
 from ventas.models import Ventas, Cliente
-from auditoria.models import LogActividad
+from auditoria.models import LogActividad, UserProfile
 
 logger = logging.getLogger(__name__)
+
+
+@staff_member_required
+def profile_settings_view(request):
+    """Vista para que el usuario edite su propio perfil (foto, nombre, email)."""
+    user = request.user
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    errors = {}
+
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name  = request.POST.get('last_name', '').strip()
+        email      = request.POST.get('email', '').strip()
+
+        # Validar unicidad de email
+        if email and User.objects.filter(email=email).exclude(pk=user.pk).exists():
+            errors['email'] = 'Este correo ya está en uso por otro usuario.'
+
+        # Validar avatar
+        if 'avatar' in request.FILES:
+            avatar_file = request.FILES['avatar']
+            if avatar_file.size > 5 * 1024 * 1024:
+                errors['avatar'] = 'La imagen no debe superar 5 MB.'
+            elif not avatar_file.content_type.startswith('image/'):
+                errors['avatar'] = 'El archivo debe ser una imagen válida.'
+
+        remove_avatar = request.POST.get('remove_avatar') == '1'
+
+        if not errors:
+            user.first_name = first_name
+            user.last_name  = last_name
+            if email:
+                user.email = email
+            user.save()
+
+            if remove_avatar and profile.avatar:
+                profile.avatar.delete(save=False)
+                profile.avatar = None
+            elif 'avatar' in request.FILES:
+                if profile.avatar:
+                    profile.avatar.delete(save=False)
+                profile.avatar = request.FILES['avatar']
+
+            profile.save()
+            messages.success(request, 'Perfil actualizado correctamente.')
+            return redirect('profile_settings')
+
+    context = {
+        **admin.site.each_context(request),
+        'title': 'Mi Perfil',
+        'subtitle': 'Configuración de tu cuenta',
+        'profile': profile,
+        'errors': errors,
+        'has_permission': True,
+    }
+    return render(request, 'admin/profile_settings.html', context)
 
 
 @user_passes_test(UtilService.is_admin)

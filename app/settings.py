@@ -86,10 +86,10 @@ JAZZMIN_SETTINGS = {
     "site_title": "Sistema administrativo - Agricola de la Costa San Luis",
     
     # Title on the login screen (19 chars max) (defaults to current_admin_site.site_header if absent or None)
-    "site_header": "Agricola de la Costa San Luis",
+    "site_header": "",
     
     # Title on the brand (19 chars max) (defaults to current_admin_site.site_header if absent or None)
-    "site_brand": "Agricola de la Costa San Luis",
+    "site_brand": "",
     
     # Logo to use for your site, must be present in static files, used for brand on top left
     "site_logo": "img/logo-sm.png",
@@ -112,8 +112,8 @@ JAZZMIN_SETTINGS = {
     # Copyright on the footer
     "copyright": "Agricola de la Costa San Luis",
     
-    # List of model admins to search from the search bar, search bar omitted if excluded
-    "search_model": ["auth.User", "auth.Group"],
+    # Una sola barra de búsqueda → sin duplicados en la navbar
+    "search_model": ["auth.User"],
     
     # Field name on user model that contains avatar ImageField/URLField/Charfield or a callable that receives the user
     "user_avatar": _get_user_avatar,
@@ -123,27 +123,19 @@ JAZZMIN_SETTINGS = {
     ############
     
     # Links to put along the top menu
+    # Solo accesos rápidos no disponibles en sidebar.
+    # "Gastos" dropdown se eliminó — ya existe en la barra lateral.
     "topmenu_links": [
-        # Url that gets reversed (Permissions can be added)
-        {"name": "Inicio", "url": "admin:index", "permissions": ["auth.view_user"]},
-        
-        # external url that opens in a new window (Permissions can be added)
+        {"name": "Panel de Control", "url": "admin:index", "permissions": ["auth.view_user"]},
         {"name": "Acumulados", "url": "/balances/", "new_window": False},
-        
-        # model admin to link to (Permissions checked against model)
-        {"model": "auth.User"},
-        
-        # App with dropdown menu to all its models pages (Permissions checked against models)
-        {"app": "gastos"},
     ],
     
     #############
     # User Menu #
     #############
     
-    # Additional links to include in the user menu on the top right ("app" url type is not allowed)
+    # Accesos rápidos en menú de usuario (avatar top-right)
     "usermenu_links": [
-        {"name": "Acumulados", "url": "/balances/", "icon": "fas fa-chart-line"},
         {"model": "auth.user"}
     ],
     
@@ -155,22 +147,53 @@ JAZZMIN_SETTINGS = {
     "show_sidebar": True,
     
     # Whether to aut expand the menu
-    "navigation_expanded": True,
+    # False = secciones colapsadas por defecto (mejor UX cuando hay muchos ítems)
+    "navigation_expanded": False,
     
     # Hide these apps when generating side menu e.g (auth)
     "hide_apps": [],
     
-    # Hide these models when generating side menu (e.g auth.user)
-    "hide_models": [],
+    # Ocultar modelos de catálogo/configuración poco frecuentes del menú principal.
+    # Agente y TerminoCredito se reubican en CATÁLOGO mediante custom_links.
+    # auth.Group se gestiona desde el panel de usuarios.
+    "hide_models": ["auth.Group", "ventas.Agente", "ventas.TerminoCredito"],
     
-    # List of apps (and models) to base side menu ordering off of (does not need to contain all apps/models)
-    "order_with_respect_to": ["auth", "gastos", "ventas", "catalogo", "auditoria"],
+    # Ordenamiento del menú lateral: apps primero, luego modelos por frecuencia de uso.
+    # Los ítems más usados aparecen primero dentro de cada sección.
+    "order_with_respect_to": [
+        "auth",
+        # GASTOS: operacional primero, configuración al final
+        "gastos",
+        "gastos.Gastos",
+        "gastos.Compra",
+        "gastos.Cuenta",
+        "gastos.SaldoMensual",
+        "gastos.CatGastos",
+        "gastos.Banco",
+        # VENTAS: transaccional primero, reportes y obligaciones al final
+        "ventas",
+        "ventas.Ventas",
+        "ventas.Cliente",
+        "ventas.PagoVenta",
+        "ventas.Anticipo",
+        "ventas.EstadoCuentaCliente",
+        "ventas.ObligacionFiscal",
+        # CATÁLOGO: datos de referencia (incluye agente y término crédito reasignados)
+        "catalogo",
+        "catalogo.Sucursal",
+        "catalogo.Producto",
+        "catalogo.Productor",
+        "catalogo.Estado",
+        "catalogo.Pais",
+        "auditoria",
+        "capital_inversiones",
+    ],
     
     # Custom links to append to app groups, keyed on app name
     "custom_links": {
         "gastos": [
             {
-                "name": "Acumulado de Gastos",
+                "name": "Acumulado de gastos",
                 "url": "admin:gastos_gastos_balances",
                 "icon": "fas fa-chart-line",
                 "permissions": ["gastos.view_gastos"]
@@ -178,24 +201,40 @@ JAZZMIN_SETTINGS = {
             {
                 "name": "Subir Factura (IA)",
                 "url": "/ingresar-factura/",
-                "icon": "fas fa-file-upload",
+                "icon": "fas fa-robot",
                 "permissions": ["gastos.add_gastos"]
             },
         ],
         "ventas": [
             {
-                "name": "Análisis de Ventas",
+                "name": "Análisis de ventas",
                 "url": "admin:ventas_ventas_balances",
                 "icon": "fas fa-chart-line",
                 "permissions": ["ventas.view_ventas"]
             },
             {
-                "name": "Reporte de Cobranza",
+                "name": "Reporte de cobranza",
                 "url": "admin:ventas_reporte_cobranza",
                 "icon": "fas fa-file-invoice-dollar",
                 "permissions": ["ventas.view_ventas"]
             },
-        ]
+        ],
+        # Catálogo consolida datos de referencia incluyendo los modelos
+        # de ventas que no son transaccionales (Agente, TerminoCredito).
+        "catalogo": [
+            {
+                "name": "Agentes aduanales",
+                "url": "admin:ventas_agente_changelist",
+                "icon": "fas fa-user-tie",
+                "permissions": ["ventas.view_agente"]
+            },
+            {
+                "name": "Términos de crédito",
+                "url": "admin:ventas_terminocredito_changelist",
+                "icon": "fas fa-handshake",
+                "permissions": ["ventas.view_terminocredito"]
+            },
+        ],
     },
     
     # Custom icons for side menu apps/models See https://fontawesome.com/icons?d=gallery&m=free&v=5.0.0,5.0.1,5.0.10,5.0.11,5.0.12,5.0.13,5.0.2,5.0.3,5.0.4,5.0.5,5.0.6,5.0.7,5.0.8,5.0.9,5.1.0,5.1.1,5.2.0,5.3.0,5.3.1,5.4.0,5.4.1,5.4.2,5.5.0,5.6.0,5.6.1,5.6.3,5.7.0,5.7.1,5.7.2,5.8.0,5.8.1,5.8.2,5.9.0,5.10.0,5.10.1,5.10.2,5.11.0,5.11.1,5.11.2,5.12.0,5.12.1,5.13.0,5.13.1,5.14.0,5.15.0,5.15.1,5.15.2,5.15.3,5.15.4&s=solid
@@ -203,25 +242,33 @@ JAZZMIN_SETTINGS = {
         "auth": "fas fa-users-cog",
         "auth.user": "fas fa-user",
         "auth.Group": "fas fa-users",
-        "gastos": "fas fa-money-bill-wave",
-        "gastos.Banco": "fas fa-university",
-        "gastos.Cuenta": "fas fa-credit-card",
-        "gastos.CatGastos": "fas fa-tags",
+        # GASTOS
+        "gastos": "fas fa-file-invoice-dollar",
         "gastos.Gastos": "fas fa-receipt",
         "gastos.Compra": "fas fa-shopping-cart",
-        "gastos.SaldoMensual": "fas fa-chart-line",
+        "gastos.Cuenta": "fas fa-credit-card",
+        "gastos.SaldoMensual": "fas fa-wallet",
+        "gastos.CatGastos": "fas fa-tags",
+        "gastos.Banco": "fas fa-university",
+        # VENTAS
         "ventas": "fas fa-chart-bar",
-        "ventas.Cliente": "fas fa-users",
-        "ventas.Agente": "fas fa-user-tie",
         "ventas.Ventas": "fas fa-cash-register",
+        "ventas.Cliente": "fas fa-user-circle",
+        "ventas.PagoVenta": "fas fa-money-check-alt",
         "ventas.Anticipo": "fas fa-hand-holding-usd",
-        "catalogo": "fas fa-list",
-        "catalogo.Pais": "fas fa-globe",
-        "catalogo.Estado": "fas fa-map",
-        "catalogo.Sucursal": "fas fa-store",
+        "ventas.EstadoCuentaCliente": "fas fa-file-invoice",
+        "ventas.ObligacionFiscal": "fas fa-balance-scale",
+        "ventas.Agente": "fas fa-user-tie",
+        "ventas.TerminoCredito": "fas fa-handshake",
+        # CATÁLOGO (datos de referencia)
+        "catalogo": "fas fa-layer-group",
+        "catalogo.Sucursal": "fas fa-store-alt",
+        "catalogo.Producto": "fas fa-box-open",
         "catalogo.Productor": "fas fa-seedling",
-        "catalogo.Producto": "fas fa-box",
-        "auditoria": "fas fa-history",
+        "catalogo.Estado": "fas fa-map",
+        "catalogo.Pais": "fas fa-globe",
+        # AUDITORÍA
+        "auditoria": "fas fa-shield-alt",
         "auditoria.LogActividad": "fas fa-clipboard-list",
     },
     
@@ -278,8 +325,8 @@ JAZZMIN_UI_TWEAKS = {
     "sidebar": "sidebar-dark-primary",
     "sidebar_nav_small_text": False,
     "sidebar_disable_expand": False,
-    "sidebar_nav_child_indent": False,
-    "sidebar_nav_compact_style": False,
+    "sidebar_nav_child_indent": True,    # Indentación visual para jerarquía clara
+    "sidebar_nav_compact_style": True,   # Reduce padding: más ítems visibles sin scroll
     "sidebar_nav_legacy_style": False,
     "sidebar_nav_flat_style": False,
     "theme": "default",
@@ -329,6 +376,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "app.context_processors.site_config",
             ],
         },
     },
