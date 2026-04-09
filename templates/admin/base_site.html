@@ -110,6 +110,11 @@
 
 /* ─ Dynamic brand logo ────────────────────────────────────────── */
 .brand-logo-dyn { height: 30px !important; width: auto !important; object-fit: contain !important; border-radius: 3px !important; }
+
+/* ─ Custom topbar CSS ─────────────────────────────────────────── */
+{% if site_config_global and site_config_global.custom_topbar_css %}
+{{ site_config_global.custom_topbar_css|safe }}
+{% endif %}
 </style>
 {% endblock %}
 

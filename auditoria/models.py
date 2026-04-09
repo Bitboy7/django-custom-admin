@@ -169,6 +169,11 @@ class SiteConfiguration(models.Model):
         verbose_name=_('Sidebar expandido al entrar'),
         help_text=_('Muestra todas las secciones del menú lateral abiertas al cargar la página.'),
     )
+    custom_topbar_css = models.TextField(
+        blank=True,
+        verbose_name=_('CSS personalizado para la barra superior'),
+        help_text=_('CSS personalizado que se aplicará a la barra de navegación superior del admin.'),
+    )
 
     class Meta:
         verbose_name = _('Configuración del Sitio')

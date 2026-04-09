@@ -92,7 +92,7 @@ JAZZMIN_SETTINGS = {
     "site_brand": "",
     
     # Logo to use for your site, must be present in static files, used for brand on top left
-    "site_logo": "img/logo-sm.png",
+    "site_logo": "",
     
     # Logo to use for your site, must be present in static files, used for login form logo (defaults to site_logo)
     "login_logo": "img/logo-sm.png",
@@ -110,7 +110,7 @@ JAZZMIN_SETTINGS = {
     "welcome_sign": "Por favor, inicia sesión para continuar",
     
     # Copyright on the footer
-    "copyright": "Agricola de la Costa San Luis",
+    "copyright": "Agricola de la Costa San Luis S.P.R. de R.L. de C.V.",
     
     # Una sola barra de búsqueda → sin duplicados en la navbar
     "search_model": ["auth.User"],
