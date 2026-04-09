@@ -400,7 +400,8 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
         'marcar_como_pagado', 
         'generar_estado_cuenta',
         'enviar_notificacion_vencimiento',
-        'exportar_cuentas_vencidas'
+        'exportar_cuentas_vencidas',
+        'export_to_excel',
     ]
     
     fieldsets = (
@@ -725,7 +726,317 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
         return response
     
     exportar_cuentas_vencidas.short_description = "📄 Exportar cuentas vencidas"
-    
+
+    def export_to_excel(self, request, queryset):
+        """Exporta las ventas seleccionadas a Excel con tabla dinámica +
+        hoja de resumen ejecutivo de cuentas por cobrar."""
+        import openpyxl
+        import datetime as dt
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.utils import get_column_letter
+        from openpyxl.worksheet.table import Table, TableStyleInfo
+        from collections import defaultdict
+
+        NAVY  = "1E3A5F"
+        TEAL  = "1AADBC"
+        LIGHT = "D6EAF8"
+        WHITE = "FFFFFF"
+        MONEY = '"$"#,##0.00'
+        hoy   = dt.date.today()
+
+        def _nav_hdr(cell, bg=NAVY):
+            cell.font      = Font(bold=True, color=WHITE)
+            cell.fill      = PatternFill("solid", fgColor=bg)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        def _section_title(ws, row, col_start, col_end, text):
+            cell = ws.cell(row=row, column=col_start, value=text)
+            cell.font = Font(bold=True, color=WHITE, size=11)
+            cell.fill = PatternFill("solid", fgColor=NAVY)
+            cell.alignment = Alignment(horizontal="left", vertical="center")
+            if col_end > col_start:
+                ws.merge_cells(start_row=row, start_column=col_start,
+                               end_row=row, end_column=col_end)
+            ws.row_dimensions[row].height = 20
+
+        def _add_table(ws, name, hdr_row, data_end_row, col_end):
+            if data_end_row < hdr_row + 1:
+                return
+            tab = Table(
+                displayName=name,
+                ref=f"A{hdr_row}:{get_column_letter(col_end)}{data_end_row}",
+            )
+            tab.tableStyleInfo = TableStyleInfo(
+                name="TableStyleLight2",
+                showFirstColumn=False, showLastColumn=False,
+                showRowStripes=True, showColumnStripes=False,
+            )
+            ws.add_table(tab)
+
+        qs = queryset.select_related(
+            'cliente', 'producto', 'sucursal_id', 'cuenta',
+            'termino_credito', 'mercado_destino'
+        ).order_by('fecha_salida_manifiesto')
+        data = list(qs)
+
+        wb = openpyxl.Workbook()
+
+        # ── HOJA 1 — Detalle ─────────────────────────────────────────────────
+        ws = wb.active
+        ws.title = "Ventas"
+
+        COLUMNS = [
+            ("Fecha",          lambda v: v.fecha_salida_manifiesto,                     13, "DD/MM/YYYY"),
+            ("Cliente",        lambda v: v.cliente.nombre,                              28, "@"),
+            ("Carga",          lambda v: v.carga or "",                                 16, "@"),
+            ("Producto",       lambda v: v.producto.variedad if hasattr(v.producto, 'variedad') else str(v.producto), 22, "@"),
+            ("Sucursal",       lambda v: v.sucursal_id.nombre,                          18, "@"),
+            ("Tipo",           lambda v: v.tipo_venta,                                  14, "@"),
+            ("Modalidad",      lambda v: v.modalidad_pago,                              14, "@"),
+            ("Monto",          lambda v: float(v.monto.amount),                         16, MONEY),
+            ("Monto Pagado",   lambda v: float(v.monto_pagado.amount),                  16, MONEY),
+            ("Saldo Pendiente",lambda v: round(float(v.monto.amount) - float(v.monto_pagado.amount), 2), 16, MONEY),
+            ("Estado",         lambda v: v.estado_cobranza,                             14, "@"),
+            ("Vencimiento",    lambda v: v.fecha_vencimiento,                           13, "DD/MM/YYYY"),
+        ]
+
+        for ci, (hdr, _, width, _) in enumerate(COLUMNS, 1):
+            cell = ws.cell(row=1, column=ci, value=hdr)
+            _nav_hdr(cell)
+            ws.column_dimensions[get_column_letter(ci)].width = width
+
+        for ri, venta in enumerate(data, 2):
+            for ci, (_, getter, _, fmt) in enumerate(COLUMNS, 1):
+                cell = ws.cell(row=ri, column=ci, value=getter(venta))
+                cell.number_format = fmt
+                cell.alignment = Alignment(vertical="center")
+
+        last_data = len(data) + 1
+
+        if data:
+            tab_main = Table(
+                displayName="TablaVentas",
+                ref=f"A1:{get_column_letter(len(COLUMNS))}{last_data}",
+            )
+            tab_main.tableStyleInfo = TableStyleInfo(
+                name="TableStyleMedium2",
+                showFirstColumn=False, showLastColumn=False,
+                showRowStripes=True, showColumnStripes=False,
+            )
+            ws.add_table(tab_main)
+
+        # Fila TOTAL fuera de la tabla
+        total_r = last_data + 1
+        for ci, col_label in ((8, "Monto"), (9, "Pagado"), (10, "Pendiente")):
+            lbl = ws.cell(row=total_r, column=ci - 1)
+            if ci == 8:
+                lbl.value = "TOTAL"
+                lbl.font  = Font(bold=True)
+                lbl.alignment = Alignment(horizontal="right")
+            col_ltr = get_column_letter(ci)
+            tc = ws.cell(row=total_r, column=ci,
+                         value=f"=SUM({col_ltr}2:{col_ltr}{last_data})")
+            tc.number_format = MONEY
+            tc.font = Font(bold=True)
+            tc.fill = PatternFill("solid", fgColor=LIGHT)
+
+        ws.freeze_panes = "A2"
+
+        # ── HOJA 2 — Cuentas por Cobrar (Resumen Ejecutivo) ──────────────────
+        ws2 = wb.create_sheet("Cuentas por Cobrar")
+
+        if not data:
+            ws2.cell(row=1, column=1, value="Sin datos seleccionados.")
+        else:
+            total_monto     = sum(float(v.monto.amount) for v in data)
+            total_pagado    = sum(float(v.monto_pagado.amount) for v in data)
+            total_pendiente = round(total_monto - total_pagado, 2)
+
+            credito  = [v for v in data if v.modalidad_pago == 'Credito']
+            vencidas = [v for v in credito if v.fecha_vencimiento and v.fecha_vencimiento < hoy
+                        and v.estado_cobranza in ('Pendiente', 'Parcial')]
+            pendientes = [v for v in credito if v.estado_cobranza in ('Pendiente', 'Parcial')]
+
+            monto_vencido   = sum(float(v.monto.amount) - float(v.monto_pagado.amount) for v in vencidas)
+            monto_pendiente_cxc = sum(float(v.monto.amount) - float(v.monto_pagado.amount) for v in pendientes)
+
+            by_estado   = defaultdict(lambda: {'count': 0, 'monto': 0.0, 'pendiente': 0.0})
+            by_cliente  = defaultdict(lambda: {'count': 0, 'monto': 0.0, 'pendiente': 0.0})
+            by_venc     = defaultdict(lambda: {'count': 0, 'monto': 0.0})   # antigüedad
+
+            for v in data:
+                amt  = float(v.monto.amount)
+                pend = round(amt - float(v.monto_pagado.amount), 2)
+                est  = v.estado_cobranza
+                cli  = v.cliente.nombre
+
+                by_estado[est]['count']    += 1
+                by_estado[est]['monto']    += amt
+                by_estado[est]['pendiente']+= pend
+
+                by_cliente[cli]['count']    += 1
+                by_cliente[cli]['monto']    += amt
+                by_cliente[cli]['pendiente']+= pend
+
+                # Antigüedad solo para créditos pendientes
+                if v.modalidad_pago == 'Credito' and v.fecha_vencimiento and pend > 0:
+                    dias_v = (hoy - v.fecha_vencimiento).days
+                    if dias_v <= 0:
+                        bucket = "Por vencer"
+                    elif dias_v <= 30:
+                        bucket = "1-30 días"
+                    elif dias_v <= 60:
+                        bucket = "31-60 días"
+                    elif dias_v <= 90:
+                        bucket = "61-90 días"
+                    else:
+                        bucket = "+90 días"
+                    by_venc[bucket]['count'] += 1
+                    by_venc[bucket]['monto'] += pend
+
+            # Anchos
+            for col, w in zip('ABCDE', [30, 14, 18, 18, 14]):
+                ws2.column_dimensions[col].width = w
+
+            r = 1
+            # Cabecera
+            hdr_cell = ws2.cell(row=r, column=1,
+                                value="  RESUMEN EJECUTIVO — CUENTAS POR COBRAR")
+            hdr_cell.font      = Font(bold=True, color=WHITE, size=14)
+            hdr_cell.fill      = PatternFill("solid", fgColor=NAVY)
+            hdr_cell.alignment = Alignment(horizontal="left", vertical="center")
+            ws2.merge_cells(f"A{r}:E{r}")
+            ws2.row_dimensions[r].height = 30
+            r += 1
+
+            sub = ws2.cell(
+                row=r, column=1,
+                value=(f"  Generado: {hoy.strftime('%d/%m/%Y')}"
+                       f"   |   Registros analizados: {len(data)}"
+                       f"   |   Créditos activos: {len(credito)}"),
+            )
+            sub.font = Font(italic=True, size=9, color="555555")
+            sub.fill = PatternFill("solid", fgColor="EBF5FB")
+            ws2.merge_cells(f"A{r}:E{r}")
+            r += 2
+
+            # KPIs — numeric cells with number_format
+            kpis = [
+                ("Total Facturado",      total_monto,           MONEY),
+                ("Total Cobrado",        total_pagado,          MONEY),
+                ("Saldo por Cobrar",     total_pendiente,       MONEY),
+                ("Saldo Vencido",        monto_vencido,         MONEY),
+                ("N° Ventas",            len(data),             "0"),
+                ("N° Créditos Activos",  len(credito),          "0"),
+                ("N° Vencidas",          len(vencidas),         "0"),
+                ("N° Pendientes",        len(pendientes),       "0"),
+            ]
+            for i, (label, value, fmt) in enumerate(kpis):
+                kpi_row = r + (i // 2)
+                kpi_col = 1 + (i % 2) * 2
+                lc = ws2.cell(row=kpi_row, column=kpi_col, value=label)
+                lc.font      = Font(bold=True, size=9, color="666666")
+                lc.fill      = PatternFill("solid", fgColor="F8FBFD")
+                lc.alignment = Alignment(horizontal="left")
+                vc = ws2.cell(row=kpi_row, column=kpi_col + 1, value=value)
+                vc.number_format = fmt
+                vc.font      = Font(bold=True, size=11, color=NAVY)
+                vc.fill      = PatternFill("solid", fgColor="F8FBFD")
+                vc.alignment = Alignment(horizontal="right")
+            r += 5  # 4 KPI rows + blank separator
+
+            # ── Por Estado de Cobranza ────────────────────────────────────
+            _section_title(ws2, r, 1, 5, "  RESUMEN POR ESTADO DE COBRANZA")
+            r += 1
+            for ci, h in enumerate(["Estado", "N° Ventas", "Monto Total", "Saldo Pendiente", "% Pendiente"], 1):
+                _nav_hdr(ws2.cell(row=r, column=ci, value=h), TEAL)
+            est_hdr = r
+            r += 1
+            for estado, v in sorted(by_estado.items(), key=lambda x: -x[1]['pendiente']):
+                pct = v['pendiente'] / total_monto if total_monto else 0
+                ws2.cell(row=r, column=1, value=estado)
+                ws2.cell(row=r, column=2, value=v['count']).alignment = Alignment(horizontal="center")
+                c3 = ws2.cell(row=r, column=3, value=v['monto'])
+                c3.number_format = MONEY
+                c4 = ws2.cell(row=r, column=4, value=v['pendiente'])
+                c4.number_format = MONEY
+                c5 = ws2.cell(row=r, column=5, value=pct)
+                c5.number_format = '0.00%'
+                r += 1
+            est_end = r - 1
+            _add_table(ws2, "TablaEstados", est_hdr, est_end, 5)
+            # Total
+            ws2.cell(row=r, column=1, value="TOTAL").font = Font(bold=True)
+            ws2.cell(row=r, column=2, value=len(data)).font = Font(bold=True)
+            ct3 = ws2.cell(row=r, column=3, value=total_monto)
+            ct3.number_format = MONEY; ct3.font = Font(bold=True); ct3.fill = PatternFill("solid", fgColor=LIGHT)
+            ct4 = ws2.cell(row=r, column=4, value=total_pendiente)
+            ct4.number_format = MONEY; ct4.font = Font(bold=True); ct4.fill = PatternFill("solid", fgColor=LIGHT)
+            r += 2
+
+            # ── Antigüedad de Saldos ──────────────────────────────────────
+            _section_title(ws2, r, 1, 4, "  ANTIGÜEDAD DE SALDOS (CRÉDITOS PENDIENTES)")
+            r += 1
+            BUCKET_ORDER = ["Por vencer", "1-30 días", "31-60 días", "61-90 días", "+90 días"]
+            for ci, h in enumerate(["Rango", "N° Facturas", "Saldo Pendiente", "% del Total Pendiente"], 1):
+                _nav_hdr(ws2.cell(row=r, column=ci, value=h), TEAL)
+            venc_hdr = r
+            r += 1
+            for bucket in BUCKET_ORDER:
+                if bucket not in by_venc:
+                    continue
+                v = by_venc[bucket]
+                pct = v['monto'] / monto_pendiente_cxc if monto_pendiente_cxc else 0
+                ws2.cell(row=r, column=1, value=bucket)
+                ws2.cell(row=r, column=2, value=v['count']).alignment = Alignment(horizontal="center")
+                b3 = ws2.cell(row=r, column=3, value=v['monto'])
+                b3.number_format = MONEY
+                b4 = ws2.cell(row=r, column=4, value=pct)
+                b4.number_format = '0.00%'
+                r += 1
+            venc_end = r - 1
+            _add_table(ws2, "TablaAntiguedad", venc_hdr, venc_end, 4)
+            ws2.cell(row=r, column=1, value="TOTAL").font = Font(bold=True)
+            ws2.cell(row=r, column=2, value=len(pendientes)).font = Font(bold=True)
+            bt3 = ws2.cell(row=r, column=3, value=monto_pendiente_cxc)
+            bt3.number_format = MONEY; bt3.font = Font(bold=True); bt3.fill = PatternFill("solid", fgColor=LIGHT)
+            r += 2
+
+            # ── Top Clientes por Saldo Pendiente ──────────────────────────
+            _section_title(ws2, r, 1, 5, "  TOP CLIENTES POR SALDO PENDIENTE")
+            r += 1
+            for ci, h in enumerate(["Cliente", "N° Ventas", "Monto Total", "Saldo Pendiente", "% del Total"], 1):
+                _nav_hdr(ws2.cell(row=r, column=ci, value=h), TEAL)
+            cli_hdr = r
+            r += 1
+            top_clientes = sorted(by_cliente.items(), key=lambda x: -x[1]['pendiente'])[:15]
+            for cli, v in top_clientes:
+                pct = v['pendiente'] / total_monto if total_monto else 0
+                ws2.cell(row=r, column=1, value=cli)
+                ws2.cell(row=r, column=2, value=v['count']).alignment = Alignment(horizontal="center")
+                cc3 = ws2.cell(row=r, column=3, value=v['monto'])
+                cc3.number_format = MONEY
+                cc4 = ws2.cell(row=r, column=4, value=v['pendiente'])
+                cc4.number_format = MONEY
+                cc5 = ws2.cell(row=r, column=5, value=pct)
+                cc5.number_format = '0.00%'
+                r += 1
+            cli_end = r - 1
+            _add_table(ws2, "TablaClientes", cli_hdr, cli_end, 5)
+
+            ws2.freeze_panes = "A4"
+
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = (
+            f'attachment; filename="ventas_{hoy.strftime("%Y%m%d")}.xlsx"'
+        )
+        wb.save(response)
+        return response
+
+    export_to_excel.short_description = "Exportar a Excel (.xlsx)"
+
     # =============================================================================
     # VISTAS PERSONALIZADAS DE REPORTES
     # =============================================================================

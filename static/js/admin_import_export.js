@@ -1,3 +1,28 @@
+// ── Forzar tema claro de Jazzmin ──────────────────────────────────────────────
+// El UI Builder de Jazzmin guarda el tema en localStorage bajo la clave "jazzmin".
+// Si alguien eligió un tema oscuro en producción, persiste aunque settings.py diga
+// "theme: default". Esta función lo resetea a valores claros en cada carga de página.
+(function enforceJazzminLightTheme() {
+  try {
+    var stored = localStorage.getItem("jazzmin");
+    if (stored) {
+      var tweaks = JSON.parse(stored);
+      var DARK_THEMES = ["darkly", "cyborg", "slate", "solar", "superhero"];
+      var wasDark = DARK_THEMES.indexOf(tweaks.theme) !== -1;
+      // Siempre forzar tema claro, independientemente de lo guardado
+      tweaks.theme = "default";
+      tweaks.dark_mode_theme = null;
+      localStorage.setItem("jazzmin", JSON.stringify(tweaks));
+      // Recargar solo si se estaba mostrando un tema oscuro (aplica el cambio visualmente)
+      if (wasDark) {
+        location.reload();
+      }
+    }
+  } catch (e) {
+    /* localStorage no disponible — ignorar */
+  }
+})();
+
 // Script para reposicionar los botones de import/export en Django Jazzmin
 document.addEventListener("DOMContentLoaded", function () {
   function repositionImportExportButtons() {
