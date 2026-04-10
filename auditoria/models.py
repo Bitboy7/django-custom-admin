@@ -169,6 +169,14 @@ class SiteConfiguration(models.Model):
         verbose_name=_('Sidebar expandido al entrar'),
         help_text=_('Muestra todas las secciones del menú lateral abiertas al cargar la página.'),
     )
+    show_ui_builder = models.BooleanField(
+        default=False,
+        verbose_name=_('Habilitar selector de temas'),
+        help_text=_(
+            'Muestra el panel de personalización de tema (UI Builder) en la barra lateral del admin. '
+            'Recomendado solo para administradores durante configuración inicial.'
+        ),
+    )
     custom_topbar_css = models.TextField(
         blank=True,
         verbose_name=_('CSS personalizado para la barra superior'),

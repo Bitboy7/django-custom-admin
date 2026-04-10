@@ -18,5 +18,25 @@ class AuditoriaConfig(AppConfig):
             if created:
                 UserProfile.objects.get_or_create(user=instance)
             else:
-                # create if doesn't exist (e.g. existing users on first deploy)
                 UserProfile.objects.get_or_create(user=instance)
+
+        # Sincronizar show_ui_builder desde la BD en el primer request
+        # (no aquí para evitar acceso prematuro a la BD durante setup)
+        from django.core.signals import request_started
+
+        _applied = {'done': False}
+
+        @receiver(request_started, weak=False)
+        def _apply_jazzmin_ui_builder(sender, **kwargs):
+            if _applied['done']:
+                return
+            try:
+                from django.conf import settings
+                from auditoria.models import SiteConfiguration
+                cfg = SiteConfiguration.objects.filter(pk=1).values('show_ui_builder').first()
+                if cfg is not None:
+                    jazzmin = getattr(settings, 'JAZZMIN_SETTINGS', {})
+                    jazzmin['show_ui_builder'] = cfg['show_ui_builder']
+                _applied['done'] = True
+            except Exception:
+                pass

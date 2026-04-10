@@ -140,7 +140,7 @@ class SiteConfigurationAdmin(ModelAdmin):
             'description': 'Personaliza los textos que identifican tu empresa en el sistema.',
         }),
         ('Barra lateral', {
-            'fields': ('navigation_expanded',),
+            'fields': ('navigation_expanded', 'show_ui_builder'),
         }),
         ('Estilos personalizados', {
             'fields': ('custom_topbar_css',),
@@ -149,6 +149,13 @@ class SiteConfigurationAdmin(ModelAdmin):
             'classes': ('collapse',),
         }),
     )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        # Aplicar el cambio en caliente sin reiniciar el servidor
+        from django.conf import settings as django_settings
+        jazzmin = getattr(django_settings, 'JAZZMIN_SETTINGS', {})
+        jazzmin['show_ui_builder'] = obj.show_ui_builder
 
     def has_add_permission(self, request):
         return False  # Singleton: no se puede agregar otro.
