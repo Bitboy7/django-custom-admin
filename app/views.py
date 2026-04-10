@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.contrib.auth.models import User
 from django.db.models import Sum, Count
 from django.utils import timezone
@@ -94,6 +94,7 @@ def export_full_report_to_excel(request):
 
 
 @login_required
+@permission_required('gastos.view_gastos', raise_exception=True)
 def balances_view(request):
     """
     Vista principal para el análisis de balances y gastos

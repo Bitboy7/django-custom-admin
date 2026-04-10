@@ -4,6 +4,7 @@ Sistema de gestión de roles y permisos personalizado
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 
 
 class RoleManager:
@@ -120,11 +121,12 @@ class RoleManager:
                 # Administrador - todos los permisos
                 permissions = Permission.objects.all()
             else:
-                # Otros roles - permisos específicos
-                permissions = Permission.objects.filter(
-                    codename__in=[p.split('.')[-1] for p in role_data['permissions']],
-                    content_type__app_label__in=[p.split('.')[0] for p in role_data['permissions']]
-                )
+                # Otros roles - permisos específicos usando pares exactos (app_label, codename)
+                perm_query = Q()
+                for perm_string in role_data['permissions']:
+                    app_label, codename = perm_string.rsplit('.', 1)
+                    perm_query |= Q(content_type__app_label=app_label, codename=codename)
+                permissions = Permission.objects.filter(perm_query)
             
             group.permissions.set(permissions)
             

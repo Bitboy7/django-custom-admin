@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Sum, Count, Avg, Max, Min, Q
 from django.db.models.functions import Extract, TruncMonth, TruncWeek, TruncDate
 from django.utils import timezone
@@ -13,10 +14,14 @@ from catalogo.models import Sucursal, Pais
 from gastos.models import Cuenta
 from .services.reporte_cobranza_service import generar_reporte_cobranza
 
+@login_required
+@permission_required('ventas.view_anticipo', raise_exception=True)
 def lista_anticipos(request):
     anticipos = Anticipo.objects.all()
     return render(request, 'lista_anticipos.html', {'anticipos': anticipos})
 
+@login_required
+@permission_required('ventas.add_anticipo', raise_exception=True)
 def crear_anticipo(request):
     if request.method == 'POST':
         form = AnticipoForm(request.POST)
@@ -27,6 +32,8 @@ def crear_anticipo(request):
         form = AnticipoForm()
     return render(request, 'crear_anticipo.html', {'form': form})
 
+@login_required
+@permission_required('ventas.view_ventas', raise_exception=True)
 def detalle_venta(request, venta_id):
     venta = get_object_or_404(Ventas, id=venta_id)
     monto_final = venta.calcular_monto_final()
@@ -362,12 +369,16 @@ def build_ventas_balances_context(request):
     return context
 
 
+@login_required
+@permission_required('ventas.view_ventas', raise_exception=True)
 def ventas_balances(request):
     """Vista para mostrar balances y análisis de ventas con filtros avanzados"""
     context = build_ventas_balances_context(request)
     return render(request, 'ventas/ventas_balances.html', context)
 
 
+@login_required
+@permission_required('ventas.view_ventas', raise_exception=True)
 def exportar_balances_xlsx(request):
     """Exporta los balances filtrados actuales a un archivo XLSX."""
     import openpyxl
@@ -448,6 +459,8 @@ def exportar_balances_xlsx(request):
     return response
 
 
+@login_required
+@permission_required('ventas.view_ventas', raise_exception=True)
 def reporte_cobranza_global(request):
     """
     Vista principal del Reporte Global de Cobranza.

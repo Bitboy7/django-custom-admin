@@ -19,8 +19,9 @@ urlpatterns = [
     path('api/currency-conversion/', currency_conversion_api, name='currency_conversion_api'),
 ]
 
-# Agregar archivos media tanto en desarrollo como en producción
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Agregar archivos media solo en desarrollo (en producción los sirve MediaServeMiddleware)
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # En producción, también agregamos archivos estáticos por si acaso
 if not settings.DEBUG:

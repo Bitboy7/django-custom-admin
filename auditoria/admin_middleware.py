@@ -1,8 +1,29 @@
 """
 Middleware para registrar actividad en el admin
 """
+import logging
 from django.urls import resolve
 from .services import registrar_creacion, registrar_actualizacion, registrar_eliminacion, registrar_visualizacion
+
+logger = logging.getLogger('auditoria.middleware')
+
+_SENSITIVE_FIELDS = frozenset([
+    'password', 'password1', 'password2', 'old_password', 'new_password',
+    'confirm_password', 'secret_key', 'token', 'api_key', 'clave', 'pin',
+])
+
+
+def _sanitize_post_data(post_dict):
+    """Redacta campos sensibles antes de registrarlos en auditoría."""
+    sanitized = {}
+    for key, value in post_dict.items():
+        if key.startswith('_') or key == 'csrfmiddlewaretoken':
+            continue
+        if any(sensitive in key.lower() for sensitive in _SENSITIVE_FIELDS):
+            sanitized[key] = '***REDACTED***'
+        else:
+            sanitized[key] = str(value[0] if isinstance(value, list) else value)[:200] if value else value
+    return sanitized
 
 
 class AdminAuditMiddleware:
@@ -67,8 +88,7 @@ class AdminAuditMiddleware:
                     # Actualización exitosa (redirección después de guardar)
                     if hasattr(request, 'POST') and model_name and object_id:
                         # Obtener los campos modificados (simplificado)
-                        campos_modificados = {k: v for k, v in request.POST.items() 
-                                            if not k.startswith('_') and k != 'csrfmiddlewaretoken'}
+                        campos_modificados = _sanitize_post_data(dict(request.POST))
                         
                         registrar_actualizacion(
                             request=request,
@@ -95,8 +115,12 @@ class AdminAuditMiddleware:
                             objeto={'pk': object_id}
                         )
         
-        except Exception as e:
-            # Silenciar errores para no afectar la funcionalidad principal
-            pass
+        except Exception:
+            logger.error(
+                "Error en AdminAuditMiddleware | Usuario: %s | Path: %s",
+                getattr(request.user, 'username', 'anónimo'),
+                request.path,
+                exc_info=True,
+            )
         
         return response

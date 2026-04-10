@@ -42,8 +42,9 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = os.getenv("SECURE_HSTS_PRELOAD", "TRUE").lower() in ["true", "1"]
     SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "False").lower() in ["true", "1"]
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "False").lower() in ["true", "1"]
-    CSRF_COOKIE_SECURE = os.getenv("CSRF_COOKIE_SECURE", "False").lower() in ["true", "1"]
+    SESSION_COOKIE_SECURE = True   # HIGH-01: siempre True en producción
+    CSRF_COOKIE_SECURE = True      # HIGH-01: siempre True en producción
+    SESSION_COOKIE_HTTPONLY = True  # Previene acceso vía JavaScript (XSS)
     X_FRAME_OPTIONS = 'DENY'
 
 CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:8000").split(",")
@@ -408,6 +409,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 12},  # MED-01: mínimo 12 caracteres (NIST SP 800-63B)
     },
     {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
@@ -426,8 +428,14 @@ TIME_ZONE = "America/Mexico_City"
 
 USE_I18N = True  # Habilitar internacionalización
 
-# Desactivamos el soporte de zona horaria para evitar errores con MySQL
-USE_TZ = False
+# HIGH-05: USE_TZ=True almacena en UTC y convierte a America/Mexico_City
+# Compatible con MySQL 8.x (confirmado). Los logs de auditoría tendrán timestamps correctos.
+USE_TZ = True
+
+# MED-05: Gestión de sesiones — expiración en 8 horas (jornada laboral)
+SESSION_COOKIE_AGE = 60 * 60 * 8       # 8 horas en segundos
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Sesión termina al cerrar el navegador
+SESSION_SAVE_EVERY_REQUEST = True       # Reinicia el timer con cada petición activa
 
 # Idiomas disponibles en la aplicación
 LANGUAGES = [

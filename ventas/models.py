@@ -4,6 +4,7 @@ from django.utils.html import format_html
 from djmoney.models.fields import MoneyField
 from django.core.validators import MinValueValidator, MaxValueValidator
 from datetime import datetime, timedelta
+from decimal import Decimal
 from django.utils import timezone
 
 class TerminoCredito(models.Model):
@@ -173,7 +174,12 @@ class Ventas(models.Model):
     carga = models.CharField(max_length=50, blank=True, null=True)
     PO = models.CharField(max_length=50, blank=True, null=True)
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
-    cantidad = models.CharField(max_length=50)
+    cantidad = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(Decimal('0.001'))],
+        help_text="Cantidad vendida (ej: 1500.000 kg)"
+    )
     monto = MoneyField(max_digits=12, decimal_places=2, default_currency='MXN')
     descripcion = models.CharField(max_length=100, blank=True, null=True)  
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
