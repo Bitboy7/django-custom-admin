@@ -187,6 +187,8 @@ JAZZMIN_SETTINGS = {
         "catalogo.Estado",
         "catalogo.Pais",
         "auditoria",
+        "auditoria.LogActividad",
+        "admin.LogEntry",
         "capital_inversiones",
     ],
     
@@ -271,6 +273,7 @@ JAZZMIN_SETTINGS = {
         # AUDITORÍA
         "auditoria": "fas fa-shield-alt",
         "auditoria.LogActividad": "fas fa-clipboard-list",
+        "admin.LogEntry": "fas fa-history",
     },
     
     # Icons that are used when one is not manually specified

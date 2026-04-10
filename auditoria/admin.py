@@ -3,6 +3,8 @@ from django.contrib.admin import ModelAdmin
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.contrib.admin.models import LogEntry, ADDITION, CHANGE, DELETION
+from django.utils.html import format_html
 from .models import LogActividad, SiteConfiguration
 
 
@@ -62,6 +64,62 @@ class LogActividadAdmin(ModelAdmin):
         css = {
             'all': ('css/admin/auditoria.css',)
         }
+
+
+_ACCION_ICONS = {
+    ADDITION: ('fas fa-plus-circle', 'text-success', 'Creación'),
+    CHANGE:   ('fas fa-edit',        'text-warning', 'Modificación'),
+    DELETION: ('fas fa-trash-alt',   'text-danger',  'Eliminación'),
+}
+
+
+@admin.register(LogEntry)
+class LogEntryAdmin(ModelAdmin):
+    """Historial de cambios del admin de Django (LogEntry nativo)."""
+
+    list_display = (
+        'accion_badge', 'object_repr', 'content_type',
+        'user', 'action_time',
+    )
+    list_filter  = ('action_flag', 'content_type', 'action_time')
+    search_fields = ('object_repr', 'change_message', 'user__username')
+    readonly_fields = (
+        'action_time', 'user', 'content_type', 'object_id',
+        'object_repr', 'action_flag', 'change_message',
+    )
+    ordering = ('-action_time',)
+
+    fieldsets = (
+        ('Quién y cuándo', {
+            'fields': ('user', 'action_time'),
+        }),
+        ('Qué objeto', {
+            'fields': ('content_type', 'object_id', 'object_repr'),
+        }),
+        ('Acción', {
+            'fields': ('action_flag', 'change_message'),
+        }),
+    )
+
+    def accion_badge(self, obj):
+        icon_cls, color_cls, label = _ACCION_ICONS.get(
+            obj.action_flag, ('fas fa-question', 'text-secondary', 'Desconocido')
+        )
+        return format_html(
+            '<i class="{} {}" title="{}"></i> {}',
+            icon_cls, color_cls, label, label
+        )
+    accion_badge.short_description = 'Acción'
+    accion_badge.admin_order_field  = 'action_flag'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
 
 
 @admin.register(SiteConfiguration)
