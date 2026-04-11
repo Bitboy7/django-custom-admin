@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentacion del Modulo de Ventas
+    url: https://github.com/Bitboy7/django-custom-admin/tree/main/Docs
+    about: Revisa la documentacion funcional y tecnica antes de abrir una incidencia.
