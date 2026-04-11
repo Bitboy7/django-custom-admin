@@ -63,6 +63,13 @@ INSTALLED_APPS = [
     'django_extensions',
     'compressor',
     'djmoney',  # Django Money para manejo de monedas
+    # 2FA
+    'django_otp',
+    'django_otp.plugins.otp_totp',
+    'django_otp.plugins.otp_static',
+    'two_factor',
+    # Brute-force protection
+    'axes',
     'app',  # Agregamos la app principal para los comandos de gestión
     'auditoria',  # Sistema de registro de actividad
     'catalogo.apps.CatalogoConfig',
@@ -83,20 +90,7 @@ def _get_user_avatar(user):
 
 # Configuración completa para Django Jazzmin
 JAZZMIN_SETTINGS = {
-    # title of the window (Will default to current_admin_site.site_title if absent or None)
-    "site_title": "Sistema administrativo - Agricola de la Costa San Luis",
-    
-    # Title on the login screen (19 chars max) (defaults to current_admin_site.site_header if absent or None)
-    "site_header": "",
-    
-    # Title on the brand (19 chars max) (defaults to current_admin_site.site_header if absent or None)
-    "site_brand": "",
-    
-    # Logo to use for your site, must be present in static files, used for brand on top left
-    "site_logo": "",
-    
-    # Logo to use for your site, must be present in static files, used for login form logo (defaults to site_logo)
-    "login_logo": "img/logo-sm.png",
+
     
     # Logo to use for login form in dark themes (defaults to login_logo)
     "login_logo_dark": None,
@@ -152,7 +146,8 @@ JAZZMIN_SETTINGS = {
     "navigation_expanded": False,
     
     # Hide these apps when generating side menu e.g (auth)
-    "hide_apps": [],
+    # axes/otp_* se reubican dentro de Auditoría mediante custom_links.
+    "hide_apps": ["axes", "otp_static", "otp_totp", "two_factor"],
     
     # Ocultar modelos de catálogo/configuración poco frecuentes del menú principal.
     # Agente y TerminoCredito se reubican en CATÁLOGO mediante custom_links.
@@ -238,6 +233,31 @@ JAZZMIN_SETTINGS = {
                 "permissions": ["ventas.view_terminocredito"]
             },
         ],
+        "auditoria": [
+            {
+                "name": "Intentos de acceso",
+                "url": "admin:axes_accessattempt_changelist",
+                "icon": "fas fa-user-times",
+                "permissions": ["axes.view_accessattempt"],
+            },
+            {
+                "name": "Registro de accesos",
+                "url": "admin:axes_accesslog_changelist",
+                "icon": "fas fa-list-alt",
+                "permissions": ["axes.view_accesslog"],
+            },
+            {
+                "name": "Fallos de acceso",
+                "url": "admin:axes_accessfailurelog_changelist",
+                "icon": "fas fa-exclamation-triangle",
+                "permissions": ["axes.view_accessfailurelog"],
+            },
+            {
+                "name": "Verificación en dos pasos (2FA)",
+                "url": "/account/two_factor/",
+                "icon": "fas fa-mobile-alt",
+            },
+        ],
     },
     
     # Custom icons for side menu apps/models See https://fontawesome.com/icons?d=gallery&m=free&v=5.0.0,5.0.1,5.0.10,5.0.11,5.0.12,5.0.13,5.0.2,5.0.3,5.0.4,5.0.5,5.0.6,5.0.7,5.0.8,5.0.9,5.1.0,5.1.1,5.2.0,5.3.0,5.3.1,5.4.0,5.4.1,5.4.2,5.5.0,5.6.0,5.6.1,5.6.3,5.7.0,5.7.1,5.7.2,5.8.0,5.8.1,5.8.2,5.9.0,5.10.0,5.10.1,5.10.2,5.11.0,5.11.1,5.11.2,5.12.0,5.12.1,5.13.0,5.13.1,5.14.0,5.15.0,5.15.1,5.15.2,5.15.3,5.15.4&s=solid
@@ -274,6 +294,8 @@ JAZZMIN_SETTINGS = {
         "auditoria": "fas fa-shield-alt",
         "auditoria.LogActividad": "fas fa-clipboard-list",
         "admin.LogEntry": "fas fa-history",
+        "axes.AccessAttempt": "fas fa-user-times",
+        "axes.AccessLog": "fas fa-list-alt",
     },
     
     # Icons that are used when one is not manually specified
@@ -353,6 +375,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django_otp.middleware.OTPMiddleware",  # 2FA: verifica OTP tras autenticación
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Cache middlewares
@@ -361,6 +384,8 @@ MIDDLEWARE = [
     # Middlewares de auditoría
     "auditoria.middleware.AuthAuditMiddleware",  # Registro de login/logout
     "auditoria.admin_middleware.AdminAuditMiddleware",  # Registro de actividad en admin
+    # Brute-force lockout (siempre al final)
+    "axes.middleware.AxesMiddleware",
 ]
 
 # Agregar middleware para servir archivos media en producción
@@ -421,6 +446,27 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
+
+# ─── Authentication backends ────────────────────────────────────────────────
+AUTHENTICATION_BACKENDS = [
+    # axes debe ir PRIMERO para bloquear intentos antes de verificar credenciales
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+# ─── django-axes (brute-force protection) ───────────────────────────────────
+AXES_FAILURE_LIMIT       = 5          # Bloquea tras 5 intentos fallidos
+AXES_COOLOFF_TIME        = 1          # Desbloqueo automático después de 1 hora
+AXES_LOCKOUT_PARAMETERS  = ['username', 'ip_address']  # Bloquea por usuario + IP
+AXES_RESET_ON_SUCCESS    = True       # Resetea el contador al iniciar sesión bien
+AXES_ENABLE_ADMIN        = True       # Muestra intentos en el admin
+AXES_LOCKOUT_TEMPLATE    = 'two_factor/lockout.html'
+AXES_VERBOSE             = False
+
+# ─── django-two-factor-auth ─────────────────────────────────────────────────
+LOGIN_URL          = 'two_factor:login'
+LOGIN_REDIRECT_URL = '/es/admin/'
+TWO_FACTOR_REMEMBER_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 días si marca "recordar"
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/

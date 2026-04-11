@@ -1,0 +1,302 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% trans "Sesión cerrada" %} — Agrícola de la Costa San Luis</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+    }
+
+    /* ── LEFT PANEL ── */
+    .l-brand {
+      width: 48%;
+      background: linear-gradient(160deg, #0d2a47 0%, #0d8fa2 60%, #08b5ab 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 52px 56px;
+      position: relative;
+      overflow: hidden;
+    }
+    .l-brand::before {
+      content: '';
+      position: absolute;
+      top: -120px; right: -120px;
+      width: 420px; height: 420px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.05);
+    }
+    .l-brand::after {
+      content: '';
+      position: absolute;
+      bottom: -80px; left: -60px;
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.04);
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+    }
+    .brand-logo-icon {
+      width: 44px; height: 44px;
+      background: rgba(255,255,255,.18);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; color: #fff;
+      backdrop-filter: blur(4px);
+    }
+    .brand-logo-text {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -.2px;
+      line-height: 1.2;
+    }
+    .brand-logo-text span {
+      display: block;
+      font-size: 11px;
+      font-weight: 400;
+      color: rgba(255,255,255,.65);
+      letter-spacing: .3px;
+    }
+
+    .brand-body { position: relative; z-index: 1; }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 12px;
+      color: rgba(255,255,255,.85);
+      font-weight: 500;
+      margin-bottom: 28px;
+      backdrop-filter: blur(4px);
+    }
+    .brand-headline {
+      font-size: 36px;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.15;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+    }
+    .brand-headline em {
+      font-style: normal;
+      color: #7de8f0;
+    }
+    .brand-sub {
+      font-size: 15px;
+      color: rgba(255,255,255,.65);
+      line-height: 1.6;
+      max-width: 340px;
+    }
+
+    .brand-features {
+      margin-top: 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative; z-index: 1;
+    }
+    .brand-feature {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: rgba(255,255,255,.8);
+    }
+    .brand-feature-icon {
+      width: 32px; height: 32px;
+      background: rgba(255,255,255,.1);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; color: #7de8f0;
+      flex-shrink: 0;
+    }
+
+    .brand-footer {
+      font-size: 12px;
+      color: rgba(255,255,255,.4);
+      position: relative; z-index: 1;
+    }
+
+    /* ── RIGHT PANEL ── */
+    .l-form {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 52px 48px;
+      background: #fff;
+    }
+
+    .form-wrap {
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+    }
+
+    /* Logout icon */
+    .logout-icon-wrap {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, #f0fdf9, #e0f7f9);
+      border: 2px solid #b2e4ec;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      color: #0d8fa2;
+      margin: 0 auto 28px;
+    }
+
+    .form-eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      color: #0d8fa2;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .form-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: #0d2a47;
+      letter-spacing: -.5px;
+      margin-bottom: 10px;
+    }
+    .form-subtitle {
+      font-size: 14px;
+      color: #8a9bb0;
+      line-height: 1.6;
+      margin-bottom: 36px;
+    }
+
+    /* Login button */
+    .btn-login {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      background: linear-gradient(135deg, #1e3a5f 0%, #0d8fa2 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      letter-spacing: .2px;
+      transition: opacity .2s, transform .1s;
+      box-shadow: 0 4px 16px rgba(13, 143, 162, .3);
+    }
+    .btn-login:hover { opacity: .92; transform: translateY(-1px); }
+    .btn-login:active { transform: translateY(0); opacity: 1; }
+
+    .form-footer {
+      margin-top: 28px;
+      font-size: 12px;
+      color: #b0bec5;
+    }
+
+    @media (max-width: 768px) {
+      .l-brand { display: none; }
+      .l-form { padding: 40px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LEFT: Brand panel -->
+  <div class="l-brand">
+    <div class="brand-logo">
+      <div class="brand-logo-icon"><i class="fas fa-leaf"></i></div>
+      <div class="brand-logo-text">
+        Agrícola de la Costa
+        <span>San Luis S.P.R. de R.L.</span>
+      </div>
+    </div>
+
+    <div class="brand-body">
+      <div class="brand-badge">
+        <i class="fas fa-shield-alt"></i>
+        {% trans "Acceso Seguro" %}
+      </div>
+      <div class="brand-headline">
+        {% trans "Sistema" %}<br><em>{% trans "Administrativo" %}</em>
+      </div>
+      <div class="brand-sub">
+        {% trans "Plataforma centralizada para la gestión de gastos, ventas, cobranza y operaciones de la empresa." %}
+      </div>
+
+      <div class="brand-features">
+        <div class="brand-feature">
+          <div class="brand-feature-icon"><i class="fas fa-chart-line"></i></div>
+          {% trans "Análisis financiero en tiempo real" %}
+        </div>
+        <div class="brand-feature">
+          <div class="brand-feature-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+          {% trans "Gestión de facturas y cobranza" %}
+        </div>
+        <div class="brand-feature">
+          <div class="brand-feature-icon"><i class="fas fa-user-shield"></i></div>
+          {% trans "Autenticación en dos factores (2FA)" %}
+        </div>
+      </div>
+    </div>
+
+    <div class="brand-footer">
+      &copy; {% now "Y" %} Agrícola de la Costa San Luis. Todos los derechos reservados.
+    </div>
+  </div>
+
+  <!-- RIGHT: Logout confirmation panel -->
+  <div class="l-form">
+    <div class="form-wrap">
+
+      <div class="logout-icon-wrap">
+        <i class="fas fa-sign-out-alt"></i>
+      </div>
+
+      <div class="form-eyebrow">{% trans "Sesión terminada" %}</div>
+      <div class="form-title">{% trans "Has cerrado sesión" %}</div>
+      <div class="form-subtitle">
+        {% trans "Tu sesión ha sido cerrada correctamente. Tus datos están seguros." %}
+      </div>
+
+      <a href="{% url 'two_factor:login' %}" class="btn-login">
+        <i class="fas fa-arrow-left"></i>
+        {% trans "Volver a iniciar sesión" %}
+      </a>
+
+      <div class="form-footer">
+        {% trans "Acceso restringido. Solo personal autorizado." %}
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

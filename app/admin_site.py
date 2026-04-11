@@ -1,10 +1,11 @@
 # Custom admin site for dashboard functionality
 from django.contrib.admin import AdminSite
 from django.template.response import TemplateResponse
+from two_factor.admin import AdminSiteOTPRequiredMixin
 from .views import dashboard_callback
 
 
-class CustomAdminSite(AdminSite):
+class CustomAdminSite(AdminSiteOTPRequiredMixin, AdminSite):
     site_header = "Agricola de la Costa San Luis"
     site_title = "Sistema administrativo"
     index_title = "Panel de Administración"

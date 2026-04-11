@@ -1,0 +1,450 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% trans "Iniciar sesión" %} — Agrícola de la Costa San Luis</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+    }
+
+    /* ── LEFT PANEL ── */
+    .l-brand {
+      width: 48%;
+      background: linear-gradient(160deg, #0d2a47 0%, #0d8fa2 60%, #08b5ab 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 52px 56px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .l-brand::before {
+      content: '';
+      position: absolute;
+      top: -120px; right: -120px;
+      width: 420px; height: 420px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.05);
+    }
+    .l-brand::after {
+      content: '';
+      position: absolute;
+      bottom: -80px; left: -60px;
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.04);
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+    }
+    .brand-logo-icon {
+      width: 44px; height: 44px;
+      background: rgba(255,255,255,.18);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; color: #fff;
+      backdrop-filter: blur(4px);
+    }
+    .brand-logo-text {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -.2px;
+      line-height: 1.2;
+    }
+    .brand-logo-text span {
+      display: block;
+      font-size: 11px;
+      font-weight: 400;
+      color: rgba(255,255,255,.65);
+      letter-spacing: .3px;
+    }
+
+    .brand-body {
+      position: relative; z-index: 1;
+    }
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 12px;
+      color: rgba(255,255,255,.85);
+      font-weight: 500;
+      margin-bottom: 28px;
+      backdrop-filter: blur(4px);
+    }
+    .brand-headline {
+      font-size: 36px;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.15;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+    }
+    .brand-headline em {
+      font-style: normal;
+      color: #7de8f0;
+    }
+    .brand-sub {
+      font-size: 15px;
+      color: rgba(255,255,255,.65);
+      line-height: 1.6;
+      max-width: 340px;
+    }
+
+    .brand-features {
+      margin-top: 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative; z-index: 1;
+    }
+    .brand-feature {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: rgba(255,255,255,.8);
+    }
+    .brand-feature-icon {
+      width: 32px; height: 32px;
+      background: rgba(255,255,255,.1);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; color: #7de8f0;
+      flex-shrink: 0;
+    }
+
+    .brand-footer {
+      font-size: 12px;
+      color: rgba(255,255,255,.4);
+      position: relative; z-index: 1;
+    }
+
+    /* ── RIGHT PANEL ── */
+    .l-form {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 52px 48px;
+      background: #fff;
+    }
+
+    .form-wrap {
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .form-eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      color: #0d8fa2;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .form-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: #0d2a47;
+      letter-spacing: -.5px;
+      margin-bottom: 6px;
+    }
+    .form-subtitle {
+      font-size: 14px;
+      color: #8a9bb0;
+      margin-bottom: 36px;
+    }
+
+    /* Steps indicator */
+    .steps-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 32px;
+    }
+    .step-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #dde3ec;
+      transition: all .3s;
+    }
+    .step-dot.active {
+      width: 24px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #1e3a5f, #0d8fa2);
+    }
+
+    /* Error */
+    .form-error {
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: #b91c1c;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .form-error i { margin-top: 1px; flex-shrink: 0; }
+
+    /* Fields */
+    .field-group {
+      margin-bottom: 20px;
+    }
+    .field-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 7px;
+    }
+    .field-wrap {
+      position: relative;
+    }
+    .field-wrap input {
+      width: 100%;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #0d2a47;
+      background: #f8fafc;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s, background .2s;
+      -webkit-appearance: none;
+    }
+    .field-wrap input:focus {
+      border-color: #0d8fa2;
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(13,143,162,.1);
+    }
+    .field-wrap input::placeholder { color: #b0bec5; }
+    .field-error {
+      font-size: 12px;
+      color: #b91c1c;
+      margin-top: 5px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* OTP info */
+    .otp-hint {
+      background: linear-gradient(135deg, #eff9fa, #e8f5f9);
+      border: 1px solid #b2e4ec;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #0a6473;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .otp-hint i { margin-top: 1px; flex-shrink: 0; }
+
+    /* Remember */
+    .remember-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      cursor: pointer;
+    }
+    .remember-row input[type=checkbox] {
+      width: 16px; height: 16px;
+      accent-color: #0d8fa2;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .remember-row span {
+      font-size: 13px;
+      color: #6b7280;
+      user-select: none;
+    }
+
+    /* Submit */
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, #1e3a5f 0%, #0d8fa2 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: .2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity .2s, transform .1s;
+      box-shadow: 0 4px 16px rgba(13, 143, 162, .3);
+    }
+    .btn-submit:hover { opacity: .92; transform: translateY(-1px); }
+    .btn-submit:active { transform: translateY(0); opacity: 1; }
+
+    .form-footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 12px;
+      color: #b0bec5;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .l-brand { display: none; }
+      .l-form { padding: 40px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LEFT: Brand panel -->
+  <div class="l-brand">
+    <div class="brand-logo">
+      <div class="brand-logo-icon"><i class="fas fa-leaf"></i></div>
+      <div class="brand-logo-text">
+        Agrícola de la Costa
+        <span>San Luis S.P.R. de R.L.</span>
+      </div>
+    </div>
+
+    <div class="brand-body">
+      <div class="brand-badge">
+        <i class="fas fa-shield-alt"></i>
+        {% trans "Acceso Seguro" %}
+      </div>
+      <div class="brand-headline">
+        {% trans "Sistema" %}<br><em>{% trans "Administrativo" %}</em>
+      </div>
+      <div class="brand-sub">
+        {% trans "Plataforma centralizada para la gestión de gastos, ventas, cobranza y operaciones de la empresa." %}
+      </div>
+
+      <div class="brand-features">
+        <div class="brand-feature">
+          <div class="brand-feature-icon"><i class="fas fa-chart-line"></i></div>
+          {% trans "Análisis financiero en tiempo real" %}
+        </div>
+        <div class="brand-feature">
+          <div class="brand-feature-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+          {% trans "Gestión de facturas y cobranza" %}
+        </div>
+        <div class="brand-feature">
+          <div class="brand-feature-icon"><i class="fas fa-user-shield"></i></div>
+          {% trans "Autenticación en dos factores (2FA)" %}
+        </div>
+      </div>
+    </div>
+
+    <div class="brand-footer">
+      &copy; {% now "Y" %} Agrícola de la Costa San Luis. Todos los derechos reservados.
+    </div>
+  </div>
+
+  <!-- RIGHT: Form panel -->
+  <div class="l-form">
+    <div class="form-wrap">
+
+      {% if wizard.steps.current == 'auth' %}
+        <div class="form-eyebrow">{% trans "Bienvenido de vuelta" %}</div>
+        <div class="form-title">{% trans "Inicia sesión" %}</div>
+        <div class="form-subtitle">{% trans "Ingresa tus credenciales para continuar" %}</div>
+      {% else %}
+        <div class="form-eyebrow">{% trans "Verificación" %}</div>
+        <div class="form-title">{% trans "Dos factores" %}</div>
+        <div class="form-subtitle">{% trans "Introduce el código de tu aplicación" %}</div>
+      {% endif %}
+
+      {% if wizard.steps.count > 1 %}
+      <div class="steps-indicator">
+        {% for step in wizard.steps.all %}
+          <div class="step-dot {% if step == wizard.steps.current %}active{% endif %}"></div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if form.errors %}
+      <div class="form-error">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{% trans "Usuario, contraseña o código incorrecto. Inténtalo de nuevo." %}</span>
+      </div>
+      {% endif %}
+
+      {% if wizard.steps.current != 'auth' %}
+      <div class="otp-hint">
+        <i class="fas fa-mobile-alt"></i>
+        <span>{% trans "Abre tu aplicación de autenticación (Google Authenticator, Authy) e ingresa el código de 6 dígitos." %}</span>
+      </div>
+      {% endif %}
+
+      <form method="post" autocomplete="on">
+        {% csrf_token %}
+        {{ wizard.management_form }}
+
+        {% for field in form.visible_fields %}
+        <div class="field-group">
+          <label class="field-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          <div class="field-wrap">
+            {{ field }}
+          </div>
+          {% if field.errors %}
+          <div class="field-error">
+            <i class="fas fa-exclamation-circle"></i>{{ field.errors.0 }}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+
+        {% if wizard.steps.current == 'auth' %}
+        <label class="remember-row">
+          <input type="checkbox" name="remember">
+          <span>{% trans "Recordar este dispositivo por 30 días" %}</span>
+        </label>
+        {% endif %}
+
+        <button type="submit" class="btn-submit">
+          {% if wizard.steps.current == 'auth' %}
+            {% trans "Continuar" %} <i class="fas fa-arrow-right"></i>
+          {% else %}
+            {% trans "Verificar acceso" %} <i class="fas fa-check-circle"></i>
+          {% endif %}
+        </button>
+      </form>
+
+      <div class="form-footer">
+        {% trans "Acceso restringido. Solo personal autorizado." %}
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

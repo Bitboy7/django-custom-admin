@@ -12,9 +12,10 @@
 {# ── Tailwind CDN + critical overrides loaded in <head> ─────────────── #}
 {% block extrahead %}
 {{ block.super }}
-<script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
+    corePlugins: { preflight: false },
+    important: '#tw-dashboard',
     theme: {
       extend: {
         colors: {
@@ -26,6 +27,7 @@
     }
   }
 </script>
+<script src="https://cdn.tailwindcss.com"></script>
 <style>
   /* ── Force Jazzmin layout to full-width ───────────────────────── */
   body                { background:#f2f4f7 !important; }
@@ -53,7 +55,7 @@
 {% block styles %}{{ block.super }}{% endblock %}
 
 {% block content %}
-<div class="px-1 pb-10">
+<div id="tw-dashboard" class="px-1 pb-10">
 
   {# ═══════════════════════════════════════════════════════════════ #}
   {# WELCOME STRIP                                                   #}
