@@ -68,9 +68,34 @@
    */
   function s2set(id, value) {
     var input = el(id);
-    if (!input) return;
+    if (!input) {
+      console.warn("s2set: element not found:", id);
+      return;
+    }
+
+    // Debug: log available options
+    var options = Array.from(input.options).map(function (opt) {
+      return opt.value;
+    });
+    console.log("s2set:", id, "→", value, "| Available:", options);
+
+    // Verify the value exists in options
+    if (!options.includes(value)) {
+      console.error(
+        "s2set: value not found in options:",
+        value,
+        "| Try:",
+        options,
+      );
+      return;
+    }
+
     if (jQ) {
       jQ(input).val(value).trigger("change");
+      // Force Select2 refresh
+      setTimeout(function () {
+        jQ(input).trigger("change.select2");
+      }, 100);
     } else {
       input.value = value;
     }
@@ -372,14 +397,16 @@
    ══════════════════════════════════════════════════════════════════ */
 
   function applyClienteData(data) {
+    console.log("applyClienteData called with:", data);
     var tipoEl = el(ID.tipoVenta);
     var mercadoEl = el(ID.mercado);
 
     if (data.es_extranjero) {
+      console.log("Cliente extranjero detectado:", data.pais_nombre);
       /* 1. Set tipo_venta = "Exportación" via Select2 */
       s2set(
         ID.tipoVenta,
-        "Exportaci\u00f3n",
+        "Exportación",
       ); /* "Exportación" — exact option value */
 
       /* 2. Lock the Select2 container so user cannot change it */
@@ -406,35 +433,50 @@
       if (data.mercado_destino_id) {
         s2set(ID.mercado, String(data.mercado_destino_id));
         flash(ID.mercado, "#d1fae5");
+        console.log("Cliente nacional detectado:", data.pais_nombre);
+        /* Domestic client: set Nacional and unlock tipo_venta */
+        s2set(ID.tipoVenta, "Nacional");
+      } else {
+        /* Domestic client: unlock tipo_venta */
+        tipoVentaLocked = false;
+        s2lock(ID.tipoVenta, false);
+        removeBadge("vf-badge-tipoventa");
+        removeTabBadge("vf-tb-mercado");
       }
-    } else {
-      /* Domestic client: unlock tipo_venta */
-      tipoVentaLocked = false;
-      s2lock(ID.tipoVenta, false);
-      removeBadge("vf-badge-tipoventa");
-      removeTabBadge("vf-tb-mercado");
-    }
 
-    /* 6. Pre-fill termino_credito from client's default (only if Crédito & empty) */
-    if (data.termino_credito_id) {
-      var modalEl = el(ID.modalidad);
-      var termEl = el(ID.termino);
-      if (modalEl && modalEl.value === "Credito" && termEl && !termEl.value) {
-        s2set(ID.termino, String(data.termino_credito_id));
-        flash(ID.termino, "#d1fae5");
-        fetchDiasAndRecalc(data.termino_credito_id);
+      /* 6. Pre-fill termino_credito from client's default (only if Crédito & empty) */
+      if (data.termino_credito_id) {
+        var modalEl = el(ID.modalidad);
+        var termEl = el(ID.termino);
+        if (modalEl && modalEl.value === "Credito" && termEl && !termEl.value) {
+          s2set(ID.termino, String(data.termino_credito_id));
+          flash(ID.termino, "#d1fae5");
+          fetchDiasAndRecalc(data.termino_credito_id);
+        }
       }
     }
-  }
+    {
+      console.log("onClienteChange: no cliente selected");
+      return;
+    }
+    console.log("onClienteChange: fetching data for cliente", clienteId);
+    var apiUrl = apiBase() + "api/cliente-info/" + clienteId + "/";
+    console.log("API URL:", apiUrl);
 
-  function onClienteChange(clienteId) {
-    if (!clienteId) return;
-    fetch(apiBase() + "api/cliente-info/" + clienteId + "/")
+    fetch(apiUrl)
       .then(function (r) {
+        if (!r.ok) {
+          throw new Error("HTTP " + r.status);
+        }
         return r.json();
       })
-      .then(applyClienteData)
-      .catch(function () {});
+      .then(function (data) {
+        console.log("API response:", data);
+        applyClienteData(data);
+      })
+      .catch(function (err) {
+        console.error("Error fetching cliente info:", err);
+      });
   }
 
   /* ══════════════════════════════════════════════════════════════════
@@ -442,8 +484,12 @@
    ══════════════════════════════════════════════════════════════════ */
 
   document.addEventListener("DOMContentLoaded", function () {
+    console.log("ventas_form_logic.js loaded");
     /* Guard: only run on the Ventas add/change page */
-    if (!el(ID.modalidad)) return;
+    if (!el(ID.modalidad)) {
+      console.log("Not on ventas form, exiting");
+      return;
+    }
 
     /* ── Initial state ── */
     syncModalidad();
@@ -512,7 +558,11 @@
     /* ── On edit forms: re-apply client logic for pre-filled value ── */
     var initialCliente = cliEl && cliEl.value;
     if (initialCliente) {
-      onClienteChange(initialCliente);
+      console.log("Initial cliente detected on page load:", initialCliente);
+      // Wait for Select2 to fully initialize
+      setTimeout(function () {
+        onClienteChange(initialCliente);
+      }, 300);
     }
   });
 })();

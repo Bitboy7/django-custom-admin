@@ -335,6 +335,14 @@ class Ventas(models.Model):
             self.estado_cobranza = self.EstadoCobranza.PENDIENTE
             
         super().save(*args, **kwargs)
+        
+        # Invalidar cache del dashboard tras guardar venta
+        try:
+            from ventas.services.cache_service import CuentasPorCobrarCache
+            from django.core.cache import cache
+            cache.delete('cxc_dashboard_ventas_principal')
+        except Exception:
+            pass  # No fallar si el cache no está disponible
     
     def saldo_pendiente(self):
         """Calcula el saldo pendiente de pago"""
@@ -493,6 +501,13 @@ class PagoVenta(models.Model):
         super().save(*args, **kwargs)
         # Actualizar el estado de la venta después de registrar el pago
         self.venta.actualizar_estado_cobranza()
+        
+        # Invalidar cache del dashboard tras registrar pago
+        try:
+            from django.core.cache import cache
+            cache.delete('cxc_dashboard_ventas_principal')
+        except Exception:
+            pass  # No fallar si el cache no está disponible
         
     class Meta:
         verbose_name = 'Pago de Venta'
