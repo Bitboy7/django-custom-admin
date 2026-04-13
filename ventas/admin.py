@@ -476,6 +476,16 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
                 name='ventas_reporte_cobranza',
             ),
             path(
+                'reporte-cobranza/export-excel/',
+                self.admin_site.admin_view(self.exportar_reporte_cobranza_excel),
+                name='ventas_reporte_cobranza_excel',
+            ),
+            path(
+                'reporte-cobranza/export-pdf/',
+                self.admin_site.admin_view(self.exportar_reporte_cobranza_pdf),
+                name='ventas_reporte_cobranza_pdf',
+            ),
+            path(
                 'dashboard-ventas/',
                 self.admin_site.admin_view(self.dashboard_ventas),
                 name='ventas_dashboard',
@@ -1115,6 +1125,567 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
             'hoy': hoy,
         })
         return TemplateResponse(request, 'admin/ventas/reporte_cobranza.html', context)
+
+    def exportar_reporte_cobranza_excel(self, request):
+        """Exporta el reporte de cobranza a formato Excel."""
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+        from datetime import date
+        from decimal import Decimal
+        from ventas.services.reporte_cobranza_service import generar_reporte_cobranza
+
+        # Obtener parámetros
+        hoy = date.today()
+        default_inicio = date(hoy.year, 1, 1)
+        default_fin = date(hoy.year, 12, 31)
+
+        fecha_inicio_str = request.GET.get('fecha_inicio', default_inicio.isoformat())
+        fecha_fin_str = request.GET.get('fecha_fin', default_fin.isoformat())
+        tipo_cambio_str = request.GET.get('tipo_cambio', '')
+
+        try:
+            fecha_inicio = date.fromisoformat(fecha_inicio_str)
+        except (ValueError, TypeError):
+            fecha_inicio = default_inicio
+
+        try:
+            fecha_fin = date.fromisoformat(fecha_fin_str)
+        except (ValueError, TypeError):
+            fecha_fin = default_fin
+
+        tipo_cambio_override = None
+        if tipo_cambio_str:
+            try:
+                tipo_cambio_override = Decimal(tipo_cambio_str)
+            except Exception:
+                pass
+
+        # Generar datos
+        datos = generar_reporte_cobranza(
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            tipo_cambio_override=tipo_cambio_override,
+        )
+
+        # Crear workbook
+        wb = openpyxl.Workbook()
+        wb.remove(wb.active)
+
+        # Estilos
+        header_fill = PatternFill(start_color='FEF08A', end_color='FEF08A', fill_type='solid')
+        header_font = Font(bold=True, color='1E3A8A', size=11)
+        section_fill = PatternFill(start_color='FDE68A', end_color='FDE68A', fill_type='solid')
+        total_fill = PatternFill(start_color='67E8F9', end_color='67E8F9', fill_type='solid')
+        subtotal_fill = PatternFill(start_color='A5F3FC', end_color='A5F3FC', fill_type='solid')
+        anticipo_fill = PatternFill(start_color='F0FDF4', end_color='F0FDF4', fill_type='solid')
+        grand_total_fill = PatternFill(start_color='0C4A6E', end_color='0C4A6E', fill_type='solid')
+        grand_total_font = Font(bold=True, color='FFFFFF', size=12)
+        center_align = Alignment(horizontal='center', vertical='center')
+        right_align = Alignment(horizontal='right', vertical='center')
+        border = Border(
+            left=Side(style='thin', color='9CA3AF'),
+            right=Side(style='thin', color='9CA3AF'),
+            top=Side(style='thin', color='9CA3AF'),
+            bottom=Side(style='thin', color='9CA3AF')
+        )
+
+        # ============== SHEET 1: VENTAS X COBRAR ==============
+        ws_ventas = wb.create_sheet('Ventas x Cobrar', 0)
+        sucursales = datos['sucursales']
+        total_anticipos = datos.get('total_anticipos', 0)
+        
+        # Header
+        row = 1
+        ws_ventas.merge_cells(f'A{row}:' + get_column_letter(len(sucursales) + 3) + f'{row}')
+        cell = ws_ventas[f'A{row}']
+        cell.value = f'TEMPORADA {fecha_inicio} — {fecha_fin}\nMAQUILA Y VENTAS X COBRAR'
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center_align
+        
+        # Column headers
+        row += 1
+        ws_ventas[f'A{row}'] = 'CLIENTE / CONCEPTO'
+        ws_ventas[f'B{row}'] = 'MON.'
+        col_idx = 3
+        for suc in sucursales:
+            ws_ventas.cell(row, col_idx, suc.nombre.upper()).alignment = center_align
+            ws_ventas.cell(row, col_idx).fill = section_fill
+            ws_ventas.cell(row, col_idx).font = header_font
+            col_idx += 1
+        ws_ventas.cell(row, col_idx, 'TOTAL X COBRAR').alignment = center_align
+        ws_ventas.cell(row, col_idx).fill = section_fill
+        ws_ventas.cell(row, col_idx).font = header_font
+        
+        for c in range(1, col_idx + 1):
+            ws_ventas.cell(row, c).fill = section_fill
+            ws_ventas.cell(row, c).font = header_font
+            ws_ventas.cell(row, c).alignment = center_align
+            ws_ventas.cell(row, c).border = border
+
+        # Panorama anticipos
+        if total_anticipos > 0:
+            row += 1
+            ws_ventas[f'A{row}'] = 'PANORAMA ANTICIPOS'
+            ws_ventas.cell(row, col_idx, total_anticipos).number_format = '$#,##0.00'
+            for c in range(1, col_idx + 1):
+                ws_ventas.cell(row, c).fill = anticipo_fill
+                ws_ventas.cell(row, c).border = border
+
+        # Data rows
+        for fila in datos['ventas_por_cliente']:
+            row += 1
+            ws_ventas[f'A{row}'] = fila['cliente'].nombre.upper()
+            ws_ventas[f'B{row}'] = fila['moneda']
+            ws_ventas[f'B{row}'].alignment = center_align
+            
+            col_idx = 3
+            for suc in sucursales:
+                monto = fila['por_sucursal'].get(suc.id, 0)
+                if monto > 0:
+                    cell = ws_ventas.cell(row, col_idx, monto)
+                    cell.number_format = '$#,##0.00' if fila['moneda'] == 'MXN' else 'US$#,##0.00'
+                    cell.alignment = right_align
+                else:
+                    ws_ventas.cell(row, col_idx, '-').alignment = center_align
+                ws_ventas.cell(row, col_idx).border = border
+                col_idx += 1
+            
+            cell = ws_ventas.cell(row, col_idx, fila['total'])
+            cell.number_format = '$#,##0.00' if fila['moneda'] == 'MXN' else 'US$#,##0.00'
+            cell.alignment = right_align
+            cell.border = border
+            cell.font = Font(bold=True)
+
+        # Totales
+        if datos.get('total_ventas_usd', 0) > 0:
+            row += 1
+            ws_ventas[f'A{row}'] = 'SUBTOTAL EXPORTACIÓN (USD)'
+            ws_ventas[f'B{row}'] = 'USD'
+            col_idx = 3
+            for suc in sucursales:
+                monto = datos['totales_ventas_usd']['por_sucursal'].get(suc.id, 0)
+                if monto > 0:
+                    ws_ventas.cell(row, col_idx, monto).number_format = 'US$#,##0.00'
+                col_idx += 1
+            ws_ventas.cell(row, col_idx, datos['total_ventas_usd']).number_format = 'US$#,##0.00'
+            for c in range(1, col_idx + 1):
+                ws_ventas.cell(row, c).fill = total_fill
+                ws_ventas.cell(row, c).font = Font(bold=True)
+                ws_ventas.cell(row, c).border = border
+
+            row += 1
+            ws_ventas[f'A{row}'] = f'TIPO DE CAMBIO {hoy} USD → MXN'
+            ws_ventas.cell(row, 2, float(datos['tipo_cambio_ventas'])).number_format = '0.0000'
+            for c in range(1, col_idx + 1):
+                ws_ventas.cell(row, c).fill = subtotal_fill
+                ws_ventas.cell(row, c).font = Font(bold=True)
+                ws_ventas.cell(row, c).border = border
+
+            row += 1
+            ws_ventas[f'A{row}'] = 'EQUIVALENTE EN PESOS MEXICANOS'
+            ws_ventas[f'B{row}'] = 'MXN'
+            ws_ventas.cell(row, col_idx, datos['total_ventas_equiv_mxn']).number_format = '$#,##0.00'
+            for c in range(1, col_idx + 1):
+                ws_ventas.cell(row, c).fill = PatternFill(start_color='DCFCE7', end_color='DCFCE7', fill_type='solid')
+                ws_ventas.cell(row, c).font = Font(bold=True)
+                ws_ventas.cell(row, c).border = border
+
+        if datos.get('total_ventas_mxn_nat', 0) > 0:
+            row += 1
+            ws_ventas[f'A{row}'] = 'SUBTOTAL VENTAS NACIONALES'
+            ws_ventas[f'B{row}'] = 'MXN'
+            col_idx = 3
+            for suc in sucursales:
+                monto = datos['totales_ventas_mxn_obj']['por_sucursal'].get(suc.id, 0)
+                if monto > 0:
+                    ws_ventas.cell(row, col_idx, monto).number_format = '$#,##0.00'
+                col_idx += 1
+            ws_ventas.cell(row, col_idx, datos['total_ventas_mxn_nat']).number_format = '$#,##0.00'
+            for c in range(1, col_idx + 1):
+                ws_ventas.cell(row, c).fill = subtotal_fill
+                ws_ventas.cell(row, c).font = Font(bold=True)
+                ws_ventas.cell(row, c).border = border
+
+        row += 1
+        ws_ventas.merge_cells(f'A{row}:B{row}')
+        ws_ventas[f'A{row}'] = 'TOTAL CARTERA A COBRAR (EQUIVALENTE MXN)'
+        ws_ventas.cell(row, col_idx, datos['total_cartera_ventas_mxn']).number_format = '$#,##0.00'
+        for c in range(1, col_idx + 1):
+            ws_ventas.cell(row, c).fill = grand_total_fill
+            ws_ventas.cell(row, c).font = grand_total_font
+            ws_ventas.cell(row, c).border = border
+
+        # Ajustar anchos
+        ws_ventas.column_dimensions['A'].width = 30
+        ws_ventas.column_dimensions['B'].width = 8
+        for i in range(3, len(sucursales) + 4):
+            ws_ventas.column_dimensions[get_column_letter(i)].width = 18
+
+        # ============== SHEET 2: MAQUILA X COBRAR ==============
+        ws_maquila = wb.create_sheet('Maquila x Cobrar', 1)
+        
+        # Header
+        row = 1
+        ws_maquila.merge_cells(f'A{row}:' + get_column_letter(len(sucursales) + 2) + f'{row}')
+        cell = ws_maquila[f'A{row}']
+        cell.value = f'TEMPORADA {fecha_inicio} — {fecha_fin}\nMAQUILA X COBRAR'
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center_align
+        
+        # Column headers
+        row += 1
+        ws_maquila[f'A{row}'] = 'CLIENTE / CONCEPTO'
+        ws_maquila[f'B{row}'] = 'MONEDA USD'
+        col_idx = 3
+        for suc in sucursales:
+            ws_maquila.cell(row, col_idx, suc.nombre.upper())
+            ws_maquila.cell(row, col_idx).fill = section_fill
+            ws_maquila.cell(row, col_idx).font = header_font
+            ws_maquila.cell(row, col_idx).alignment = center_align
+            col_idx += 1
+        ws_maquila.cell(row, col_idx, 'TOTAL X COBRAR')
+        ws_maquila.cell(row, col_idx).fill = section_fill
+        ws_maquila.cell(row, col_idx).font = header_font
+        ws_maquila.cell(row, col_idx).alignment = center_align
+        
+        for c in range(1, col_idx + 1):
+            ws_maquila.cell(row, c).fill = section_fill
+            ws_maquila.cell(row, c).font = header_font
+            ws_maquila.cell(row, c).alignment = center_align
+            ws_maquila.cell(row, c).border = border
+
+        # Data rows
+        for fila in datos['maquila_por_cliente']:
+            row += 1
+            ws_maquila[f'A{row}'] = fila['cliente'].nombre.upper()
+            
+            col_idx = 3
+            for suc in sucursales:
+                monto = fila['por_sucursal'].get(suc.id, 0)
+                if monto > 0:
+                    cell = ws_maquila.cell(row, col_idx, monto)
+                    cell.number_format = '$#,##0.00'
+                    cell.alignment = right_align
+                else:
+                    ws_maquila.cell(row, col_idx, '-').alignment = center_align
+                ws_maquila.cell(row, col_idx).border = border
+                col_idx += 1
+            
+            cell = ws_maquila.cell(row, col_idx, fila['total'])
+            cell.number_format = '$#,##0.00'
+            cell.alignment = right_align
+            cell.font = Font(bold=True)
+            cell.border = border
+
+        # Totales
+        row += 1
+        ws_maquila[f'A{row}'] = 'TOTAL MAQUILA X COBRAR'
+        ws_maquila[f'B{row}'] = '$'
+        col_idx = 3
+        for suc in sucursales:
+            monto = datos['totales_maquila']['por_sucursal'].get(suc.id, 0)
+            if monto > 0:
+                ws_maquila.cell(row, col_idx, monto).number_format = '$#,##0.00'
+            col_idx += 1
+        ws_maquila.cell(row, col_idx, datos['totales_maquila']['total']).number_format = '$#,##0.00'
+        for c in range(1, col_idx + 1):
+            ws_maquila.cell(row, c).fill = total_fill
+            ws_maquila.cell(row, c).font = Font(bold=True)
+            ws_maquila.cell(row, c).border = border
+
+        row += 1
+        ws_maquila[f'A{row}'] = f'TIPO CAMBIO HOY {hoy} PARA PAGOS'
+        ws_maquila.cell(row, 2, float(datos['tipo_cambio'])).number_format = '0.0000'
+        for c in range(1, col_idx + 1):
+            ws_maquila.cell(row, c).fill = subtotal_fill
+            ws_maquila.cell(row, c).font = Font(bold=True)
+            ws_maquila.cell(row, c).border = border
+
+        row += 1
+        ws_maquila[f'A{row}'] = 'PESOS MEXICANOS'
+        ws_maquila[f'B{row}'] = '$'
+        ws_maquila.cell(row, col_idx, datos['totales_maquila']['total_mxn']).number_format = '$#,##0.00'
+        for c in range(1, col_idx + 1):
+            ws_maquila.cell(row, c).fill = PatternFill(start_color='34D399', end_color='34D399', fill_type='solid')
+            ws_maquila.cell(row, c).font = Font(bold=True, color='064E3B')
+            ws_maquila.cell(row, c).border = border
+
+        # Ajustar anchos
+        ws_maquila.column_dimensions['A'].width = 30
+        ws_maquila.column_dimensions['B'].width = 12
+        for i in range(3, len(sucursales) + 3):
+            ws_maquila.column_dimensions[get_column_letter(i)].width = 18
+
+        # ============== SHEET 3: IMPUESTOS ==============
+        if datos.get('obligacion_fiscal'):
+            ws_impuestos = wb.create_sheet('Impuestos a Pagar', 2)
+            obligacion = datos['obligacion_fiscal']
+            
+            row = 1
+            ws_impuestos.merge_cells(f'A{row}:B{row}')
+            cell = ws_impuestos[f'A{row}']
+            cell.value = f"IMPUESTOS A PAGAR — {obligacion.periodo or ''}"
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = center_align
+            
+            row += 1
+            ws_impuestos[f'A{row}'] = 'CONCEPTO'
+            ws_impuestos[f'B{row}'] = 'IMPORTE'
+            for c in [1, 2]:
+                ws_impuestos.cell(row, c).fill = section_fill
+                ws_impuestos.cell(row, c).font = header_font
+                ws_impuestos.cell(row, c).alignment = center_align
+                ws_impuestos.cell(row, c).border = border
+
+            impuestos = [
+                ('ISR INGRESOS PROPIOS', obligacion.isr_ingresos_propios.amount),
+                ('ISR RESICO SERVICIOS PROFESIONALES', obligacion.isr_resico.amount),
+                ('ISR RETENCIONES POR SALARIOS', obligacion.isr_retenciones_salarios.amount),
+                ('IVA RETENCIONES SERVICIOS PROFESIONALES', obligacion.iva_retenciones_profesionales.amount),
+            ]
+            
+            for concepto, importe in impuestos:
+                row += 1
+                ws_impuestos[f'A{row}'] = concepto
+                ws_impuestos.cell(row, 2, float(importe)).number_format = '$#,##0.00'
+                ws_impuestos.cell(row, 2).alignment = right_align
+                for c in [1, 2]:
+                    ws_impuestos.cell(row, c).border = border
+
+            row += 1
+            ws_impuestos[f'A{row}'] = 'TOTAL IMPUESTOS A PAGAR'
+            ws_impuestos.cell(row, 2, obligacion.total_impuestos()).number_format = '$#,##0.00'
+            for c in [1, 2]:
+                ws_impuestos.cell(row, c).fill = total_fill
+                ws_impuestos.cell(row, c).font = Font(bold=True)
+                ws_impuestos.cell(row, c).alignment = right_align if c == 2 else None
+                ws_impuestos.cell(row, c).border = border
+
+            ws_impuestos.column_dimensions['A'].width = 45
+            ws_impuestos.column_dimensions['B'].width = 18
+
+        # Preparar respuesta
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f'reporte_cobranza_{fecha_inicio}_{fecha_fin}.xlsx'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        wb.save(response)
+        return response
+
+    def exportar_reporte_cobranza_pdf(self, request):
+        """Exporta el reporte de cobranza a formato PDF."""
+        from reportlab.lib.pagesizes import letter, landscape
+        from reportlab.lib import colors
+        from reportlab.lib.units import inch
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+        from datetime import date
+        from decimal import Decimal
+        from ventas.services.reporte_cobranza_service import generar_reporte_cobranza
+        from io import BytesIO
+
+        # Obtener parámetros
+        hoy = date.today()
+        default_inicio = date(hoy.year, 1, 1)
+        default_fin = date(hoy.year, 12, 31)
+
+        fecha_inicio_str = request.GET.get('fecha_inicio', default_inicio.isoformat())
+        fecha_fin_str = request.GET.get('fecha_fin', default_fin.isoformat())
+        tipo_cambio_str = request.GET.get('tipo_cambio', '')
+
+        try:
+            fecha_inicio = date.fromisoformat(fecha_inicio_str)
+        except (ValueError, TypeError):
+            fecha_inicio = default_inicio
+
+        try:
+            fecha_fin = date.fromisoformat(fecha_fin_str)
+        except (ValueError, TypeError):
+            fecha_fin = default_fin
+
+        tipo_cambio_override = None
+        if tipo_cambio_str:
+            try:
+                tipo_cambio_override = Decimal(tipo_cambio_str)
+            except Exception:
+                pass
+
+        # Generar datos
+        datos = generar_reporte_cobranza(
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            tipo_cambio_override=tipo_cambio_override,
+        )
+
+        # Crear PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), 
+                              leftMargin=0.5*inch, rightMargin=0.5*inch,
+                              topMargin=0.5*inch, bottomMargin=0.5*inch)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Estilos personalizados
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            textColor=colors.HexColor('#1E3A8A'),
+            alignment=TA_CENTER,
+            spaceAfter=12
+        )
+        
+        section_style = ParagraphStyle(
+            'SectionTitle',
+            parent=styles['Heading2'],
+            fontSize=12,
+            textColor=colors.HexColor('#1E3A8A'),
+            alignment=TA_CENTER,
+            spaceAfter=8
+        )
+
+        sucursales = datos['sucursales']
+        
+        # ============== SECCIÓN 1: VENTAS X COBRAR ==============
+        elements.append(Paragraph(f'REPORTE GLOBAL DE COBRANZA', title_style))
+        elements.append(Paragraph(f'Período: {fecha_inicio} — {fecha_fin}', section_style))
+        elements.append(Spacer(1, 0.2*inch))
+        elements.append(Paragraph('MAQUILA Y VENTAS X COBRAR', section_style))
+        
+        # Tabla ventas
+        ventas_data = [['CLIENTE', 'MON.'] + [s.nombre.upper() for s in sucursales] + ['TOTAL']]
+        
+        if datos.get('total_anticipos', 0) > 0:
+            anticipo_row = ['PANORAMA ANTICIPOS', ''] + [''] * len(sucursales) + [f"${datos['total_anticipos']:,.2f}"]
+            ventas_data.append(anticipo_row)
+        
+        for fila in datos['ventas_por_cliente']:
+            row = [fila['cliente'].nombre.upper()[:25], fila['moneda']]
+            for suc in sucursales:
+                monto = fila['por_sucursal'].get(suc.id, 0)
+                prefix = 'US' if fila['moneda'] == 'USD' else ''
+                row.append(f"{prefix}${monto:,.2f}" if monto > 0 else '-')
+            prefix = 'US' if fila['moneda'] == 'USD' else ''
+            row.append(f"{prefix}${fila['total']:,.2f}")
+            ventas_data.append(row)
+
+        # Totales
+        if datos.get('total_ventas_usd', 0) > 0:
+            subtotal_usd = ['SUBTOTAL EXPORTACIÓN (USD)', 'USD'] + [''] * len(sucursales) + [f"US${datos['total_ventas_usd']:,.2f}"]
+            ventas_data.append(subtotal_usd)
+            tc_row = [f'TIPO DE CAMBIO {hoy}', f"{datos['tipo_cambio_ventas']:.4f}"] + [''] * len(sucursales) + ['']
+            ventas_data.append(tc_row)
+            equiv_row = ['EQUIVALENTE MXN', 'MXN'] + [''] * len(sucursales) + [f"${datos['total_ventas_equiv_mxn']:,.2f}"]
+            ventas_data.append(equiv_row)
+
+        if datos.get('total_ventas_mxn_nat', 0) > 0:
+            subtotal_mxn = ['SUBTOTAL NACIONALES', 'MXN'] + [''] * len(sucursales) + [f"${datos['total_ventas_mxn_nat']:,.2f}"]
+            ventas_data.append(subtotal_mxn)
+
+        total_row = ['TOTAL CARTERA (MXN)', ''] + [''] * len(sucursales) + [f"${datos['total_cartera_ventas_mxn']:,.2f}"]
+        ventas_data.append(total_row)
+
+        # Crear tabla
+        col_widths = [2.0*inch, 0.5*inch] + [1.0*inch] * len(sucursales) + [1.2*inch]
+        ventas_table = Table(ventas_data, colWidths=col_widths)
+        ventas_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FDE68A')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1E3A8A')),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#67E8F9')),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ALIGN', (-1, 1), (-1, -1), 'RIGHT'),
+        ]))
+        
+        elements.append(ventas_table)
+        elements.append(PageBreak())
+
+        # ============== SECCIÓN 2: MAQUILA X COBRAR ==============
+        elements.append(Paragraph(f'MAQUILA X COBRAR', section_style))
+        elements.append(Spacer(1, 0.1*inch))
+        
+        maquila_data = [['CLIENTE', ''] + [s.nombre.upper() for s in sucursales] + ['TOTAL']]
+        
+        for fila in datos['maquila_por_cliente']:
+            row = [fila['cliente'].nombre.upper()[:25], '']
+            for suc in sucursales:
+                monto = fila['por_sucursal'].get(suc.id, 0)
+                row.append(f"${monto:,.2f}" if monto > 0 else '-')
+            row.append(f"${fila['total']:,.2f}")
+            maquila_data.append(row)
+
+        total_maq = ['TOTAL MAQUILA', '$'] + [''] * len(sucursales) + [f"${datos['totales_maquila']['total']:,.2f}"]
+        maquila_data.append(total_maq)
+        tc_maq = [f'TIPO CAMBIO {hoy}', f"{datos['tipo_cambio']:.4f}"] + [''] * len(sucursales) + ['']
+        maquila_data.append(tc_maq)
+        total_mxn = ['PESOS MEXICANOS', '$'] + [''] * len(sucursales) + [f"${datos['totales_maquila']['total_mxn']:,.2f}"]
+        maquila_data.append(total_mxn)
+
+        maquila_table = Table(maquila_data, colWidths=col_widths)
+        maquila_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FDE68A')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1E3A8A')),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('BACKGROUND', (0, -3), (-1, -1), colors.HexColor('#A5F3FC')),
+            ('FONTNAME', (0, -3), (-1, -1), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ALIGN', (-1, 1), (-1, -1), 'RIGHT'),
+        ]))
+        
+        elements.append(maquila_table)
+
+        # ============== SECCIÓN 3: IMPUESTOS ==============
+        if datos.get('obligacion_fiscal'):
+            elements.append(PageBreak())
+            elements.append(Paragraph('IMPUESTOS A PAGAR', section_style))
+            elements.append(Spacer(1, 0.1*inch))
+            
+            obligacion = datos['obligacion_fiscal']
+            impuestos_data = [
+                ['CONCEPTO', 'IMPORTE'],
+                ['ISR INGRESOS PROPIOS', f"${obligacion.isr_ingresos_propios.amount:,.2f}"],
+                ['ISR RESICO SERVICIOS PROFESIONALES', f"${obligacion.isr_resico.amount:,.2f}"],
+                ['ISR RETENCIONES POR SALARIOS', f"${obligacion.isr_retenciones_salarios.amount:,.2f}"],
+                ['IVA RETENCIONES SERVICIOS PROFESIONALES', f"${obligacion.iva_retenciones_profesionales.amount:,.2f}"],
+                ['TOTAL IMPUESTOS A PAGAR', f"${obligacion.total_impuestos():,.2f}"],
+            ]
+            
+            impuestos_table = Table(impuestos_data, colWidths=[5*inch, 2*inch])
+            impuestos_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FDE68A')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1E3A8A')),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 9),
+                ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#67E8F9')),
+                ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ]))
+            
+            elements.append(impuestos_table)
+
+        # Construir PDF
+        doc.build(elements)
+        
+        # Preparar respuesta
+        buffer.seek(0)
+        response = HttpResponse(buffer.read(), content_type='application/pdf')
+        filename = f'reporte_cobranza_{fecha_inicio}_{fecha_fin}.pdf'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
 
     def dashboard_ventas(self, request):
         """

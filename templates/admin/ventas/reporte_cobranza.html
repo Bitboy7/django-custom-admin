@@ -164,6 +164,7 @@
 
   @media print {
     #nav-sidebar, .sidebar, .main-footer, .rc-filter-card, #toolbar, header { display: none !important; }
+    .rc-export-buttons { display: none !important; }
     body { background: white; }
     .rc-card { box-shadow: none; border: none; }
     .rc-table th, .rc-table td { font-size: 0.7rem; padding: 3px 5px; }
@@ -180,16 +181,26 @@
     <div>
       <h1 style="font-size:1.4rem; font-weight:700; color:#1e3a8a; margin:0;">
         <i class="fas fa-file-invoice-dollar" style="color:#3b82f6; margin-right:0.4rem;"></i>
-        Reporte Global de Cobranza
+        Reporte global de cobranza
       </h1>
       <p style="color:#6b7280; font-size:0.875rem; margin:4px 0 0;">
-        Ventas x Cobrar &bull; Maquila x Cobrar &bull; Obligaciones Fiscales
+        Ventas x cobrar &bull; Maquila x cobrar &bull; Obligaciones fiscales
       </p>
     </div>
-    <button onclick="window.print()"
-      style="background:#374151; color:#fff; border:none; border-radius:4px; padding:8px 16px; font-size:0.875rem; cursor:pointer;">
-      <i class="fas fa-print" style="margin-right:0.3rem;"></i> Imprimir
-    </button>
+    <div class="rc-export-buttons" style="display:flex; gap:0.5rem;">
+      <a href="{% url 'admin:ventas_reporte_cobranza_excel' %}?fecha_inicio={{ fecha_inicio_str }}&fecha_fin={{ fecha_fin_str }}{% if tipo_cambio_input %}&tipo_cambio={{ tipo_cambio_input }}{% endif %}"
+        style="background:#10b981; color:#fff; border:none; border-radius:4px; padding:8px 16px; font-size:0.875rem; text-decoration:none; display:inline-flex; align-items:center;">
+        <i class="fas fa-file-excel" style="margin-right:0.3rem;"></i> Excel
+      </a>
+      <a href="{% url 'admin:ventas_reporte_cobranza_pdf' %}?fecha_inicio={{ fecha_inicio_str }}&fecha_fin={{ fecha_fin_str }}{% if tipo_cambio_input %}&tipo_cambio={{ tipo_cambio_input }}{% endif %}"
+        style="background:#ef4444; color:#fff; border:none; border-radius:4px; padding:8px 16px; font-size:0.875rem; text-decoration:none; display:inline-flex; align-items:center;">
+        <i class="fas fa-file-pdf" style="margin-right:0.3rem;"></i> PDF
+      </a>
+      <button onclick="window.print()"
+        style="background:#374151; color:#fff; border:none; border-radius:4px; padding:8px 16px; font-size:0.875rem; cursor:pointer;">
+        <i class="fas fa-print" style="margin-right:0.3rem;"></i> Imprimir
+      </button>
+    </div>
   </div>
 
   <!-- FILTROS -->
@@ -204,7 +215,7 @@
         <input type="date" name="fecha_fin" value="{{ fecha_fin_str }}">
       </div>
       <div>
-        <label>Tipo de Cambio USD <span style="font-weight:normal; color:#9ca3af;">(override)</span></label>
+        <label>Tipo de cambio USD <span style="font-weight:normal; color:#9ca3af;">(override)</span></label>
         <input type="number" name="tipo_cambio" value="{{ tipo_cambio_input }}"
           step="0.0001" min="0" placeholder="Ej: 17.5990" style="width:140px;">
       </div>

@@ -4,6 +4,7 @@ mysqlclient
 python-dotenv
 django-import-export
 openpyxl
+reportlab
 pillow
 django-jazzmin
 django-money[exchange]
