@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name='pagoventa',
             constraint=models.CheckConstraint(
-                check=models.Q(monto_pago__gt=0),
+                condition=models.Q(monto_pago__gt=0),
                 name='pago_venta_monto_positivo'
             ),
         ),
@@ -38,7 +38,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name='anticipo',
             constraint=models.CheckConstraint(
-                check=models.Q(monto__gt=0),
+                condition=models.Q(monto__gt=0),
                 name='anticipo_monto_positivo'
             ),
         ),

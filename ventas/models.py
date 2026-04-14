@@ -277,7 +277,7 @@ class Anticipo(models.Model):
         # Constraint de BD: monto positivo
         constraints = [
             models.CheckConstraint(
-                check=models.Q(monto__gt=0),
+                condition=models.Q(monto__gt=0),
                 name='anticipo_monto_positivo'
             ),
         ]
@@ -808,7 +808,7 @@ class PagoVenta(models.Model):
         # Constraint de BD: asegurar que monto_pago sea siempre positivo
         constraints = [
             models.CheckConstraint(
-                check=models.Q(monto_pago__gt=0),
+                condition=models.Q(monto_pago__gt=0),
                 name='pago_venta_monto_positivo'
             ),
         ]
