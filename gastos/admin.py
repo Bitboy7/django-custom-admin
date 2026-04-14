@@ -514,6 +514,8 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
 
     def balances_admin_view(self, request):
         from app.services.balance_service import BalanceAnalysisService
+        from django.http import JsonResponse
+        from django.template.loader import render_to_string
         balance_service = BalanceAnalysisService()
         context = balance_service.get_full_context(request)
         context.update(self.admin_site.each_context(request))
@@ -523,6 +525,27 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
             'opts': self.model._meta,
             'has_view_permission': self.has_view_permission(request),
         })
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            table_html = render_to_string(
+                'admin/gastos/partials/balances_table.html',
+                context,
+                request=request,
+            )
+            return JsonResponse({
+                'kpis': {
+                    'total_gastos': float(context.get('total_gastos') or 0),
+                    'promedio_gastos': float(context.get('promedio_gastos') or 0),
+                    'numero_transacciones': context.get('numero_transacciones', 0),
+                    'gasto_maximo': float(context.get('gasto_maximo') or 0),
+                    'gasto_minimo': float(context.get('gasto_minimo') or 0),
+                    'gasto_mediano': float(context.get('gasto_mediano') or 0),
+                    'categoria_gasto_maximo': context.get('categoria_gasto_maximo') or '',
+                    'categoria_gasto_minimo': context.get('categoria_gasto_minimo') or '',
+                },
+                'table_html': table_html,
+            })
+
         return TemplateResponse(request, 'admin/gastos/balances.html', context)
     
 class ComprasResource(resources.ModelResource):

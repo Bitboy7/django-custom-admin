@@ -18,7 +18,7 @@
 
 .money-field-wrapper .amount-input:focus {
   outline: none;
-  border-color: #4f46e5;
+  border-color: #0b0a1d;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 

@@ -117,10 +117,9 @@ class VentasAdminForm(forms.ModelForm):
 class AnticipoForm(forms.ModelForm):
     class Meta:
         model = Anticipo
-        fields = ['cliente', 'sucursal', 'cuenta', 'monto', 'fecha', 'descripcion', 'estado_anticipo']
+        fields = ['cliente', 'cuenta', 'monto', 'fecha', 'descripcion', 'estado_anticipo']
         widgets = {
             'cliente': forms.Select(attrs={'class': 'form-control'}),
-            'sucursal': forms.Select(attrs={'class': 'form-control'}),
             'cuenta': forms.Select(attrs={'class': 'form-control'}),
             'monto': forms.NumberInput(attrs={'class': 'form-control'}),
             'fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),

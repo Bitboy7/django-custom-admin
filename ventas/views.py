@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Sum, Count, Avg, Max, Min, Q
 from django.db.models.functions import Extract, TruncMonth, TruncWeek, TruncDate
@@ -13,6 +14,7 @@ from .forms import AnticipoForm
 from catalogo.models import Sucursal, Pais
 from gastos.models import Cuenta
 from .services.reporte_cobranza_service import generar_reporte_cobranza
+from .services.cache_service import VentasBalancesCache
 
 @login_required
 @permission_required('ventas.view_anticipo', raise_exception=True)
@@ -66,7 +68,51 @@ def build_ventas_balances_context(request):
     # Años disponibles basados en las ventas registradas
     available_years = Ventas.objects.dates('fecha_registro', 'year').order_by('-fecha_registro')
     current_year = timezone.now().year
-    
+
+    # ── Cache check ────────────────────────────────────────────────────────────
+    _filter_params = {
+        'cliente_id':    selected_cliente_id,
+        'cuenta_id':     selected_cuenta_id,
+        'sucursal_id':   selected_sucursal_id,
+        'mercado_id':    selected_mercado_id,
+        'modalidad':     selected_modalidad,
+        'estado':        selected_estado,
+        'year':          selected_year,
+        'months':        '|'.join(sorted(selected_months)) if selected_months else '',
+        'periodo':       selected_periodo,
+        'dia':           selected_dia,
+        'fecha_inicio':  selected_fecha_inicio,
+        'fecha_fin':     selected_fecha_fin,
+        'tipo_fecha':    tipo_fecha,
+    }
+    _cached = VentasBalancesCache.get(_filter_params)
+    if _cached is not None:
+        _cached.update({
+            'clientes': clientes,
+            'cuentas': cuentas,
+            'sucursales': sucursales,
+            'mercados': mercados,
+            'available_years': available_years,
+            'current_year': current_year,
+            'selected_cliente_id':   selected_cliente_id,
+            'selected_cuenta_id':    selected_cuenta_id,
+            'selected_sucursal_id':  selected_sucursal_id,
+            'selected_mercado_id':   selected_mercado_id,
+            'selected_modalidad':    selected_modalidad,
+            'selected_estado':       selected_estado,
+            'selected_year':         selected_year,
+            'selected_months':       selected_months,
+            'selected_periodo':      selected_periodo,
+            'selected_dia':          selected_dia,
+            'selected_fecha_inicio': selected_fecha_inicio,
+            'selected_fecha_fin':    selected_fecha_fin,
+            'tipo_fecha':            tipo_fecha,
+            'modalidad_choices': Ventas.ModalidadPago.choices,
+            'estado_choices':    Ventas.EstadoCobranza.choices,
+        })
+        return _cached
+    # ── /Cache check ────────────────────────────────────────────────────────────
+
     # Construir filtros base
     filters = Q()
     
@@ -365,7 +411,28 @@ def build_ventas_balances_context(request):
         'modalidad_choices': Ventas.ModalidadPago.choices,
         'estado_choices': Ventas.EstadoCobranza.choices,
     }
-    
+
+    # Cachear solo los datos computados (no las queryset de opciones de filtro)
+    VentasBalancesCache.set(_filter_params, {
+        'balances':               context['balances'],
+        'total_ventas':           context['total_ventas'],
+        'total_pagado':           context['total_pagado'],
+        'saldo_pendiente_total':  context['saldo_pendiente_total'],
+        'numero_transacciones':   context['numero_transacciones'],
+        'venta_maxima':           context['venta_maxima'],
+        'venta_minima':           context['venta_minima'],
+        'promedio_ventas':        context['promedio_ventas'],
+        'ventas_contado_total':   context['ventas_contado_total'],
+        'ventas_contado_count':   context['ventas_contado_count'],
+        'ventas_credito_total':   context['ventas_credito_total'],
+        'ventas_credito_count':   context['ventas_credito_count'],
+        'ventas_vencidas_total':  context['ventas_vencidas_total'],
+        'ventas_vencidas_count':  context['ventas_vencidas_count'],
+        'ventas_por_modalidad':   context['ventas_por_modalidad'],
+        'ventas_por_estado':      context['ventas_por_estado'],
+        'ventas_por_cliente':     context['ventas_por_cliente'],
+    })
+
     return context
 
 
@@ -374,6 +441,36 @@ def build_ventas_balances_context(request):
 def ventas_balances(request):
     """Vista para mostrar balances y análisis de ventas con filtros avanzados"""
     context = build_ventas_balances_context(request)
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        table_html = render_to_string(
+            'ventas/partials/ventas_balances_table.html',
+            context,
+            request=request,
+        )
+        return JsonResponse({
+            'kpis': {
+                'total_ventas': float(context['total_ventas']),
+                'total_pagado': float(context['total_pagado']),
+                'saldo_pendiente_total': float(context['saldo_pendiente_total']),
+                'numero_transacciones': context['numero_transacciones'],
+                'venta_maxima': float(context['venta_maxima']),
+                'promedio_ventas': float(context['promedio_ventas']),
+                'ventas_contado_total': float(context['ventas_contado_total']),
+                'ventas_contado_count': context['ventas_contado_count'],
+                'ventas_credito_total': float(context['ventas_credito_total']),
+                'ventas_credito_count': context['ventas_credito_count'],
+                'ventas_vencidas_total': float(context['ventas_vencidas_total']),
+                'ventas_vencidas_count': context['ventas_vencidas_count'],
+            },
+            'chart_data': {
+                'modalidad': json.loads(context['ventas_por_modalidad']),
+                'estados': json.loads(context['ventas_por_estado']),
+                'clientes': json.loads(context['ventas_por_cliente']),
+            },
+            'table_html': table_html,
+        })
+
     return render(request, 'ventas/ventas_balances.html', context)
 
 

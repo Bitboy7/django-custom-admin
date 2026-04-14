@@ -146,7 +146,6 @@ class Anticipo(models.Model):
     """
     from gastos.models import Cuenta
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
-    sucursal = models.ForeignKey(Sucursal, on_delete=models.CASCADE)
     cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE)
     monto = MoneyField(
         max_digits=10, 

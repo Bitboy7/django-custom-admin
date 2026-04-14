@@ -1,0 +1,82 @@
+{% load l10n gastos_tags ventas_tags %}
+{% if balances %}
+<table id="ventasTable" class="display responsive nowrap min-w-full hover stripe" style="width:100%">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Cliente</th>
+      <th>N° Cuenta</th>
+      <th>Banco</th>
+      <th>Sucursal</th>
+      <th>Fecha</th>
+      <th>Total Ventas</th>
+      <th>Total Pagado</th>
+      <th>Saldo Pendiente</th>
+      <th>Estado</th>
+      <th>Acumulado</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for balance in balances %}
+    <tr>
+      <td class="font-mono text-xs text-gray-500">{{ balance.numero_secuencial }}</td>
+
+      <td><span class="font-medium text-gray-900">{{ balance.cliente_nombre }}</span></td>
+
+      <td>
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800">{{ balance.cuenta_numero }}</span>
+      </td>
+
+      <td class="text-sm text-gray-600">{{ balance.banco_nombre }}</td>
+
+      <td class="text-sm text-gray-600">{{ balance.sucursal_nombre }}</td>
+
+      <td class="text-sm text-gray-600">{{ balance.fecha|date:"d/m/Y" }}</td>
+
+      <td class="text-right font-semibold text-emerald-700" data-order="{{ balance.total_ventas|unlocalize }}">
+        ${{ balance.total_ventas|us_currency:2 }}
+      </td>
+
+      <td class="text-right font-semibold text-blue-700" data-order="{{ balance.total_pagado|unlocalize }}">
+        ${{ balance.total_pagado|us_currency:2 }}
+      </td>
+
+      <td class="text-right font-semibold text-red-700" data-order="{{ balance.saldo_pendiente|unlocalize }}">
+        ${{ balance.saldo_pendiente|us_currency:2 }}
+      </td>
+
+      <td class="text-center" data-order="{{ balance.estado_cobranza }}">
+        <div class="flex flex-col items-center space-y-1">
+          <span class="{{ balance.estado_cobranza|estado_badge_class }}">{{ balance.estado_cobranza }}</span>
+          {% if balance.fecha_vencimiento %}
+            <small class="text-xs text-gray-400">{{ balance.fecha_vencimiento|date:"d/m/Y" }}</small>
+          {% endif %}
+        </div>
+      </td>
+
+      <td class="text-right font-semibold text-purple-700" data-order="{{ balance.acumulado|unlocalize }}">
+        ${{ balance.acumulado|us_currency:2 }}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <th colspan="6" class="text-right">Totales:</th>
+      <th class="text-right">${{ total_ventas|us_currency:2 }}</th>
+      <th class="text-right">${{ total_pagado|us_currency:2 }}</th>
+      <th class="text-right">${{ saldo_pendiente_total|us_currency:2 }}</th>
+      <th class="text-center">{{ numero_transacciones }}</th>
+      <th></th>
+    </tr>
+  </tfoot>
+</table>
+{% else %}
+<div class="text-center py-12">
+  <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+    <i class="fas fa-inbox text-gray-400 text-2xl"></i>
+  </div>
+  <p class="text-gray-600 font-semibold">No hay datos de ventas disponibles</p>
+  <p class="text-gray-400 text-sm mt-1">Intente modificar los filtros para ver resultados.</p>
+</div>
+{% endif %}

@@ -225,7 +225,7 @@ class ExcelReportService:
     def create_anticipos_sheet(self, ws):
         """Crea la hoja de anticipos con datos y formateo"""
         headers = [
-            "ID", "Fecha", "Cliente", "Sucursal", "Cuenta", "Monto", 
+            "ID", "Fecha", "Cliente", "Sucursal (cuenta)", "Cuenta", "Monto",
             "Descripción", "Estado del Anticipo"
         ]
         ws.append(headers)
@@ -240,7 +240,7 @@ class ExcelReportService:
                 anticipo.id,
                 self.remove_timezone(anticipo.fecha),
                 anticipo.cliente.nombre if hasattr(anticipo.cliente, 'nombre') else str(anticipo.cliente),
-                anticipo.sucursal.nombre if hasattr(anticipo.sucursal, 'nombre') else str(anticipo.sucursal),
+                anticipo.cuenta.id_sucursal.nombre if anticipo.cuenta and hasattr(anticipo.cuenta, 'id_sucursal') else '',
                 anticipo.cuenta.numero_cuenta if hasattr(anticipo.cuenta, 'numero_cuenta') else str(anticipo.cuenta),
                 self.convert_money_to_float(anticipo.monto),
                 anticipo.descripcion,

@@ -381,7 +381,7 @@
       <div class="kpi-icon-wrap" style="background:#1e3a5f"><i class="fas fa-coins"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Acumulado</p>
-        <p class="kpi-value">${{ total_gastos|us_currency:2 }}</p>
+        <p id="kpi-total-gastos" class="kpi-value">${{ total_gastos|us_currency:2 }}</p>
       </div>
     </div>
 
@@ -390,7 +390,7 @@
       <div class="kpi-icon-wrap" style="background:#0369a1"><i class="fas fa-calculator"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Promedio</p>
-        <p class="kpi-value">${{ promedio_gastos|us_currency:2 }}</p>
+        <p id="kpi-promedio" class="kpi-value">${{ promedio_gastos|us_currency:2 }}</p>
       </div>
     </div>
 
@@ -399,7 +399,7 @@
       <div class="kpi-icon-wrap" style="background:#2563eb"><i class="fas fa-exchange-alt"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Transacciones</p>
-        <p class="kpi-value">{{ numero_transacciones }}</p>
+        <p id="kpi-transacciones" class="kpi-value">{{ numero_transacciones }}</p>
       </div>
     </div>
 
@@ -408,8 +408,8 @@
       <div class="kpi-icon-wrap" style="background:#1d4ed8"><i class="fas fa-arrow-up"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Máximo</p>
-        <p class="kpi-value">${{ gasto_maximo|us_currency:2 }}</p>
-        <p class="kpi-sub">{{ categoria_gasto_maximo }}</p>
+        <p id="kpi-maximo" class="kpi-value">${{ gasto_maximo|us_currency:2 }}</p>
+        <p id="kpi-sub-maximo" class="kpi-sub">{{ categoria_gasto_maximo }}</p>
       </div>
     </div>
 
@@ -418,8 +418,8 @@
       <div class="kpi-icon-wrap" style="background:#1aadbc"><i class="fas fa-arrow-down"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Mínimo</p>
-        <p class="kpi-value">${{ gasto_minimo|us_currency:2 }}</p>
-        <p class="kpi-sub">{{ categoria_gasto_minimo }}</p>
+        <p id="kpi-minimo" class="kpi-value">${{ gasto_minimo|us_currency:2 }}</p>
+        <p id="kpi-sub-minimo" class="kpi-sub">{{ categoria_gasto_minimo }}</p>
       </div>
     </div>
 
@@ -428,7 +428,7 @@
       <div class="kpi-icon-wrap" style="background:#0891b2"><i class="fas fa-equals"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Media</p>
-        <p class="kpi-value">${{ gasto_mediano|us_currency:2 }}</p>
+        <p id="kpi-mediano" class="kpi-value">${{ gasto_mediano|us_currency:2 }}</p>
       </div>
     </div>
 
@@ -478,7 +478,7 @@
       <div class="s-card-ico" style="background:#dbeafe"><i class="fas fa-table text-blue-600"></i></div>
       <span class="s-card-title">Detalle de gastos por categoría y cuenta</span>
     </div>
-    <div class="s-card-body">
+    <div class="s-card-body" id="gastos-table-container">
       {% if balances %}
       <table id="gastosTable" class="display responsive nowrap min-w-full hover stripe" style="width:100%">
         <thead>
@@ -652,4 +652,152 @@
 <script src="{% static 'js/datatables-utils.js' %}"></script>
 <script src="{% static 'js/balances-datatables.js' %}"></script>
 <script src="{% static 'js/multi-month-selector.js' %}"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  var ajaxUrl = "{% url 'admin:gastos_gastos_balances' %}";
+
+  function formatCurrencyAjax(value) {
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2, maximumFractionDigits: 2
+    }).format(parseFloat(value) || 0);
+  }
+
+  function updateKpis(kpis) {
+    var el;
+    el = document.getElementById('kpi-total-gastos');
+    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.total_gastos);
+    el = document.getElementById('kpi-promedio');
+    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.promedio_gastos);
+    el = document.getElementById('kpi-transacciones');
+    if (el) el.textContent = kpis.numero_transacciones;
+    el = document.getElementById('kpi-maximo');
+    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.gasto_maximo);
+    el = document.getElementById('kpi-sub-maximo');
+    if (el) el.textContent = kpis.categoria_gasto_maximo;
+    el = document.getElementById('kpi-minimo');
+    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.gasto_minimo);
+    el = document.getElementById('kpi-sub-minimo');
+    if (el) el.textContent = kpis.categoria_gasto_minimo;
+    el = document.getElementById('kpi-mediano');
+    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.gasto_mediano);
+  }
+
+  function reinitGastosDataTable() {
+    // balances-datatables.js exposes its init as a named function if available,
+    // otherwise we destroy and re-trigger DOMContentLoaded equivalent inline.
+    var container = document.getElementById('gastos-table-container');
+    if (!container) return;
+
+    if ($.fn.DataTable.isDataTable('#gastosTable')) {
+      $('#gastosTable').DataTable().destroy();
+    }
+
+    if (!$('#gastosTable').length) return;
+
+    // Replicate the config from balances-datatables.js
+    var table = $('#gastosTable').DataTable({
+      responsive: true,
+      pageLength: 25,
+      lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos']],
+      dom: 'Bfrtip',
+      language: { url: '/static/js/datatables-spanish.json' },
+      order: [[5, 'desc']],
+      columnDefs: [
+        { targets: [6, 7], type: 'num-fmt', className: 'text-right dt-body-right' },
+        { targets: '_all', className: 'dt-body-left' }
+      ],
+      buttons: [
+        { extend: 'copy', text: '<i class="fas fa-copy"></i>', className: 'btn-copy dt-button', titleAttr: 'Copiar' },
+        { extend: 'csv', text: '<i class="fas fa-file-csv"></i>', className: 'btn-csv dt-button', titleAttr: 'CSV', filename: 'acumulado-gastos' },
+        { extend: 'excel', text: '<i class="fas fa-file-excel"></i>', className: 'btn-excel dt-button', titleAttr: 'Excel', filename: 'acumulado-gastos', title: 'Acumulado de Gastos', exportOptions: { columns: ':visible' } },
+        { extend: 'pdf', text: '<i class="fas fa-file-pdf"></i>', className: 'btn-pdf dt-button', titleAttr: 'PDF', filename: 'acumulado-gastos', title: 'Acumulado de Gastos', orientation: 'landscape', pageSize: 'A4', exportOptions: { columns: ':visible' } },
+        { extend: 'print', text: '<i class="fas fa-print"></i>', className: 'btn-print dt-button', titleAttr: 'Imprimir', title: 'Acumulado de Gastos', exportOptions: { columns: ':visible' } }
+      ]
+    });
+
+    // Reconnect the draw.dt chart update handler defined inline above
+    $('#gastosTable').on('draw.dt', function () {
+      setTimeout(function () {
+        if (typeof updateChartsData === 'function') {
+          updateChartsData();
+          window.dispatchEvent(new Event('chartsDataUpdated'));
+        }
+      }, 100);
+    });
+
+    // Trigger initial chart update after DataTable renders
+    setTimeout(function () {
+      if (typeof updateChartsData === 'function') {
+        updateChartsData();
+        window.dispatchEvent(new Event('chartsDataUpdated'));
+      }
+    }, 300);
+  }
+
+  function doAjaxFilter(form) {
+    var params = new URLSearchParams(new FormData(form));
+    var container = document.getElementById('gastos-table-container');
+    if (container) {
+      container.style.opacity = '0.5';
+      container.style.pointerEvents = 'none';
+    }
+
+    fetch(ajaxUrl + '?' + params.toString(), {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+      .then(function (response) {
+        if (!response.ok) throw new Error('Error ' + response.status);
+        return response.json();
+      })
+      .then(function (data) {
+        updateKpis(data.kpis);
+
+        if (container) {
+          // Destroy DataTable before replacing HTML
+          if ($.fn.DataTable.isDataTable('#gastosTable')) {
+            $('#gastosTable').DataTable().destroy();
+          }
+          container.innerHTML = data.table_html;
+          container.style.opacity = '';
+          container.style.pointerEvents = '';
+          reinitGastosDataTable();
+        }
+
+        // Show toast
+        if (typeof showToast === 'function') {
+          showToast('¡Filtros aplicados!', 'La información ha sido filtrada según los criterios seleccionados.');
+        }
+
+        // Update URL
+        history.replaceState(null, '', '?' + params.toString());
+      })
+      .catch(function (err) {
+        if (container) {
+          container.style.opacity = '';
+          container.style.pointerEvents = '';
+        }
+        console.error('AJAX error:', err);
+      });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var form = document.querySelector('form[action*="gastos_balances"]');
+    if (!form) return;
+
+    // Intercept real submit events
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      doAjaxFilter(form);
+    });
+
+    // Override programmatic form.submit() used by multi-month-selector
+    form.submit = function () {
+      doAjaxFilter(form);
+    };
+  });
+})();
+</script>
 {% endblock %}

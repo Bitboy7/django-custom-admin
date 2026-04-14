@@ -456,6 +456,13 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
             except Exception:
                 pass  # No bloquear el guardado por errores de validación
         super().save_model(request, obj, form, change)
+        from .services.cache_service import VentasBalancesCache
+        VentasBalancesCache.invalidar()
+
+    def delete_model(self, request, obj):
+        super().delete_model(request, obj)
+        from .services.cache_service import VentasBalancesCache
+        VentasBalancesCache.invalidar()
 
     def get_urls(self):
         urls = super().get_urls()
@@ -1055,6 +1062,9 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
 
     def ventas_balances_admin_view(self, request):
         """Vista de análisis de balances de ventas integrada en el admin de Django."""
+        import json
+        from django.http import JsonResponse
+        from django.template.loader import render_to_string
         from ventas.views import build_ventas_balances_context
         from app.services.filter_utils import FilterOptionsProvider
 
@@ -1067,6 +1077,30 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
             'has_view_permission': self.has_view_permission(request),
             'months': FilterOptionsProvider.get_months_list(),
         })
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            table_html = render_to_string(
+                'admin/ventas/partials/ventas_balances_table.html',
+                context,
+                request=request,
+            )
+            return JsonResponse({
+                'kpis': {
+                    'total_ventas': float(context.get('total_ventas') or 0),
+                    'total_pagado': float(context.get('total_pagado') or 0),
+                    'saldo_pendiente_total': float(context.get('saldo_pendiente_total') or 0),
+                    'numero_transacciones': context.get('numero_transacciones', 0),
+                    'venta_maxima': float(context.get('venta_maxima') or 0),
+                    'promedio_ventas': float(context.get('promedio_ventas') or 0),
+                },
+                'chart_data': {
+                    'modalidad': json.loads(context['ventas_por_modalidad']),
+                    'estados': json.loads(context['ventas_por_estado']),
+                    'clientes': json.loads(context['ventas_por_cliente']),
+                },
+                'table_html': table_html,
+            })
+
         return TemplateResponse(request, 'admin/ventas/ventas_balances.html', context)
 
     def exportar_balances_xlsx_admin_view(self, request):
@@ -2029,33 +2063,25 @@ class AnticiposResource(resources.ModelResource):
         column_name='cliente',
         attribute='cliente',
         widget=ForeignKeyWidget(Cliente, field='nombre'))
-    
-    sucursal = fields.Field(
-        column_name='sucursal',
-        attribute='sucursal',
-        widget=ForeignKeyWidget(Sucursal, field='nombre'))
-    
+
     cuenta = fields.Field(
         column_name='cuenta',
         attribute='cuenta',
         widget=ForeignKeyWidget(Cuenta, field='numero_cuenta'))
-    
+
     monto = fields.Field(
         column_name='monto',
         attribute='monto',
         widget=MoneyWidget())
-    
+
     class Meta:
         model = Anticipo
-        fields = ('id', 'fecha', 'cliente', 'sucursal', 'cuenta', 'monto', 'descripcion','estado_anticipo')
+        fields = ('id', 'fecha', 'cliente', 'cuenta', 'monto', 'descripcion', 'estado_anticipo')
         import_id_fields = ('id',)
-        
+
     def dehydrate_cliente(self, anticipo):
         return anticipo.cliente.nombre
-    
-    def dehydrate_sucursal(self, anticipo):
-        return anticipo.sucursal.nombre
-    
+
     def dehydrate_cuenta(self, anticipo):
         return anticipo.cuenta.numero_cuenta if anticipo.cuenta else ""
 
@@ -2071,10 +2097,10 @@ class AnticipoAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = AnticiposResource
     import_form_class = ImportForm
     export_form_class = ExportForm
-    list_display = ('fecha', 'cliente', 'sucursal', 'cuenta', 'monto', 'folio_factura_anticipo', 'descripcion', 'estado_anticipo')
+    list_display = ('fecha', 'cliente', 'cuenta', 'monto', 'folio_factura_anticipo', 'descripcion', 'estado_anticipo')
     list_per_page = 20
-    list_filter = ('fecha', 'cliente', 'sucursal', 'cuenta', 'monto', 'estado_anticipo')
-    fields = ('fecha', 'cliente', 'sucursal', 'cuenta', 'monto', 'folio_factura_anticipo', 'descripcion', 'estado_anticipo')
+    list_filter = ('fecha', 'cliente', 'cuenta', 'monto', 'estado_anticipo')
+    fields = ('fecha', 'cliente', 'cuenta', 'monto', 'folio_factura_anticipo', 'descripcion', 'estado_anticipo')
     actions = ['aplicar_anticipo_a_ventas_pendientes']
 
     def aplicar_anticipo_a_ventas_pendientes(self, request, queryset):
@@ -2154,8 +2180,8 @@ class TerminoCreditoAdmin(ModelAdmin):
     readonly_fields = ('fecha_creacion',)
 
 
-# Administración para MercadoDestino  
-# @admin.register(MercadoDestino)  # OCULTO DE LA SIDEBAR
+# Administración para MercadoDestino
+@admin.register(MercadoDestino)
 class MercadoDestinoAdmin(ModelAdmin):
     list_display = (
         'nombre', 'get_num_paises', 'requiere_documentacion_especial', 

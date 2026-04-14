@@ -607,8 +607,8 @@ LOGGING = {
 # Configuración de Redis Cache con fallback
 REDIS_URL = os.getenv('REDIS_URL', None)
 
-if REDIS_URL and not DEBUG:
-    # Configuración Redis para producción
+if REDIS_URL:
+    # Configuración Redis (disponible en cualquier entorno que tenga REDIS_URL)
     try:
         CACHES = {
             'default': {

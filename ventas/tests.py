@@ -76,7 +76,6 @@ class ReporteCobranzaBaseTest(TestCase):
         """Crea un Anticipo usando objects.create() (no invoca full_clean)."""
         return Anticipo.objects.create(
             cliente=cliente,
-            sucursal=self.sucursal,
             cuenta=self.cuenta,
             monto=Money(monto, 'MXN'),
             fecha=fecha or date(2026, 1, 15),

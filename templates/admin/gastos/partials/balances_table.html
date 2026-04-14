@@ -1,0 +1,56 @@
+{% load i18n l10n gastos_tags %}
+{% if balances %}
+<table id="gastosTable" class="display responsive nowrap min-w-full hover stripe" style="width:100%">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Categoría</th>
+      <th>N° Cuenta</th>
+      <th>Banco</th>
+      <th>Sucursal</th>
+      <th>Fecha</th>
+      <th>Total</th>
+      <th>Acumulado</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for balance in balances %}
+    <tr>
+      <td class="font-mono text-xs text-gray-500">{{ balance.numero_secuencial }}</td>
+      <td>
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800">{{ balance.id_cat_gastos__nombre }}</span>
+      </td>
+      <td>{% if balance.id_cuenta_banco__numero_cuenta %}{{ balance.id_cuenta_banco__numero_cuenta }}{% else %}<span class="text-gray-400">—</span>{% endif %}</td>
+      <td>{% if balance.id_cuenta_banco__id_banco__nombre %}{{ balance.id_cuenta_banco__id_banco__nombre }}{% else %}<span class="text-gray-400">—</span>{% endif %}</td>
+      <td>{% if balance.id_sucursal__nombre %}{{ balance.id_sucursal__nombre }}{% else %}<span class="text-gray-400">—</span>{% endif %}</td>
+      <td class="text-gray-600">
+        {% if selected_periodo == 'diario' %}
+          {% if balance.fecha %}{{ balance.fecha|date:"Y-m-d" }}{% else %}—{% endif %}
+        {% elif selected_periodo == 'semanal' %}
+          {% if balance.semana %}{{ balance.semana|date:"Y-m-d" }}{% else %}—{% endif %}
+        {% elif selected_periodo == 'mensual' %}
+          {% if balance.mes %}{{ balance.mes|date:"Y-m" }}{% else %}—{% endif %}
+        {% endif %}
+      </td>
+      <td class="text-right font-semibold text-blue-700" data-order="{{ balance.total_gastos|unlocalize }}">${{ balance.total_gastos|us_currency:2 }}</td>
+      <td class="text-right font-semibold text-emerald-700" data-order="{{ balance.acumulado|unlocalize }}">${{ balance.acumulado|us_currency:2 }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <th colspan="6" class="text-right">Total general:</th>
+      <th class="text-right">${{ total_gastos|us_currency:2 }}</th>
+      <th></th>
+    </tr>
+  </tfoot>
+</table>
+{% else %}
+<div class="text-center py-12">
+  <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+    <i class="fas fa-inbox text-gray-400 text-2xl"></i>
+  </div>
+  <p class="text-gray-600 font-semibold">No hay datos disponibles</p>
+  <p class="text-gray-400 text-sm mt-1">Intente modificar los filtros para ver resultados.</p>
+</div>
+{% endif %}

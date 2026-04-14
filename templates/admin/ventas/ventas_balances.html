@@ -403,7 +403,7 @@
       <div class="kpi-icon-wrap" style="background:#1e3a5f"><i class="fas fa-dollar-sign"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Total Ventas</p>
-        <p class="kpi-value">${{ total_ventas|us_currency:2 }}</p>
+        <p class="kpi-value" id="kpi-total-ventas">${{ total_ventas|us_currency:2 }}</p>
       </div>
     </div>
 
@@ -411,7 +411,7 @@
       <div class="kpi-icon-wrap" style="background:#0369a1"><i class="fas fa-money-check-alt"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Total Pagado</p>
-        <p class="kpi-value">${{ total_pagado|us_currency:2 }}</p>
+        <p class="kpi-value" id="kpi-total-pagado">${{ total_pagado|us_currency:2 }}</p>
       </div>
     </div>
 
@@ -419,7 +419,7 @@
       <div class="kpi-icon-wrap" style="background:#2563eb"><i class="fas fa-exclamation-triangle"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Pendiente</p>
-        <p class="kpi-value">${{ saldo_pendiente_total|us_currency:2 }}</p>
+        <p class="kpi-value" id="kpi-saldo-pendiente">${{ saldo_pendiente_total|us_currency:2 }}</p>
       </div>
     </div>
 
@@ -427,7 +427,7 @@
       <div class="kpi-icon-wrap" style="background:#1d4ed8"><i class="fas fa-receipt"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Transacciones</p>
-        <p class="kpi-value">{{ numero_transacciones }}</p>
+        <p class="kpi-value" id="kpi-transacciones">{{ numero_transacciones }}</p>
       </div>
     </div>
 
@@ -435,7 +435,7 @@
       <div class="kpi-icon-wrap" style="background:#1aadbc"><i class="fas fa-arrow-up"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Venta Máxima</p>
-        <p class="kpi-value">${{ venta_maxima|us_currency:2 }}</p>
+        <p class="kpi-value" id="kpi-venta-maxima">${{ venta_maxima|us_currency:2 }}</p>
       </div>
     </div>
 
@@ -443,7 +443,7 @@
       <div class="kpi-icon-wrap" style="background:#0891b2"><i class="fas fa-calculator"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Promedio</p>
-        <p class="kpi-value">${{ promedio_ventas|us_currency:2 }}</p>
+        <p class="kpi-value" id="kpi-promedio">${{ promedio_ventas|us_currency:2 }}</p>
       </div>
     </div>
 
@@ -501,7 +501,7 @@
       <div class="s-card-ico" style="background:#dbeafe"><i class="fas fa-table text-blue-600"></i></div>
       <span class="s-card-title">Detalle de Ventas</span>
     </div>
-    <div class="s-card-body">
+    <div class="s-card-body" id="ventas-table-container">
       {% if balances %}
       <table id="ventasTable" class="display responsive nowrap min-w-full hover stripe" style="width:100%">
         <thead>
@@ -668,4 +668,164 @@
 <script src="{% static 'js/datatables-utils.js' %}"></script>
 <script src="{% static 'js/ventas-balances.js' %}"></script>
 <script src="{% static 'js/multi-month-selector.js' %}"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  var ajaxUrl = "{% url 'admin:ventas_ventas_balances' %}";
+
+  function formatCurrencyAjax(value) {
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2, maximumFractionDigits: 2
+    }).format(parseFloat(value) || 0);
+  }
+
+  function updateKpis(kpis) {
+    var el;
+    el = document.getElementById('kpi-total-ventas');
+    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.total_ventas);
+    el = document.getElementById('kpi-total-pagado');
+    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.total_pagado);
+    el = document.getElementById('kpi-saldo-pendiente');
+    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.saldo_pendiente_total);
+    el = document.getElementById('kpi-transacciones');
+    if (el) el.textContent = kpis.numero_transacciones;
+    el = document.getElementById('kpi-venta-maxima');
+    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.venta_maxima);
+    el = document.getElementById('kpi-promedio');
+    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.promedio_ventas);
+  }
+
+  function destroyVentasCharts() {
+    ['modalidadChart', 'estadosChart', 'clientesChart'].forEach(function (id) {
+      var canvas = document.getElementById(id);
+      if (canvas) {
+        var existing = Chart.getChart(canvas);
+        if (existing) existing.destroy();
+      }
+    });
+  }
+
+  function reinitVentasDataTable() {
+    if ($.fn.DataTable.isDataTable('#ventasTable')) {
+      $('#ventasTable').DataTable().destroy();
+    }
+    if ($('#ventasTable').length) {
+      $('#ventasTable').DataTable({
+        responsive: true,
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos']],
+        order: [[0, 'asc']],
+        columnDefs: [
+          { targets: [6, 7, 8, 10], type: 'num-fmt', className: 'text-right' },
+          { targets: [9], className: 'text-center' }
+        ],
+        dom: 'Bfrtip',
+        language: { url: '/static/js/datatables-spanish.json' },
+        buttons: [
+          {
+            extend: 'excel', title: 'Análisis de Ventas',
+            text: '<i class="fas fa-file-excel"></i> Excel',
+            className: 'btn btn-success btn-sm',
+            exportOptions: { columns: ':visible' }
+          },
+          {
+            extend: 'pdf', title: 'Análisis de Ventas',
+            text: '<i class="fas fa-file-pdf"></i> PDF',
+            className: 'btn btn-danger btn-sm',
+            orientation: 'landscape', pageSize: 'A4',
+            exportOptions: { columns: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] }
+          },
+          {
+            extend: 'print', title: 'Análisis de Ventas',
+            text: '<i class="fas fa-print"></i> Imprimir',
+            className: 'btn btn-info btn-sm',
+            exportOptions: { columns: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] }
+          }
+        ]
+      });
+    }
+  }
+
+  function doAjaxFilter(form) {
+    var params = new URLSearchParams(new FormData(form));
+    var container = document.getElementById('ventas-table-container');
+    var submitBtn = form.querySelector('button[type="submit"]');
+    var originalBtnHtml = submitBtn ? submitBtn.innerHTML : null;
+
+    if (container) {
+      container.style.opacity = '0.5';
+      container.style.pointerEvents = 'none';
+    }
+
+    function restoreBtn() {
+      if (submitBtn && originalBtnHtml !== null) {
+        submitBtn.innerHTML = originalBtnHtml;
+        submitBtn.disabled = false;
+      }
+    }
+
+    fetch(ajaxUrl + '?' + params.toString(), {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+      .then(function (response) {
+        if (!response.ok) throw new Error('Error ' + response.status);
+        return response.json();
+      })
+      .then(function (data) {
+        updateKpis(data.kpis);
+
+        // Update chart data globals and reinit
+        window.ventasModalidadData = data.chart_data.modalidad;
+        window.ventasEstadosData = data.chart_data.estados;
+        window.ventasClientesData = data.chart_data.clientes;
+        destroyVentasCharts();
+        setTimeout(function () { initializeVentasCharts(); }, 50);
+
+        // Replace table HTML and reinitialise DataTable
+        if (container) {
+          container.innerHTML = data.table_html;
+          container.style.opacity = '';
+          container.style.pointerEvents = '';
+          reinitVentasDataTable();
+        }
+
+        restoreBtn();
+
+        // Show toast
+        if (typeof showToast === 'function') {
+          showToast('¡Filtros aplicados!', 'Los datos han sido actualizados.');
+        }
+
+        // Update URL without page reload
+        history.replaceState(null, '', '?' + params.toString());
+      })
+      .catch(function (err) {
+        if (container) {
+          container.style.opacity = '';
+          container.style.pointerEvents = '';
+        }
+        restoreBtn();
+        console.error('AJAX error:', err);
+      });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var form = document.querySelector('form[action*="ventas/balances"]');
+    if (!form) return;
+
+    // Intercept real submit events (from the submit button)
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      doAjaxFilter(form);
+    });
+
+    // Override programmatic form.submit() used by multi-month-selector
+    form.submit = function () {
+      doAjaxFilter(form);
+    };
+  });
+})();
+</script>
 {% endblock %}

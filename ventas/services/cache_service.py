@@ -562,3 +562,100 @@ class CuentasPorCobrarCache:
             'recuperacion_mes_anterior': recuperacion_mes_anterior,
             'top_clientes': top_clientes
         }
+
+
+class VentasBalancesCache:
+    """
+    Cache para la vista de balances de ventas (build_ventas_balances_context).
+    Cachea los datos computados (balances, métricas, gráficos) keyed por los
+    parámetros de filtro del request. TTL: 5 minutos.
+    Se invalida automáticamente al guardar/eliminar registros de Ventas.
+    """
+
+    CACHE_TIMEOUT = 300  # 5 minutos
+    PREFIX = 'ventas_balances'
+
+    # -------------------------------------------------------------------------
+    # Helpers de serialización (date/datetime → JSON-safe y viceversa)
+    # -------------------------------------------------------------------------
+
+    @classmethod
+    def _serialize(cls, obj):
+        """Convierte date/datetime a markers JSON-serializables."""
+        import datetime
+        if isinstance(obj, list):
+            return [cls._serialize(i) for i in obj]
+        if isinstance(obj, dict):
+            return {k: cls._serialize(v) for k, v in obj.items()}
+        if isinstance(obj, datetime.datetime):
+            return {'__dt__': obj.isoformat()}
+        if isinstance(obj, datetime.date):
+            return {'__d__': obj.isoformat()}
+        return obj
+
+    @classmethod
+    def _deserialize(cls, obj):
+        """Reconstruye date/datetime desde markers."""
+        import datetime
+        if isinstance(obj, list):
+            return [cls._deserialize(i) for i in obj]
+        if isinstance(obj, dict):
+            if tuple(obj.keys()) == ('__dt__',):
+                return datetime.datetime.fromisoformat(obj['__dt__'])
+            if tuple(obj.keys()) == ('__d__',):
+                return datetime.date.fromisoformat(obj['__d__'])
+            return {k: cls._deserialize(v) for k, v in obj.items()}
+        return obj
+
+    # -------------------------------------------------------------------------
+    # Cache key
+    # -------------------------------------------------------------------------
+
+    @classmethod
+    def _make_key(cls, filter_params: dict) -> str:
+        import hashlib
+        key_str = '&'.join(f'{k}={v}' for k, v in sorted(filter_params.items()))
+        digest = hashlib.md5(key_str.encode()).hexdigest()
+        return f'{cls.PREFIX}_{digest}'
+
+    # -------------------------------------------------------------------------
+    # API pública
+    # -------------------------------------------------------------------------
+
+    @classmethod
+    def get(cls, filter_params: dict) -> Optional[Dict]:
+        """Devuelve datos cacheados o None si no hay cache."""
+        cache_key = cls._make_key(filter_params)
+        data = cache.get(cache_key)
+        if data is not None:
+            try:
+                return cls._deserialize(data)
+            except Exception as e:
+                logger.warning(f'VentasBalancesCache.get: error deserializando: {e}')
+        return None
+
+    @classmethod
+    def set(cls, filter_params: dict, data: Dict):
+        """Guarda datos computados en cache."""
+        cache_key = cls._make_key(filter_params)
+        try:
+            serializable = cls._serialize(data)
+            cache.set(cache_key, serializable, cls.CACHE_TIMEOUT)
+            logger.debug(f'VentasBalancesCache: datos cacheados (key={cache_key})')
+        except Exception as e:
+            logger.warning(f'VentasBalancesCache.set: error serializando: {e}')
+
+    @classmethod
+    def invalidar(cls):
+        """
+        Invalida todo el cache de balances de ventas.
+        Con django-redis usa delete_pattern; con LocMemCache deja que expiren por TTL.
+        """
+        try:
+            if hasattr(cache, 'delete_pattern'):
+                cache.delete_pattern(f'*{cls.PREFIX}_*')
+                logger.debug('VentasBalancesCache: cache invalidado via delete_pattern')
+            else:
+                logger.debug('VentasBalancesCache: backend sin delete_pattern, TTL expirará naturalmente')
+        except Exception as e:
+            logger.warning(f'VentasBalancesCache.invalidar: {e}')
