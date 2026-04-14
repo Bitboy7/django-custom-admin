@@ -65,47 +65,23 @@ class MoneyWidget(Widget):
     
     def render(self, value, obj=None, **kwargs):
         """
-        Convierte el objeto Money a string para exportación en formato US
-        (comas para miles, puntos para decimales)
+        Convierte el objeto Money a un valor numerico para exportacion.
+        Esto permite que XLSX y otros formatos tabulares conserven el tipo
+        numerico en lugar de recibir texto ya formateado.
         """
         try:
             if isinstance(value, Money):
-                # Usar el amount como Decimal para mantener precisión
-                amount = value.amount
-                # Formatear con 2 decimales
-                formatted = f"{amount:.2f}"
-                
-                # Separar parte entera y decimal
-                if '.' in formatted:
-                    integer_part, decimal_part = formatted.split('.')
-                else:
-                    integer_part, decimal_part = formatted, '00'
-                
-                # Agregar separadores de miles (comas)
-                # Convertir a int primero para usar el formato de miles
-                integer_value = int(float(integer_part))
-                integer_with_commas = f"{integer_value:,}"
-                
-                # Retornar en formato US: 1,234.56
-                return f"{integer_with_commas}.{decimal_part}"
+                return value.amount
             elif value is not None and value != '':
-                # Si no es Money, intentar formatear como número
                 try:
-                    numeric_value = Decimal(str(value))
-                    formatted = f"{numeric_value:.2f}"
-                    if '.' in formatted:
-                        integer_part, decimal_part = formatted.split('.')
-                    else:
-                        integer_part, decimal_part = formatted, '00'
-                    
-                    integer_value = int(float(integer_part))
-                    integer_with_commas = f"{integer_value:,}"
-                    return f"{integer_with_commas}.{decimal_part}"
+                    if isinstance(value, str):
+                        value = value.replace(',', '')
+                    return Decimal(str(value))
                 except (ValueError, TypeError):
                     return str(value)
-            return "0.00"
-        except (ValueError, TypeError):
-            return "0.00"
+            return Decimal('0.00')
+        except (ValueError, TypeError, InvalidOperation):
+            return Decimal('0.00')
 
 
 class DecimalWidget(Widget):

@@ -150,13 +150,14 @@ JAZZMIN_SETTINGS = {
     
     # Ocultar modelos de catálogo/configuración poco frecuentes del menú principal.
     # Agente y TerminoCredito se reubican en CATÁLOGO mediante custom_links.
-    # auth.Group se gestiona desde el panel de usuarios.
-    "hide_models": ["auth.Group", "ventas.Agente", "ventas.TerminoCredito"],
+    "hide_models": ["ventas.Agente", "ventas.TerminoCredito"],
     
     # Ordenamiento del menú lateral: apps primero, luego modelos por frecuencia de uso.
     # Los ítems más usados aparecen primero dentro de cada sección.
     "order_with_respect_to": [
         "auth",
+        "auth.User",
+        "auth.Group",
         # GASTOS: operacional primero, configuración al final
         "gastos",
         "gastos.Gastos",
@@ -188,6 +189,20 @@ JAZZMIN_SETTINGS = {
     
     # Custom links to append to app groups, keyed on app name
     "custom_links": {
+        "auth": [
+            {
+                "name": "Administración de grupos",
+                "url": "admin:auth_group_changelist",
+                "icon": "fas fa-users",
+                "permissions": ["auth.view_group"]
+            },
+            {
+                "name": "Verificación en dos pasos (2FA)",
+                "url": "/account/two_factor/",
+                "icon": "fas fa-mobile-alt",
+                "permissions": ["auth.view_group"]
+            },
+        ],
         "gastos": [
             {
                 "name": "Acumulado de gastos",
@@ -250,11 +265,6 @@ JAZZMIN_SETTINGS = {
                 "url": "admin:axes_accessfailurelog_changelist",
                 "icon": "fas fa-exclamation-triangle",
                 "permissions": ["axes.view_accessfailurelog"],
-            },
-            {
-                "name": "Verificación en dos pasos (2FA)",
-                "url": "/account/two_factor/",
-                "icon": "fas fa-mobile-alt",
             },
         ],
     },

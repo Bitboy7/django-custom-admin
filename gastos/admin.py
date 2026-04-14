@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
+from django.contrib.admin import SimpleListFilter
 from django.template.response import TemplateResponse
 from django.urls import path
 from import_export import resources, fields
@@ -8,8 +9,81 @@ from import_export.admin import ImportExportModelAdmin
 from import_export.forms import ExportForm, ImportForm
 from .models import CatGastos, Banco, Cuenta, Gastos, Compra, SaldoMensual
 from django.utils.html import format_html
+from django.utils import timezone
 from catalogo.models import Sucursal, Productor, Producto
 from app.widgets import MoneyWidget
+from datetime import timedelta
+
+
+class BancoGastoFilter(SimpleListFilter):
+    title = 'Banco'
+    parameter_name = 'banco'
+
+    def lookups(self, request, model_admin):
+        return [
+            (str(banco.id), banco.nombre)
+            for banco in Banco.objects.order_by('nombre')
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(id_cuenta_banco__id_banco_id=self.value())
+        return queryset
+
+
+class MontoGastoFilter(SimpleListFilter):
+    title = 'Rango de monto'
+    parameter_name = 'rango_monto'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('0-1000', '$0 - $1,000'),
+            ('1000-5000', '$1,000 - $5,000'),
+            ('5000-10000', '$5,000 - $10,000'),
+            ('10000-50000', '$10,000 - $50,000'),
+            ('50000+', '$50,000+'),
+        ]
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value == '0-1000':
+            return queryset.filter(monto__amount__range=[0, 1000])
+        if value == '1000-5000':
+            return queryset.filter(monto__amount__range=[1000, 5000])
+        if value == '5000-10000':
+            return queryset.filter(monto__amount__range=[5000, 10000])
+        if value == '10000-50000':
+            return queryset.filter(monto__amount__range=[10000, 50000])
+        if value == '50000+':
+            return queryset.filter(monto__amount__gte=50000)
+        return queryset
+
+
+class PeriodoGastoFilter(SimpleListFilter):
+    title = 'Periodo'
+    parameter_name = 'periodo'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('hoy', 'Hoy'),
+            ('semana', 'Ultimos 7 dias'),
+            ('mes', 'Mes actual'),
+            ('anio', 'Año actual'),
+        ]
+
+    def queryset(self, request, queryset):
+        today = timezone.localdate()
+        value = self.value()
+
+        if value == 'hoy':
+            return queryset.filter(fecha=today)
+        if value == 'semana':
+            return queryset.filter(fecha__gte=today - timedelta(days=7), fecha__lte=today)
+        if value == 'mes':
+            return queryset.filter(fecha__year=today.year, fecha__month=today.month)
+        if value == 'anio':
+            return queryset.filter(fecha__year=today.year)
+        return queryset
 
 class CatGastoResource(resources.ModelResource):
     fields = ('id', 'nombre', 'fecha_registro')
@@ -131,8 +205,10 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
     export_form_class = ExportForm
     list_display = ('id', 'id_sucursal', 'id_cat_gastos',
                     'id_cuenta_banco', 'monto', 'descripcion', 'fecha', 'fecha_registro')
-    search_fields = ('descripcion', 'id_sucursal__nombre', 'id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta')
-    list_filter = ('id_sucursal', 'id_cat_gastos','id_cuenta_banco', 'fecha')
+    search_fields = ('descripcion', 'id_sucursal__nombre', 'id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta', 'id_cuenta_banco__id_banco__nombre')
+    list_filter = (BancoGastoFilter, 'id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', MontoGastoFilter, PeriodoGastoFilter, 'fecha', 'fecha_registro')
+    date_hierarchy = 'fecha'
+    list_select_related = ('id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', 'id_cuenta_banco__id_banco')
     list_per_page = 20
     fieldsets = (
         ('Datos del Registro', {
