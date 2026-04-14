@@ -199,10 +199,10 @@ class InversionAdmin(ImportExportModelAdmin, ModelAdmin):
     def tiene_documento(self, obj):
         """Indica si tiene documento adjunto"""
         if obj.documento_soporte:
-            return format_html(
+            return mark_safe(
                 '<span style="color: green;">✓ Sí</span>'
             )
-        return format_html('<span style="color: gray;">✗ No</span>')
+        return mark_safe('<span style="color: gray;">✗ No</span>')
     tiene_documento.short_description = 'Documento'
     
     def rendimientos_count(self, obj):

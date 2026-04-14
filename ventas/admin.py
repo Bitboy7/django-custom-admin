@@ -586,11 +586,11 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
     def get_saldo_pendiente(self, obj):
         """Saldo pendiente con formato visual"""
         if obj.modalidad_pago == 'Contado':
-            return format_html('<span style="color: green;">✓ Pagado</span>')
+            return mark_safe('<span style="color: green;">✓ Pagado</span>')
         
         saldo = obj.saldo_pendiente()
         if saldo <= 0:
-            return format_html('<span style="color: green;">✓ $0.00</span>')
+            return mark_safe('<span style="color: green;">✓ $0.00</span>')
         
         color = '#dc3545' if obj.esta_vencida() else '#fd7e14'
         return format_html(
@@ -1909,7 +1909,7 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
         """Muestra el saldo pendiente después de este pago"""
         saldo = obj.venta.saldo_pendiente()
         if saldo <= 0:
-            return format_html('<span style="color:#10b981; font-weight:600;">✓ Pagado</span>')
+            return mark_safe('<span style="color:#10b981; font-weight:600;">✓ Pagado</span>')
         return format_html('<span style="color:#f59e0b;">${}</span>', f'{float(saldo):,.2f}')
     get_saldo_pendiente.short_description = 'Saldo Restante'
     
@@ -1941,13 +1941,13 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
                 icon,
                 file_type
             )
-        return format_html('<span style="color:#9ca3af;">Sin comprobante</span>')
+        return mark_safe('<span style="color:#9ca3af;">Sin comprobante</span>')
     get_comprobante.short_description = 'Comprobante'
     
     def preview_comprobante(self, obj):
         """Muestra preview del comprobante en el formulario de detalle"""
         if not obj.comprobante_pago:
-            return format_html('<p style="color:#9ca3af;">No hay comprobante adjunto</p>')
+            return mark_safe('<p style="color:#9ca3af;">No hay comprobante adjunto</p>')
         
         file_ext = obj.comprobante_pago.name.split('.')[-1].lower()
         
