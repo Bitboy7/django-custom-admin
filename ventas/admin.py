@@ -1846,15 +1846,183 @@ class PagoVentaResource(resources.ModelResource):
 
 @admin.register(PagoVenta)
 class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
+    """
+    Admin para PagoVenta con controles bancarios de integridad.
+    Implementa RF01, RF02, RF03: validaciones de nivel financiero.
+    """
     resource_class = PagoVentaResource
-    list_display = ('fecha_pago', 'get_venta_info', 'monto_pago', 'metodo_pago', 'referencia', 'fecha_registro')
-    list_filter = ('fecha_pago', 'metodo_pago', 'venta__cliente')
-    search_fields = ('venta__carga', 'venta__cliente__nombre', 'referencia')
+    list_display = ('fecha_pago', 'get_venta_info', 'monto_pago', 'metodo_pago', 'get_saldo_pendiente', 'get_comprobante', 'referencia', 'fecha_registro')
+    list_filter = ('fecha_pago', 'metodo_pago', 'venta__cliente', 'venta__estado_cobranza')
+    search_fields = ('venta__carga', 'venta__cliente__nombre', 'referencia', 'notas')
     date_hierarchy = 'fecha_pago'
+    readonly_fields = ('fecha_registro', 'get_saldo_venta', 'preview_comprobante')
+    
+    # Usar formulario personalizado con validaciones bancarias
+    from .forms_banking import PagoVentaForm
+    form = PagoVentaForm
+    
+    fieldsets = (
+        ('Información del Pago', {
+            'fields': ('venta', 'get_saldo_venta', 'fecha_pago', 'monto_pago'),
+            'description': '<strong style="color:#047857;">⚠️ Controles Bancarios Activos:</strong> '
+                          'No se permiten pagos a ventas completadas ni sobrepagos.'
+        }),
+        ('Detalles Transaccionales', {
+            'fields': ('metodo_pago', 'referencia', 'cuenta_destino', 'comprobante_pago', 'preview_comprobante'),
+        }),
+        ('Notas y Auditoría', {
+            'fields': ('notas', 'fecha_registro'),
+            'classes': ('collapse',),
+        }),
+    )
+    
+    def get_saldo_venta(self, obj):
+        """Muestra el saldo pendiente de la venta"""
+        if obj and obj.venta:
+            saldo = obj.venta.saldo_pendiente()
+            color = '#047857' if saldo > 0 else '#6b7280'
+            return format_html(
+                '<strong style="color:{}">Saldo pendiente: ${}</strong>',
+                color, f'{float(saldo):,.2f}'
+            )
+        return '-'
+    get_saldo_venta.short_description = 'Saldo de la Venta'
     
     def get_venta_info(self, obj):
-        return f"{obj.venta.carga} - {obj.venta.cliente.nombre}"
+        """Información de la venta con indicador de estado"""
+        estado_color = {
+            'Pagado': '#10b981',
+            'Pendiente': '#f59e0b',
+            'Parcial': '#3b82f6',
+            'Vencido': '#ef4444',
+        }.get(obj.venta.estado_cobranza, '#6b7280')
+        
+        return format_html(
+            '{} - {} <span style="color:{}; font-weight:600;">●</span>',
+            obj.venta.carga,
+            obj.venta.cliente.nombre,
+            estado_color
+        )
     get_venta_info.short_description = 'Venta - Cliente'
+    
+    def get_saldo_pendiente(self, obj):
+        """Muestra el saldo pendiente después de este pago"""
+        saldo = obj.venta.saldo_pendiente()
+        if saldo <= 0:
+            return format_html('<span style="color:#10b981; font-weight:600;">✓ Pagado</span>')
+        return format_html('<span style="color:#f59e0b;">${}</span>', f'{float(saldo):,.2f}')
+    get_saldo_pendiente.short_description = 'Saldo Restante'
+    
+    def get_comprobante(self, obj):
+        """Muestra ícono de comprobante si existe con link para preview"""
+        if obj.comprobante_pago:
+            file_ext = obj.comprobante_pago.name.split('.')[-1].lower()
+            if file_ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+                icon = '🖼️'
+                file_type = 'Imagen'
+            elif file_ext == 'pdf':
+                icon = '📄'
+                file_type = 'PDF'
+            else:
+                icon = '📎'
+                file_type = 'Archivo'
+            
+            return format_html(
+                '<a href="{}" target="_blank" class="comprobante-link" '
+                'data-file-type="{}" data-file-url="{}" '
+                'onclick="return previewComprobante(event, this);" '
+                'style="text-decoration:none; cursor:pointer;" '
+                'title="Click para ver comprobante">'
+                '{} <span style="color:#3b82f6; text-decoration:underline;">{}</span>'
+                '</a>',
+                obj.comprobante_pago.url,
+                file_type.lower(),
+                obj.comprobante_pago.url,
+                icon,
+                file_type
+            )
+        return format_html('<span style="color:#9ca3af;">Sin comprobante</span>')
+    get_comprobante.short_description = 'Comprobante'
+    
+    def preview_comprobante(self, obj):
+        """Muestra preview del comprobante en el formulario de detalle"""
+        if not obj.comprobante_pago:
+            return format_html('<p style="color:#9ca3af;">No hay comprobante adjunto</p>')
+        
+        file_ext = obj.comprobante_pago.name.split('.')[-1].lower()
+        
+        if file_ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+            return format_html(
+                '<div style="margin-top:10px;">'
+                '<a href="{}" target="_blank">'
+                '<img src="{}" style="max-width:400px; max-height:400px; '
+                'border:2px solid #e5e7eb; border-radius:8px; cursor:pointer;" '
+                'alt="Comprobante de pago" />'
+                '</a>'
+                '<p style="margin-top:5px; color:#6b7280; font-size:12px;">'
+                'Click en la imagen para verla en tamaño completo'
+                '</p>'
+                '</div>',
+                obj.comprobante_pago.url,
+                obj.comprobante_pago.url
+            )
+        elif file_ext == 'pdf':
+            return format_html(
+                '<div style="margin-top:10px;">'
+                '<a href="{}" target="_blank" '
+                'style="display:inline-block; padding:10px 20px; '
+                'background:#3b82f6; color:white; text-decoration:none; '
+                'border-radius:6px; font-weight:500;">'
+                '📄 Abrir PDF en nueva pestaña'
+                '</a>'
+                '<p style="margin-top:10px; color:#6b7280; font-size:12px;">'
+                'Archivo: {}'
+                '</p>'
+                '</div>',
+                obj.comprobante_pago.url,
+                obj.comprobante_pago.name.split('/')[-1]
+            )
+        else:
+            return format_html(
+                '<div style="margin-top:10px;">'
+                '<a href="{}" target="_blank" '
+                'style="display:inline-block; padding:10px 20px; '
+                'background:#6b7280; color:white; text-decoration:none; '
+                'border-radius:6px; font-weight:500;">'
+                '📎 Descargar archivo'
+                '</a>'
+                '<p style="margin-top:10px; color:#6b7280; font-size:12px;">'
+                'Archivo: {}'
+                '</p>'
+                '</div>',
+                obj.comprobante_pago.url,
+                obj.comprobante_pago.name.split('/')[-1]
+            )
+    preview_comprobante.short_description = 'Vista Previa'
+    
+    class Media:
+        js = ('admin/js/comprobante_preview.js',)
+        css = {
+            'all': ('admin/css/comprobante_preview.css',)
+        }
+    
+    def save_model(self, request, obj, form, change):
+        """Override para registrar usuario en auditoría"""
+        super().save_model(request, obj, form, change)
+        
+        # Registrar en auditoría con usuario actual
+        try:
+            from auditoria.models import LogActividad
+            LogActividad.objects.create(
+                usuario=request.user,
+                nombre_usuario=request.user.username,
+                tipo_accion='update' if change else 'create',
+                descripcion=f'Pago de ${obj.monto_pago.amount:,.2f} registrado para venta {obj.venta.carga}',
+                modelo_afectado='PagoVenta',
+                objeto_id=str(obj.pk),
+            )
+        except Exception:
+            pass
     
 class AnticiposResource(resources.ModelResource):
     cliente = fields.Field(

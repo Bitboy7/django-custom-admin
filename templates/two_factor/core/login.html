@@ -244,6 +244,20 @@
       box-shadow: 0 0 0 4px rgba(13,143,162,.1);
     }
     .field-wrap input::placeholder { color: #b0bec5; }
+    /* Asegurar que checkboxes dentro de field-wrap no hereden estilos de texto */
+    .field-wrap input[type=checkbox] {
+      width: 18px !important;
+      height: 18px !important;
+      padding: 0 !important;
+      border-radius: 4px !important;
+      -webkit-appearance: checkbox !important;
+      -moz-appearance: checkbox !important;
+      appearance: checkbox !important;
+      accent-color: #0d8fa2;
+      cursor: pointer;
+      background: #fff !important;
+      box-shadow: none !important;
+    }
     .field-error {
       font-size: 12px;
       color: #b91c1c;
@@ -277,15 +291,40 @@
       cursor: pointer;
     }
     .remember-row input[type=checkbox] {
-      width: 16px; height: 16px;
-      accent-color: #0d8fa2;
+      /* Reset estilos heredados de .field-wrap input */
+      width: 18px !important;
+      height: 18px !important;
+      padding: 0 !important;
+      border-radius: 4px !important;
+      border: 1.5px solid #cbd5e1 !important;
+      background: #fff !important;
       cursor: pointer;
       flex-shrink: 0;
+      margin: 0;
+      -webkit-appearance: checkbox !important;
+      -moz-appearance: checkbox !important;
+      appearance: checkbox !important;
+      accent-color: #0d8fa2;
+      box-shadow: none !important;
+      outline: none;
+    }
+    .remember-row input[type=checkbox]:hover {
+      border-color: #0d8fa2 !important;
+    }
+    .remember-row input[type=checkbox]:focus {
+      border-color: #0d8fa2 !important;
+      box-shadow: 0 0 0 3px rgba(13, 143, 162, 0.1) !important;
+      outline: none;
+    }
+    .remember-row input[type=checkbox]:checked {
+      background-color: #0d8fa2 !important;
+      border-color: #0d8fa2 !important;
     }
     .remember-row span {
       font-size: 13px;
-      color: #6b7280;
+      color: #374151;
       user-select: none;
+      line-height: 1.5;
     }
 
     /* Submit */
@@ -410,6 +449,17 @@
         {{ wizard.management_form }}
 
         {% for field in form.visible_fields %}
+        {% if field.field.widget.input_type == 'checkbox' %}
+        <label class="remember-row" for="{{ field.id_for_label }}">
+          {{ field }}
+          <span>{{ field.label }}</span>
+        </label>
+        {% if field.errors %}
+        <div class="field-error" style="margin-top:-16px;margin-bottom:16px;">
+          <i class="fas fa-exclamation-circle"></i>{{ field.errors.0 }}
+        </div>
+        {% endif %}
+        {% else %}
         <div class="field-group">
           <label class="field-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
           <div class="field-wrap">
@@ -421,6 +471,7 @@
           </div>
           {% endif %}
         </div>
+        {% endif %}
         {% endfor %}
 
         {% if wizard.steps.current == 'auth' %}

@@ -330,17 +330,3 @@ def guardar_gastos_estado_cuenta(request):
     logger.warning("Acceso no POST - redirigiendo al formulario principal")
     return redirect('gastos:ingresar_gasto_factura')
 
-
-from app.services.compras_service import ComprasAnalysisService
-
-@login_required
-def compras_balances_view(request):
-    """
-    Vista para análisis de compras usando el servicio modular
-    
-    Similar a balances_view pero adaptado para compras de fruta
-    """
-    service = ComprasAnalysisService()
-    context = service.get_full_context(request)
-    
-    return render(request, 'compras/compras_balances.html', context)

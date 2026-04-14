@@ -135,11 +135,24 @@ class Agente(models.Model):
         verbose_name_plural = 'Agentes aduanales'
         
 class Anticipo(models.Model):
+    """
+    Anticipo de cliente - Pago adelantado que se aplicará a futuras ventas.
+    
+    Estándares Bancarios Implementados:
+    - RF07: No se puede asignar un anticipo a una venta ya completada
+    - RF08: Un anticipo solo puede estar en un estado a la vez
+    - RF09: Control de disponibilidad del anticipo antes de asignación
+    - RF10: Auditoría de cambios de estado
+    """
     from gastos.models import Cuenta
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     sucursal = models.ForeignKey(Sucursal, on_delete=models.CASCADE)
     cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE)
-    monto = MoneyField(max_digits=10, decimal_places=2, default_currency='MXN')
+    monto = MoneyField(
+        max_digits=10, 
+        decimal_places=2, 
+        default_currency='MXN'
+    )
     fecha = models.DateField()
     descripcion = models.TextField(blank=True, null=True, default='Sin descripción')
     folio_factura_anticipo = models.CharField(
@@ -148,19 +161,126 @@ class Anticipo(models.Model):
         help_text="Folio del CFDI de anticipo (ej: B 1980)"
     )
     fecha_registro = models.DateTimeField(auto_now_add=True)
+    
     class Estado_anticipo(models.TextChoices):
-        Pendiente = 'Pendiente'
-        Aplicado = 'Aplicado'
-        Cancelado = 'Cancelado'
-    estado_anticipo = models.CharField(max_length=20, choices=Estado_anticipo.choices, default=Estado_anticipo.Pendiente)
+        Pendiente = 'Pendiente', 'Pendiente de Aplicar'
+        Aplicado = 'Aplicado', 'Aplicado a Venta'
+        Cancelado = 'Cancelado', 'Cancelado'
+    
+    estado_anticipo = models.CharField(
+        max_length=20, 
+        choices=Estado_anticipo.choices, 
+        default=Estado_anticipo.Pendiente
+    )
     
     def __str__(self):
-        return f"Anticipo de {self.cliente.nombre} - {self.monto}"
+        return f"Anticipo de {self.cliente.nombre} - {self.monto} ({self.estado_anticipo})"
+    
+    def clean(self):
+        """
+        Validaciones de nivel bancario para anticipos.
+        """
+        from django.core.exceptions import ValidationError
+        
+        # Validar monto positivo
+        if self.monto.amount <= 0:
+            raise ValidationError({
+                'monto': 'El monto del anticipo debe ser mayor a cero.'
+            })
+        
+        # Validar fecha no futura
+        if self.fecha > timezone.now().date():
+            raise ValidationError({
+                'fecha': 'La fecha del anticipo no puede ser futura.'
+            })
+        
+        # RF09: Validar disponibilidad si está siendo aplicado
+        if self.estado_anticipo == self.Estado_anticipo.Aplicado:
+            # Verificar que hay una venta asociada
+            if not hasattr(self, 'ventas') or not self.ventas.exists():
+                raise ValidationError({
+                    'estado_anticipo': 'No se puede marcar como Aplicado sin una venta asociada.'
+                })
+    
+    def puede_ser_aplicado(self):
+        """Verifica si el anticipo está disponible para ser aplicado"""
+        return self.estado_anticipo == self.Estado_anticipo.Pendiente
+    
+    def aplicar_a_venta(self, venta):
+        """
+        Aplica el anticipo a una venta específica.
+        Implementa validaciones bancarias.
+        """
+        from django.core.exceptions import ValidationError
+        from django.db import transaction
+        
+        with transaction.atomic():
+            # Validar que el anticipo esté disponible
+            if not self.puede_ser_aplicado():
+                raise ValidationError(
+                    f'Este anticipo ya fue {self.estado_anticipo.lower()}. '
+                    'Solo se pueden aplicar anticipos pendientes.'
+                )
+            
+            # RF07: Validar que la venta NO esté completada
+            if venta.estado_cobranza == Ventas.EstadoCobranza.PAGADO:
+                raise ValidationError(
+                    'No se puede aplicar un anticipo a una venta que ya está completamente pagada.'
+                )
+            
+            # Validar que el anticipo sea del mismo cliente
+            if self.cliente_id != venta.cliente_id:
+                raise ValidationError(
+                    f'El anticipo es del cliente {self.cliente.nombre} pero la venta es de {venta.cliente.nombre}. '
+                    'El cliente debe coincidir.'
+                )
+            
+            # Marcar anticipo como aplicado
+            self.estado_anticipo = self.Estado_anticipo.Aplicado
+            self.save(update_fields=['estado_anticipo'])
+            
+            # Asignar anticipo a la venta
+            venta.anticipo = self
+            venta.save(update_fields=['anticipo'])
+            
+            # Auditoría
+            self._registrar_aplicacion(venta)
+    
+    def _registrar_aplicacion(self, venta):
+        """Registra la aplicación del anticipo en auditoría"""
+        try:
+            from auditoria.models import LogActividad
+            LogActividad.objects.create(
+                usuario=None,
+                nombre_usuario='Sistema',
+                tipo_accion='update',
+                descripcion=f'Anticipo de ${self.monto.amount:,.2f} aplicado a venta {venta.carga}',
+                modelo_afectado='Anticipo',
+                objeto_id=str(self.pk),
+                campos_modificados={
+                    'estado_anticipo': {'de': 'Pendiente', 'a': 'Aplicado'},
+                    'venta_aplicada': venta.id,
+                },
+            )
+        except Exception:
+            pass
 
     class Meta:
         verbose_name = 'Anticipo'
         verbose_name_plural = 'Anticipos'
         ordering = ['-fecha_registro']
+        indexes = [
+            models.Index(fields=['cliente', 'estado_anticipo']),
+            models.Index(fields=['estado_anticipo']),
+            models.Index(fields=['fecha']),
+        ]
+        # Constraint de BD: monto positivo
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(monto__gt=0),
+                name='anticipo_monto_positivo'
+            ),
+        ]
         
 class Ventas(models.Model):
     from gastos.models import Cuenta
@@ -315,6 +435,49 @@ class Ventas(models.Model):
 
     def __str__(self):
         return f"-{self.carga} - {self.fecha_salida_manifiesto} - {self.monto} - {self.cliente.nombre}- {self.producto.nombre}"
+    
+    def clean(self):
+        """
+        Validaciones de integridad financiera nivel bancario.
+        RF07: Previene asignación de anticipos a ventas completadas.
+        """
+        from django.core.exceptions import ValidationError
+        
+        # RF07: Validar asignación de anticipo
+        if self.anticipo_id:
+            # Verificar que el anticipo esté disponible
+            if not self.anticipo.puede_ser_aplicado() and not self.pk:
+                raise ValidationError({
+                    'anticipo': f'Este anticipo ya fue {self.anticipo.estado_anticipo.lower()}. '
+                               'Solo se pueden asignar anticipos pendientes.'
+                })
+            
+            # Verificar que el anticipo sea del mismo cliente
+            if self.anticipo.cliente_id != self.cliente_id:
+                raise ValidationError({
+                    'anticipo': f'El anticipo seleccionado es del cliente {self.anticipo.cliente.nombre} '
+                               f'pero esta venta es de {self.cliente.nombre}. Deben coincidir.'
+                })
+            
+            # RF07: NO permitir asignar anticipo si la venta ya está pagada
+            if self.pk and self.estado_cobranza == self.EstadoCobranza.PAGADO:
+                # Verificar si cambió el anticipo
+                venta_original = Ventas.objects.get(pk=self.pk)
+                if venta_original.anticipo_id != self.anticipo_id:
+                    raise ValidationError({
+                        'anticipo': 'No se puede asignar o cambiar el anticipo de una venta que ya está completamente pagada.'
+                    })
+        
+        # Validar que montos sean positivos
+        if self.monto.amount <= 0:
+            raise ValidationError({
+                'monto': 'El monto de la venta debe ser mayor a cero.'
+            })
+        
+        if self.cantidad <= 0:
+            raise ValidationError({
+                'cantidad': 'La cantidad debe ser mayor a cero.'
+            })
     
     def save(self, *args, **kwargs):
         """Override save para calcular automáticamente campos derivados"""
@@ -475,12 +638,31 @@ class Ventas(models.Model):
         ]
 
 class PagoVenta(models.Model):
-    """Modelo para rastrear pagos individuales de ventas a crédito"""
+    """
+    Modelo para rastrear pagos individuales de ventas a crédito.
+    
+    Estándares Bancarios Implementados:
+    - RF01: Un pago solo puede pertenecer a UNA venta (garantizado por ForeignKey)
+    - RF02: No se permiten pagos a ventas completadas (validación clean)
+    - RF03: No se permiten sobrepagos (validación clean)
+    - RF04: Transacciones atómicas con control de concurrencia
+    - RF05: Auditoría completa de cada pago
+    - RF06: Validación en múltiples niveles (BD + Modelo + Formulario)
+    """
     from gastos.models import Cuenta
     
-    venta = models.ForeignKey(Ventas, on_delete=models.CASCADE, related_name='pagos')
+    venta = models.ForeignKey(
+        Ventas, 
+        on_delete=models.CASCADE, 
+        related_name='pagos',
+        help_text="Venta a la que pertenece este pago (relación 1:N)"
+    )
     fecha_pago = models.DateField()
-    monto_pago = MoneyField(max_digits=12, decimal_places=2, default_currency='MXN')
+    monto_pago = MoneyField(
+        max_digits=12, 
+        decimal_places=2, 
+        default_currency='MXN'
+    )
     cuenta_destino = models.ForeignKey(Cuenta, on_delete=models.CASCADE)
     
     class MetodoPago(models.TextChoices):
@@ -490,17 +672,101 @@ class PagoVenta(models.Model):
         TARJETA = 'Tarjeta', 'Tarjeta de Crédito/Débito'
         
     metodo_pago = models.CharField(max_length=15, choices=MetodoPago.choices)
-    referencia = models.CharField(max_length=100, blank=True, null=True, help_text="Número de referencia o cheque")
+    referencia = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True, 
+        help_text="Número de referencia, cheque o ID de transacción"
+    )
     notas = models.TextField(blank=True, null=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)
+    
+    # Comprobante de pago (imagen o PDF)
+    comprobante_pago = models.FileField(
+        upload_to='comprobantes_pagos/%Y/%m/',
+        blank=True,
+        null=True,
+        help_text="Comprobante de pago (imagen o PDF)",
+        verbose_name="Comprobante de Pago"
+    )
     
     def __str__(self):
         return f"Pago {self.monto_pago} - {self.venta.carga} - {self.fecha_pago}"
     
+    def clean(self):
+        """
+        Validaciones de nivel bancario ANTES de guardar.
+        Garantiza integridad financiera absoluta.
+        """
+        from django.core.exceptions import ValidationError
+        
+        if not self.venta_id:
+            return  # Skip si aún no hay venta asignada (formulario vacío)
+        
+        # RF02: PROHIBIDO pagar ventas ya completadas
+        if self.venta.estado_cobranza == Ventas.EstadoCobranza.PAGADO:
+            raise ValidationError({
+                'venta': 'Esta venta ya está completamente pagada. No se permiten más pagos.'
+            })
+        
+        # RF03: PROHIBIDO sobrepagar una venta
+        saldo_actual = self.venta.saldo_pendiente()
+        
+        # Si estamos editando, restar el monto original del pago
+        if self.pk:
+            pago_anterior = PagoVenta.objects.get(pk=self.pk)
+            saldo_actual += float(pago_anterior.monto_pago.amount)
+        
+        if float(self.monto_pago.amount) > saldo_actual:
+            raise ValidationError({
+                'monto_pago': f'El monto del pago (${self.monto_pago.amount:,.2f}) excede el saldo pendiente (${saldo_actual:,.2f}). '
+                              f'No se permiten sobrepagos.'
+            })
+        
+        # Validar que no sea un monto negativo o cero
+        if self.monto_pago.amount <= 0:
+            raise ValidationError({
+                'monto_pago': 'El monto del pago debe ser mayor a cero.'
+            })
+        
+        # Validar fecha de pago no sea futura
+        if self.fecha_pago > timezone.now().date():
+            raise ValidationError({
+                'fecha_pago': 'La fecha del pago no puede ser futura.'
+            })
+        
+        # Validar que la venta sea a crédito
+        if self.venta.modalidad_pago != Ventas.ModalidadPago.CREDITO:
+            raise ValidationError({
+                'venta': 'Solo se pueden registrar pagos para ventas a crédito.'
+            })
+    
     def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        # Actualizar el estado de la venta después de registrar el pago
-        self.venta.actualizar_estado_cobranza()
+        """
+        Guarda el pago con transacción atómica y control de concurrencia.
+        Implementa estándares bancarios de integridad transaccional.
+        """
+        from django.db import transaction
+        from django.core.exceptions import ValidationError
+        
+        # RF04: Ejecutar TODA la operación en transacción atómica
+        with transaction.atomic():
+            # Control de concurrencia: bloquear la venta para evitar race conditions
+            venta_bloqueada = Ventas.objects.select_for_update().get(pk=self.venta_id)
+            
+            # Validar nuevamente dentro de la transacción
+            if venta_bloqueada.estado_cobranza == Ventas.EstadoCobranza.PAGADO and not self.pk:
+                raise ValidationError('La venta ya está completamente pagada.')
+            
+            # Guardar el pago
+            es_nuevo = self.pk is None
+            super().save(*args, **kwargs)
+            
+            # Actualizar el estado de la venta
+            venta_bloqueada.actualizar_estado_cobranza()
+            
+            # RF05: Auditoría completa
+            self._registrar_auditoria(es_nuevo, venta_bloqueada)
         
         # Invalidar cache del dashboard tras registrar pago
         try:
@@ -508,11 +774,44 @@ class PagoVenta(models.Model):
             cache.delete('cxc_dashboard_ventas_principal')
         except Exception:
             pass  # No fallar si el cache no está disponible
+    
+    def _registrar_auditoria(self, es_nuevo, venta):
+        """Registra el pago en auditoría para trazabilidad completa"""
+        try:
+            from auditoria.models import LogActividad
+            LogActividad.objects.create(
+                usuario=None,
+                nombre_usuario='Sistema',
+                tipo_accion='create' if es_nuevo else 'update',
+                descripcion=f'Pago de ${self.monto_pago.amount:,.2f} registrado para venta {venta.carga}. '
+                           f'Saldo restante: ${venta.saldo_pendiente():,.2f}',
+                modelo_afectado='PagoVenta',
+                objeto_id=str(self.pk),
+                campos_modificados={
+                    'monto_pago': float(self.monto_pago.amount),
+                    'metodo_pago': self.metodo_pago,
+                    'venta_id': venta.id,
+                    'saldo_pendiente_venta': venta.saldo_pendiente(),
+                },
+            )
+        except Exception:
+            pass  # No fallar la transacción por errores de auditoría
         
     class Meta:
         verbose_name = 'Pago de Venta'
         verbose_name_plural = 'Pagos de Ventas'
-        ordering = ['-fecha_pago']
+        ordering = ['-fecha_pago', '-fecha_registro']
+        indexes = [
+            models.Index(fields=['venta', 'fecha_pago']),
+            models.Index(fields=['fecha_pago']),
+        ]
+        # Constraint de BD: asegurar que monto_pago sea siempre positivo
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(monto_pago__gt=0),
+                name='pago_venta_monto_positivo'
+            ),
+        ]
 
 
 # =============================================================================

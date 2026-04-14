@@ -94,18 +94,6 @@ def export_full_report_to_excel(request):
 
 
 @login_required
-@permission_required('gastos.view_gastos', raise_exception=True)
-def balances_view(request):
-    """
-    Vista principal para el análisis de balances y gastos
-    """
-    balance_service = BalanceAnalysisService()
-    context = balance_service.get_full_context(request)
-    
-    return render(request, 'gastos/balances.html', context)
-
-
-@login_required
 def user_manual_view(request):
     """
     Vista para mostrar el manual de usuario

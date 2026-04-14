@@ -1936,7 +1936,7 @@ body.jazzmin-login-page .errorlist {
 
 /* Pestaña activa en formularios */
 #jazzy-tabs .nav-link.active {
-  color: var(--c-navy-dark) !important;
+  color: var(--c-blue, #dcdde1) !important;
 }
 
 /* Pestaña inactiva */
