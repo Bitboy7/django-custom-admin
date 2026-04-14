@@ -3,27 +3,27 @@
 # Entrypoint específico para Railway.app
 set -e
 
-echo "🚀 Iniciando configuración para Railway..."
+echo "Iniciando configuración..."
 
 # Instalar dependencias si no están instaladas
-echo "📦 Verificando e instalando dependencias..."
+echo "Verificando e instalando dependencias... 📦 "
 pip install -r requirements.txt
 
 # Esperar un poco para asegurar que todo esté listo
-echo "⏳ Esperando inicialización..."
+echo "Esperando inicialización..."
 sleep 5
 
 # Verificar la configuración de Django
-echo "🔍 Verificando configuración de Django..."
+echo "Verificando configuración de Django..."
 python manage.py check --deploy --settings=app.settings || echo "⚠️ Advertencias de configuración detectadas, continuando..."
 
 # Ejecutar migraciones de forma más robusta
-echo "🔄 Ejecutando migraciones..."
+echo "Ejecutando migraciones..."
 python manage.py migrate --fake-initial || python manage.py migrate --run-syncdb || echo "⚠️ Error en migraciones, continuando..."
 python manage.py makemigrations || echo "⚠️ Error al crear migraciones, continuando..."
 python manage.py migrate ventas  
 # Crear superusuario si no existe (de forma más segura)
-echo "👤 Verificando superusuario..."
+echo "Verificando superusuario..."
 python manage.py shell -c "
 import os
 from django.contrib.auth import get_user_model
@@ -44,19 +44,19 @@ except Exception as e:
 " || echo "⚠️ Error al configurar superusuario, continuando..."
 
 # Configurar roles si no existen
-echo "🔐 Configurando roles del sistema..."
+echo "Configurando roles del sistema..."
 python manage.py setup_roles --create-roles || echo "Los roles ya están configurados o hubo un error"
 
 # Recopilar archivos estáticos
-echo "📦 Recopilando archivos estáticos..."
+echo "Recopilando archivos estáticos... 📦 "
 python manage.py collectstatic --noinput --clear || echo "⚠️ Error al recopilar estáticos, continuando..."
 
 # Compilar mensajes de traducción
-echo "🌐 Compilando mensajes de traducción..."
+echo "Compilando mensajes de traducción..."
 python manage.py compilemessages || echo "⚠️ Error al compilar traducciones, continuando..."
 
 # Crear directorios de media necesarios
-echo "📁 Creando directorios de media..."
+echo "Creando directorios de media... 📁 "
 python manage.py shell -c "
 import os
 from django.conf import settings
@@ -71,10 +71,10 @@ try:
         print(f'Directorio creado: {dir_path}')
 except Exception as e:
     print(f'Error al crear directorios: {e}')
-" || echo "⚠️ Error al crear directorios de media"
+" || echo "Error al crear directorios de media"
 
-echo "✅ Configuración completada"
-echo "🎯 Iniciando servidor..."
+echo "Configuración completada"
+echo "Iniciando servidor..."
 
 # Obtener el puerto de Railway o usar 8000 por defecto
 PORT=${PORT:-8000}

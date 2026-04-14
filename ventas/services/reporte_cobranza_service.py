@@ -100,8 +100,9 @@ def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_over
     totales_maquila = _calcular_totales(maquila_por_cliente, sucursales, tipo_cambio=tipo_cambio)
 
     # -------------------------------------------------------------------------
-    # 5. Anticipos pendientes (SALDO FVR CLIENTE)
+    # 5. Saldo a favor del cliente (anticipos + excedentes de anticipos aplicados)
     # -------------------------------------------------------------------------
+    # 5a. Anticipos Pendientes (no aplicados a ninguna venta)
     anticipos_qs = Anticipo.objects.filter(estado_anticipo='Pendiente').select_related('cliente')
     if fecha_inicio:
         anticipos_qs = anticipos_qs.filter(fecha__gte=fecha_inicio)
@@ -112,6 +113,26 @@ def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_over
     for a in anticipos_qs:
         anticipos_por_cliente[a.cliente_id] += float(a.monto.amount)
 
+    # 5b. Anticipo aplicado cuyo monto supera el total de la venta (excedente)
+    #     Ocurre cuando el cliente depositó más de lo que valía la factura y
+    #     el anticipo fue marcado como Aplicado sin ajustar el importe restante.
+    ventas_con_excedente = (
+        Ventas.objects.filter(anticipo__isnull=False, anticipo__estado_anticipo='Aplicado')
+        .select_related('cliente', 'anticipo')
+    )
+    if fecha_inicio:
+        ventas_con_excedente = ventas_con_excedente.filter(
+            fecha_salida_manifiesto__gte=fecha_inicio
+        )
+    if fecha_fin:
+        ventas_con_excedente = ventas_con_excedente.filter(
+            fecha_salida_manifiesto__lte=fecha_fin
+        )
+    for v in ventas_con_excedente:
+        excedente = float(v.anticipo.monto.amount) - float(v.monto.amount)
+        if excedente > 0:
+            anticipos_por_cliente[v.cliente_id] += excedente
+
     # Inyectar saldo FVR en las filas de ventas (solo en la primera fila por cliente)
     seen_anticipo_ids = set()
     for fila in ventas_por_cliente:
@@ -120,7 +141,7 @@ def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_over
             fila['anticipo'] = anticipos_por_cliente.get(cliente_id, 0.0)
             seen_anticipo_ids.add(cliente_id)
 
-    # Total global de anticipos (encabezado "PANORAMA ANTICIPOS")
+    # Total global de saldo a favor (encabezado "PANORAMA ANTICIPOS / SALDO FVR")
     total_anticipos = sum(anticipos_por_cliente.values())
 
     # -------------------------------------------------------------------------

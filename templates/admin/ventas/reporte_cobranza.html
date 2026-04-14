@@ -243,7 +243,7 @@
             </th>
             {% if total_anticipos > 0 %}
             <th class="rc-header-section" style="background-color:#bfdbfe;">
-              SALDO<br>FVR CLIENTE
+              SALDO A<br>FAVOR CLIENTE
             </th>
             {% endif %}
           </tr>
@@ -255,14 +255,18 @@
             {% endfor %}
             <th class="rc-header-col" style="min-width:140px;">TOTAL X COBRAR</th>
             {% if total_anticipos > 0 %}
-            <th class="rc-header-col" style="background-color:#dbeafe; min-width:120px;">SALDO FVR</th>
+            <th class="rc-header-col" style="background-color:#dbeafe; min-width:120px;">SALDO A FAVOR</th>
             {% endif %}
           </tr>
         </thead>
         <tbody>
           {% if total_anticipos > 0 %}
           <tr class="rc-anticipo">
-            <td class="font-semibold">PANORAMA ANTICIPOS</td>
+            <td class="font-semibold">SALDO A FAVOR DEL CLIENTE
+              <span style="font-size:0.68rem; font-weight:400; color:#065f46;">
+                (anticipos pendientes + excedentes de anticipos aplicados)
+              </span>
+            </td>
             <td></td>
             {% for suc in sucursales %}<td></td>{% endfor %}
             <td></td>
