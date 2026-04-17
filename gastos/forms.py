@@ -163,6 +163,18 @@ class SaldoMensualForm(forms.ModelForm):
             'saldo_inicial': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
+MODELO_IA_CHOICES = [
+    ('Google Gemini', [
+        ('gemini-2.5-flash', 'Gemini 2.5 Flash (recomendado)'),
+        ('gemini-2.0-flash', 'Gemini 2.0 Flash'),
+    ]),
+    ('OpenRouter (gratis)', [
+        ('google/gemma-3-27b-it:free', 'Gemma 3 27B IT'),
+        ('meta-llama/llama-4-scout:free', 'Llama 4 Scout'),
+        ('mistralai/mistral-small-3.1-24b-instruct:free', 'Mistral Small 3.1 24B'),
+    ]),
+]
+
 class FacturaUploadForm(forms.Form):
     documento_pdf = forms.FileField(
         label="Subir Documento PDF",
@@ -181,6 +193,12 @@ class FacturaUploadForm(forms.Form):
         ],
         initial='auto',
         widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    modelo_ia = forms.ChoiceField(
+        label="Modelo de IA",
+        choices=MODELO_IA_CHOICES,
+        initial='gemini-2.5-flash',
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_modelo_ia'})
     )
     asignar_categorias = forms.BooleanField(
         label="Asignar categorías automáticamente",

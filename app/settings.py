@@ -575,11 +575,13 @@ LOGGING = {
             'maxBytes': 1024*1024*15,  # 15MB
             'backupCount': 10,
             'formatter': 'verbose',
+            'encoding': 'utf-8',
         },
         'console': {
             'level': 'INFO' if not DEBUG else 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'simple' if DEBUG else 'verbose',
+            'stream': 'ext://sys.stdout',
         },
     },
     'root': {
@@ -659,9 +661,8 @@ if REDIS_URL:
             }
         }
         
-        # Usar Redis para sesiones
-        SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-        SESSION_CACHE_ALIAS = 'sessions'
+        # Las sesiones usan la base de datos (más robusto, no depende de Redis)
+        SESSION_ENGINE = 'django.contrib.sessions.backends.db'
         
     except Exception as e:
         print(f"Warning: Could not configure Redis cache: {e}")

@@ -64,6 +64,18 @@
                     {% endif %}
                 </div>
 
+                <!-- AI Model Selection -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-slate-700 mb-3">
+                        Modelo de IA
+                    </label>
+                    {{ form.modelo_ia }}
+                    <p id="modelProviderNote" class="mt-2 text-xs text-slate-500"></p>
+                    {% if form.modelo_ia.errors %}
+                        <div class="mt-1 text-sm text-red-600">{{ form.modelo_ia.errors }}</div>
+                    {% endif %}
+                </div>
+
                 <!-- AI Category Assignment Option -->
                 <div class="mb-6">
                     <div class="flex items-start">
@@ -222,7 +234,7 @@
                         </div>
                         <div id="step3" class="flex items-center opacity-50">
                             <div class="w-2 h-2 bg-slate-300 rounded-full mr-2"></div>
-                            <span>Procesando con Google Gemini...</span>
+                            <span id="step3Text">Procesando con IA...</span>
                         </div>
                         <div id="step4" class="flex items-center opacity-50">
                             <div class="w-2 h-2 bg-slate-300 rounded-full mr-2"></div>
@@ -246,6 +258,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadingTextElement = document.getElementById('loadingText');
     const fileInput = document.getElementById('id_documento_pdf');
     const dropZone = document.getElementById('dropZone');
+    const modelSelect = document.getElementById('id_modelo_ia');
+    const modelProviderNote = document.getElementById('modelProviderNote');
+    const step3Text = document.getElementById('step3Text');
+
+    const OPENROUTER_PROVIDER_NOTE = '⚡ OpenRouter — modelo gratuito de terceros. Requiere OPENROUTER_API_KEY configurada.';
+    const GEMINI_PROVIDER_NOTE = '🔵 Google Gemini — modelo oficial de Google. Requiere GOOGLE_API_KEY configurada.';
+
+    function updateModelInfo() {
+        if (!modelSelect) return;
+        const val = modelSelect.value;
+        if (val.includes('/')) {
+            modelProviderNote.textContent = OPENROUTER_PROVIDER_NOTE;
+            step3Text.textContent = 'Procesando con OpenRouter...';
+        } else {
+            modelProviderNote.textContent = GEMINI_PROVIDER_NOTE;
+            step3Text.textContent = 'Procesando con Google Gemini...';
+        }
+    }
+
+    if (modelSelect) {
+        modelSelect.addEventListener('change', updateModelInfo);
+        updateModelInfo();
+    }
     
     // Hide the file input initially (additional safety)
     if (fileInput) {

@@ -21,7 +21,40 @@ logger = logging.getLogger(__name__)
 from dotenv import load_dotenv
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_API_MODEL = os.getenv("OPENROUTER_API_MODEL", "google/gemini-3.1-flash-lite-preview")
 genai.configure(api_key=GOOGLE_API_KEY)
+
+# Models whose IDs contain a slash are treated as OpenRouter models
+def get_llm_model(model_id=None):
+    """
+    Factory that returns a LangChain chat model instance.
+    Models containing '/' are routed through OpenRouter (OpenAI-compatible endpoint).
+    All other model IDs are treated as Google Gemini models.
+    """
+    if model_id is None:
+        model_id = os.getenv("GOOGLE_API_MODEL", "gemini-2.5-flash")
+
+    if "/" in model_id:
+        try:
+            from langchain_openai import ChatOpenAI
+        except ImportError:
+            logger.warning("langchain_openai not installed; falling back to Gemini default")
+            return ChatGoogleGenerativeAI(model=os.getenv("GOOGLE_API_MODEL", "gemini-2.0-flash"), temperature=0)
+
+        if not OPENROUTER_API_KEY:
+            logger.warning("OPENROUTER_API_KEY not set; falling back to Gemini default")
+            return ChatGoogleGenerativeAI(model=os.getenv("GOOGLE_API_MODEL", "gemini-2.0-flash"), temperature=0)
+
+        return ChatOpenAI(
+            model=model_id,
+            api_key=OPENROUTER_API_KEY,
+            base_url="https://openrouter.ai/api/v1",
+            temperature=0,
+            default_headers={"HTTP-Referer": os.getenv("SITE_URL", "https://agricola.app")},
+        )
+
+    return ChatGoogleGenerativeAI(model=model_id, temperature=0)
 
 class GastoFactura(BaseModel):
     """
@@ -56,12 +89,13 @@ class EstadoCuentaCompleto(BaseModel):
     saldo_final: float = Field(description="Saldo final del periodo.")
     movimientos: List[MovimientoEstadoCuenta] = Field(description="Lista de todos los movimientos del estado de cuenta.")
 
-def reconocer_factura_pdf(pdf_file):
+def reconocer_factura_pdf(pdf_file, modelo=None):
     """
     Procesa un archivo PDF de una factura para extraer información clave.
 
     Args:
         pdf_file: Un objeto de archivo PDF (por ejemplo, de un FileUpload de Django).
+        modelo: ID del modelo de IA a usar (None = usa GOOGLE_API_MODEL env var).
 
     Returns:
         Un diccionario con la información extraída de la factura.
@@ -99,9 +133,9 @@ def reconocer_factura_pdf(pdf_file):
         logger.info(f"Contenido extraído: {len(contenido_factura)} caracteres")
         logger.debug(f"Primeros 200 caracteres del contenido: {contenido_factura[:200]}...")
 
-        # Configurar el modelo de Gemini
-        logger.info("Configurando modelo Google Gemini...")
-        model = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0)
+        # Configurar el modelo de IA
+        logger.info("Configurando modelo de IA...")
+        model = get_llm_model(modelo)
 
         # Configurar el parser para obtener una salida JSON
         logger.info("Configurando parser JSON con modelo Pydantic...")
@@ -208,8 +242,8 @@ def asignar_categoria_automatica(descripcion_movimiento, categorias_disponibles)
     try:
         logger.info(f"Asignando categoría automática para: '{descripcion_movimiento}'")
         
-        # Configurar el modelo de Gemini
-        model = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0)
+        # Configurar el modelo de IA
+        model = get_llm_model()
         
         # Preparar lista de categorías para el prompt
         categorias_lista = "\n".join([f"- {cat_id}: {nombre}" for cat_id, nombre in categorias_disponibles.items()])
@@ -393,13 +427,14 @@ def asignar_categoria_automatica_old(descripcion_movimiento, categorias_disponib
         logger.error(f"Error en asignación automática de categoría: {str(e)}")
         return None
 
-def reconocer_estado_cuenta_pdf(pdf_file, asignar_categorias_automaticamente=False):
+def reconocer_estado_cuenta_pdf(pdf_file, asignar_categorias_automaticamente=False, modelo=None):
     """
     Procesa un archivo PDF de un estado de cuenta bancario para extraer todos los movimientos.
 
     Args:
         pdf_file: Un objeto de archivo PDF del estado de cuenta.
         asignar_categorias_automaticamente: Si es True, intenta asignar categorías automáticamente (puede ser lento).
+        modelo: ID del modelo de IA a usar (None = usa GOOGLE_API_MODEL env var).
 
     Returns:
         Un diccionario con la información extraída del estado de cuenta.
@@ -437,9 +472,9 @@ def reconocer_estado_cuenta_pdf(pdf_file, asignar_categorias_automaticamente=Fal
         logger.info(f"Contenido extraído: {len(contenido_estado)} caracteres")
         logger.debug(f"Primeros 300 caracteres del contenido: {contenido_estado[:300]}...")
 
-        # Configurar el modelo de Gemini para estados de cuenta
-        logger.info("Configurando modelo Google Gemini para estados de cuenta...")
-        model = ChatGoogleGenerativeAI(model=os.getenv("GOOGLE_API_MODEL"), temperature=0)
+        # Configurar el modelo de IA para estados de cuenta
+        logger.info("Configurando modelo de IA para estados de cuenta...")
+        model = get_llm_model(modelo)
 
         # Configurar el parser para obtener una salida JSON
         logger.info("Configurando parser JSON con modelo EstadoCuentaCompleto...")

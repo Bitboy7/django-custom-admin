@@ -43,6 +43,7 @@ def ingresar_gasto_factura(request):
             documento_pdf = request.FILES['documento_pdf']
             tipo_documento = form.cleaned_data['tipo_documento']
             asignar_categorias = form.cleaned_data.get('asignar_categorias', False)
+            modelo_ia = form.cleaned_data.get('modelo_ia', None)
             
             logger.info(f"Archivo recibido: {documento_pdf.name}")
             logger.info(f"Tamaño del archivo: {documento_pdf.size} bytes")
@@ -76,7 +77,7 @@ def ingresar_gasto_factura(request):
                     if tipo_documento == 'estado_cuenta':
                         logger.info("=== PROCESANDO COMO ESTADO DE CUENTA ===")
                         # Usar la opción del usuario para asignación automática
-                        datos_extraidos = reconocer_estado_cuenta_pdf(pdf_file, asignar_categorias_automaticamente=asignar_categorias)
+                        datos_extraidos = reconocer_estado_cuenta_pdf(pdf_file, asignar_categorias_automaticamente=asignar_categorias, modelo=modelo_ia)
                         
                         if 'error' in datos_extraidos:
                             logger.error(f"❌ Error en reconocimiento de estado de cuenta: {datos_extraidos['error']}")
@@ -97,7 +98,7 @@ def ingresar_gasto_factura(request):
                     
                     else:  # factura
                         logger.info("=== PROCESANDO COMO FACTURA ===")
-                        datos_extraidos = reconocer_factura_pdf(pdf_file)
+                        datos_extraidos = reconocer_factura_pdf(pdf_file, modelo=modelo_ia)
                         
                         if 'error' in datos_extraidos:
                             logger.error(f"❌ Error en reconocimiento de factura: {datos_extraidos['error']}")
