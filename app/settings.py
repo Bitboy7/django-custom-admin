@@ -544,7 +544,9 @@ STATICFILES_FINDERS = [
 
 # Configuración para servir archivos estáticos en producción
 if not DEBUG:
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    # Cambiado a CompressedStaticFilesStorage para evitar hashing de nombres
+    # que causa conflictos con custom_css de Jazzmin
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
     # Configuración adicional para archivos estáticos
     WHITENOISE_USE_FINDERS = True
     WHITENOISE_AUTOREFRESH = True

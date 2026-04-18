@@ -64,7 +64,7 @@
        style="background:linear-gradient(135deg,#1e3a5f 0%,#0d8fa2 100%)">
     <div>
       <div class="text-base font-bold tracking-wide">
-        &#128075; &#161;Bienvenido,
+        Bienvenido,
         {% if request.user.get_full_name %}{{ request.user.get_full_name }}{% else %}{{ request.user.username }}{% endif %}!
       </div>
       <div class="text-xs mt-1 opacity-80">{{ current_month_name }} {{ current_year }} &mdash; Panel de Control Ejecutivo</div>
