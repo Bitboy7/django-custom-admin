@@ -32,9 +32,9 @@ if not settings.DEBUG:
 
 # URLs con prefijo de idioma
 urlpatterns += i18n_patterns(
+    path('admin/mi-perfil/', profile_settings_view, name='profile_settings'),
     path("admin/", admin.site.urls),
     path("admin/dashboard/", custom_admin_index, name='custom_admin_index'),
-    path('admin/mi-perfil/', profile_settings_view, name='profile_settings'),
     path('manual/', user_manual_view, name='user_manual'),
     path('export-full-report/', export_full_report_to_excel, name='export_full_report'),
     path('', include('catalogo.urls')),

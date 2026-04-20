@@ -1,4 +1,4 @@
-{% extends 'admin/base.html' %}
+{% extends 'admin/base_site.html' %}
 {% load i18n %}
 {% load humanize %}
 {% load static %}
@@ -91,7 +91,7 @@
     <div class="ks relative p-4 border-r border-[#dde3ec]">
       <div class="absolute top-0 left-0 w-1 h-full bg-[#1aadbc] rounded-l-2xl"></div>
       <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">Ventas del Mes</div>
-      <div class="text-xl font-bold text-[#1a2332] my-1.5 leading-none pl-1">{{ total_ventas|us_currency:0 }}</div>
+      <div class="text-xl font-bold text-[#1a2332] my-1.5 leading-none pl-1">${{ total_ventas|us_currency:0 }}</div>
       <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if ventas_trend >= 0 %} bg-green-100 text-green-700{% else %} bg-red-100 text-red-700{% endif %}">
         {% if ventas_trend >= 0 %}&#9650;{% else %}&#9660;{% endif %} {{ ventas_trend|floatformat:1 }}%
       </span>
@@ -101,7 +101,7 @@
     <div class="ks relative p-4 border-r border-[#dde3ec]">
       <div class="absolute top-0 left-0 w-1 h-full bg-[#1e3a5f] rounded-l-2xl"></div>
       <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">Gastos del Mes</div>
-      <div class="text-xl font-bold text-[#1a2332] my-1.5 leading-none pl-1">{{ total_gastos|us_currency:0 }}</div>
+      <div class="text-xl font-bold text-[#1a2332] my-1.5 leading-none pl-1">${{ total_gastos|us_currency:0 }}</div>
       <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if gastos_trend <= 0 %} bg-green-100 text-green-700{% else %} bg-red-100 text-red-700{% endif %}">
         {% if gastos_trend <= 0 %}&#9660;{% else %}&#9650;{% endif %} {{ gastos_trend|floatformat:1 }}%
       </span>
@@ -111,7 +111,7 @@
     <div class="ks relative p-4 border-r border-[#dde3ec]">
       <div class="absolute top-0 left-0 w-1 h-full rounded-l-2xl{% if balance_neto >= 0 %} bg-green-500{% else %} bg-red-500{% endif %}"></div>
       <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">Balance Neto</div>
-      <div class="text-xl font-bold my-1.5 leading-none pl-1{% if balance_neto >= 0 %} text-green-600{% else %} text-red-600{% endif %}">{{ balance_neto|us_currency:0 }}</div>
+      <div class="text-xl font-bold my-1.5 leading-none pl-1{% if balance_neto >= 0 %} text-green-600{% else %} text-red-600{% endif %}">${{ balance_neto|us_currency:0 }}</div>
       <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if balance_trend >= 0 %} bg-green-100 text-green-700{% else %} bg-red-100 text-red-700{% endif %}">
         {% if balance_trend >= 0 %}&#9650;{% else %}&#9660;{% endif %} {{ balance_trend|floatformat:1 }}%
       </span>
@@ -129,7 +129,7 @@
     <div class="ks relative p-4 border-r border-[#dde3ec]">
       <div class="absolute top-0 left-0 w-1 h-full bg-amber-400 rounded-l-2xl"></div>
       <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">CxC Vigentes</div>
-      <div class="text-xl font-bold text-[#1a2332] my-1.5 leading-none pl-1">{{ ventas_vigentes|us_currency:0 }}</div>
+      <div class="text-xl font-bold text-[#1a2332] my-1.5 leading-none pl-1">${{ ventas_vigentes|us_currency:0 }}</div>
       <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">{{ ventas_vigentes_count }} fact.</span>
     </div>
 
@@ -137,7 +137,7 @@
     <div class="ks relative p-4 border-r border-[#dde3ec]">
       <div class="absolute top-0 left-0 w-1 h-full bg-red-500 rounded-l-2xl"></div>
       <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">CxC Vencidas</div>
-      <div class="text-xl font-bold text-red-600 my-1.5 leading-none pl-1">{{ ventas_vencidas|us_currency:0 }}</div>
+      <div class="text-xl font-bold text-red-600 my-1.5 leading-none pl-1">${{ ventas_vencidas|us_currency:0 }}</div>
       <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">&#9650; {{ ventas_vencidas_count }} fact.</span>
     </div>
 

@@ -151,7 +151,15 @@ JAZZMIN_SETTINGS = {
     
     # Ocultar modelos de catálogo/configuración poco frecuentes del menú principal.
     # Agente y TerminoCredito se reubican en CATÁLOGO mediante custom_links.
-    "hide_models": ["ventas.Agente", "ventas.TerminoCredito"],
+    # Los 3 modelos de reportes se reubican con mejores nombres via custom_links,
+    # ocultarlos aquí evita que Jazzmin resalte dos ítems a la vez para la misma URL.
+    "hide_models": [
+        "ventas.Agente",
+        "ventas.TerminoCredito",
+        "reportes.ConfiguracionReporte",
+        "reportes.ReporteEjecutivo",
+        "reportes.DestinatarioReporte",
+    ],
     
     # Ordenamiento del menú lateral: apps primero, luego modelos por frecuencia de uso.
     # Los ítems más usados aparecen primero dentro de cada sección.

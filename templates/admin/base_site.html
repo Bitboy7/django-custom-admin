@@ -163,9 +163,8 @@
   ready(function () {
     /* ── 1. Navbar button → avatar pill ── */
     var userBtn = (
-      document.querySelector('.navbar-nav.ml-auto .nav-link[data-toggle="dropdown"]') ||
-      document.querySelector('#jazzy-usermenu')?.closest('.nav-item')?.querySelector('.nav-link') ||
-      document.querySelector('.navbar-nav.ml-auto .nav-item.dropdown > .nav-link')
+      document.querySelector('#jazzy-usermenu')?.closest('.nav-item')?.querySelector(':scope > .nav-link') ||
+      document.querySelector('#jazzy-usermenu')?.closest('.nav-item.dropdown')?.querySelector('.nav-link')
     );
     if (userBtn) {
       userBtn.classList.add('jaz-avatar-btn');
