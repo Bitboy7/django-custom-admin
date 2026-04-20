@@ -1,0 +1,433 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block extrahead %}{{ block.super }}
+<style>
+  /* ── Layout wrapper ── */
+  .rg-wrapper {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  /* ── Hero header ── */
+  .rg-hero {
+    background: linear-gradient(135deg, #1a3a5c 0%, #2563a8 100%);
+    border-radius: 10px 10px 0 0;
+    padding: 28px 32px 24px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .rg-hero-icon {
+    width: 52px;
+    height: 52px;
+    background: rgba(255,255,255,.15);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .rg-hero h2 {
+    margin: 0 0 4px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+  }
+  .rg-hero p {
+    margin: 0;
+    font-size: .85rem;
+    opacity: .8;
+  }
+
+  /* ── Body card ── */
+  .rg-body {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    padding: 28px 32px 8px;
+  }
+
+  /* ── Section rows ── */
+  .rg-section {
+    margin-bottom: 26px;
+  }
+  .rg-section-label {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .rg-section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+  }
+
+  /* ── Period badge ── */
+  .rg-period-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: .8rem;
+    font-weight: 600;
+  }
+
+  /* ── Date inputs ── */
+  .rg-date-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 500px) {
+    .rg-date-grid { grid-template-columns: 1fr; }
+    .rg-hero { padding: 10px; }
+    .rg-body { padding: 10px 16px 8px; }
+  }
+  .rg-date-grid label {
+    display: block;
+    font-size: .58rem;
+    font-weight: 500;
+    color: #475569;
+    margin-bottom: 6px;
+  }
+  .rg-date-grid input[type="date"] {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 7px;
+    font-size: .9rem;
+    color: #1e293b;
+    background: #f8fafc;
+    transition: border-color .2s, box-shadow .2s;
+    box-sizing: border-box;
+  }
+  .rg-date-grid input[type="date"]:focus {
+    outline: none;
+    border-color: #2563a8;
+    box-shadow: 0 0 0 3px rgba(37,99,168,.12);
+    background: #fff;
+  }
+
+  /* ── AI model chip ── */
+  .rg-model-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: .82rem;
+    font-family: monospace;
+  }
+
+  /* ── Recipient list ── */
+  .rg-recipients {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 2px;
+  }
+  .rg-recipient-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 20px;
+    padding: 5px 12px 5px 8px;
+    font-size: .82rem;
+    color: #334155;
+  }
+  .rg-recipient-pill .pill-avatar {
+    width: 22px;
+    height: 22px;
+    background: #2563a8;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .65rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .rg-no-recipients {
+    font-size: .83rem;
+    color: #94a3b8;
+    font-style: italic;
+  }
+
+  /* ── Warning notice ── */
+  .rg-notice {
+    display: flex;
+    gap: 12px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-left: 4px solid #f59e0b;
+    border-radius: 8px;
+    padding: 13px 16px;
+    margin-bottom: 26px;
+  }
+  .rg-notice i {
+    color: #d97706;
+    font-size: 1rem;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  .rg-notice-body strong {
+    display: block;
+    font-size: .83rem;
+    font-weight: 700;
+    color: #92400e;
+    margin-bottom: 3px;
+  }
+  .rg-notice-body p {
+    margin: 0;
+    font-size: .8rem;
+    color: #78350f;
+    line-height: 1.5;
+  }
+
+  /* ── Footer actions ── */
+  .rg-footer {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .rg-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 20px;
+    border-radius: 7px;
+    font-size: .87rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: background .18s, transform .12s, box-shadow .18s;
+    text-decoration: none;
+  }
+  .rg-btn:active { transform: scale(.97); }
+  .rg-btn-primary {
+    background: #2563a8;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(37,99,168,.3);
+  }
+  .rg-btn-primary:hover {
+    background: #1d4ed8;
+    box-shadow: 0 4px 14px rgba(37,99,168,.4);
+    color: #fff;
+  }
+  .rg-btn-secondary {
+    background: #e2e8f0;
+    color: #334155;
+  }
+  .rg-btn-secondary:hover {
+    background: #cbd5e1;
+    color: #1e293b;
+  }
+  .rg-btn-ghost {
+    background: transparent;
+    color: #64748b;
+    border: 1.5px solid #e2e8f0;
+  }
+  .rg-btn-ghost:hover {
+    background: #f1f5f9;
+    color: #334155;
+    border-color: #cbd5e1;
+  }
+  .rg-footer-spacer { flex: 1; }
+
+  /* ── Spinner overlay ── */
+  .rg-spinner-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,.55);
+    z-index: 9999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+  .rg-spinner-overlay.active { display: flex; }
+  .rg-spinner-box {
+    background: #fff;
+    border-radius: 14px;
+    padding: 32px 40px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    max-width: 320px;
+  }
+  .rg-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #2563a8;
+    border-radius: 50%;
+    animation: rg-spin .8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes rg-spin { to { transform: rotate(360deg); } }
+  .rg-spinner-box h4 {
+    margin: 0 0 6px;
+    font-size: 1rem;
+    color: #1e293b;
+  }
+  .rg-spinner-box p {
+    margin: 0;
+    font-size: .8rem;
+    color: #64748b;
+    line-height: 1.5;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rg-wrapper">
+  <form method="post" id="rg-form">
+    {% csrf_token %}
+
+    <!-- Hero header -->
+    <div class="rg-hero">
+      <div class="rg-hero-icon">
+        <i class="fas fa-robot"></i>
+      </div>
+      <div>
+        <h2>Generar reporte ejecutivo</h2>
+        <p>{{ config.nombre }} &mdash; Análisis financiero con IA</p>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="rg-body">
+
+      <!-- Período -->
+      <div class="rg-section">
+        <div class="rg-section-label"><i class="fas fa-calendar-alt"></i> Período de análisis</div>
+        <div style="margin-bottom:14px;">
+          <span class="rg-period-badge">
+            <i class="fas fa-clock"></i>
+            Período por defecto: <strong>{{ config.periodo_default }}</strong>
+          </span>
+        </div>
+        <div class="rg-date-grid">
+          <div>
+            <label for="fecha_inicio"><i class="fas fa-calendar-day" style="color:#2563a8;margin-right:4px;"></i>Fecha de inicio</label>
+            <input type="date" name="fecha_inicio" id="fecha_inicio"
+                   value="{{ fecha_inicio|date:'Y-m-d' }}" required>
+          </div>
+          <div>
+            <label for="fecha_fin"><i class="fas fa-calendar-check" style="color:#2563a8;margin-right:4px;"></i>Fecha de fin</label>
+            <input type="date" name="fecha_fin" id="fecha_fin"
+                   value="{{ fecha_fin|date:'Y-m-d' }}" required>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modelo IA -->
+      <div class="rg-section">
+        <div class="rg-section-label"><i class="fas fa-microchip"></i> Modelo de IA</div>
+        <span class="rg-model-chip">
+          <i class="fas fa-brain" style="color:#16a34a;"></i>
+          {% if config.modelo_ia %}{{ config.modelo_ia }}{% else %}Modelo por defecto del entorno{% endif %}
+        </span>
+      </div>
+
+      <!-- Destinatarios -->
+      <div class="rg-section">
+        <div class="rg-section-label"><i class="fas fa-users"></i> Destinatarios activos</div>
+        <div class="rg-recipients">
+          {% for d in config.destinatarios.all %}{% if d.activo %}
+          <div class="rg-recipient-pill">
+            <div class="pill-avatar">{{ d.nombre|slice:":1"|upper }}</div>
+            <span>{{ d.nombre }} &lt;{{ d.correo }}&gt;</span>
+          </div>
+          {% endif %}{% empty %}
+          <span class="rg-no-recipients"><i class="fas fa-exclamation-triangle mr-1"></i>Sin destinatarios configurados</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Aviso tiempo -->
+      <div class="rg-notice">
+        <i class="fas fa-hourglass-half"></i>
+        <div class="rg-notice-body">
+          <strong>Tiempo estimado: 10 – 60 segundos</strong>
+          <p>La generación del resumen con IA depende del modelo y el volumen de datos.
+             La página permanecerá cargando hasta completar el proceso.</p>
+        </div>
+      </div>
+
+    </div><!-- rg-body -->
+
+    <!-- Footer actions -->
+    <div class="rg-footer">
+      <button type="submit" name="enviar" value="1" class="rg-btn rg-btn-primary" id="btn-send">
+        <i class="fas fa-paper-plane"></i> Generar y Enviar por correo
+      </button>
+      <button type="submit" name="enviar" value="0" class="rg-btn rg-btn-secondary" id="btn-only">
+        <i class="fas fa-file-alt"></i> Solo generar (sin enviar)
+      </button>
+      <div class="rg-footer-spacer"></div>
+      <a href="{% url 'admin:reportes_configuracionreporte_changelist' %}"
+         class="rg-btn rg-btn-ghost">
+        <i class="fas fa-times"></i> Cancelar
+      </a>
+    </div>
+  </form>
+</div>
+
+<!-- Spinner overlay -->
+<div class="rg-spinner-overlay" id="rg-spinner">
+  <div class="rg-spinner-box">
+    <div class="rg-spinner"></div>
+    <h4 id="rg-spinner-title">Generando reporte…</h4>
+    <p>La IA está analizando los datos financieros. Por favor espera.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  var form    = document.getElementById('rg-form');
+  var spinner = document.getElementById('rg-spinner');
+  var title   = document.getElementById('rg-spinner-title');
+  var sending = false;
+
+  form.addEventListener('submit', function (e) {
+    if (sending) { e.preventDefault(); return; }
+    sending = true;
+    var btn = e.submitter;
+    if (btn && btn.value === '1') {
+      title.textContent = 'Generando y enviando reporte…';
+    } else {
+      title.textContent = 'Generando reporte…';
+    }
+    spinner.classList.add('active');
+  });
+})();
+</script>
+{% endblock %}

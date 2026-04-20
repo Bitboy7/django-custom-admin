@@ -77,6 +77,7 @@ INSTALLED_APPS = [
     'ventas.apps.VentasConfig',
     'capital_inversiones.apps.CapitalInversionesConfig',  # Módulo de capital e inversiones
     'import_export',
+    'reportes.apps.ReportesConfig',  # Módulo de reportes ejecutivos IA
 ]
 
 # Callable para Jazzmin: devuelve la URL del avatar del usuario
@@ -231,6 +232,26 @@ JAZZMIN_SETTINGS = {
                 "permissions": ["ventas.view_ventas"]
             },
         ],
+        "reportes": [
+            {
+                "name": "Resumen Ejecutivo IA",
+                "url": "admin:reportes_configuracionreporte_changelist",
+                "icon": "fas fa-robot",
+                "permissions": ["reportes.view_configuracionreporte"]
+            },
+            {
+                "name": "Historial de reportes",
+                "url": "admin:reportes_reporteejecutivo_changelist",
+                "icon": "fas fa-history",
+                "permissions": ["reportes.view_reporteejecutivo"]
+            },
+            {
+                "name": "Destinatarios",
+                "url": "admin:reportes_destinatarioreporte_changelist",
+                "icon": "fas fa-envelope",
+                "permissions": ["reportes.view_destinatarioreporte"]
+            },
+        ],
         # Catálogo consolida datos de referencia incluyendo los modelos
         # de ventas que no son transaccionales (Agente, TerminoCredito).
         "catalogo": [
@@ -305,6 +326,11 @@ JAZZMIN_SETTINGS = {
         "admin.LogEntry": "fas fa-history",
         "axes.AccessAttempt": "fas fa-user-times",
         "axes.AccessLog": "fas fa-list-alt",
+        # REPORTES
+        "reportes": "fas fa-file-alt",
+        "reportes.ConfiguracionReporte": "fas fa-cog",
+        "reportes.DestinatarioReporte": "fas fa-envelope",
+        "reportes.ReporteEjecutivo": "fas fa-chart-pie",
     },
     
     # Icons that are used when one is not manually specified
@@ -531,6 +557,29 @@ TEMPLATE_DIRS = (
 )
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ===============================
+# CONFIGURACIÓN DE CORREO (EMAIL)
+# ===============================
+# Configura las variables de entorno en .env para activar el envío de correos.
+# Si EMAIL_HOST no está configurado, se usará el backend de consola (solo dev).
+
+_email_host = os.getenv("EMAIL_HOST", "")
+if _email_host:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = _email_host
+    EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+    EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() in ["true", "1", "yes"]
+    EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() in ["true", "1", "yes"]
+    EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+    DEFAULT_FROM_EMAIL = os.getenv(
+        "DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "noreply@empresa.com"
+    )
+else:
+    # En desarrollo sin EMAIL_HOST configurado: imprime los correos en la consola
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    DEFAULT_FROM_EMAIL = "noreply@empresa.com"
 
 # Compressor settings
 COMPRESS_ROOT = BASE_DIR / 'static'
