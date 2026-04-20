@@ -176,12 +176,20 @@ def _get_financial_data(fecha_inicio: date, fecha_fin: date) -> dict:
     ventas_vencidas = qs_vencidas["total"] or Decimal("0")
     ventas_vencidas_count = qs_vencidas["count"] or 0
 
-    # Clientes nuevos
+    # Clientes nuevos — usar datetimes aware para DateTimeField con USE_TZ=True
+    from datetime import datetime as dt
+    from django.utils.timezone import make_aware
+
+    fi_aware = make_aware(dt.combine(fecha_inicio, dt.min.time()))
+    ff_aware = make_aware(dt.combine(fecha_fin, dt.max.time().replace(microsecond=0)))
+    pi_aware = make_aware(dt.combine(prev_inicio, dt.min.time()))
+    pf_aware = make_aware(dt.combine(prev_fin, dt.max.time().replace(microsecond=0)))
+
     clientes_nuevos = Cliente.objects.filter(
-        fecha_registro__range=(fecha_inicio, fecha_fin)
+        fecha_registro__range=(fi_aware, ff_aware)
     ).count()
     clientes_previos = Cliente.objects.filter(
-        fecha_registro__range=(prev_inicio, prev_fin)
+        fecha_registro__range=(pi_aware, pf_aware)
     ).count()
 
     return {
@@ -284,6 +292,14 @@ def generar_resumen_ejecutivo(
         raw_output = chain.invoke({"system_prompt": system_prompt})
     except Exception as exc:
         logger.error("Error al llamar al LLM: %s", exc, exc_info=True)
+        # Detectar error de cuota agotada (429) para mostrar mensaje claro al usuario
+        exc_str = str(exc)
+        if "ResourceExhausted" in type(exc).__name__ or "429" in exc_str or "quota" in exc_str.lower():
+            raise RuntimeError(
+                "Cuota de la API de IA agotada (error 429). "
+                "Verifica tu plan y facturación en https://ai.dev/rate-limit. "
+                f"Modelo usado: {effective_model}."
+            ) from exc
         raise RuntimeError(f"Error al generar resumen con IA: {exc}") from exc
 
     # Parsear JSON de la respuesta
