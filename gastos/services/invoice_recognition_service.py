@@ -25,7 +25,38 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_API_MODEL = os.getenv("OPENROUTER_API_MODEL", "google/gemini-3.1-flash-lite-preview")
 genai.configure(api_key=GOOGLE_API_KEY)
 
-# Models whose IDs contain a slash are treated as OpenRouter models
+def get_available_models():
+    """
+    Retorna los modelos de IA disponibles basados en las variables de entorno configuradas.
+    
+    Returns:
+        list: Lista de tuplas (id, nombre_amigable, proveedor) de modelos disponibles
+    """
+    modelos = []
+    
+    # Agregar modelo de Google Gemini si está configurado
+    if GOOGLE_API_KEY:
+        google_model = os.getenv("GOOGLE_API_MODEL", "gemini-2.5-flash")
+        modelo_nombre = google_model.replace("gemini-", "Gemini ").replace("-", " ").title()
+        modelos.append((google_model, modelo_nombre, "google"))
+        logger.info(f"Modelo Google Gemini disponible: {google_model}")
+    
+    # Agregar modelo de OpenRouter si está configurado
+    if OPENROUTER_API_KEY:
+        openrouter_model = OPENROUTER_API_MODEL
+        # Extraer nombre legible del ID del modelo
+        if "/" in openrouter_model:
+            modelo_nombre = openrouter_model.split("/")[-1].replace("-", " ").replace(":", " - ").title()
+        else:
+            modelo_nombre = openrouter_model
+        modelos.append((openrouter_model, f"{modelo_nombre} (OpenRouter)", "openrouter"))
+        logger.info(f"Modelo OpenRouter disponible: {openrouter_model}")
+    
+    if not modelos:
+        logger.warning("No hay modelos de IA configurados. Verifica las variables de entorno.")
+    
+    return modelos
+
 def get_llm_model(model_id=None):
     """
     Factory that returns a LangChain chat model instance.
@@ -217,8 +248,6 @@ def obtener_categorias_disponibles():
         logger.error(f"Error al obtener categorías: {str(e)}")
         return {}
 
-import time
-
 def asignar_categoria_automatica(descripcion_movimiento, categorias_disponibles):
     """
     Utiliza Google Gemini para asignar automáticamente una categoría de gasto basándose 
@@ -344,88 +373,6 @@ def asignar_categorias_en_lotes(movimientos_gastos, categorias_disponibles, tama
             time.sleep(delay_entre_lotes)
     
     logger.info(f"=== PROCESAMIENTO EN LOTES COMPLETADO ===")
-
-def asignar_categoria_automatica_old(descripcion_movimiento, categorias_disponibles):
-    """
-    Usa IA para asignar automáticamente la categoría más apropiada basada en la descripción.
-    
-    Args:
-        descripcion_movimiento (str): Descripción del movimiento bancario
-        categorias_disponibles (dict): Diccionario con las categorías disponibles {id: nombre}
-        
-    Returns:
-        str: ID de la categoría más apropiada o string vacío si no se puede determinar
-    """
-    if not categorias_disponibles or not descripcion_movimiento:
-        return ""
-    
-    logger.info(f"Asignando categoría para: '{descripcion_movimiento}'")
-    
-    try:
-        # Preparar el prompt para clasificación
-        categorias_texto = "\n".join([f"ID: {id_cat}, Nombre: {nombre}" for id_cat, nombre in categorias_disponibles.items()])
-        
-        # Configurar el modelo
-        model = ChatGoogleGenerativeAI(model=os.getenv("GOOGLE_API_MODEL"), temperature=0)
-
-        prompt_template = """
-        Eres un asistente experto en clasificación de gastos bancarios.
-        
-        TAREA: Analiza la siguiente descripción de un movimiento bancario y selecciona la categoría MÁS APROPIADA de la lista disponible.
-        
-        DESCRIPCIÓN DEL MOVIMIENTO: "{descripcion}"
-        
-        CATEGORÍAS DISPONIBLES:
-        {categorias}
-        
-        INSTRUCCIONES:
-        1. Analiza cuidadosamente la descripción del movimiento
-        2. Considera palabras clave, tipo de establecimiento, servicio o producto
-        3. Selecciona ÚNICAMENTE el ID de la categoría más apropiada de la lista
-        4. Si no hay una categoría claramente apropiada, responde con "NO_MATCH"
-        5. Responde SOLO con el ID de la categoría (ejemplo: "3") o "NO_MATCH"
-        
-        EJEMPLOS:
-        - "PAGO TARJETA CREDITO" → categoría de servicios financieros
-        - "FARMACIA GUADALAJARA" → categoría de salud/medicinas
-        - "GASOLINA PEMEX" → categoría de combustible/transporte
-        - "DEPOSITO NOMINA" → NO_MATCH (es ingreso, no gasto)
-        
-        RESPUESTA:
-        """
-        
-        prompt = prompt_template.format(
-            descripcion=descripcion_movimiento,
-            categorias=categorias_texto
-        )
-        
-        logger.debug(f"Enviando prompt para clasificación: {prompt[:200]}...")
-        
-        # Invocar el modelo
-        respuesta = model.invoke(prompt)
-        categoria_id = respuesta.content.strip()
-        
-        logger.info(f"Respuesta de IA para categorización: '{categoria_id}'")
-        
-        # Validar que la respuesta sea un ID válido
-        if categoria_id == "NO_MATCH":
-            logger.info("IA determinó que no hay categoría apropiada")
-            return None
-        
-        if categoria_id in categorias_disponibles:
-            categoria_nombre = categorias_disponibles[categoria_id]
-            logger.info(f"✅ Categoría asignada: {categoria_nombre} (ID: {categoria_id})")
-            return {
-                'id': int(categoria_id),  # Convertir a entero para compatibilidad con Django
-                'nombre': categoria_nombre
-            }
-        else:
-            logger.warning(f"⚠️ IA devolvió ID inválido: {categoria_id}")
-            return None
-            
-    except Exception as e:
-        logger.error(f"Error en asignación automática de categoría: {str(e)}")
-        return None
 
 def reconocer_estado_cuenta_pdf(pdf_file, asignar_categorias_automaticamente=False, modelo=None):
     """
@@ -569,7 +516,7 @@ def reconocer_estado_cuenta_pdf(pdf_file, asignar_categorias_automaticamente=Fal
                             logger.info(f"Procesando gasto {idx+1}/{len(gastos_a_procesar)}: '{descripcion}' (${monto})")
                             
                             try:
-                                categoria_info = asignar_categoria_automatica_old(descripcion, categorias_disponibles)
+                                categoria_info = asignar_categoria_automatica(descripcion, categorias_disponibles)
                                 
                                 if categoria_info:
                                     movimiento['categoria_sugerida'] = categoria_info

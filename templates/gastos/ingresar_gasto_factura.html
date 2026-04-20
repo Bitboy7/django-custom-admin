@@ -262,18 +262,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const modelProviderNote = document.getElementById('modelProviderNote');
     const step3Text = document.getElementById('step3Text');
 
-    const OPENROUTER_PROVIDER_NOTE = '⚡ OpenRouter — modelo gratuito de terceros. Requiere OPENROUTER_API_KEY configurada.';
-    const GEMINI_PROVIDER_NOTE = '🔵 Google Gemini — modelo oficial de Google. Requiere GOOGLE_API_KEY configurada.';
-
     function updateModelInfo() {
         if (!modelSelect) return;
         const val = modelSelect.value;
-        if (val.includes('/')) {
-            modelProviderNote.textContent = OPENROUTER_PROVIDER_NOTE;
+        const selectedOption = modelSelect.options[modelSelect.selectedIndex];
+        const optGroupLabel = selectedOption.parentElement.label;
+        
+        // Detectar proveedor basado en el ID del modelo o el grupo
+        if (val.includes('/') || (optGroupLabel && optGroupLabel.toLowerCase().includes('openrouter'))) {
+            modelProviderNote.textContent = '⚡ OpenRouter — modelo gratuito de terceros. Requiere OPENROUTER_API_KEY configurada.';
             step3Text.textContent = 'Procesando con OpenRouter...';
-        } else {
-            modelProviderNote.textContent = GEMINI_PROVIDER_NOTE;
+        } else if (optGroupLabel && optGroupLabel.toLowerCase().includes('gemini')) {
+            modelProviderNote.textContent = '🔵 Google Gemini — modelo oficial de Google. Requiere GOOGLE_API_KEY configurada.';
             step3Text.textContent = 'Procesando con Google Gemini...';
+        } else {
+            // Mensaje genérico para otros modelos
+            modelProviderNote.textContent = '🤖 Modelo de IA configurado en variables de entorno.';
+            step3Text.textContent = 'Procesando con IA...';
         }
     }
 

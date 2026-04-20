@@ -163,17 +163,45 @@ class SaldoMensualForm(forms.ModelForm):
             'saldo_inicial': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
-MODELO_IA_CHOICES = [
-    ('Google Gemini', [
-        ('gemini-2.5-flash', 'Gemini 2.5 Flash (recomendado)'),
-        ('gemini-2.0-flash', 'Gemini 2.0 Flash'),
-    ]),
-    ('OpenRouter (gratis)', [
-        ('google/gemma-3-27b-it:free', 'Gemma 3 27B IT'),
-        ('meta-llama/llama-4-scout:free', 'Llama 4 Scout'),
-        ('mistralai/mistral-small-3.1-24b-instruct:free', 'Mistral Small 3.1 24B'),
-    ]),
-]
+def get_modelo_ia_choices():
+    """
+    Obtiene dinámicamente las opciones de modelos de IA desde las variables de entorno.
+    
+    Returns:
+        list: Lista de tuplas (id_modelo, nombre_modelo) para usar en el formulario
+    """
+    from gastos.services.invoice_recognition_service import get_available_models
+    
+    modelos = get_available_models()
+    
+    if not modelos:
+        # Si no hay modelos configurados, retornar un mensaje de error
+        return [('', 'No hay modelos de IA configurados - Verifica las variables de entorno')]
+    
+    # Agrupar modelos por proveedor
+    google_models = []
+    openrouter_models = []
+    
+    for model_id, model_name, provider in modelos:
+        if provider == "google":
+            google_models.append((model_id, model_name))
+        elif provider == "openrouter":
+            openrouter_models.append((model_id, model_name))
+    
+    # Crear estructura de choices agrupada
+    choices = []
+    
+    if google_models:
+        choices.append(('Google Gemini', google_models))
+    
+    if openrouter_models:
+        choices.append(('OpenRouter (gratis)', openrouter_models))
+    
+    # Si solo hay modelos planos sin agrupar, retornarlos directamente
+    if not choices and modelos:
+        choices = [(model_id, model_name) for model_id, model_name, _ in modelos]
+    
+    return choices
 
 class FacturaUploadForm(forms.Form):
     documento_pdf = forms.FileField(
@@ -196,8 +224,7 @@ class FacturaUploadForm(forms.Form):
     )
     modelo_ia = forms.ChoiceField(
         label="Modelo de IA",
-        choices=MODELO_IA_CHOICES,
-        initial='gemini-2.5-flash',
+        choices=[],  # Se establecerá dinámicamente en __init__
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_modelo_ia'})
     )
     asignar_categorias = forms.BooleanField(
@@ -209,3 +236,19 @@ class FacturaUploadForm(forms.Form):
             'class': 'form-check-input'
         })
     )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Establecer las opciones de modelo de IA dinámicamente desde variables de entorno
+        modelo_choices = get_modelo_ia_choices()
+        self.fields['modelo_ia'].choices = modelo_choices
+        
+        # Establecer el valor inicial como el primer modelo disponible
+        if modelo_choices:
+            if isinstance(modelo_choices[0], tuple) and isinstance(modelo_choices[0][1], list):
+                # Si está agrupado, tomar el primer modelo del primer grupo
+                self.fields['modelo_ia'].initial = modelo_choices[0][1][0][0]
+            else:
+                # Si no está agrupado, tomar el primer modelo
+                self.fields['modelo_ia'].initial = modelo_choices[0][0]
