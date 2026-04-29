@@ -1,5 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
+from decimal import Decimal
 from .models import Anticipo, Ventas, Cliente, PagoVenta, Agente, TerminoCredito
 from catalogo.models import Producto, Sucursal
 from gastos.models import Cuenta
@@ -243,6 +244,65 @@ class CFDIConfirmForm(forms.Form):
         label='Tipo de registro',
         widget=forms.Select(attrs={'class': 'form-control'}),
     )
+
+
+class AnticipoCFDIUploadForm(forms.Form):
+    """Carga de archivo XML CFDI para crear anticipo."""
+    xml_file = forms.FileField(
+        label='Archivo XML (CFDI)',
+        help_text='Sube el archivo .xml del CFDI de anticipo (max. 1 MB).',
+        widget=forms.ClearableFileInput(attrs={'accept': '.xml', 'class': 'form-control'}),
+    )
+
+    def clean_xml_file(self):
+        f = self.cleaned_data['xml_file']
+        if not f.name.lower().endswith('.xml'):
+            raise ValidationError('El archivo debe tener extension .xml')
+        if f.size > 1 * 1024 * 1024:
+            raise ValidationError('El archivo no puede superar 1 MB.')
+        return f
+
+
+class AnticipoCFDIConfirmForm(forms.Form):
+    """Confirmacion de datos para crear anticipo desde CFDI."""
+    fecha = forms.DateField(
+        label='Fecha del anticipo',
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+    )
+    monto = forms.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        label='Monto total (MXN)',
+        widget=forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
+    )
+    folio_factura_anticipo = forms.CharField(
+        max_length=50,
+        required=False,
+        label='Folio factura anticipo',
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    descripcion = forms.CharField(
+        max_length=500,
+        required=False,
+        label='Descripcion',
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+    )
+    cliente = forms.ModelChoiceField(
+        queryset=Cliente.objects.filter(activo=True).order_by('nombre'),
+        label='Cliente',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+    cuenta = forms.ModelChoiceField(
+        queryset=Cuenta.objects.all().order_by('numero_cuenta'),
+        label='Cuenta bancaria',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+
+    def clean_monto(self):
+        monto = self.cleaned_data['monto']
+        if monto <= Decimal('0'):
+            raise ValidationError('El monto del anticipo debe ser mayor a cero.')
+        return monto
 
 
 class AnticipoForm(forms.ModelForm):

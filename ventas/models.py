@@ -2,6 +2,7 @@ from django.db import models
 from catalogo.models import Sucursal, Pais, Producto
 from django.utils.html import format_html
 from djmoney.models.fields import MoneyField
+from djmoney.money import Money
 from django.core.validators import MinValueValidator, MaxValueValidator
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -152,6 +153,13 @@ class Anticipo(models.Model):
         decimal_places=2, 
         default_currency='MXN'
     )
+    monto_aplicado = MoneyField(
+        max_digits=10,
+        decimal_places=2,
+        default_currency='MXN',
+        default=0,
+        help_text='Monto acumulado ya aplicado a ventas.'
+    )
     fecha = models.DateField()
     descripcion = models.TextField(blank=True, null=True, default='Sin descripción')
     folio_factura_anticipo = models.CharField(
@@ -186,6 +194,16 @@ class Anticipo(models.Model):
             raise ValidationError({
                 'monto': 'El monto del anticipo debe ser mayor a cero.'
             })
+
+        if self.monto_aplicado.amount < 0:
+            raise ValidationError({
+                'monto_aplicado': 'El monto aplicado no puede ser negativo.'
+            })
+
+        if self.monto_aplicado.amount > self.monto.amount:
+            raise ValidationError({
+                'monto_aplicado': 'El monto aplicado no puede exceder el monto total del anticipo.'
+            })
         
         # Validar fecha no futura
         if self.fecha > timezone.now().date():
@@ -193,17 +211,51 @@ class Anticipo(models.Model):
                 'fecha': 'La fecha del anticipo no puede ser futura.'
             })
         
-        # RF09: Validar disponibilidad si está siendo aplicado
-        if self.estado_anticipo == self.Estado_anticipo.Aplicado:
-            # Verificar que hay una venta asociada
-            if not hasattr(self, 'ventas') or not self.ventas.exists():
-                raise ValidationError({
-                    'estado_anticipo': 'No se puede marcar como Aplicado sin una venta asociada.'
-                })
+        # RF09: Consistencia entre estado y saldo disponible
+        if self.estado_anticipo == self.Estado_anticipo.Aplicado and self.saldo_disponible() > 0:
+            raise ValidationError({
+                'estado_anticipo': 'No se puede marcar como Aplicado si aún existe saldo disponible.'
+            })
     
     def puede_ser_aplicado(self):
         """Verifica si el anticipo está disponible para ser aplicado"""
-        return self.estado_anticipo == self.Estado_anticipo.Pendiente
+        return self.saldo_disponible() > 0
+
+    def saldo_disponible(self):
+        """
+        Saldo disponible del anticipo.
+
+        Incluye fallback para datos legacy donde el anticipo estaba en estado
+        aplicado sin llevar control de monto_aplicado.
+        """
+        monto_total = float(self.monto.amount)
+        monto_aplicado = float(self.monto_aplicado.amount)
+
+        if (
+            self.pk
+            and monto_aplicado <= 0
+            and self.estado_anticipo == self.Estado_anticipo.Aplicado
+        ):
+            # Registro legacy sin trazabilidad de monto_aplicado:
+            # asumir aplicado en su totalidad para no inflar saldo en reportes.
+            monto_aplicado = monto_total
+
+        return max(monto_total - monto_aplicado, 0.0)
+
+    def registrar_aplicacion(self, monto):
+        """Acumula monto aplicado y normaliza el estado del anticipo."""
+        monto_decimal = Decimal(str(monto))
+        monto_total = Decimal(str(self.monto.amount))
+        aplicado_actual = Decimal(str(self.monto_aplicado.amount))
+        nuevo_aplicado = aplicado_actual + monto_decimal
+        if nuevo_aplicado > monto_total:
+            nuevo_aplicado = monto_total
+
+        self.monto_aplicado = Money(nuevo_aplicado, self.monto.currency)
+        if nuevo_aplicado >= monto_total:
+            self.estado_anticipo = self.Estado_anticipo.Aplicado
+        elif nuevo_aplicado > 0:
+            self.estado_anticipo = self.Estado_anticipo.Pendiente
     
     def aplicar_a_venta(self, venta):
         """
@@ -278,6 +330,10 @@ class Anticipo(models.Model):
             models.CheckConstraint(
                 condition=models.Q(monto__gt=0),
                 name='anticipo_monto_positivo'
+            ),
+            models.CheckConstraint(
+                condition=models.Q(monto_aplicado__gte=0),
+                name='anticipo_monto_aplicado_no_negativo'
             ),
         ]
         

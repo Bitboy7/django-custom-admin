@@ -107,10 +107,15 @@ class ReporteCobranzaBaseTest(TestCase):
 
     def _aplicar_anticipo(self, anticipo):
         """
-        Marca el anticipo como Aplicado usando update() para evitar
-        la validación de clean() (que exige venta asociada via ORM).
+        Marca el anticipo como Aplicado ajustando monto_aplicado.
         """
-        Anticipo.objects.filter(pk=anticipo.pk).update(estado_anticipo='Aplicado')
+        venta = Ventas.objects.filter(anticipo=anticipo).first()
+        monto_aplicado = venta.monto.amount if venta else anticipo.monto.amount
+        Anticipo.objects.filter(pk=anticipo.pk).update(
+            estado_anticipo='Aplicado',
+            monto_aplicado=monto_aplicado,
+            monto_aplicado_currency=anticipo.monto.currency,
+        )
         anticipo.refresh_from_db()
 
 

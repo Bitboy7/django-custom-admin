@@ -10,8 +10,13 @@ from .models import (
     SaldoCliente, AntigüedadSaldo, EstadoCuentaCliente, ConfiguracionCuentasPorCobrar,
     ObligacionFiscal
 )
-from .forms import VentasAdminForm
-from .forms import CFDIUploadForm, CFDIConfirmForm
+from .forms import (
+    VentasAdminForm,
+    CFDIUploadForm,
+    CFDIConfirmForm,
+    AnticipoCFDIUploadForm,
+    AnticipoCFDIConfirmForm,
+)
 from catalogo.models import Sucursal, Pais, Producto
 from gastos.models import Cuenta
 from import_export import resources
@@ -31,6 +36,7 @@ from django.db.models.functions import Extract, TruncMonth, TruncDay, Coalesce
 from django.utils import timezone
 from datetime import datetime, timedelta, date
 from decimal import Decimal
+from djmoney.money import Money
 import json
 from django.contrib import messages
 from django.template.response import TemplateResponse
@@ -1437,10 +1443,10 @@ class VentasAdmin(ModelAdmin):
             ws_ventas.cell(row, c).alignment = center_align
             ws_ventas.cell(row, c).border = border
 
-        # Panorama anticipos
+        # Anticipos / Saldo a favor
         if total_anticipos > 0:
             row += 1
-            ws_ventas[f'A{row}'] = 'PANORAMA ANTICIPOS'
+            ws_ventas[f'A{row}'] = 'ANTICIPOS / SALDO A FAVOR'
             ws_ventas.cell(row, col_idx, total_anticipos).number_format = '$#,##0.00'
             for c in range(1, col_idx + 1):
                 ws_ventas.cell(row, c).fill = anticipo_fill
@@ -1775,7 +1781,7 @@ class VentasAdmin(ModelAdmin):
         ventas_data = [['CLIENTE', 'MON.'] + [s.nombre.upper() for s in sucursales] + ['TOTAL']]
         
         if datos.get('total_anticipos', 0) > 0:
-            anticipo_row = ['PANORAMA ANTICIPOS', ''] + [''] * len(sucursales) + [f"${datos['total_anticipos']:,.2f}"]
+            anticipo_row = ['ANTICIPOS / SALDO A FAVOR', ''] + [''] * len(sucursales) + [f"${datos['total_anticipos']:,.2f}"]
             ventas_data.append(anticipo_row)
         
         for fila in datos['ventas_por_cliente']:
@@ -2077,8 +2083,10 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
     fieldsets = (
         ('Información del Pago', {
             'fields': ('venta', 'get_saldo_venta', 'fecha_pago', 'monto_pago'),
-            'description': '<strong style="color:#047857;">⚠️ Controles Bancarios Activos:</strong> '
-                          'No se permiten pagos a ventas completadas ni sobrepagos.'
+            'description': mark_safe(
+                '<strong style="color:#047857;">⚠️ Controles Bancarios Activos:</strong> '
+                'No se permiten pagos a ventas completadas ni sobrepagos.'
+            ),
         }),
         ('Detalles Transaccionales', {
             'fields': ('metodo_pago', 'referencia', 'cuenta_destino', 'comprobante_pago', 'preview_comprobante'),
@@ -2276,44 +2284,115 @@ class AnticipoAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = AnticiposResource
     import_form_class = ImportForm
     export_form_class = ExportForm
-    list_display = ('fecha', 'cliente', 'cuenta', 'monto', 'folio_factura_anticipo', 'descripcion', 'estado_anticipo')
+    list_display = (
+        'fecha',
+        'cliente',
+        'cuenta',
+        'monto',
+        'get_saldo_disponible',
+        'folio_factura_anticipo',
+        'descripcion',
+        'estado_anticipo',
+    )
     list_per_page = 20
     list_filter = ('fecha', 'cliente', 'cuenta', 'monto', 'estado_anticipo')
-    fields = ('fecha', 'cliente', 'cuenta', 'monto', 'folio_factura_anticipo', 'descripcion', 'estado_anticipo')
+    fields = (
+        'fecha',
+        'cliente',
+        'cuenta',
+        'monto',
+        'monto_aplicado',
+        'folio_factura_anticipo',
+        'descripcion',
+        'estado_anticipo',
+    )
+    readonly_fields = ('monto_aplicado',)
     actions = ['aplicar_anticipo_a_ventas_pendientes']
+    change_list_template = 'admin/ventas/anticipo/change_list.html'
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                'importar-cfdi/',
+                self.admin_site.admin_view(self.importar_anticipo_desde_cfdi),
+                name='ventas_importar_anticipo_cfdi',
+            ),
+        ]
+        return custom_urls + urls
+
+    def get_saldo_disponible(self, obj):
+        return f"${obj.saldo_disponible():,.2f}"
+    get_saldo_disponible.short_description = 'Saldo disponible'
 
     def aplicar_anticipo_a_ventas_pendientes(self, request, queryset):
         """Aplica los anticipos seleccionados a las ventas pendientes del cliente."""
         aplicados = 0
         omitidos = 0
-        for anticipo in queryset.filter(estado_anticipo='Pendiente').select_related('cliente'):
-            ventas_pendientes = Ventas.objects.filter(
-                cliente=anticipo.cliente,
-                modalidad_pago='Credito',
-                estado_cobranza__in=['Pendiente', 'Parcial'],
-            ).order_by('fecha_vencimiento')
-
-            if not ventas_pendientes.exists():
-                omitidos += 1
-                continue
-
+        for anticipo in queryset.select_related('cliente', 'cuenta'):
             try:
                 with transaction.atomic():
-                    saldo_anticipo = float(anticipo.monto.amount)
-                    for venta in ventas_pendientes:
-                        if saldo_anticipo <= 0:
-                            break
-                        saldo_venta = float(venta.monto.amount) - float(venta.monto_pagado.amount)
-                        if saldo_venta <= 0:
-                            continue
-                        abono = min(saldo_anticipo, saldo_venta)
-                        venta.monto_pagado = venta.monto_pagado + abono
-                        venta.actualizar_estado_cobranza()
-                        venta.save(update_fields=['monto_pagado_amount', 'estado_cobranza'])
-                        saldo_anticipo -= abono
+                    anticipo_bloqueado = Anticipo.objects.select_for_update().get(pk=anticipo.pk)
+                    saldo_anticipo = Decimal(str(anticipo_bloqueado.saldo_disponible()))
+                    if saldo_anticipo <= Decimal('0'):
+                        omitidos += 1
+                        continue
 
-                    anticipo.estado_anticipo = 'Aplicado'
-                    anticipo.save(update_fields=['estado_anticipo'])
+                    ventas_pendientes = list(
+                        Ventas.objects.select_for_update().filter(
+                            cliente=anticipo_bloqueado.cliente,
+                            modalidad_pago=Ventas.ModalidadPago.CREDITO,
+                            estado_cobranza__in=[
+                                Ventas.EstadoCobranza.PENDIENTE,
+                                Ventas.EstadoCobranza.PARCIAL,
+                                Ventas.EstadoCobranza.VENCIDO,
+                            ],
+                        ).order_by('fecha_vencimiento', 'id')
+                    )
+                    if not ventas_pendientes:
+                        omitidos += 1
+                        continue
+
+                    monto_aplicado = Decimal('0')
+                    for venta in ventas_pendientes:
+                        if saldo_anticipo <= Decimal('0'):
+                            break
+
+                        saldo_venta = Decimal(str(venta.monto.amount)) - Decimal(str(venta.monto_pagado.amount))
+                        if saldo_venta <= Decimal('0'):
+                            continue
+
+                        abono = min(saldo_anticipo, saldo_venta).quantize(Decimal('0.01'))
+                        if abono <= Decimal('0'):
+                            continue
+
+                        PagoVenta.objects.create(
+                            venta=venta,
+                            fecha_pago=timezone.now().date(),
+                            monto_pago=Money(abono, venta.monto.currency),
+                            cuenta_destino=anticipo_bloqueado.cuenta,
+                            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+                            referencia=f'ANTICIPO-{anticipo_bloqueado.pk}',
+                            notas='Aplicacion automatica de anticipo desde admin.',
+                        )
+
+                        if not venta.anticipo_id:
+                            venta.anticipo = anticipo_bloqueado
+                            venta.save(update_fields=['anticipo'])
+
+                        saldo_anticipo -= abono
+                        monto_aplicado += abono
+
+                    if monto_aplicado <= Decimal('0'):
+                        omitidos += 1
+                        continue
+
+                    anticipo_bloqueado.registrar_aplicacion(monto_aplicado)
+                    anticipo_bloqueado.save(update_fields=[
+                        'monto_aplicado',
+                        'monto_aplicado_currency',
+                        'estado_anticipo',
+                    ])
                     aplicados += 1
             except Exception as exc:
                 self.message_user(
@@ -2337,6 +2416,108 @@ class AnticipoAdmin(ImportExportModelAdmin, ModelAdmin):
             )
 
     aplicar_anticipo_a_ventas_pendientes.short_description = "Aplicar anticipo a ventas pendientes del cliente"
+
+    def importar_anticipo_desde_cfdi(self, request):
+        """Importa un anticipo desde XML CFDI con confirmacion previa."""
+        from .cfdi_parser import parse_cfdi
+
+        opts = self.model._meta
+
+        if request.method == 'POST' and request.POST.get('_step') == 'confirm':
+            form = AnticipoCFDIConfirmForm(request.POST)
+            if form.is_valid():
+                cd = form.cleaned_data
+                try:
+                    anticipo = Anticipo(
+                        fecha=cd['fecha'],
+                        cliente=cd['cliente'],
+                        cuenta=cd['cuenta'],
+                        monto=Money(cd['monto'], 'MXN'),
+                        descripcion=cd['descripcion'],
+                        folio_factura_anticipo=cd['folio_factura_anticipo'],
+                        estado_anticipo=Anticipo.Estado_anticipo.Pendiente,
+                    )
+                    anticipo.full_clean()
+                    anticipo.save()
+                    messages.success(
+                        request,
+                        f'Anticipo importado correctamente desde CFDI: #{anticipo.pk}.',
+                    )
+                    change_url = reverse(
+                        'admin:%s_%s_change' % (opts.app_label, opts.model_name),
+                        args=[anticipo.pk],
+                    )
+                    return redirect(change_url)
+                except Exception as exc:
+                    messages.error(request, f'Error al guardar anticipo: {exc}')
+
+            context = dict(
+                self.admin_site.each_context(request),
+                form=form,
+                step='confirm',
+                title='Importar anticipo - confirmar datos',
+                opts=opts,
+            )
+            return TemplateResponse(request, 'admin/ventas/importar_anticipo_cfdi.html', context)
+
+        if request.method == 'POST' and request.POST.get('_step') == 'upload':
+            upload_form = AnticipoCFDIUploadForm(request.POST, request.FILES)
+            if upload_form.is_valid():
+                xml_bytes = upload_form.cleaned_data['xml_file'].read()
+                try:
+                    parsed = parse_cfdi(xml_bytes)
+                except ValueError as exc:
+                    messages.error(request, str(exc))
+                    upload_form = AnticipoCFDIUploadForm()
+                    context = dict(
+                        self.admin_site.each_context(request),
+                        form=upload_form,
+                        step='upload',
+                        title='Importar anticipo desde CFDI (XML)',
+                        opts=opts,
+                    )
+                    return TemplateResponse(request, 'admin/ventas/importar_anticipo_cfdi.html', context)
+
+                receptor_nombre = parsed.get('_receptor_nombre', '')
+                cliente_inicial = None
+                if receptor_nombre:
+                    cliente_inicial = Cliente.objects.filter(
+                        nombre__iexact=receptor_nombre,
+                        activo=True,
+                    ).first()
+
+                monto_mxn = Decimal(str(parsed.get('monto', 0)))
+                moneda = (parsed.get('moneda_venta') or 'MXN').upper()
+                tipo_cambio = Decimal(str(parsed.get('tipo_cambio') or 1))
+                if moneda != 'MXN' and tipo_cambio > 0:
+                    monto_mxn = (monto_mxn * tipo_cambio).quantize(Decimal('0.01'))
+
+                initial = {
+                    'fecha': parsed.get('fecha_emision_cfdi') or timezone.now().date(),
+                    'monto': monto_mxn,
+                    'folio_factura_anticipo': parsed.get('folio_factura', ''),
+                    'descripcion': parsed.get('descripcion', ''),
+                    'cliente': cliente_inicial,
+                }
+                form = AnticipoCFDIConfirmForm(initial=initial)
+                context = dict(
+                    self.admin_site.each_context(request),
+                    form=form,
+                    step='confirm',
+                    title='Importar anticipo - confirmar datos',
+                    opts=opts,
+                )
+                return TemplateResponse(request, 'admin/ventas/importar_anticipo_cfdi.html', context)
+
+        upload_form = AnticipoCFDIUploadForm()
+        context = dict(
+            self.admin_site.each_context(request),
+            form=upload_form,
+            step='upload',
+            title='Importar anticipo desde CFDI (XML)',
+            opts=opts,
+        )
+        return TemplateResponse(request, 'admin/ventas/importar_anticipo_cfdi.html', context)
 
 # Administración para TerminoCredito
 @admin.register(TerminoCredito)

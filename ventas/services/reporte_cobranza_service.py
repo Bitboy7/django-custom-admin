@@ -102,36 +102,20 @@ def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_over
     # -------------------------------------------------------------------------
     # 5. Saldo a favor del cliente (anticipos + excedentes de anticipos aplicados)
     # -------------------------------------------------------------------------
-    # 5a. Anticipos Pendientes (no aplicados a ninguna venta)
-    anticipos_qs = Anticipo.objects.filter(estado_anticipo='Pendiente').select_related('cliente')
+    # 5a. Saldo disponible de anticipos (pendientes o parcialmente aplicados)
+    anticipos_qs = Anticipo.objects.exclude(estado_anticipo='Cancelado').select_related('cliente')
     if fecha_inicio:
         anticipos_qs = anticipos_qs.filter(fecha__gte=fecha_inicio)
     if fecha_fin:
         anticipos_qs = anticipos_qs.filter(fecha__lte=fecha_fin)
 
     anticipos_por_cliente = defaultdict(float)
+    clientes_anticipo_map = {}  # cliente_id → cliente object
     for a in anticipos_qs:
-        anticipos_por_cliente[a.cliente_id] += float(a.monto.amount)
-
-    # 5b. Anticipo aplicado cuyo monto supera el total de la venta (excedente)
-    #     Ocurre cuando el cliente depositó más de lo que valía la factura y
-    #     el anticipo fue marcado como Aplicado sin ajustar el importe restante.
-    ventas_con_excedente = (
-        Ventas.objects.filter(anticipo__isnull=False, anticipo__estado_anticipo='Aplicado')
-        .select_related('cliente', 'anticipo')
-    )
-    if fecha_inicio:
-        ventas_con_excedente = ventas_con_excedente.filter(
-            fecha_salida_manifiesto__gte=fecha_inicio
-        )
-    if fecha_fin:
-        ventas_con_excedente = ventas_con_excedente.filter(
-            fecha_salida_manifiesto__lte=fecha_fin
-        )
-    for v in ventas_con_excedente:
-        excedente = float(v.anticipo.monto.amount) - float(v.monto.amount)
-        if excedente > 0:
-            anticipos_por_cliente[v.cliente_id] += excedente
+        saldo_disponible = float(a.saldo_disponible())
+        if saldo_disponible > 0:
+            anticipos_por_cliente[a.cliente_id] += saldo_disponible
+            clientes_anticipo_map[a.cliente_id] = a.cliente
 
     # Inyectar saldo FVR en las filas de ventas (solo en la primera fila por cliente)
     seen_anticipo_ids = set()
@@ -141,8 +125,17 @@ def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_over
             fila['anticipo'] = anticipos_por_cliente.get(cliente_id, 0.0)
             seen_anticipo_ids.add(cliente_id)
 
-    # Total global de saldo a favor (encabezado "PANORAMA ANTICIPOS / SALDO FVR")
+    # Total global de saldo a favor
     total_anticipos = sum(anticipos_por_cliente.values())
+
+    # Lista ordenada para la sección "Saldo a Favor" del reporte
+    anticipos_saldo_favor = sorted(
+        [
+            {'cliente': clientes_anticipo_map[cid], 'saldo': saldo}
+            for cid, saldo in anticipos_por_cliente.items()
+        ],
+        key=lambda x: x['cliente'].nombre,
+    )
 
     # -------------------------------------------------------------------------
     # 6. Obligación fiscal más reciente del período
@@ -162,6 +155,7 @@ def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_over
     total_ventas_mxn_nat  = totales_ventas_mxn_obj['total']
     total_ventas_equiv_mxn = total_ventas_usd * float(tipo_cambio_ventas)
     total_cartera_ventas_mxn = total_ventas_mxn_nat + total_ventas_equiv_mxn
+    deuda_neta_mxn = max(total_cartera_ventas_mxn - total_anticipos, 0.0)
 
     return {
         'sucursales': sucursales,
@@ -178,7 +172,9 @@ def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_over
         'totales_maquila': totales_maquila,
         'tipo_cambio': tipo_cambio,
         'anticipos_por_cliente': dict(anticipos_por_cliente),
+        'anticipos_saldo_favor': anticipos_saldo_favor,
         'total_anticipos': total_anticipos,
+        'deuda_neta_mxn': deuda_neta_mxn,
         'obligacion_fiscal': obligacion_fiscal,
         'fecha_inicio': fecha_inicio,
         'fecha_fin': fecha_fin,
