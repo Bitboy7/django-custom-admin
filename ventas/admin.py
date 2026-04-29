@@ -11,6 +11,7 @@ from .models import (
     ObligacionFiscal
 )
 from .forms import VentasAdminForm
+from .forms import CFDIUploadForm, CFDIConfirmForm
 from catalogo.models import Sucursal, Pais, Producto
 from gastos.models import Cuenta
 from import_export import resources
@@ -369,11 +370,9 @@ class VentasResource(resources.ModelResource):
             row['id'] = next_id
        
 @admin.register(Ventas)
-class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
-    resource_class = VentasResource
-    import_form_class = ImportForm
-    export_form_class = ExportForm
+class VentasAdmin(ModelAdmin):
     form = VentasAdminForm
+    change_list_template = 'admin/ventas/ventas/change_list.html'
 
     class Media:
         js = ('js/ventas_form_logic.js',)
@@ -517,6 +516,11 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
                 self.admin_site.admin_view(self.api_termino_credito_info),
                 name='ventas_api_termino_credito_info',
             ),
+            path(
+                'importar-cfdi/',
+                self.admin_site.admin_view(self.importar_desde_cfdi),
+                name='ventas_importar_cfdi',
+            ),
         ]
         return custom_urls + urls
 
@@ -555,7 +559,168 @@ class VentasAdmin(ImportExportModelAdmin, ModelAdmin):
         except TerminoCredito.DoesNotExist:
             return JsonResponse({'error': 'Not found'}, status=404)
         return JsonResponse({'dias_credito': tc.dias_credito})
-    
+
+    # =========================================================================
+    # IMPORTAR VENTA DESDE CFDI XML
+    # =========================================================================
+
+    def importar_desde_cfdi(self, request):
+        """
+        Two-step view for importing a Ventas record from a CFDI XML file.
+
+        GET  → show upload form (step 1)
+        POST step=upload  → parse XML, show confirmation form (step 2)
+        POST step=confirm → validate and create Ventas, redirect to change view
+        """
+        from .cfdi_parser import parse_cfdi
+        from djmoney.money import Money
+
+        opts = self.model._meta
+        admin_url = reverse('admin:%s_%s_changelist' % (opts.app_label, opts.model_name))
+
+        # ── Step 2 → confirm & save ──────────────────────────────────────
+        if request.method == 'POST' and request.POST.get('_step') == 'confirm':
+            form = CFDIConfirmForm(request.POST)
+            if form.is_valid():
+                cd = form.cleaned_data
+                try:
+                    venta = Ventas(
+                        folio_factura=cd['folio_factura'],
+                        fecha_emision_cfdi=cd['fecha_emision_cfdi'],
+                        monto=Money(cd['monto'], cd['moneda_venta']),
+                        moneda_venta=cd['moneda_venta'],
+                        tipo_cambio=cd['tipo_cambio'],
+                        incoterm=cd['incoterm'],
+                        tipo_venta=cd['tipo_venta'],
+                        modalidad_pago=cd['modalidad_pago'],
+                        cantidad=cd['cantidad'],
+                        descripcion=cd['descripcion'],
+                        PO=cd['PO'],
+                        cliente=cd['cliente'],
+                        producto=cd['producto'],
+                        fecha_salida_manifiesto=cd['fecha_salida_manifiesto'],
+                        fecha_deposito=cd['fecha_deposito'],
+                        agente_id=cd['agente_id'],
+                        pedimento=cd['pedimento'],
+                        carga=cd['carga'],
+                        sucursal_id=cd['sucursal_id'],
+                        cuenta=cd['cuenta'],
+                        tipo_registro=cd['tipo_registro'],
+                    )
+                    venta.full_clean()
+                    venta.save()
+                    messages.success(
+                        request,
+                        f'Venta importada correctamente desde CFDI — '
+                        f'folio {venta.folio_factura or venta.pk}.'
+                    )
+                    change_url = reverse(
+                        'admin:%s_%s_change' % (opts.app_label, opts.model_name),
+                        args=[venta.pk]
+                    )
+                    return redirect(change_url)
+                except Exception as exc:
+                    messages.error(request, f'Error al guardar la venta: {exc}')
+
+            context = dict(
+                self.admin_site.each_context(request),
+                form=form,
+                step='confirm',
+                title='Importar venta — confirmar datos',
+                opts=opts,
+            )
+            return TemplateResponse(request, 'admin/ventas/importar_cfdi.html', context)
+
+        # ── Step 1 → parse XML ───────────────────────────────────────────
+        if request.method == 'POST' and request.POST.get('_step') == 'upload':
+            upload_form = CFDIUploadForm(request.POST, request.FILES)
+            if upload_form.is_valid():
+                xml_bytes = upload_form.cleaned_data['xml_file'].read()
+                try:
+                    parsed = parse_cfdi(xml_bytes)
+                except ValueError as exc:
+                    messages.error(request, str(exc))
+                    upload_form = CFDIUploadForm()
+                    context = dict(
+                        self.admin_site.each_context(request),
+                        form=upload_form,
+                        step='upload',
+                        title='Importar venta desde CFDI (XML)',
+                        opts=opts,
+                    )
+                    return TemplateResponse(request, 'admin/ventas/importar_cfdi.html', context)
+
+                # Try to find best client match (case-insensitive partial name)
+                receptor_nombre = parsed.get('_receptor_nombre', '')
+                cliente_inicial = None
+                cliente_sugerido_nombre = ''
+                if receptor_nombre:
+                    qs = Cliente.objects.filter(
+                        nombre__icontains=receptor_nombre[:30], activo=True
+                    )
+                    if qs.count() == 1:
+                        cliente_inicial = qs.first()
+                    elif qs.exists():
+                        # Multiple matches — pick the closest (first word match)
+                        first_word = receptor_nombre.split()[0] if receptor_nombre else ''
+                        exact = qs.filter(nombre__icontains=first_word).first()
+                        cliente_inicial = exact or qs.first()
+                    cliente_sugerido_nombre = receptor_nombre
+
+                # Try to find product match by NoIdentificacion in descripcion
+                no_id = parsed.get('_no_identificacion', '')
+                fraccion = parsed.get('_fraccion_arancelaria', '')
+                producto_inicial = None
+                if no_id:
+                    producto_inicial = (
+                        Producto.objects.filter(variedad__icontains=no_id).first()
+                        or Producto.objects.filter(descripcion__icontains=no_id).first()
+                    )
+                if not producto_inicial and fraccion:
+                    # For mangoes: fraccion 0804509903 → look for "Mango" products
+                    producto_inicial = Producto.objects.filter(nombre__icontains='Mango').first()
+
+                from datetime import date as today_date
+                initial = {
+                    'folio_factura': parsed.get('folio_factura', ''),
+                    'fecha_emision_cfdi': parsed.get('fecha_emision_cfdi'),
+                    'monto': parsed.get('monto', '0'),
+                    'moneda_venta': parsed.get('moneda_venta', 'MXN'),
+                    'tipo_cambio': parsed.get('tipo_cambio', '1.0000'),
+                    'incoterm': parsed.get('incoterm', ''),
+                    'tipo_venta': parsed.get('tipo_venta', 'Nacional'),
+                    'modalidad_pago': parsed.get('modalidad_pago', 'Contado'),
+                    'cantidad': parsed.get('cantidad'),
+                    'descripcion': parsed.get('descripcion', ''),
+                    'PO': parsed.get('PO', ''),
+                    'cliente': cliente_inicial,
+                    'producto': producto_inicial,
+                    'fecha_deposito': today_date.today(),
+                }
+
+                form = CFDIConfirmForm(initial=initial)
+                context = dict(
+                    self.admin_site.each_context(request),
+                    form=form,
+                    step='confirm',
+                    title='Importar venta — confirmar datos',
+                    opts=opts,
+                    parsed=parsed,
+                    cliente_sugerido_nombre=cliente_sugerido_nombre,
+                )
+                return TemplateResponse(request, 'admin/ventas/importar_cfdi.html', context)
+
+        # ── Step 0 → show upload form ────────────────────────────────────
+        upload_form = CFDIUploadForm()
+        context = dict(
+            self.admin_site.each_context(request),
+            form=upload_form,
+            step='upload',
+            title='Importar venta desde CFDI (XML)',
+            opts=opts,
+        )
+        return TemplateResponse(request, 'admin/ventas/importar_cfdi.html', context)
+
     def get_cliente_info(self, obj):
         """Información del cliente con indicador de riesgo"""
         cliente = obj.cliente

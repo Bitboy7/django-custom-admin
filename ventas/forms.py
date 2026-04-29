@@ -1,6 +1,8 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import Anticipo, Ventas, Cliente, PagoVenta
+from .models import Anticipo, Ventas, Cliente, PagoVenta, Agente
+from catalogo.models import Producto, Sucursal
+from gastos.models import Cuenta
 
 
 class VentasAdminForm(forms.ModelForm):
@@ -112,6 +114,130 @@ class VentasAdminForm(forms.ModelForm):
                 cleaned_data['mercado_destino'] = cliente.mercado_destino
 
         return cleaned_data
+
+
+# =============================================================================
+# CFDI IMPORT FORMS
+# =============================================================================
+
+class CFDIUploadForm(forms.Form):
+    """Step 1 – just the file upload."""
+    xml_file = forms.FileField(
+        label='Archivo XML (CFDI)',
+        help_text='Sube el archivo .xml generado por tu PAC (máx. 1 MB).',
+        widget=forms.ClearableFileInput(attrs={'accept': '.xml', 'class': 'form-control'}),
+    )
+
+    def clean_xml_file(self):
+        f = self.cleaned_data['xml_file']
+        if not f.name.lower().endswith('.xml'):
+            raise ValidationError('El archivo debe tener extensión .xml')
+        if f.size > 1 * 1024 * 1024:
+            raise ValidationError('El archivo no puede superar 1 MB.')
+        return f
+
+
+class CFDIConfirmForm(forms.Form):
+    """
+    Step 2 – confirmation form pre-filled with XML data.
+    User completes the manual-only fields and confirms before saving.
+    """
+    # ── Fields extracted from XML (pre-filled, editable) ──────────────────
+    folio_factura = forms.CharField(
+        max_length=50, required=False, label='Folio factura / UUID',
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    fecha_emision_cfdi = forms.DateField(
+        required=False, label='Fecha emisión CFDI',
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+    )
+    monto = forms.DecimalField(
+        max_digits=12, decimal_places=2, label='Monto total (MXN)',
+        widget=forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
+    )
+    moneda_venta = forms.CharField(
+        max_length=3, initial='MXN', label='Moneda',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '3'}),
+    )
+    tipo_cambio = forms.DecimalField(
+        max_digits=10, decimal_places=4, initial='1.0000', label='Tipo de cambio USD',
+        widget=forms.NumberInput(attrs={'step': '0.0001', 'class': 'form-control'}),
+    )
+    incoterm = forms.CharField(
+        max_length=10, required=False, label='Incoterm',
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    tipo_venta = forms.ChoiceField(
+        choices=Ventas.TipoVenta.choices, label='Tipo de venta',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+    modalidad_pago = forms.ChoiceField(
+        choices=Ventas.ModalidadPago.choices, label='Modalidad de pago',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+    cantidad = forms.DecimalField(
+        max_digits=12, decimal_places=3, label='Cantidad (cajas)',
+        widget=forms.NumberInput(attrs={'step': '0.001', 'class': 'form-control'}),
+    )
+    descripcion = forms.CharField(
+        max_length=100, required=False, label='Descripción',
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    PO = forms.CharField(
+        max_length=50, required=False, label='P.O. (Purchase Order)',
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+
+    # ── Client & product (pre-selected from match, editable) ──────────────
+    cliente = forms.ModelChoiceField(
+        queryset=Cliente.objects.filter(activo=True).order_by('nombre'),
+        label='Cliente',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+    producto = forms.ModelChoiceField(
+        queryset=Producto.objects.filter(disponible=True).order_by('variedad'),
+        label='Producto',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+
+    # ── Manual-only fields ─────────────────────────────────────────────────
+    fecha_salida_manifiesto = forms.DateField(
+        label='Fecha salida manifiesto',
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+    )
+    fecha_deposito = forms.DateField(
+        label='Fecha depósito',
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+    )
+    agente_id = forms.ModelChoiceField(
+        queryset=Agente.objects.all().order_by('nombre'),
+        label='Agente aduanal',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+    pedimento = forms.CharField(
+        max_length=50, required=False, label='Pedimento',
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    carga = forms.CharField(
+        max_length=50, required=False, label='Carga',
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    sucursal_id = forms.ModelChoiceField(
+        queryset=Sucursal.objects.all().order_by('nombre'),
+        label='Sucursal',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+    cuenta = forms.ModelChoiceField(
+        queryset=Cuenta.objects.all().order_by('numero_cuenta'),
+        required=False, label='Cuenta',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+    tipo_registro = forms.ChoiceField(
+        choices=Ventas.TipoRegistro.choices,
+        initial=Ventas.TipoRegistro.VENTA,
+        label='Tipo de registro',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
 
 
 class AnticipoForm(forms.ModelForm):
