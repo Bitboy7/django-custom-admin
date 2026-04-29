@@ -606,6 +606,7 @@ class VentasAdmin(ModelAdmin):
                         sucursal_id=cd['sucursal_id'],
                         cuenta=cd['cuenta'],
                         tipo_registro=cd['tipo_registro'],
+                        termino_credito=cd.get('termino_credito'),
                     )
                     venta.full_clean()
                     venta.save()
@@ -650,34 +651,47 @@ class VentasAdmin(ModelAdmin):
                     )
                     return TemplateResponse(request, 'admin/ventas/importar_cfdi.html', context)
 
-                # Try to find best client match (case-insensitive partial name)
+                # Try to find best client match against receptor nombre
                 receptor_nombre = parsed.get('_receptor_nombre', '')
                 cliente_inicial = None
                 cliente_sugerido_nombre = ''
                 if receptor_nombre:
-                    qs = Cliente.objects.filter(
-                        nombre__icontains=receptor_nombre[:30], activo=True
-                    )
-                    if qs.count() == 1:
+                    # 1) Exact full-name match (case-insensitive)
+                    qs = Cliente.objects.filter(nombre__iexact=receptor_nombre, activo=True)
+                    if qs.exists():
                         cliente_inicial = qs.first()
-                    elif qs.exists():
-                        # Multiple matches — pick the closest (first word match)
-                        first_word = receptor_nombre.split()[0] if receptor_nombre else ''
-                        exact = qs.filter(nombre__icontains=first_word).first()
-                        cliente_inicial = exact or qs.first()
+                    else:
+                        # 2) Try each significant word (len > 3) from receptor against DB names
+                        words = [w for w in receptor_nombre.split() if len(w) > 3]
+                        for word in words:
+                            qs = Cliente.objects.filter(nombre__icontains=word, activo=True)
+                            if qs.count() == 1:
+                                cliente_inicial = qs.first()
+                                break
+                            elif qs.exists():
+                                cliente_inicial = qs.first()
+                                # keep searching for a more specific match
                     cliente_sugerido_nombre = receptor_nombre
 
-                # Try to find product match by NoIdentificacion in descripcion
+                # Detect product by scanning DB varieties against the CFDI description
+                descripcion_cfdi = parsed.get('descripcion', '')
                 no_id = parsed.get('_no_identificacion', '')
                 fraccion = parsed.get('_fraccion_arancelaria', '')
                 producto_inicial = None
-                if no_id:
+                # 1) Match any Producto.variedad found inside the CFDI description text
+                if descripcion_cfdi:
+                    for p in Producto.objects.filter(disponible=True).order_by('variedad'):
+                        if p.variedad and p.variedad.strip().lower() in descripcion_cfdi.lower():
+                            producto_inicial = p
+                            break
+                # 2) Fallback: match by NoIdentificacion field
+                if not producto_inicial and no_id:
                     producto_inicial = (
                         Producto.objects.filter(variedad__icontains=no_id).first()
                         or Producto.objects.filter(descripcion__icontains=no_id).first()
                     )
+                # 3) Fallback: match by nombre (e.g. "Mango") when fraccion arancelaria present
                 if not producto_inicial and fraccion:
-                    # For mangoes: fraccion 0804509903 → look for "Mango" products
                     producto_inicial = Producto.objects.filter(nombre__icontains='Mango').first()
 
                 from datetime import date as today_date

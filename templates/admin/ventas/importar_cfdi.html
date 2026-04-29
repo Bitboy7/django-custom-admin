@@ -101,6 +101,28 @@
     margin-left: .4rem;
     vertical-align: middle;
   }
+  .badge-required {
+    display: inline-block;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: .65rem;
+    font-weight: 700;
+    padding: .1rem .4rem;
+    border-radius: 9999px;
+    margin-left: .4rem;
+    vertical-align: middle;
+  }
+  .badge-optional {
+    display: inline-block;
+    background: #e2e8f0;
+    color: #475569;
+    font-size: .65rem;
+    font-weight: 700;
+    padding: .1rem .4rem;
+    border-radius: 9999px;
+    margin-left: .4rem;
+    vertical-align: middle;
+  }
   .upload-area {
     border: 2px dashed #94a3b8;
     border-radius: .75rem;
@@ -277,15 +299,15 @@
           {{ form.modalidad_pago }}
           {{ form.modalidad_pago.errors }}
         </div>
+        <div class="field-group" id="termino-credito-group">
+          <label>Término de crédito <span class="badge-manual">Manual</span></label>
+          {{ form.termino_credito }}
+          {{ form.termino_credito.errors }}
+        </div>
         <div class="field-group">
           <label>Cantidad (cajas) <span class="badge-xml">XML</span></label>
           {{ form.cantidad }}
           {{ form.cantidad.errors }}
-        </div>
-        <div class="field-group">
-          <label>P.O. <span class="badge-xml">XML</span></label>
-          {{ form.PO }}
-          {{ form.PO.errors }}
         </div>
         <div class="field-group" style="grid-column: 1 / -1;">
           <label>Descripción <span class="badge-xml">XML</span></label>
@@ -315,45 +337,51 @@
     <!-- Datos manuales -->
     <div class="cfdi-card">
       <h2><i class="fas fa-keyboard text-yellow-600"></i> Datos adicionales <span class="badge-manual">MANUAL</span></h2>
+      <p style="font-size:.875rem; color:#475569; margin:-.25rem 0 1rem;">Completa estos campos manualmente. Se indica cuáles son requeridos y cuáles opcionales.</p>
 
       <div class="field-row">
         <div class="field-group">
-          <label>Fecha salida manifiesto <span class="badge-manual">MANUAL</span></label>
+          <label>Fecha salida manifiesto <span class="badge-manual">MANUAL</span><span class="badge-required">REQUERIDO</span></label>
           {{ form.fecha_salida_manifiesto }}
           {{ form.fecha_salida_manifiesto.errors }}
         </div>
         <div class="field-group">
-          <label>Fecha depósito <span class="badge-manual">MANUAL</span></label>
+          <label>Fecha depósito <span class="badge-manual">MANUAL</span><span class="badge-required">REQUERIDO</span></label>
           {{ form.fecha_deposito }}
           {{ form.fecha_deposito.errors }}
         </div>
         <div class="field-group">
-          <label>Agente aduanal <span class="badge-manual">MANUAL</span></label>
+          <label>Agente aduanal <span class="badge-manual">MANUAL</span><span class="badge-required">REQUERIDO</span></label>
           {{ form.agente_id }}
           {{ form.agente_id.errors }}
         </div>
         <div class="field-group">
-          <label>Pedimento <span class="badge-manual">MANUAL</span></label>
+          <label>P.O. <span class="badge-manual">MANUAL</span><span class="badge-optional">OPCIONAL</span></label>
+          {{ form.PO }}
+          {{ form.PO.errors }}
+        </div>
+        <div class="field-group">
+          <label>Pedimento <span class="badge-manual">MANUAL</span><span class="badge-optional">OPCIONAL</span></label>
           {{ form.pedimento }}
           {{ form.pedimento.errors }}
         </div>
         <div class="field-group">
-          <label>Carga <span class="badge-manual">MANUAL</span></label>
+          <label>Carga <span class="badge-manual">MANUAL</span><span class="badge-optional">OPCIONAL</span></label>
           {{ form.carga }}
           {{ form.carga.errors }}
         </div>
         <div class="field-group">
-          <label>Sucursal <span class="badge-manual">MANUAL</span></label>
+          <label>Sucursal <span class="badge-manual">MANUAL</span><span class="badge-required">REQUERIDO</span></label>
           {{ form.sucursal_id }}
           {{ form.sucursal_id.errors }}
         </div>
         <div class="field-group">
-          <label>Cuenta contable</label>
+          <label>Cuenta contable <span class="badge-manual">MANUAL</span><span class="badge-optional">OPCIONAL</span></label>
           {{ form.cuenta }}
           {{ form.cuenta.errors }}
         </div>
         <div class="field-group">
-          <label>Tipo de registro</label>
+          <label>Tipo de registro <span class="badge-manual">MANUAL</span><span class="badge-required">REQUERIDO</span></label>
           {{ form.tipo_registro }}
           {{ form.tipo_registro.errors }}
         </div>
@@ -378,6 +406,24 @@
 {% block extrajs %}
 {{ block.super }}
 <script>
+// Show/hide termino_credito based on modalidad_pago
+function toggleTerminoCredito() {
+  const modalidad = document.getElementById('id_modalidad_pago');
+  const group = document.getElementById('termino-credito-group');
+  if (!modalidad || !group) return;
+  const isCredito = modalidad.value === 'Credito';
+  group.style.display = isCredito ? '' : 'none';
+  const select = group.querySelector('select');
+  if (select) select.required = isCredito;
+}
+document.addEventListener('DOMContentLoaded', function () {
+  const modalidad = document.getElementById('id_modalidad_pago');
+  if (modalidad) {
+    modalidad.addEventListener('change', toggleTerminoCredito);
+    toggleTerminoCredito();
+  }
+});
+
 function updateFileName(input) {
   const display = document.getElementById('file-name-display');
   if (input.files && input.files[0]) {

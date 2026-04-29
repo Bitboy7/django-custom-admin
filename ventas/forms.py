@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import Anticipo, Ventas, Cliente, PagoVenta, Agente
+from .models import Anticipo, Ventas, Cliente, PagoVenta, Agente, TerminoCredito
 from catalogo.models import Producto, Sucursal
 from gastos.models import Cuenta
 
@@ -149,7 +149,7 @@ class CFDIConfirmForm(forms.Form):
     )
     fecha_emision_cfdi = forms.DateField(
         required=False, label='Fecha emisión CFDI',
-        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
     )
     monto = forms.DecimalField(
         max_digits=12, decimal_places=2, label='Monto total (MXN)',
@@ -173,6 +173,11 @@ class CFDIConfirmForm(forms.Form):
     )
     modalidad_pago = forms.ChoiceField(
         choices=Ventas.ModalidadPago.choices, label='Modalidad de pago',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+    termino_credito = forms.ModelChoiceField(
+        queryset=TerminoCredito.objects.filter(activo=True).order_by('dias_credito'),
+        required=False, label='Término de crédito',
         widget=forms.Select(attrs={'class': 'form-control'}),
     )
     cantidad = forms.DecimalField(
