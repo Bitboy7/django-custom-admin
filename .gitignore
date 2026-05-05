@@ -9,7 +9,8 @@ db.sqlite3-journal
 .env
 .idea
 *.swp
-
+.agents
+skills-lock.json
 static/src
 static/CACHE
 static/static-only
@@ -72,7 +73,6 @@ cover/
 
 # Translations
 *.mo
-
 # Django stuff:
 
 # Flask stuff:
