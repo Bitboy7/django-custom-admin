@@ -2826,17 +2826,17 @@ class EstadoCuentaClienteAdmin(ModelAdmin):
     
     list_display = (
         'get_cliente_info', 'fecha_generacion',
-        'periodo_inicio', 'periodo_fin', 'get_total_ventas',
-        'get_total_abonos', 'get_saldo_final', 'formato_generado'
+        'periodo_inicio', 'periodo_fin', 'get_saldo_inicial',
+        'get_total_ventas', 'get_total_abonos', 'get_saldo_final', 'formato_generado'
     )
     
     list_filter = ('fecha_generacion', 'periodo_inicio', 'periodo_fin', 'formato_generado')
     search_fields = ('cliente__nombre', 'generado_por')
-    date_hierarchy = 'fecha_generacion'
+    date_hierarchy = 'periodo_inicio'
     list_per_page = 20
     
     readonly_fields = (
-        'fecha_generacion', 'total_ventas', 'total_abonos',
+        'fecha_generacion', 'saldo_inicial', 'total_ventas', 'total_abonos',
         'saldo_final', 'numero_facturas'
     )
     
@@ -2848,7 +2848,8 @@ class EstadoCuentaClienteAdmin(ModelAdmin):
             'fields': ('periodo_inicio', 'periodo_fin')
         }),
         ('Resumen Financiero', {
-            'fields': ('total_ventas', 'total_abonos', 'saldo_final', 'numero_facturas')
+            'fields': ('saldo_inicial', 'total_ventas', 'total_abonos', 'saldo_final', 'numero_facturas'),
+            'description': 'Saldo Final = Saldo Inicial + Total Ventas − Total Abonos'
         }),
         ('Archivo', {
             'fields': ('formato_generado', 'archivo_generado', 'notas'),
@@ -2866,6 +2867,16 @@ class EstadoCuentaClienteAdmin(ModelAdmin):
         )
     get_cliente_info.short_description = 'Cliente'
     
+    def get_saldo_inicial(self, obj):
+        if obj.saldo_inicial.amount == 0:
+            return format_html('<span style="color: gray;">$0.00</span>')
+        color = 'darkorange' if obj.saldo_inicial.amount > 0 else 'green'
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">${}</span>',
+            color, f"{float(obj.saldo_inicial.amount):,.2f}"
+        )
+    get_saldo_inicial.short_description = 'Saldo Inicial'
+
     def get_total_ventas(self, obj):
         return format_html(
             '<span style="color: navy; font-weight: bold;">${}</span>',

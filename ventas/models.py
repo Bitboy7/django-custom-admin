@@ -551,6 +551,19 @@ class Ventas(models.Model):
             self.monto_pagado = self.monto
         elif self.modalidad_pago == self.ModalidadPago.CREDITO and not self.pk:
             self.estado_cobranza = self.EstadoCobranza.PENDIENTE
+
+        # Auto-transición a VENCIDO cuando la fecha de vencimiento ya pasó
+        # (aplica a ventas existentes que se guardan de nuevo sin pago registrado)
+        if (
+            self.modalidad_pago == self.ModalidadPago.CREDITO
+            and self.fecha_vencimiento
+            and self.fecha_vencimiento < timezone.now().date()
+            and self.estado_cobranza in [
+                self.EstadoCobranza.PENDIENTE,
+                self.EstadoCobranza.PARCIAL,
+            ]
+        ):
+            self.estado_cobranza = self.EstadoCobranza.VENCIDO
             
         super().save(*args, **kwargs)
         
@@ -561,6 +574,7 @@ class Ventas(models.Model):
             cache.delete('cxc_dashboard_ventas_principal')
         except Exception:
             pass  # No fallar si el cache no está disponible
+
     
     def saldo_pendiente(self):
         """Calcula el saldo pendiente de pago"""
@@ -1174,6 +1188,13 @@ class EstadoCuentaCliente(models.Model):
     )
     
     # Resumen financiero del estado de cuenta (RF4: Venta Original - Suma de Abonos = Saldo Pendiente)
+    saldo_inicial = MoneyField(
+        max_digits=12,
+        decimal_places=2,
+        default_currency='MXN',
+        default=0,
+        help_text="Saldo acumulado de ventas anteriores al inicio del período"
+    )
     total_ventas = MoneyField(
         max_digits=12, 
         decimal_places=2, 

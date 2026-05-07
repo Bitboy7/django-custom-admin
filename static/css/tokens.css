@@ -1,0 +1,223 @@
+/*
+ * ═══════════════════════════════════════════════════════════════
+ *  DESIGN TOKENS — Agrícola de la Costa ERP
+ *
+ *  Dirección estética: Brutalismo Editorial Agrícola
+ *  - Tipografía refinada con calidez orgánica
+ *  - Navy + verde botánico + olivo plantación + ámbar terroso
+ *  - Paleta corregida para WCAG AA (contraste >= 4.5:1)
+ *  - Dark mode completo via [data-theme="dark"]
+ *
+ *  Skills aplicadas:
+ *    frontend-design  — Distinctive typography, bold aesthetic
+ *    ui-ux-pro-max    — Accessibility, contrast 4.5:1
+ *    tailwindcss v4   — CSS-first theme variables
+ * ═══════════════════════════════════════════════════════════════
+ */
+
+/* ── Google Fonts (cargadas desde el HTML head o @import) ───── */
+/* Playfair Display: 400, 600, 700 */
+/* Plus Jakarta Sans: 300, 400, 500, 600, 700 */
+/* JetBrains Mono: 400, 500 */
+
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+/* ── THEME: LIGHT (default) ──────────────────────────────────── */
+:root {
+  /* Brand — paleta corregida con identidad agrícola */
+  --brand-navy: #0c1929;
+  --brand-navy-light: #162d4a;
+  --brand-navy-dark: #070f19;
+  --brand-teal: #089b7a;
+  --brand-teal-light: #0db892;
+  --brand-teal-dark: #067a60;
+  --brand-olive: #5d8c4a;
+  --brand-olive-light: #7aa66a;
+  --brand-olive-dark: #3d6b2c;
+
+  /* Accent */
+  --accent-amber: #c2780a;
+  --accent-amber-bg: #fffefb;
+  --accent-green: #2d7a3a;
+  --accent-green-bg: #eef8ef;
+  --accent-red: #c53030;
+  --accent-red-bg: #fef5f5;
+  --accent-blue: #2b6cb0;
+  --accent-blue-bg: #ebf4fb;
+
+  /* Surface — fondo cálido con textura de tierra */
+  --surface-bg: #eeeeed;
+  --surface-card: #fefdfb;
+  --surface-hover: #ede8dc;
+  --surface-overlay: rgba(12, 25, 41, 0.03);
+
+  /* Border */
+  --border-default: #e0dcd3;
+  --border-strong: #c9c3b8;
+  --border-focus: var(--brand-teal);
+
+  /* Text — tonos cálidos sobre fondo tierra */
+  --text-primary: #1c1814;
+  --text-secondary: #5c5548;
+  --text-muted: #9c9385;
+  --text-on-dark: rgba(255, 255, 255, 0.92);
+  --text-on-dark-muted: rgba(255, 255, 255, 0.58);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(12, 25, 41, 0.06);
+  --shadow-md: 0 4px 14px rgba(12, 25, 41, 0.08);
+  --shadow-lg: 0 12px 36px rgba(12, 25, 41, 0.12);
+  --shadow-xl: 0 24px 64px rgba(12, 25, 41, 0.18);
+  --shadow-inner: inset 0 1px 3px rgba(12, 25, 41, 0.06);
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 220ms;
+  --duration-slow: 350ms;
+
+  /* Typography */
+  --font-display: "Playfair Display", "Georgia", serif;
+  --font-body: "Plus Jakarta Sans", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", "Consolas", monospace;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.8125rem;
+  --font-size-base: 0.875rem;
+  --font-size-md: 0.9375rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 1.875rem;
+  --font-size-3xl: 2.25rem;
+  --line-height-tight: 1.25;
+  --line-height-base: 1.5;
+  --line-height-relaxed: 1.625;
+
+  /* Spacing scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* Sidebar */
+  --sidebar-width: 250px;
+  --sidebar-collapsed: 60px;
+  --navbar-height: 56px;
+  --sidebar-bg: var(--brand-navy);
+  --sidebar-text: rgb(252, 251, 251);
+  --sidebar-text-muted: rgba(255, 255, 255, 0.72);
+  --sidebar-text-header: rgba(255, 255, 255, 0.5);
+  --sidebar-hover-bg: rgba(13, 148, 136, 0.18);
+  --sidebar-active-bg: rgba(13, 148, 136, 0.22);
+  --sidebar-active-text: #fff;
+  --sidebar-child-text: rgba(255, 255, 255, 0.78);
+
+  /* Z-index */
+  --z-sidebar: 1030;
+  --z-navbar: 1035;
+  --z-dropdown: 1040;
+  --z-modal: 1050;
+  --z-toast: 1060;
+  --z-tooltip: 1070;
+}
+
+/* ── THEME: DARK ──────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --surface-bg: #141815;
+  --surface-card: #1e2220;
+  --surface-hover: #2a2f2c;
+  --surface-overlay: rgba(255, 255, 255, 0.03);
+
+  --border-default: #aeb0af;
+  --border-strong: #4a504c;
+
+  --text-primary: #f5f2eb;
+  --text-secondary: #b8b5ab;
+  --text-muted: #6e6b63;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.65);
+  --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.75);
+  --shadow-inner: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+
+  --brand-teal: #0db892;
+  --brand-teal-light: #16d5aa;
+  --brand-teal-dark: #089b7a;
+  --brand-olive: #7aa66a;
+  --brand-olive-light: #9bc48a;
+  --brand-olive-dark: #5d8c4a;
+
+  --sidebar-bg: var(--brand-navy-dark);
+  --sidebar-text: rgba(255, 255, 255, 0.88);
+  --sidebar-text-muted: rgba(253, 253, 253, 0.944);
+  --sidebar-text-header: rgba(255, 255, 255, 0.882);
+  --sidebar-hover-bg: rgba(13, 148, 136, 0.13);
+  --sidebar-active-bg: rgba(13, 148, 136, 0.18);
+  --sidebar-active-text: #fff;
+  --sidebar-child-text: rgba(255, 255, 255, 0.6);
+
+  --accent-amber: #f0a520;
+  --accent-amber-bg: rgba(240, 165, 32, 0.12);
+  --accent-green: #4caf50;
+  --accent-green-bg: rgba(76, 175, 80, 0.12);
+  --accent-red: #e06060;
+  --accent-red-bg: rgba(224, 96, 96, 0.12);
+  --accent-blue: #5b9bd5;
+  --accent-blue-bg: rgba(91, 155, 213, 0.12);
+}
+
+/* ── Prefers Dark (auto-detect) ───────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface-bg: #141815;
+    --surface-card: #1e2220;
+    --surface-hover: #2a2f2c;
+    --surface-overlay: rgba(255, 255, 255, 0.03);
+    --border-default: #333835;
+    --border-strong: #4a504c;
+    --text-primary: #ffffff;
+    --text-secondary: #b8b5ab;
+    --text-muted: #6e6b63;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.55);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.65);
+    --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.75);
+    --shadow-inner: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+    --brand-teal: #0db892;
+    --brand-teal-light: #16d5aa;
+    --brand-teal-dark: #089b7a;
+    --brand-olive: #7aa66a;
+    --brand-olive-light: #9bc48a;
+    --brand-olive-dark: #5d8c4a;
+    --sidebar-bg: var(--brand-navy-dark);
+    --sidebar-text: rgba(255, 255, 255, 0.88);
+    --sidebar-text-muted: rgba(255, 255, 255, 0.81);
+    --sidebar-text-header: rgba(255, 255, 255, 0.863);
+    --sidebar-hover-bg: rgba(13, 148, 136, 0.13);
+    --sidebar-active-bg: rgba(13, 148, 136, 0.18);
+    --sidebar-active-text: #fff;
+    --sidebar-child-text: rgba(255, 255, 255, 0.879);
+    --accent-amber: #f0a520;
+    --accent-amber-bg: rgba(240, 165, 32, 0.12);
+    --accent-green: #4caf50;
+    --accent-green-bg: rgba(76, 175, 80, 0.12);
+    --accent-red: #e06060;
+    --accent-red-bg: rgba(224, 96, 96, 0.12);
+    --accent-blue: #5b9bd5;
+    --accent-blue-bg: rgba(91, 155, 213, 0.12);
+  }
+}

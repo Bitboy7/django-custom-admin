@@ -18,6 +18,19 @@ class VentasAdminForm(forms.ModelForm):
         widgets = {
             'tipo_venta': forms.Select(attrs={'class': 'auto-tipo-venta'}),
             'mercado_destino': forms.Select(attrs={'class': 'auto-mercado-destino'}),
+            'pedimento': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 26 24 3400 4000123'}),
+            'carga': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: C-2024-001'}),
+            'PO': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: PO-98765'}),
+            'descripcion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Descripción de la venta'}),
+            'incoterm': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'FOB, CIF, EXW...'}),
+            'moneda_venta': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'MXN'}),
+            'tipo_cambio': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001', 'placeholder': '17.5000'}),
+            'folio_factura': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: B 1996'}),
+            'cfdi_cancelado': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'UUID del CFDI cancelado'}),
+            'nota_credito': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: NC-001'}),
+            'nota_cargo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: NCG-001'}),
+            'numero_carga_comprador': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'PANORAMA LOAD 12345'}),
+            'ajuste': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -146,7 +159,7 @@ class CFDIConfirmForm(forms.Form):
     # ── Fields extracted from XML (pre-filled, editable) ──────────────────
     folio_factura = forms.CharField(
         max_length=50, required=False, label='Folio factura / UUID',
-        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'B 1996 / UUID-del-CFDI'}),
     )
     fecha_emision_cfdi = forms.DateField(
         required=False, label='Fecha emisión CFDI',
@@ -154,19 +167,19 @@ class CFDIConfirmForm(forms.Form):
     )
     monto = forms.DecimalField(
         max_digits=12, decimal_places=2, label='Monto total (MXN)',
-        widget=forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
+        widget=forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control', 'placeholder': '0.00'}),
     )
     moneda_venta = forms.CharField(
         max_length=3, initial='MXN', label='Moneda',
-        widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '3'}),
+        widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '3', 'placeholder': 'MXN'}),
     )
     tipo_cambio = forms.DecimalField(
         max_digits=10, decimal_places=4, initial='1.0000', label='Tipo de cambio USD',
-        widget=forms.NumberInput(attrs={'step': '0.0001', 'class': 'form-control'}),
+        widget=forms.NumberInput(attrs={'step': '0.0001', 'class': 'form-control', 'placeholder': '17.5000'}),
     )
     incoterm = forms.CharField(
         max_length=10, required=False, label='Incoterm',
-        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'FOB, CIF, EXW...'}),
     )
     tipo_venta = forms.ChoiceField(
         choices=Ventas.TipoVenta.choices, label='Tipo de venta',
@@ -183,15 +196,15 @@ class CFDIConfirmForm(forms.Form):
     )
     cantidad = forms.DecimalField(
         max_digits=12, decimal_places=3, label='Cantidad (cajas)',
-        widget=forms.NumberInput(attrs={'step': '0.001', 'class': 'form-control'}),
+        widget=forms.NumberInput(attrs={'step': '0.001', 'class': 'form-control', 'placeholder': '0.000'}),
     )
     descripcion = forms.CharField(
         max_length=100, required=False, label='Descripción',
-        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Descripción del producto'}),
     )
     PO = forms.CharField(
         max_length=50, required=False, label='P.O. (Purchase Order)',
-        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: PO-98765'}),
     )
 
     # ── Client & product (pre-selected from match, editable) ──────────────
@@ -222,11 +235,11 @@ class CFDIConfirmForm(forms.Form):
     )
     pedimento = forms.CharField(
         max_length=50, required=False, label='Pedimento',
-        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 26 24 3400 4000123'}),
     )
     carga = forms.CharField(
         max_length=50, required=False, label='Carga',
-        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: C-2024-001'}),
     )
     sucursal_id = forms.ModelChoiceField(
         queryset=Sucursal.objects.all().order_by('nombre'),
@@ -273,19 +286,19 @@ class AnticipoCFDIConfirmForm(forms.Form):
         max_digits=12,
         decimal_places=2,
         label='Monto total (MXN)',
-        widget=forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
+        widget=forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control', 'placeholder': '0.00'}),
     )
     folio_factura_anticipo = forms.CharField(
         max_length=50,
         required=False,
         label='Folio factura anticipo',
-        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: B 1980'}),
     )
     descripcion = forms.CharField(
         max_length=500,
         required=False,
         label='Descripcion',
-        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Motivo o descripción del anticipo'}),
     )
     cliente = forms.ModelChoiceField(
         queryset=Cliente.objects.filter(activo=True).order_by('nombre'),
@@ -312,8 +325,8 @@ class AnticipoForm(forms.ModelForm):
         widgets = {
             'cliente': forms.Select(attrs={'class': 'form-control'}),
             'cuenta': forms.Select(attrs={'class': 'form-control'}),
-            'monto': forms.NumberInput(attrs={'class': 'form-control'}),
+            'monto': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00', 'step': '0.01'}),
             'fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'descripcion': forms.Textarea(attrs={'class': 'form-control'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Motivo o descripción del anticipo'}),
             'estado_anticipo': forms.Select(attrs={'class': 'form-control'}),
         }

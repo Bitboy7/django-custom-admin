@@ -168,7 +168,7 @@ html.dark .bg-white {
 }
 
 .text-green-500 {
-  color: #22c55e;
+  color: #1f5d36;
 }
 
 .text-blue-500 {
@@ -176,7 +176,7 @@ html.dark .bg-white {
 }
 
 .text-purple-500 {
-  color: #a855f7;
+  color: #332145;
 }
 
 .text-yellow-500 {

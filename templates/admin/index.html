@@ -21,7 +21,7 @@
         colors: {
           teal:  { DEFAULT:'#1aadbc', dark:'#0d8fa2', light:'#c4f0f5' },
           navy:  { DEFAULT:'#1e3a5f', mid:'#2d5282' },
-          dash:  { bg:'#f2f4f7', card:'#ffffff', border:'#dde3ec', txt:'#1a2332', muted:'#7a8899' }
+          dash:  { bg:'var(--surface-bg)', card:'var(--surface-card)', border:'var(--border-default)', txt:'var(--text-primary)', muted:'var(--text-muted)' }
         }
       }
     }
@@ -29,12 +29,49 @@
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  /* ── Force Jazzmin layout to full-width ───────────────────────── */
-  body                { background:#f2f4f7 !important; }
-  #content-main       { padding:16px 20px 40px !important; max-width:100% !important; width:100% !important; box-sizing:border-box !important; }
+  /* ── Full width fixes ─────────────────────────────────────────── */
+  #tw-dashboard       { width:100%; max-width:100%; }
+  #content-main       { padding:0 !important; max-width:100% !important; width:100% !important; box-sizing:border-box !important; }
   #content            { max-width:100% !important; }
   #main-content       { padding:0 !important; }
+  .content-wrapper>.content { padding: 0 !important; }
+  .container-fluid    { padding-left: 0 !important; padding-right: 0 !important; }
   canvas              { max-width:100% !important; display:block; }
+
+  /* ── Dashboard theme-aware classes ────────────────────────────── */
+  .dash-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .dash-text   { color: var(--text-primary); }
+  .dash-muted  { color: var(--text-muted); }
+  .dash-border { border-color: var(--border-default) !important; }
+  .dash-bg     { background: var(--surface-bg); }
+  .dash-btn {
+    background: var(--surface-hover);
+    border: 1px solid var(--border-default);
+    color: var(--text-primary);
+    transition: all 150ms cubic-bezier(0.4,0,0.2,1);
+  }
+  .dash-btn:hover {
+    background: rgba(13,148,136,0.12);
+    border-color: var(--brand-teal);
+    color: var(--brand-teal-dark);
+  }
+  .dash-status-success { background: var(--accent-green-bg); color: var(--accent-green); }
+  .dash-status-danger  { background: var(--accent-red-bg);   color: var(--accent-red); }
+  .dash-status-warning { background: var(--accent-amber-bg); color: var(--accent-amber); }
+  .dash-status-slate   { background: var(--surface-hover);   color: var(--text-muted); }
+  .dash-welcome {
+    background: linear-gradient(135deg, #2f2d5b 0%, #0d8fa2 100%);
+    border-radius: 1rem;
+    color: #fff;
+  }
+  .dash-activity-item { border-bottom: 1px solid var(--border-default); }
+
   /* ── Toast animations ─────────────────────────────────────────── */
   @keyframes tProg    { from{width:100%} to{width:0%} }
   .t-prog             { animation:tProg 4.2s linear forwards; }
@@ -43,11 +80,11 @@
   /* ── KPI strip responsive dividers ───────────────────────────── */
   @media(max-width:1279px){
     .ks:nth-child(4n)  { border-right:0 !important; }
-    .ks:nth-child(n+5) { border-top:1px solid #dde3ec !important; }
+    .ks:nth-child(n+5) { border-top:1px solid var(--border-default) !important; }
   }
   @media(max-width:639px){
     .ks:nth-child(2n)  { border-right:0 !important; }
-    .ks:nth-child(n+3) { border-top:1px solid #dde3ec !important; }
+    .ks:nth-child(n+3) { border-top:1px solid var(--border-default) !important; }
   }
 </style>
 {% endblock %}
@@ -55,98 +92,76 @@
 {% block styles %}{{ block.super }}{% endblock %}
 
 {% block content %}
-<div id="tw-dashboard" class="px-1 pb-10">
+<div id="tw-dashboard" class="pb-10">
 
-  {# ═══════════════════════════════════════════════════════════════ #}
-  {# WELCOME STRIP                                                   #}
-  {# ═══════════════════════════════════════════════════════════════ #}
-  <div class="rounded-2xl p-3 mb-3 flex flex-wrap items-center justify-between gap-4 text-white"
-       style="background:linear-gradient(135deg,#2f2d5b 0%,#0d8fa2 100%)">
-    <div>
-      <div class="text-base font-bold tracking-wide">
-        Bienvenido,
-        {% if request.user.get_full_name %}{{ request.user.get_full_name }}{% else %}{{ request.user.username }}{% endif %}!
-      </div>
-      <div class="text-xs mt-1 opacity-80">{{ current_month_name }} {{ current_year }} &mdash; Panel de Control Ejecutivo</div>
-    </div>
-    <div class="flex items-center gap-4 shrink-0">
-      <div class="text-right text-xs opacity-75">
-        <div>&#218;ltima actualizaci&#243;n</div>
-        <div class="font-bold text-sm mt-0.5">{{ last_update }}</div>
-      </div>
-      <a href="javascript:location.reload()"
-         class="px-4 py-2 rounded-xl text-xs font-semibold text-white no-underline transition-all"
-         style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4)">
-        &#8635; Actualizar
-      </a>
-    </div>
-  </div>
+  
+
 
   {# ═══════════════════════════════════════════════════════════════ #}
   {# KPI STRIP — 7 metrics                                          #}
   {# ═══════════════════════════════════════════════════════════════ #}
-  <div class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 bg-white rounded-2xl border border-[#dde3ec] shadow-sm mb-5 overflow-hidden">
+  <div class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 dash-card mb-5">
 
     {# 1 — Ventas del Mes #}
-    <div class="ks relative p-4 border-r border-[#dde3ec]">
+    <div class="ks relative p-4 border-r dash-border">
       <div class="absolute top-0 left-0 w-1 h-full bg-[#1aadbc] rounded-l-2xl"></div>
-      <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">Ventas del Mes</div>
-      <div class="text-xl font-bold text-[#1a2332] my-1.5 leading-none pl-1">${{ total_ventas|us_currency:0 }}</div>
-      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if ventas_trend >= 0 %} bg-green-100 text-green-700{% else %} bg-red-100 text-red-700{% endif %}">
-        {% if ventas_trend >= 0 %}&#9650;{% else %}&#9660;{% endif %} {{ ventas_trend|floatformat:1 }}%
+      <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">Ventas del Mes</div>
+      <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1">${{ total_ventas|us_currency:0 }}</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if ventas_trend >= 0 %} dash-status-success{% else %} dash-status-danger{% endif %}">
+        <i class="fas fa-arrow-{% if ventas_trend >= 0 %}up{% else %}down{% endif %} text-[9px]"></i> {{ ventas_trend|floatformat:1 }}%
       </span>
     </div>
 
     {# 2 — Gastos del Mes #}
-    <div class="ks relative p-4 border-r border-[#dde3ec]">
+    <div class="ks relative p-4 border-r dash-border">
       <div class="absolute top-0 left-0 w-1 h-full bg-[#1e3a5f] rounded-l-2xl"></div>
-      <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">Gastos del Mes</div>
-      <div class="text-xl font-bold text-[#1a2332] my-1.5 leading-none pl-1">${{ total_gastos|us_currency:0 }}</div>
-      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if gastos_trend <= 0 %} bg-green-100 text-green-700{% else %} bg-red-100 text-red-700{% endif %}">
-        {% if gastos_trend <= 0 %}&#9660;{% else %}&#9650;{% endif %} {{ gastos_trend|floatformat:1 }}%
+      <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">Gastos del Mes</div>
+      <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1">${{ total_gastos|us_currency:0 }}</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if gastos_trend <= 0 %} dash-status-success{% else %} dash-status-danger{% endif %}">
+        <i class="fas fa-arrow-{% if gastos_trend <= 0 %}down{% else %}up{% endif %} text-[9px]"></i> {{ gastos_trend|floatformat:1 }}%
       </span>
     </div>
 
     {# 3 — Balance Neto #}
-    <div class="ks relative p-4 border-r border-[#dde3ec]">
+    <div class="ks relative p-4 border-r dash-border">
       <div class="absolute top-0 left-0 w-1 h-full rounded-l-2xl{% if balance_neto >= 0 %} bg-green-500{% else %} bg-red-500{% endif %}"></div>
-      <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">Balance Neto</div>
+      <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">Balance Neto</div>
       <div class="text-xl font-bold my-1.5 leading-none pl-1{% if balance_neto >= 0 %} text-green-600{% else %} text-red-600{% endif %}">${{ balance_neto|us_currency:0 }}</div>
-      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if balance_trend >= 0 %} bg-green-100 text-green-700{% else %} bg-red-100 text-red-700{% endif %}">
-        {% if balance_trend >= 0 %}&#9650;{% else %}&#9660;{% endif %} {{ balance_trend|floatformat:1 }}%
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if balance_trend >= 0 %} dash-status-success{% else %} dash-status-danger{% endif %}">
+        <i class="fas fa-arrow-{% if balance_trend >= 0 %}up{% else %}down{% endif %} text-[9px]"></i> {{ balance_trend|floatformat:1 }}%
       </span>
     </div>
 
     {# 4 — Margen Neto (JS computed) #}
-    <div class="ks relative p-4 border-r border-[#dde3ec]">
+    <div class="ks relative p-4 border-r dash-border">
       <div class="absolute top-0 left-0 w-1 h-full bg-[#0d8fa2] rounded-l-2xl"></div>
-      <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold pl-1">Margen Neto</div>
-      <div class="text-xl font-bold text-[#1a2332] my-1.5 leading-none pl-1" id="kpiMargen">&#8212;</div>
-      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500" id="kpiMargenBdg">calc&#8230;</span>
+      <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold pl-1">Margen Neto</div>
+      <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1" id="kpiMargen">&#8212;</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full dash-status-slate" id="kpiMargenBdg">calc&#8230;</span>
     </div>
 
     {# 5 — CxC Vigentes #}
-    <div class="ks relative p-4 border-r border-[#dde3ec]">
+    <div class="ks relative p-4 border-r dash-border">
       <div class="absolute top-0 left-0 w-1 h-full bg-amber-400 rounded-l-2xl"></div>
-      <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">CxC Vigentes</div>
-      <div class="text-xl font-bold text-[#1a2332] my-1.5 leading-none pl-1">${{ ventas_vigentes|us_currency:0 }}</div>
-      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">{{ ventas_vigentes_count }} fact.</span>
+      <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">CxC Vigentes</div>
+      <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1">${{ ventas_vigentes|us_currency:0 }}</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full dash-status-slate">{{ ventas_vigentes_count }} fact.</span>
     </div>
 
     {# 6 — CxC Vencidas #}
-    <div class="ks relative p-4 border-r border-[#dde3ec]">
+    <div class="ks relative p-4 border-r dash-border">
       <div class="absolute top-0 left-0 w-1 h-full bg-red-500 rounded-l-2xl"></div>
-      <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">CxC Vencidas</div>
+      <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">CxC Vencidas</div>
       <div class="text-xl font-bold text-red-600 my-1.5 leading-none pl-1">${{ ventas_vencidas|us_currency:0 }}</div>
-      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">&#9650; {{ ventas_vencidas_count }} fact.</span>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full dash-status-danger"><i class="fas fa-arrow-up text-[9px]"></i> {{ ventas_vencidas_count }} fact.</span>
     </div>
 
     {# 7 — Clientes Activos #}
     <div class="ks relative p-4">
       <div class="absolute top-0 left-0 w-1 h-full bg-[#2d5282] rounded-l-2xl"></div>
-      <div class="text-[10px] uppercase tracking-widest text-[#7a8899] font-semibold truncate pl-1">Clientes Activos</div>
-      <div class="text-xl font-bold text-[#1a2332] my-1.5 leading-none pl-1">{{ total_clientes }}</div>
-      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if clientes_trend >= 0 %} bg-green-100 text-green-700{% else %} bg-red-100 text-red-700{% endif %}">
+      <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">Clientes Activos</div>
+      <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1">{{ total_clientes }}</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if clientes_trend >= 0 %} dash-status-success{% else %} dash-status-danger{% endif %}">
         {% if clientes_trend >= 0 %}+{% endif %}{{ clientes_nuevos }} nuevos
       </span>
     </div>
@@ -159,13 +174,13 @@
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
 
     {# Chart 1 — Ventas por Mes Bar #}
-    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm overflow-hidden">
-      <div class="flex items-start justify-between px-5 pt-4 pb-3 border-b border-[#dde3ec]">
+    <div class="dash-card">
+      <div class="flex items-start justify-between px-5 pt-4 pb-3 border-b dash-border">
         <div>
-          <div class="text-[13px] font-bold text-[#1a2332]">Ventas por Mes</div>
-          <div class="text-xs text-[#7a8899] mt-0.5">Facturaci&#243;n mensual</div>
+          <div class="text-[13px] font-bold dash-text">Ventas por Mes</div>
+          <div class="text-xs dash-muted mt-0.5">Facturaci&#243;n mensual</div>
         </div>
-        <a href="/admin/ventas/ventas/" class="text-xs font-semibold text-[#1aadbc] no-underline">Ver todo &#8250;</a>
+        <a href="/admin/ventas/ventas/" class="text-xs font-semibold no-underline" style="color:var(--brand-teal)">Ver todo &#8250;</a>
       </div>
       <div class="p-4" style="height:210px;position:relative">
         <canvas id="ventasBarChart"></canvas>
@@ -173,37 +188,37 @@
     </div>
 
     {# Chart 2 — Cartera Donut #}
-    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm overflow-hidden">
-      <div class="flex items-start justify-between px-5 pt-4 pb-3 border-b border-[#dde3ec]">
+    <div class="dash-card">
+      <div class="flex items-start justify-between px-5 pt-4 pb-3 border-b dash-border">
         <div>
-          <div class="text-[13px] font-bold text-[#1a2332]">Cartera de Cobro</div>
-          <div class="text-xs text-[#7a8899] mt-0.5">Vigente vs Vencida</div>
+          <div class="text-[13px] font-bold dash-text">Cartera de Cobro</div>
+          <div class="text-xs dash-muted mt-0.5">Vigente vs Vencida</div>
         </div>
       </div>
       <div class="flex items-center justify-center p-4" style="height:170px;position:relative">
         <canvas id="carteraDonut" style="max-height:170px"></canvas>
       </div>
-      <div class="flex flex-wrap gap-3 px-5 py-3 border-t border-[#dde3ec] text-xs text-[#7a8899] items-center">
+      <div class="flex flex-wrap gap-3 px-5 py-3 border-t dash-border text-xs dash-muted items-center">
         <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#1aadbc]"></span>Vigente</span>
         <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#1e3a5f]"></span>Vencida</span>
-        <span class="ml-auto font-bold text-[#1a2332]" id="kpiMorosidad">&#8212;</span>
+        <span class="ml-auto font-bold dash-text" id="kpiMorosidad">&#8212;</span>
         <span>morosidad</span>
       </div>
     </div>
 
     {# Chart 3 — Gastos Donut #}
-    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm overflow-hidden">
-      <div class="flex items-start justify-between px-5 pt-4 pb-3 border-b border-[#dde3ec]">
+    <div class="dash-card">
+      <div class="flex items-start justify-between px-5 pt-4 pb-3 border-b dash-border">
         <div>
-          <div class="text-[13px] font-bold text-[#1a2332]">Gastos por Categor&#237;a</div>
-          <div class="text-xs text-[#7a8899] mt-0.5">Distribuci&#243;n actual</div>
+          <div class="text-[13px] font-bold dash-text">Gastos por Categor&#237;a</div>
+          <div class="text-xs dash-muted mt-0.5">Distribuci&#243;n actual</div>
         </div>
-        <a href="/admin/gastos/gasto/" class="text-xs font-semibold text-[#1aadbc] no-underline">Ver todo &#8250;</a>
+        <a href="/admin/gastos/gasto/" class="text-xs font-semibold no-underline" style="color:var(--brand-teal)">Ver todo &#8250;</a>
       </div>
       <div class="flex items-center justify-center p-4" style="height:170px;position:relative">
         <canvas id="gastosDonut" style="max-height:170px"></canvas>
       </div>
-      <div class="flex flex-wrap gap-1.5 px-5 py-3 border-t border-[#dde3ec]" id="gastosLgnd"></div>
+      <div class="flex flex-wrap gap-1.5 px-5 py-3 border-t dash-border" id="gastosLgnd"></div>
     </div>
 
   </div>{# /row1 #}
@@ -214,10 +229,10 @@
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 
     {# Chart 4 — Tendencias Line #}
-    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm overflow-hidden">
-      <div class="px-5 pt-4 pb-3 border-b border-[#dde3ec]">
-        <div class="text-[13px] font-bold text-[#1a2332]">Tendencias</div>
-        <div class="text-xs text-[#7a8899] mt-0.5">Ventas vs Gastos &mdash; &#250;ltimos 6 meses</div>
+    <div class="dash-card">
+      <div class="px-5 pt-4 pb-3 border-b dash-border">
+        <div class="text-[13px] font-bold dash-text">Tendencias</div>
+        <div class="text-xs dash-muted mt-0.5">Ventas vs Gastos &mdash; &#250;ltimos 6 meses</div>
       </div>
       <div class="p-4" style="height:240px;position:relative">
         <canvas id="tendenciasChart"></canvas>
@@ -225,10 +240,10 @@
     </div>
 
     {# Chart 5 — Balance Bar #}
-    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm overflow-hidden">
-      <div class="px-5 pt-4 pb-3 border-b border-[#dde3ec]">
-        <div class="text-[13px] font-bold text-[#1a2332]">Balance Mensual</div>
-        <div class="text-xs text-[#7a8899] mt-0.5">Resultado neto por mes</div>
+    <div class="dash-card">
+      <div class="px-5 pt-4 pb-3 border-b dash-border">
+        <div class="text-[13px] font-bold dash-text">Balance Mensual</div>
+        <div class="text-xs dash-muted mt-0.5">Resultado neto por mes</div>
       </div>
       <div class="p-4" style="height:240px;position:relative">
         <canvas id="balanceBarChart"></canvas>
@@ -243,72 +258,72 @@
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 
     {# Activity Feed #}
-    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm overflow-hidden">
-      <div class="px-5 pt-4 pb-3 border-b border-[#dde3ec]">
-        <div class="text-[13px] font-bold text-[#1a2332]">Actividad Reciente</div>
-        <div class="text-xs text-[#7a8899] mt-0.5">&#218;ltimas acciones en el sistema</div>
+    <div class="dash-card">
+      <div class="px-5 pt-4 pb-3 border-b dash-border">
+        <div class="text-[13px] font-bold dash-text">Actividad Reciente</div>
+        <div class="text-xs dash-muted mt-0.5">&#218;ltimas acciones en el sistema</div>
       </div>
       <div class="px-5 py-2">
         {% for act in recent_activities %}
-        <div class="flex items-start gap-3 py-3{% if not forloop.last %} border-b border-[#f0f2f5]{% endif %}">
+        <div class="flex items-start gap-3 py-3{% if not forloop.last %} dash-activity-item{% endif %}">
           <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0"
                style="background:{{ act.color }}20;color:{{ act.color }}">{{ act.icon }}</div>
           <div class="flex-1 min-w-0">
-            <div class="text-[13px] text-[#1a2332] leading-snug">{{ act.description }}</div>
-            <div class="text-xs text-[#7a8899] mt-0.5">{{ act.user }} &middot; {{ act.timestamp }}</div>
+            <div class="text-[13px] dash-text leading-snug">{{ act.description }}</div>
+            <div class="text-xs dash-muted mt-0.5">{{ act.user }} &middot; {{ act.timestamp }}</div>
           </div>
           <span class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full
-            {% if act.status == 'success' %}bg-green-100 text-green-700
-            {% elif act.status == 'warning' %}bg-amber-100 text-amber-700
-            {% elif act.status == 'error' %}bg-red-100 text-red-700
-            {% else %}bg-slate-100 text-slate-500{% endif %}">
+            {% if act.status == 'success' %}dash-status-success
+            {% elif act.status == 'warning' %}dash-status-warning
+            {% elif act.status == 'error' %}dash-status-danger
+            {% else %}dash-status-slate{% endif %}">
             {{ act.status }}
           </span>
         </div>
         {% empty %}
-        <p class="text-xs text-[#7a8899] text-center py-6">Sin actividad reciente</p>
+        <p class="text-xs dash-muted text-center py-6">Sin actividad reciente</p>
         {% endfor %}
       </div>
     </div>
 
     {# Quick Access #}
-    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm overflow-hidden">
-      <div class="px-5 pt-4 pb-3 border-b border-[#dde3ec]">
-        <div class="text-[13px] font-bold text-[#1a2332]">Acceso R&#225;pido</div>
-        <div class="text-xs text-[#7a8899] mt-0.5">M&#243;dulos principales</div>
+    <div class="dash-card">
+      <div class="px-5 pt-4 pb-3 border-b dash-border">
+        <div class="text-[13px] font-bold dash-text">Acceso R&#225;pido</div>
+        <div class="text-xs dash-muted mt-0.5">M&#243;dulos principales</div>
       </div>
       <div class="p-5">
         <div class="grid grid-cols-3 gap-3">
           {% with btns=''%}
           <a href="/admin/ventas/ventas/add/"
-             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline bg-[#f8fafb] border border-[#dde3ec] hover:bg-[#c4f0f5] hover:border-[#1aadbc] transition-all">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg bg-green-100 text-green-600">&#128196;</div>
-            <span class="text-xs font-semibold text-[#1a2332] text-center leading-tight">Nueva Venta</span>
+             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline dash-btn transition-all">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style="background:var(--accent-green-bg);color:var(--accent-green)"><i class="fas fa-file-invoice text-sm"></i></div>
+            <span class="text-xs font-semibold dash-text text-center leading-tight">Nueva Venta</span>
           </a>
           <a href="/admin/gastos/gasto/add/"
-             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline bg-[#f8fafb] border border-[#dde3ec] hover:bg-[#c4f0f5] hover:border-[#1aadbc] transition-all">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg bg-red-100 text-red-500">&#128184;</div>
-            <span class="text-xs font-semibold text-[#1a2332] text-center leading-tight">Nuevo Gasto</span>
+             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline dash-btn transition-all">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style="background:var(--accent-red-bg);color:var(--accent-red)"><i class="fas fa-money-bill-wave text-sm"></i></div>
+            <span class="text-xs font-semibold dash-text text-center leading-tight">Nuevo Gasto</span>
           </a>
           <a href="/admin/ventas/ventas/?estado_cobranza__in=Vencida"
-             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline bg-[#f8fafb] border border-[#dde3ec] hover:bg-[#c4f0f5] hover:border-[#1aadbc] transition-all">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg bg-amber-100 text-amber-600">&#9888;&#65039;</div>
-            <span class="text-xs font-semibold text-[#1a2332] text-center leading-tight">CxC Vencidas</span>
+             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline dash-btn transition-all">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style="background:var(--accent-amber-bg);color:var(--accent-amber)"><i class="fas fa-triangle-exclamation text-sm"></i></div>
+            <span class="text-xs font-semibold dash-text text-center leading-tight">CxC Vencidas</span>
           </a>
           <a href="/admin/catalogo/"
-             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline bg-[#f8fafb] border border-[#dde3ec] hover:bg-[#c4f0f5] hover:border-[#1aadbc] transition-all">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg bg-blue-100 text-blue-600">&#128230;</div>
-            <span class="text-xs font-semibold text-[#1a2332] text-center leading-tight">Cat&#225;logo</span>
+             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline dash-btn transition-all">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style="background:var(--accent-blue-bg);color:var(--accent-blue)"><i class="fas fa-boxes-stacked text-sm"></i></div>
+            <span class="text-xs font-semibold dash-text text-center leading-tight">Cat&#225;logo</span>
           </a>
           <a href="/admin/compras/compra/add/"
-             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline bg-[#f8fafb] border border-[#dde3ec] hover:bg-[#c4f0f5] hover:border-[#1aadbc] transition-all">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg bg-purple-100 text-purple-600">&#128722;</div>
-            <span class="text-xs font-semibold text-[#1a2332] text-center leading-tight">Nueva Compra</span>
+             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline dash-btn transition-all">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style="background:rgba(107,70,193,0.12);color:#6b46c1"><i class="fas fa-cart-plus text-sm"></i></div>
+            <span class="text-xs font-semibold dash-text text-center leading-tight">Nueva Compra</span>
           </a>
           <a href="/admin/auditoria/"
-             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline bg-[#f8fafb] border border-[#dde3ec] hover:bg-[#c4f0f5] hover:border-[#1aadbc] transition-all">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg bg-teal-100 text-teal-600">&#128269;</div>
-            <span class="text-xs font-semibold text-[#1a2332] text-center leading-tight">Auditor&#237;a</span>
+             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline dash-btn transition-all">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style="background:rgba(13,148,136,0.12);color:var(--brand-teal)"><i class="fas fa-magnifying-glass text-sm"></i></div>
+            <span class="text-xs font-semibold dash-text text-center leading-tight">Auditor&#237;a</span>
           </a>
           {% endwith %}
         </div>
@@ -322,35 +337,35 @@
   {# ═══════════════════════════════════════════════════════════════ #}
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
 
-    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm p-5 flex items-center gap-4">
-      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl bg-blue-100 shrink-0">&#128100;</div>
+    <div class="dash-card p-5 flex items-center gap-4">
+      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0" style="background:var(--accent-blue-bg);color:var(--accent-blue)"><i class="fas fa-users"></i></div>
       <div>
-        <div class="text-2xl font-bold text-[#1a2332]">{{ total_users }}</div>
-        <div class="text-xs text-[#7a8899] mt-0.5">Usuarios activos</div>
+        <div class="text-2xl font-bold dash-text">{{ total_users }}</div>
+        <div class="text-xs dash-muted mt-0.5">Usuarios activos</div>
       </div>
     </div>
 
-    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm p-5 flex items-center gap-4">
-      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl bg-green-100 shrink-0">&#128230;</div>
+    <div class="dash-card p-5 flex items-center gap-4">
+      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0" style="background:var(--accent-green-bg);color:var(--accent-green)"><i class="fas fa-boxes-stacked"></i></div>
       <div>
-        <div class="text-2xl font-bold text-[#1a2332]">{{ productos_vendidos }}</div>
-        <div class="text-xs text-[#7a8899] mt-0.5">Productos vendidos</div>
+        <div class="text-2xl font-bold dash-text">{{ productos_vendidos }}</div>
+        <div class="text-xs dash-muted mt-0.5">Productos vendidos</div>
       </div>
     </div>
 
-    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm p-5 flex items-center gap-4">
-      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl bg-amber-100 shrink-0">&#127991;&#65039;</div>
+    <div class="dash-card p-5 flex items-center gap-4">
+      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0" style="background:var(--accent-amber-bg);color:var(--accent-amber)"><i class="fas fa-tags"></i></div>
       <div>
-        <div class="text-2xl font-bold text-[#1a2332]">{{ total_categorias }}</div>
-        <div class="text-xs text-[#7a8899] mt-0.5">Categor&#237;as activas</div>
+        <div class="text-2xl font-bold dash-text">{{ total_categorias }}</div>
+        <div class="text-xs dash-muted mt-0.5">Categor&#237;as activas</div>
       </div>
     </div>
 
-    <div class="bg-white rounded-2xl border border-[#dde3ec] shadow-sm p-5 flex items-center gap-4">
-      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0" style="background:#c4f0f5;color:#0d8fa2">&#128197;</div>
+    <div class="dash-card p-5 flex items-center gap-4">
+      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0" style="background:rgba(13,148,136,0.12);color:var(--brand-teal)"><i class="fas fa-calendar-days"></i></div>
       <div>
-        <div class="text-sm font-bold text-[#1a2332] leading-snug">{{ last_update }}</div>
-        <div class="text-xs text-[#7a8899] mt-0.5">&#218;ltima actualizaci&#243;n</div>
+        <div class="text-sm font-bold dash-text leading-snug">{{ last_update }}</div>
+        <div class="text-xs dash-muted mt-0.5">&#218;ltima actualizaci&#243;n</div>
       </div>
     </div>
 
@@ -366,7 +381,20 @@
 <script>
 (function () {
   'use strict';
-  const TEAL = '#1aadbc', NAVY = '#1e3a5f';
+
+  /* ── Theme-aware colours ──────────────────────────────────────── */
+  const rs = getComputedStyle(document.documentElement);
+  const v = n => rs.getPropertyValue(n).trim();
+  const surfaceCard  = v('--surface-card')  || '#ffffff';
+  const surfaceBg    = v('--surface-bg')    || '#f5f2eb';
+  const textPrimary  = v('--text-primary')  || '#1a2332';
+  const textMuted    = v('--text-muted')    || '#7a8899';
+  const borderDefault= v('--border-default')|| '#dde3ec';
+  const accentGreen  = v('--accent-green')  || '#2d7a3a';
+  const accentRed    = v('--accent-red')    || '#c53030';
+  const brandTeal    = v('--brand-teal')    || '#1aadbc';
+  const TEAL = brandTeal;
+  const NAVY = '#1e3a5f';
   const PAL  = ['#1aadbc','#1e3a5f','#5dd0d7','#2d6a9f','#82dce0','#4e8bc4','#b3edf2','#35435a'];
 
   const meses   = {{ meses_labels|safe }};
@@ -391,15 +419,15 @@
     elMargen.textContent = margenPct.toFixed(1) + '%';
     const up = margenPct >= 0;
     elMBdg.className = 'inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ' +
-      (up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700');
-    elMBdg.textContent = (up ? '\u25b2 ' : '\u25bc ') + Math.abs(margenPct).toFixed(1) + '%';
+      (up ? 'dash-status-success' : 'dash-status-danger');
+    elMBdg.innerHTML = (up ? '<i class="fas fa-arrow-up text-[9px]"></i> ' : '<i class="fas fa-arrow-down text-[9px]"></i> ') + Math.abs(margenPct).toFixed(1) + '%';
   }
   if (elMoros) elMoros.textContent = morosPct.toFixed(1) + '%';
 
   /* ── Chart.js defaults ──────────────────────────────────────────── */
   Chart.defaults.font.family = "'Inter','Segoe UI',system-ui,sans-serif";
   Chart.defaults.font.size   = 11;
-  Chart.defaults.color       = '#7a8899';
+  Chart.defaults.color       = textMuted;
   const base = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } };
 
   /* ── 1. Ventas Bar ──────────────────────────────────────────────── */
@@ -416,7 +444,7 @@
       }]
     },
     options: { ...base, scales: {
-      y: { grid:{ color:'#eef1f5' }, ticks:{ callback: v => '$'+(v/1000).toFixed(0)+'k' } },
+      y: { grid:{ color: borderDefault }, ticks:{ callback: v => '$'+(v/1000).toFixed(0)+'k' } },
       x: { grid:{ display:false } }
     }}
   });
@@ -426,7 +454,7 @@
     type: 'doughnut',
     data: {
       labels: ['Vigente','Vencida'],
-      datasets: [{ data:[cxcVig,cxcVen], backgroundColor:[TEAL,NAVY], borderWidth:2, borderColor:'#fff', hoverOffset:8 }]
+      datasets: [{ data:[cxcVig,cxcVen], backgroundColor:[TEAL,NAVY], borderWidth:2, borderColor:surfaceCard, hoverOffset:8 }]
     },
     options: { ...base, cutout:'65%',
       plugins: { legend:{ display:false }, tooltip:{ callbacks:{ label: ctx => ' '+ctx.label+': $'+ctx.raw.toLocaleString() } } }
@@ -438,14 +466,14 @@
     type: 'doughnut',
     data: {
       labels: catLbls,
-      datasets: [{ data:catData, backgroundColor:PAL.slice(0,catData.length), borderWidth:2, borderColor:'#fff', hoverOffset:8 }]
+      datasets: [{ data:catData, backgroundColor:PAL.slice(0,catData.length), borderWidth:2, borderColor:surfaceCard, hoverOffset:8 }]
     },
     options: { ...base, cutout:'60%' }
   });
   const lgnd = document.getElementById('gastosLgnd');
   if (lgnd && catLbls.length) {
     lgnd.innerHTML = catLbls.map((l,i) =>
-      '<span class="flex items-center gap-1 text-[11px] text-[#7a8899]">'+
+      '<span class="flex items-center gap-1 text-[11px] dash-muted">'+
       '<span style="width:9px;height:9px;border-radius:50%;background:'+PAL[i%PAL.length]+';display:inline-block"></span>'+l+'</span>'
     ).join('');
   }
@@ -458,9 +486,9 @@
       { label:'Gastos', data:gastos, borderColor:NAVY, backgroundColor:NAVY+'12', borderWidth:2.5, fill:true, tension:.35, pointRadius:4, pointHoverRadius:6, pointBackgroundColor:NAVY }
     ]},
     options: { ...base,
-      plugins: { legend:{ display:true, position:'top', labels:{ usePointStyle:true, boxWidth:8, padding:16 } } },
+      plugins: { legend:{ display:true, position:'top', labels:{ usePointStyle:true, boxWidth:8, padding:16, color:textPrimary } } },
       scales: {
-        y: { grid:{ color:'#eef1f5' }, ticks:{ callback: v => '$'+(v/1000).toFixed(0)+'k' } },
+        y: { grid:{ color: borderDefault }, ticks:{ callback: v => '$'+(v/1000).toFixed(0)+'k' } },
         x: { grid:{ display:false } }
       }
     }
@@ -478,25 +506,31 @@
       borderWidth: 1.5, borderRadius: 6, borderSkipped: false
     }]},
     options: { ...base, scales:{
-      y: { grid:{ color:'#eef1f5' }, ticks:{ callback: v => '$'+(v/1000).toFixed(0)+'k' } },
+      y: { grid:{ color: borderDefault }, ticks:{ callback: v => '$'+(v/1000).toFixed(0)+'k' } },
       x: { grid:{ display:false } }
     }}
   });
 
   /* ── Toast helper ───────────────────────────────────────────────── */
   function showToast(title, msg, type) {
-    const icons  = {success:'\u2705',warning:'\u26a0\ufe0f',error:'\u274c',info:'\u2139\ufe0f'};
-    const colors = {success:'#22c55e',warning:'#f59e0b',error:'#ef4444',info:'#1aadbc'};
+    const icons  = {
+      success: '<i class="fas fa-check-circle"></i>',
+      warning: '<i class="fas fa-triangle-exclamation"></i>',
+      error:   '<i class="fas fa-circle-xmark"></i>',
+      info:    '<i class="fas fa-circle-info"></i>'
+    };
+    const colors = {success: accentGreen, warning:'#f59e0b',error: accentRed,info: TEAL};
     const t = type||'info';
     const el = document.createElement('div');
-    el.className = 'pointer-events-auto bg-white rounded-xl border border-[#dde3ec] shadow-lg p-3 flex items-start gap-3 min-w-[220px] max-w-[300px] relative overflow-hidden t-slide';
+    el.className = 'pointer-events-auto dash-card shadow-lg p-3 flex items-start gap-3 min-w-[220px] max-w-[300px] relative overflow-hidden t-slide';
+    el.style.borderColor = borderDefault;
     el.innerHTML =
       '<div style="width:28px;height:28px;border-radius:8px;background:'+colors[t]+'20;color:'+colors[t]+';display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">'+icons[t]+'</div>'+
       '<div style="flex:1;min-width:0">'+
-        '<div style="font-size:12.5px;font-weight:700;color:#1a2332">'+title+'</div>'+
-        '<div style="font-size:11.5px;color:#7a8899;margin-top:2px;line-height:1.4">'+msg+'</div>'+
+        '<div style="font-size:12.5px;font-weight:700;color:'+textPrimary+'">'+title+'</div>'+
+        '<div style="font-size:11.5px;color:'+textMuted+';margin-top:2px;line-height:1.4">'+msg+'</div>'+
       '</div>'+
-      '<button onclick="this.closest(\'.t-slide\').remove()" style="font-size:14px;color:#7a8899;background:none;border:none;cursor:pointer;line-height:1">&times;</button>'+
+      '<button onclick="this.closest(\'.t-slide\').remove()" style="font-size:14px;color:'+textMuted+';background:none;border:none;cursor:pointer;line-height:1">&times;</button>'+
       '<div class="t-prog" style="position:absolute;bottom:0;left:0;height:3px;background:'+colors[t]+';border-radius:0 0 10px 10px"></div>';
     document.getElementById('toastWrap').appendChild(el);
     requestAnimationFrame(() => el.classList.add('t-show'));

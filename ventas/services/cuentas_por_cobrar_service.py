@@ -486,6 +486,9 @@ class CuentasPorCobrarService:
                 for pago in pagos_anteriores:
                     saldo_acumulado -= float(pago.monto_pago.amount)
             
+            # Guardar para el registro del modelo
+            saldo_inicial_periodo = saldo_acumulado
+            
             # Agregar saldo inicial si existe
             if abs(saldo_acumulado) > 0.01:  # Evitar mostrar centavos insignificantes
                 movimientos.append({
@@ -549,17 +552,20 @@ class CuentasPorCobrarService:
             total_abonos = sum(p.monto_pago.amount for p in pagos_periodo)
             saldo_final = saldo_acumulado  # RF4: Saldo Pendiente
             
-            # Crear registro del estado de cuenta
-            estado_cuenta = EstadoCuentaCliente.objects.create(
+            # Crear ou actualizar registro del estado de cuenta (evita duplicados en regenerar)
+            estado_cuenta, _ = EstadoCuentaCliente.objects.update_or_create(
                 cliente=cliente,
                 periodo_inicio=fecha_inicio,
                 periodo_fin=fecha_fin,
-                total_ventas=total_ventas,
-                total_abonos=total_abonos,
-                saldo_final=saldo_final,
-                numero_facturas=ventas_periodo.count(),
-                generado_por=usuario,
-                formato_generado=formato
+                defaults={
+                    'saldo_inicial': saldo_inicial_periodo,
+                    'total_ventas': total_ventas,
+                    'total_abonos': total_abonos,
+                    'saldo_final': saldo_final,
+                    'numero_facturas': ventas_periodo.count(),
+                    'generado_por': usuario,
+                    'formato_generado': formato,
+                }
             )
             
             # Preparar resumen del estado de cuenta
@@ -567,6 +573,7 @@ class CuentasPorCobrarService:
                 'cliente': cliente,
                 'periodo_inicio': fecha_inicio,
                 'periodo_fin': fecha_fin,
+                'saldo_inicial': saldo_inicial_periodo,
                 'total_ventas': total_ventas,
                 'total_abonos': total_abonos,
                 'saldo_final': saldo_final,

@@ -48,7 +48,17 @@ class Command(BaseCommand):
             )
             return
 
+        # Guardar IDs antes del update para sincronizar SaldoCliente después
+        ids_a_actualizar = list(qs.values_list('id', flat=True))
+
         updated = qs.update(estado_cobranza='Vencido')
+
+        # Sincronizar SaldoCliente para que refleje el nuevo estado
+        try:
+            from ventas.models import SaldoCliente
+            SaldoCliente.objects.filter(venta_id__in=ids_a_actualizar).update(estado='VENCIDO')
+        except Exception:
+            pass  # No detener el proceso si falla la sincronización
 
         self.stdout.write(self.style.SUCCESS(f"{updated} venta(s) marcadas como Vencidas."))
 

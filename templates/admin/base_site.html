@@ -10,120 +10,29 @@
   {% endif %}
 {% endblock %}
 
-{# ── Inline styles for avatar pill + user dropdown ──────────────── #}
+{# ── Modular CSS already loaded via Jazzmin custom_css (admin_custom.css → all modules) ── #}
+{% block extrahead %}
+{{ block.super }}
+{# Google Fonts: Playfair Display + Plus Jakarta Sans + JetBrains Mono #}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+{% endblock %}
+
 {% block extrastyle %}
 {{ block.super }}
 <style>
-/* ─ Navbar user button → avatar pill ─────────────────────────── */
-.jaz-avatar-btn {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  padding: 4px 12px 4px 4px !important;
-  border-radius: 24px !important;
-  transition: background 0.18s ease, box-shadow 0.18s ease !important;
-  cursor: pointer !important;
-  text-decoration: none !important;
-}
-.jaz-avatar-btn:hover,
-.jaz-avatar-btn:focus {
-  background: rgba(26, 173, 188, 0.18) !important;
-  box-shadow: 0 0 0 2px rgba(26, 173, 188, 0.35) !important;
-  outline: none !important;
-}
-.jaz-avatar-img {
-  width: 32px; height: 32px;
-  border-radius: 50%; object-fit: cover;
-  border: 2px solid rgba(26, 173, 188, 0.7);
-  display: block; flex-shrink: 0;
-}
-.jaz-avatar-initials {
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #1aadbc 0%, #0d8fa2 100%);
-  color: #fff; font-size: 0.72rem; font-weight: 700;
-  display: inline-flex; align-items: center; justify-content: center;
-  flex-shrink: 0; letter-spacing: 0.06em;
-  border: 2px solid rgba(255,255,255,0.18);
-  user-select: none; line-height: 1;
-}
-.jaz-avatar-name {
-  color: rgba(255,255,255,0.88); font-size: 0.83rem; font-weight: 500;
-  max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-@media (max-width: 767px) { .jaz-avatar-name { display: none !important; } }
-
-/* ─ Dropdown user card ────────────────────────────────────────── */
-.jaz-dd-card {
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px 16px;
-  background: linear-gradient(135deg, #f0fdfe 0%, #e6f7fa 100%);
-  border-radius: 4px 4px 0 0;
-  text-decoration: none !important;
-  color: #1e293b !important;
-  transition: background 0.15s;
-  position: relative;
-}
-.jaz-dd-card:hover { background: linear-gradient(135deg, #e0f9fc 0%, #cdf0f5 100%); }
-.jaz-dd-card .profile-mini-avatar {
-  width: 42px; height: 42px;
-  border-radius: 50%; object-fit: cover;
-  border: 2px solid #1aadbc; flex-shrink: 0;
-}
-.jaz-dd-card .profile-mini-initials {
-  width: 42px; height: 42px; border-radius: 50%;
-  background: linear-gradient(135deg, #1aadbc, #0d8fa2);
-  color: #fff; font-size: 0.9rem; font-weight: 700;
-  display: inline-flex; align-items: center; justify-content: center;
-  flex-shrink: 0; letter-spacing: 0.04em;
-}
-.jaz-dd-meta { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.jaz-dd-meta .pname {
-  font-weight: 700; font-size: 0.875rem; color: #1e293b;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.jaz-dd-meta .pemail {
-  font-size: 0.72rem; color: #64748b;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.jaz-dd-edit-btn {
-  width: 28px; height: 28px; border-radius: 50%;
-  background: rgba(26,173,188,0.12); color: #0d8fa2 !important;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.72rem; flex-shrink: 0;
-  transition: background 0.15s, color 0.15s;
-  text-decoration: none !important;
-}
-.jaz-dd-edit-btn:hover { background: #1aadbc; color: #fff !important; }
-
-/* ─ Dropdown action items polish ─────────────────────────────── */
-#jazzy-usermenu { min-width: 240px; border: none; box-shadow: 0 8px 24px rgba(0,0,0,0.12); border-radius: 6px; }
-#jazzy-usermenu .dropdown-item {
-  font-size: 0.84rem; padding: 8px 16px;
-  display: flex; align-items: center; gap: 8px;
-  transition: background 0.13s;
-}
-#jazzy-usermenu .dropdown-item i { width: 16px; text-align: center; opacity: 0.7; }
-#jazzy-usermenu .dropdown-item:hover i { opacity: 1; }
-#jazzy-usermenu .jaz-logout-btn {
-  color: #dc2626 !important; font-weight: 500;
-}
-#jazzy-usermenu .jaz-logout-btn:hover { background: #fef2f2; }
-#jazzy-usermenu .jaz-logout-btn i { color: #dc2626; }
-
-/* ─ Dynamic brand logo ────────────────────────────────────────── */
-.brand-logo-dyn { height: 30px !important; width: auto !important; object-fit: contain !important; border-radius: 3px !important; }
-
-/* ─ Custom topbar CSS ─────────────────────────────────────────── */
-{% if site_config_global and site_config_global.custom_topbar_css %}
-{{ site_config_global.custom_topbar_css|safe }}
-{% endif %}
+  /* ── Dynamic topbar CSS (SiteConfiguration) ── */
+  {% if site_config_global and site_config_global.custom_topbar_css %}
+  {{ site_config_global.custom_topbar_css|safe }}
+  {% endif %}
 </style>
 {% endblock %}
 
-{# ── JS: avatar pill + dropdown rebuild + dynamic logo ───────────── #}
+{# ── JS: avatar pill + dropdown rebuild + dynamic logo + brand ── #}
 {% block extrajs %}
 {{ block.super }}
+<script src="{% static 'js/theme-toggle.js' %}"></script>
 <script>
 (function () {
   var AV       = "{{ user_avatar_url|escapejs }}";
@@ -168,7 +77,7 @@
     );
     if (userBtn) {
       userBtn.classList.add('jaz-avatar-btn');
-      userBtn.setAttribute('aria-label', NAME ? 'Usuario: ' + NAME : 'Menú de usuario');
+      userBtn.setAttribute('aria-label', NAME ? 'Usuario: ' + NAME : 'Menu de usuario');
       userBtn.setAttribute('title', '');
       userBtn.innerHTML = '';
       userBtn.appendChild(avatarEl('jaz-avatar-img'));
@@ -181,25 +90,21 @@
     /* ── 2. Rebuild user dropdown: single profile card, no duplicates ── */
     var dropMenu = document.querySelector('#jazzy-usermenu');
     if (dropMenu) {
-      /* a) Remove jazzmin's "Account" header + its following divider */
       var hdr = dropMenu.querySelector('.dropdown-header');
       if (hdr) {
         var nextEl = hdr.nextElementSibling;
         if (nextEl && nextEl.classList.contains('dropdown-divider')) nextEl.remove();
         hdr.remove();
       }
-      /* b) Remove jazzmin's "See Profile" footer link + its preceding divider */
       var footer = dropMenu.querySelector('.dropdown-footer');
       if (footer) {
         var prevEl = footer.previousElementSibling;
         if (prevEl && prevEl.classList.contains('dropdown-divider')) prevEl.remove();
         footer.remove();
       }
-      /* c) Style logout button */
       var logoutBtn = dropMenu.querySelector('#logout-form button[type="submit"]');
       if (logoutBtn) logoutBtn.classList.add('jaz-logout-btn');
 
-      /* d) Build profile card and insert at the very top */
       var card = document.createElement('a');
       card.href = PROF_URL;
       card.className = 'jaz-dd-card';
