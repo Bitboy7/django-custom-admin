@@ -193,10 +193,10 @@ body #changelist-filter li.selected a {
 .dt-button.btn-pdf   { background: var(--accent-red) !important; }
 .dt-button.btn-print { background: var(--text-secondary) !important; }
 .dt-button.btn-summary-excel { background: #6d28d9 !important; }
-.dt-button.btn-copy:hover  { background: #1d4ed8 !important; }
-.dt-button.btn-csv:hover   { background: #14532d !important; }
+.dt-button.btn-copy:hover  { background: #586f7c !important; }
+.dt-button.btn-csv:hover   { background: #3d6b2c !important; }
 .dt-button.btn-excel:hover { background: #0f3d22 !important; }
-.dt-button.btn-pdf:hover   { background: #b91c1c !important; }
+.dt-button.btn-pdf:hover   { background: #b85450 !important; }
 .dt-button.btn-print:hover { background: var(--brand-navy-light) !important; }
 
 .dt-buttons {

@@ -48,13 +48,13 @@
 .font-bold { font-weight: 700; }
 .font-semibold { font-weight: 600; }
 .font-medium { font-weight: 500; }
-.text-gray-900 { color: var(--text-primary); }
-.text-gray-800 { color: var(--text-primary); }
-.text-gray-500 { color: var(--text-secondary); }
+.text-[#2f4550] { color: var(--text-primary); }
+.text-[#2f4550] { color: var(--text-primary); }
+.text-[#586f7c] { color: var(--text-secondary); }
 .overflow-hidden { overflow: hidden; }
 .rounded-lg { border-radius: var(--radius-lg); }
 .rounded-full { border-radius: var(--radius-full); }
-.bg-white { background: var(--surface-card); }
+.bg-[#f4f4f9] { background: var(--surface-card); }
 .shadow-sm { box-shadow: var(--shadow-sm); }
 .shadow { box-shadow: var(--shadow-md); }
 .border { border: 1px solid var(--border-default); }

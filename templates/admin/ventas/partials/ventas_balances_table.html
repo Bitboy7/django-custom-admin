@@ -19,29 +19,29 @@
   <tbody>
     {% for balance in balances %}
     <tr>
-      <td class="font-mono text-xs text-gray-500">{{ balance.numero_secuencial }}</td>
+      <td class="font-mono text-xs text-[#586f7c]">{{ balance.numero_secuencial }}</td>
 
-      <td><span class="font-medium text-gray-900">{{ balance.cliente_nombre }}</span></td>
+      <td><span class="font-medium text-[#2f4550]">{{ balance.cliente_nombre }}</span></td>
 
       <td>
-        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800">{{ balance.cuenta_numero }}</span>
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-[rgba(184,219,217,.2)] text-[#2f4550]">{{ balance.cuenta_numero }}</span>
       </td>
 
-      <td class="text-sm text-gray-600">{{ balance.banco_nombre }}</td>
+      <td class="text-sm text-[#586f7c]">{{ balance.banco_nombre }}</td>
 
-      <td class="text-sm text-gray-600">{{ balance.sucursal_nombre }}</td>
+      <td class="text-sm text-[#586f7c]">{{ balance.sucursal_nombre }}</td>
 
-      <td class="text-sm text-gray-600">{{ balance.fecha|date:"d/m/Y" }}</td>
+      <td class="text-sm text-[#586f7c]">{{ balance.fecha|date:"d/m/Y" }}</td>
 
-      <td class="text-right font-semibold text-emerald-700" data-order="{{ balance.total_ventas|unlocalize }}">
+      <td class="text-right font-semibold text-[#5a7d6b]" data-order="{{ balance.total_ventas|unlocalize }}">
         ${{ balance.total_ventas|us_currency:2 }}
       </td>
 
-      <td class="text-right font-semibold text-blue-700" data-order="{{ balance.total_pagado|unlocalize }}">
+      <td class="text-right font-semibold text-[#2f4550]" data-order="{{ balance.total_pagado|unlocalize }}">
         ${{ balance.total_pagado|us_currency:2 }}
       </td>
 
-      <td class="text-right font-semibold text-red-700" data-order="{{ balance.saldo_pendiente|unlocalize }}">
+      <td class="text-right font-semibold text-[#b85450]" data-order="{{ balance.saldo_pendiente|unlocalize }}">
         ${{ balance.saldo_pendiente|us_currency:2 }}
       </td>
 
@@ -49,7 +49,7 @@
         <div class="flex flex-col items-center space-y-1">
           <span class="{{ balance.estado_cobranza|estado_badge_class }}">{{ balance.estado_cobranza }}</span>
           {% if balance.fecha_vencimiento %}
-            <small class="text-xs text-gray-400">{{ balance.fecha_vencimiento|date:"d/m/Y" }}</small>
+            <small class="text-xs text-[#b8dbd9]">{{ balance.fecha_vencimiento|date:"d/m/Y" }}</small>
           {% endif %}
         </div>
       </td>
@@ -73,10 +73,10 @@
 </table>
 {% else %}
 <div class="text-center py-12">
-  <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-    <i class="fas fa-inbox text-gray-400 text-2xl"></i>
+  <div class="inline-flex items-center justify-center w-16 h-16 bg-[#f4f4f9] rounded-full mb-4">
+    <i class="fas fa-inbox text-[#b8dbd9] text-2xl"></i>
   </div>
-  <p class="text-gray-600 font-semibold">No hay datos de ventas disponibles</p>
-  <p class="text-gray-400 text-sm mt-1">Intente modificar los filtros para ver resultados.</p>
+  <p class="text-[#586f7c] font-semibold">No hay datos de ventas disponibles</p>
+  <p class="text-[#b8dbd9] text-sm mt-1">Intente modificar los filtros para ver resultados.</p>
 </div>
 {% endif %}

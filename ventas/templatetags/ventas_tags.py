@@ -51,17 +51,17 @@ def estado_badge_class(estado):
     Uso: {{ estado|estado_badge_class }}
     """
     if not estado:
-        return 'px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600'
+        return 'px-2 py-1 text-xs rounded-full bg-[#f4f4f9] text-[#586f7c]'
     
     class_map = {
-        'Pagado': 'px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 font-medium',
+        'Pagado': 'px-2 py-1 text-xs rounded-full bg-[rgba(184,219,217,.15)] text-[#5a7d6b] font-medium',
         'Pendiente': 'px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 font-medium', 
-        'Parcial': 'px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 font-medium',
-        'Vencido': 'px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 font-medium',
-        'Incobrable': 'px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600 font-medium'
+        'Parcial': 'px-2 py-1 text-xs rounded-full bg-[rgba(184,219,217,.2)] text-[#2f4550] font-medium',
+        'Vencido': 'px-2 py-1 text-xs rounded-full bg-[rgba(184,84,80,.15)] text-[#b85450] font-medium',
+        'Incobrable': 'px-2 py-1 text-xs rounded-full bg-[#f4f4f9] text-[#586f7c] font-medium'
     }
     
-    return class_map.get(estado, 'px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600')
+    return class_map.get(estado, 'px-2 py-1 text-xs rounded-full bg-[#f4f4f9] text-[#586f7c]')
 
 @register.filter
 def estado_cobranza_badge(estado):
@@ -100,7 +100,7 @@ def modalidad_pago_class(modalidad):
     elif modalidad == 'Credito':
         return 'venta-credito'
     else:
-        return 'text-gray-600'
+        return 'text-[#586f7c]'
 
 @register.filter
 def days_until_due(fecha_vencimiento):

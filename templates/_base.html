@@ -20,8 +20,29 @@
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-  <!-- Estilos para el menú desplegable -->
+  <!-- Paleta de marca -->
   <style>
+    :root {
+      --black: #000000;
+      --charcoal-blue: #2f4550;
+      --blue-slate: #586f7c;
+      --light-blue: #b8dbd9;
+      --ghost-white: #f4f4f9;
+    }
+    body { background-color: var(--ghost-white); }
+
+    /* Navbar */
+    .navbar-brand {
+      background-color: var(--charcoal-blue);
+    }
+    .nav-link {
+      color: rgba(244,244,249,.75);
+      transition: color .2s;
+    }
+    .nav-link:hover {
+      color: var(--ghost-white);
+    }
+
     /* Dropdown Menu Styles */
     .dropdown {
       position: relative;
@@ -31,22 +52,22 @@
     .dropdown-content {
       display: none;
       position: absolute;
-      background-color: #1e3a8a;
+      background-color: var(--charcoal-blue);
       min-width: 220px;
-      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+      box-shadow: 0px 8px 16px 0px rgba(47,69,80,0.2);
       z-index: 1000;
       border-radius: 0.375rem;
       margin-top: 0.5rem;
     }
 
     .dropdown-content a {
-      color: #d1d5db;
+      color: rgba(244,244,249,.8);
       padding: 12px 16px;
       text-decoration: none;
       display: flex;
       align-items: center;
       transition: all 0.2s ease;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+      border-bottom: 1px solid rgba(244,244,249,0.08);
     }
 
     .dropdown-content a:last-child {
@@ -54,8 +75,8 @@
     }
 
     .dropdown-content a:hover {
-      background-color: #1e40af;
-      color: white;
+      background-color: var(--blue-slate);
+      color: var(--ghost-white);
       padding-left: 20px;
     }
 
@@ -68,7 +89,7 @@
     }
 
     .dropdown-toggle:hover {
-      color: white !important;
+      color: var(--ghost-white) !important;
     }
 
     /* Mobile dropdown styles */
@@ -76,7 +97,7 @@
       .dropdown-content {
         position: static;
         box-shadow: none;
-        background-color: rgba(30, 58, 138, 0.5);
+        background-color: rgba(47, 69, 80, 0.5);
         margin-top: 0;
         padding-left: 1rem;
       }
@@ -92,20 +113,26 @@
     }
   </style>
 
+  <!-- HTMX Utilities CSS -->
+  <link rel="stylesheet" href="{% static 'css/htmx-utils.css' %}">
+
   <!-- Bloque para CSS adicional -->
   {% block extra_css %}{% endblock %}
 </head>
 
-<body class="bg-emerald-50">
+<body>
   <!-- Navbar -->
-  <nav class="bg-blue-900 p-4 sticky top-0 shadow z-30">
+  <nav class="navbar-brand p-4 sticky top-0 shadow z-30">
     <div class="w-full px-4 flex flex-wrap justify-between items-center">
-      <a href="{% url 'admin:index' %}" class="flex items-center text-white text-lg font-semibold">
-        <i class="fas fa-tractor mr-2"></i> Agrícola de la Costa
+      <a href="{% url 'admin:index' %}" class="flex items-center text-lg font-semibold" style="color: var(--ghost-white);">
+        <i class="fas fa-tractor mr-2" style="color: var(--light-blue);"></i> Agrícola de la Costa
       </a>
 
       <button data-collapse-toggle="navbar-menu" type="button"
-        class="inline-flex items-center p-2 ml-3 text-sm text-white rounded-lg md:hidden hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-gray-200"
+        class="inline-flex items-center p-2 ml-3 text-sm rounded-lg md:hidden focus:outline-none focus:ring-2"
+        style="color: var(--ghost-white);"
+        onmouseover="this.style.backgroundColor='var(--blue-slate)'"
+        onmouseout="this.style.backgroundColor='transparent'"
         aria-controls="navbar-menu" aria-expanded="false">
         <span class="sr-only">Abrir menú principal</span>
         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
@@ -118,34 +145,34 @@
       <div class="hidden w-full md:block md:w-auto" id="navbar-menu">
         <ul class="flex flex-col mt-4 md:flex-row md:space-x-6 md:mt-0 md:text-sm md:font-medium">
           <li>
-            <a href="{% url 'admin:index' %}" class="text-gray-300 hover:text-white flex items-center py-2">
+            <a href="{% url 'admin:index' %}" class="nav-link flex items-center py-2">
               <i class="fas fa-tachometer-alt mr-1"></i> Panel de Control
             </a>
           </li>
           <li>
-            <a href="{% url 'balances' %}" class="text-gray-300 hover:text-white flex items-center py-2">
+            <a href="{% url 'balances' %}" class="nav-link flex items-center py-2">
               <i class="fas fa-file-invoice-dollar mr-1"></i> Gastos
             </a>
           </li>
           <li>
-            <a href="{% url 'gastos:compras_balances' %}" class="text-gray-300 hover:text-white flex items-center py-2">
+            <a href="{% url 'gastos:compras_balances' %}" class="nav-link flex items-center py-2">
               <i class="fas fa-shopping-cart mr-1"></i> Compras
             </a>
           </li>
           <li>
-            <a href="{% url 'ventas:ventas_balances' %}" class="text-gray-300 hover:text-white flex items-center py-2">
+            <a href="{% url 'ventas:ventas_balances' %}" class="nav-link flex items-center py-2">
               <i class="fas fa-chart-bar mr-1"></i> Ventas
             </a>
           </li>
           <li>
-            <a href="{% url 'gastos:ingresar_gasto_factura' %}" class="text-gray-300 hover:text-white flex items-center py-2">
+            <a href="{% url 'gastos:ingresar_gasto_factura' %}" class="nav-link flex items-center py-2">
               <i class="fas fa-brain mr-1"></i> Documentos IA
             </a>
           </li>
 
           <!-- Menú desplegable de Inversiones -->
           <li class="dropdown">
-            <a href="#" class="dropdown-toggle text-gray-300 hover:text-white flex items-center py-2">
+            <a href="#" class="dropdown-toggle nav-link flex items-center py-2">
               <i class="fas fa-chart-line mr-1"></i> Capital e Inversiones
               <i class="fas fa-chevron-down ml-1 text-xs"></i>
             </a>
@@ -169,7 +196,7 @@
           </li>
 
           <li>
-            <a href="{% url 'export_full_report' %}" class="text-gray-300 hover:text-white flex items-center py-2">
+            <a href="{% url 'export_full_report' %}" class="nav-link flex items-center py-2">
               <i class="fas fa-file-excel mr-1"></i> Exportar reporte completo
             </a>
           </li>
@@ -185,6 +212,9 @@
     {% endblock %}
   </div>
 
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.12" integrity="sha384-ObDjAIhaM9I-iZvUhfG7Q24iQ6L0vH+K0Z0b7Q20O0d8+K26u5U4f1Q5a9b1Z8iZ" crossorigin="anonymous"></script>
+
   <!-- Flowbite JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script>
 
@@ -193,10 +223,13 @@
 
 
 
+  <!-- HTMX Toast Notifications -->
+  <script src="{% static 'js/htmx-toast.js' %}"></script>
+
   <!-- Bloque para scripts adicionales -->
   {% block extra_js %}
   {{ block.super }}
-  
+
     <!-- Calculadora de compras -->
     <script src="{% static 'js/compra_calculator.js' %}"></script>
     

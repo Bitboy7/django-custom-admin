@@ -53,17 +53,17 @@
   .cobrar-grid { display: table; width: 100%; border-collapse: collapse; }
   .cobrar-cell { display: table-cell; width: 50%; padding: 12px; text-align: center; }
   .cobrar-cell.vigente { background: #f0fdf4; border: 1px solid #bbf7d0; }
-  .cobrar-cell.vencido { background: #fef2f2; border: 1px solid #fecaca; }
+  .cobrar-cell.vencido { background: #fef2f2; border: 1px solid #e8b4b0; }
   .cobrar-label { font-size: 11px; color: #666; text-transform: uppercase; }
   .cobrar-val   { font-size: 18px; font-weight: 700; margin-top: 4px; }
-  .cobrar-val.verde { color: #166534; }
-  .cobrar-val.rojo  { color: #991b1b; }
+  .cobrar-val.verde { color: #3d6b2c; }
+  .cobrar-val.rojo  { color: #b85450; }
 
   /* Footer */
   .footer { background: #f0f4fa; padding: 20px 40px; text-align: center; font-size: 11px; color: #888; border-top: 1px solid #dde2ef; }
 
   /* Divider */
-  .divider { height: 3px; background: linear-gradient(90deg, #1a3a5c, #3b82f6); }
+  .divider { height: 3px; background: linear-gradient(90deg, #1a3a5c, #586f7c); }
 </style>
 </head>
 <body>
@@ -171,12 +171,12 @@
       <div class="cobrar-cell vigente">
         <div class="cobrar-label">Vigente + Parcial</div>
         <div class="cobrar-val verde">${{ d.cuentas_por_cobrar|floatformat:0 }}</div>
-        <div style="font-size:11px;color:#166534">{{ d.ventas_pendientes_count }} ventas</div>
+        <div style="font-size:11px;color:#3d6b2c">{{ d.ventas_pendientes_count }} ventas</div>
       </div>
       <div class="cobrar-cell vencido">
         <div class="cobrar-label">Vencido</div>
         <div class="cobrar-val rojo">${{ d.ventas_vencidas|floatformat:0 }}</div>
-        <div style="font-size:11px;color:#991b1b">{{ d.ventas_vencidas_count }} ventas</div>
+        <div style="font-size:11px;color:#b85450">{{ d.ventas_vencidas_count }} ventas</div>
       </div>
     </div>
   </div>

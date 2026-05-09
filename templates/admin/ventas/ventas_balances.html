@@ -27,7 +27,7 @@
 <style>
   /* ── Page base ── */
   #content-main { padding: 0; }
-  #content { padding: 1.25rem; background-color: #f0f4f8; min-height: 100vh; }
+  #content { padding: 1.25rem; background-color: #f4f4f9; min-height: 100vh; }
 
   /* ── AdminLTE/Jazzmin compat ── */
   .main-header .navbar-brand, .main-header .nav-link,
@@ -60,15 +60,15 @@
   .kpi-body { flex: 1; min-width: 0; }
   .kpi-label {
     font-size: .6rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .08em; color: #94a3b8; margin-bottom: .15rem;
+    letter-spacing: .08em; color: #586f7c; margin-bottom: .15rem;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .kpi-value {
-    font-size: 1.15rem; font-weight: 800; color: #0f172a; line-height: 1.15;
+    font-size: 1.15rem; font-weight: 800; color: #2f4550; line-height: 1.15;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .kpi-sub {
-    font-size: .65rem; color: #94a3b8; margin-top: .2rem;
+    font-size: .65rem; color: #586f7c; margin-top: .2rem;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
@@ -83,7 +83,7 @@
     display: flex; align-items: center; gap: .5rem;
     padding: .625rem 1rem;
     background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #d8dce6;
   }
   .s-card-ico {
     width: 1.75rem; height: 1.75rem;
@@ -91,7 +91,7 @@
     display: flex; align-items: center; justify-content: center;
     font-size: .75rem;
   }
-  .s-card-title { font-size: .8rem; font-weight: 700; color: #334155; }
+  .s-card-title { font-size: .8rem; font-weight: 700; color: #2f4550; }
   .s-card-body { padding: 1rem; }
 
   /* ── Filter Card ── */
@@ -105,27 +105,27 @@
   }
   .filter-stripe {
     height: 3px;
-    background: linear-gradient(90deg, #1e3a5f, #1aadbc);
+    background: linear-gradient(90deg, #2f4550, #b8dbd9);
     border-radius: .5rem .5rem 0 0;
   }
   .filter-head {
     padding: .625rem 1rem;
     background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #d8dce6;
     display: flex; align-items: center; gap: .5rem;
   }
   .filter-select {
-    width: 100%; background: #fff; border: 1px solid #d1d5db;
+    width: 100%; background: #fff; border: 1px solid #d8dce6;
     border-radius: .375rem; padding: .375rem .625rem;
-    font-size: .8rem; color: #374151;
+    font-size: .8rem; color: #586f7c;
     transition: border-color .15s, box-shadow .15s;
   }
-  .filter-select:focus { outline: none; border-color: #1aadbc; box-shadow: 0 0 0 3px rgba(26,173,188,.15); }
-  .filter-label { display: block; font-size: .7rem; font-weight: 700; color: #64748b; margin-bottom: .25rem; }
+  .filter-select:focus { outline: none; border-color: #b8dbd9; box-shadow: 0 0 0 3px rgba(26,173,188,.15); }
+  .filter-label { display: block; font-size: .7rem; font-weight: 700; color: #586f7c; margin-bottom: .25rem; }
 
   /* ── DataTable overrides ── */
   table.dataTable thead th {
-    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+    background: linear-gradient(135deg, #2f4550 0%, #586f7c 100%) !important;
     color: #fff !important;
     border: none !important;
     font-size: .7rem !important; font-weight: 700 !important;
@@ -133,17 +133,17 @@
     padding: .75rem 1rem !important;
   }
   table.dataTable tfoot th {
-    background: #eff6ff !important;
-    color: #1e40af !important;
+    background: rgba(184,219,217,.1) !important;
+    color: #586f7c !important;
     font-weight: 700 !important;
     font-size: .75rem !important;
   }
   table.dataTable.stripe tbody tr.odd { background-color: #f8fafc; }
-  table.dataTable.hover tbody tr:hover > * { background-color: #eff6ff !important; box-shadow: none; }
+  table.dataTable.hover tbody tr:hover > * { background-color: rgba(184,219,217,.1) !important; box-shadow: none; }
   table.dataTable tbody td { font-size: .8rem; }
   div.dataTables_wrapper div.dataTables_filter input,
   div.dataTables_wrapper div.dataTables_length select {
-    border: 1px solid #d1d5db; border-radius: .375rem; font-size: .78rem;
+    border: 1px solid #d8dce6; border-radius: .375rem; font-size: .78rem;
     padding: .25rem .5rem;
   }
   .dt-buttons .dt-button {
@@ -153,13 +153,13 @@
   /* ── Scroll bar thin ── */
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: #f1f5f9; }
-  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: #b8dbd9; border-radius: 3px; }
 
   /* ── Export PDF button ── */
   .btn-export-pdf {
     display: inline-flex; align-items: center; gap: .375rem;
     font-size: .75rem; font-weight: 700; color: #fff;
-    background: linear-gradient(135deg, #dc2626, #ef4444);
+    background: linear-gradient(135deg, #b85450, #b85450);
     border: none; border-radius: .375rem;
     padding: .35rem .8rem; cursor: pointer;
     box-shadow: 0 1px 3px rgba(220,38,38,.3);
@@ -170,41 +170,41 @@
   .btn-export-pdf:disabled { opacity: .5; cursor: not-allowed; }
 
   /* ── Estado badges ── */
-  .estado-pagado     { color: #059669; background-color: #d1fae5; padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
-  .estado-pendiente  { color: #d97706; background-color: #fef3c7; padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
-  .estado-parcial    { color: #2563eb; background-color: #dbeafe; padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
-  .estado-vencido    { color: #dc2626; background-color: #fecaca; padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
-  .estado-incobrable { color: #374151; background-color: #f3f4f6; padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
+  .estado-pagado     { color: #5a7d6b; background-color: rgba(184,219,217,.1); padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
+  .estado-pendiente  { color: #c9a227; background-color: rgba(201,162,39,.08); padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
+  .estado-parcial    { color: #586f7c; background-color: rgba(184,219,217,.15); padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
+  .estado-vencido    { color: #b85450; background-color: #e8b4b0; padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
+  .estado-incobrable { color: #586f7c; background-color: #f4f4f9; padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="text-gray-800">
+<div class="text-[#2f4550]">
 
   {# ── Toast de notificación ── #}
   <div id="toast-notification" class="fixed top-4 right-4 z-50 transform translate-x-full transition-all duration-300 opacity-0">
-    <div class="bg-white border-l-4 border-blue-600 shadow-xl rounded-md p-4 flex items-start gap-3 max-w-xs">
-      <div class="w-8 h-8 rounded bg-blue-100 flex items-center justify-center flex-shrink-0">
-        <i class="fas fa-filter text-blue-600 text-sm"></i>
+    <div class="bg-[#f4f4f9] border-l-4 border-[#2f4550] shadow-xl rounded-md p-4 flex items-start gap-3 max-w-xs">
+      <div class="w-8 h-8 rounded bg-[rgba(184,219,217,.2)] flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-filter text-[#2f4550] text-sm"></i>
       </div>
       <div class="flex-1 min-w-0">
-        <p class="text-sm font-bold text-gray-800" id="toast-title">¡Filtros aplicados!</p>
-        <p class="text-xs text-gray-500 mt-0.5" id="toast-message">La información ha sido filtrada según los criterios seleccionados.</p>
+        <p class="text-sm font-bold text-[#2f4550]" id="toast-title">¡Filtros aplicados!</p>
+        <p class="text-xs text-[#586f7c] mt-0.5" id="toast-message">La información ha sido filtrada según los criterios seleccionados.</p>
       </div>
-      <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors ml-1" onclick="hideToast()">
+      <button type="button" class="text-[#b8dbd9] hover:text-[#586f7c] transition-colors ml-1" onclick="hideToast()">
         <i class="fas fa-times text-xs"></i>
       </button>
     </div>
   </div>
 
   {# ── Aviso inicial ── #}
-  <div id="warning-message" class="bg-blue-50 border-l-4 border-blue-400 rounded-r-md p-3 mb-4 flex items-center gap-3" role="alert">
-    <div class="w-7 h-7 rounded bg-blue-100 flex items-center justify-center flex-shrink-0">
-      <i class="fas fa-info-circle text-blue-500 text-xs"></i>
+  <div id="warning-message" class="bg-[rgba(184,219,217,.15)] border-l-4 border-blue-400 rounded-r-md p-3 mb-4 flex items-center gap-3" role="alert">
+    <div class="w-7 h-7 rounded bg-[rgba(184,219,217,.2)] flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-info-circle text-[#586f7c] text-xs"></i>
     </div>
     <div>
-      <p class="text-xs font-bold text-blue-800">Información</p>
-      <p class="text-xs text-blue-700">El filtro por defecto es mensual. Seleccione el período y filtros deseados para el análisis.</p>
+      <p class="text-xs font-bold text-[#2f4550]">Información</p>
+      <p class="text-xs text-[#2f4550]">El filtro por defecto es mensual. Seleccione el período y filtros deseados para el análisis.</p>
     </div>
   </div>
 
@@ -212,20 +212,20 @@
   <div class="filter-card">
     <div class="filter-stripe"></div>
     <div class="filter-head">
-      <i class="fas fa-sliders-h text-blue-700 text-sm"></i>
-      <span class="text-sm font-bold text-gray-700">Filtros de análisis de ventas</span>
+      <i class="fas fa-sliders-h text-[#2f4550] text-sm"></i>
+      <span class="text-sm font-bold text-[#586f7c]">Filtros de análisis de ventas</span>
       <span class="relative group ml-1">
         <i class="fas fa-question-circle text-blue-400 cursor-pointer text-xs"></i>
-        <div class="absolute left-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-xl p-4 text-xs text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 pointer-events-none" style="top:100%">
-          <strong class="text-gray-800 block mb-2">¿Cómo usar el análisis de ventas?</strong>
+        <div class="absolute left-0 mt-2 w-80 bg-[#f4f4f9] border border-[#d8dce6] rounded-lg shadow-xl p-4 text-xs text-[#586f7c] opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 pointer-events-none" style="top:100%">
+          <strong class="text-[#2f4550] block mb-2">¿Cómo usar el análisis de ventas?</strong>
           <ul class="space-y-1.5">
-            <li><span class="font-semibold text-gray-700">Cliente:</span> Filtra ventas por cliente específico.</li>
-            <li><span class="font-semibold text-gray-700">Cuenta:</span> Análisis por cuenta bancaria de cobro.</li>
-            <li><span class="font-semibold text-gray-700">Sucursal:</span> Ventas por sucursal de la empresa.</li>
-            <li><span class="font-semibold text-gray-700">Mercado:</span> Filtro por mercado de destino.</li>
-            <li><span class="font-semibold text-gray-700">Modalidad:</span> Ventas al contado vs crédito.</li>
-            <li><span class="font-semibold text-gray-700">Estado:</span> Estado de cobranza (Pagado, Pendiente, Vencido, etc.).</li>
-            <li><span class="font-semibold text-gray-700">Período:</span> <span class="text-blue-600 font-semibold">Diario</span>, <span class="text-blue-600 font-semibold">Semanal</span> o <span class="text-blue-600 font-semibold">Mensual</span>.</li>
+            <li><span class="font-semibold text-[#586f7c]">Cliente:</span> Filtra ventas por cliente específico.</li>
+            <li><span class="font-semibold text-[#586f7c]">Cuenta:</span> Análisis por cuenta bancaria de cobro.</li>
+            <li><span class="font-semibold text-[#586f7c]">Sucursal:</span> Ventas por sucursal de la empresa.</li>
+            <li><span class="font-semibold text-[#586f7c]">Mercado:</span> Filtro por mercado de destino.</li>
+            <li><span class="font-semibold text-[#586f7c]">Modalidad:</span> Ventas al contado vs crédito.</li>
+            <li><span class="font-semibold text-[#586f7c]">Estado:</span> Estado de cobranza (Pagado, Pendiente, Vencido, etc.).</li>
+            <li><span class="font-semibold text-[#586f7c]">Período:</span> <span class="text-[#2f4550] font-semibold">Diario</span>, <span class="text-[#2f4550] font-semibold">Semanal</span> o <span class="text-[#2f4550] font-semibold">Mensual</span>.</li>
           </ul>
         </div>
       </span>
@@ -316,17 +316,17 @@
               <button type="button" id="month-selector-btn" class="filter-select text-left w-full">
                 <span id="month-selector-text">Todos los meses</span>
               </button>
-              <div id="month-dropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg hidden">
+              <div id="month-dropdown" class="absolute z-50 w-full mt-1 bg-[#f4f4f9] border border-[#d8dce6] rounded-md shadow-lg hidden">
                 <div class="p-2 max-h-64 overflow-y-auto">
-                  <label class="flex items-center gap-2 p-2 hover:bg-blue-50 rounded cursor-pointer">
-                    <input type="checkbox" id="month-all" class="text-blue-600 focus:ring-blue-500 rounded">
-                    <span class="text-xs font-semibold text-gray-700">Todos los meses</span>
+                  <label class="flex items-center gap-2 p-2 hover:bg-[rgba(184,219,217,.15)] rounded cursor-pointer">
+                    <input type="checkbox" id="month-all" class="text-[#2f4550] focus:ring-[#b8dbd9] rounded">
+                    <span class="text-xs font-semibold text-[#586f7c]">Todos los meses</span>
                   </label>
                   <hr class="my-1 border-gray-100">
                   {% for month in months %}
-                  <label class="flex items-center gap-2 p-2 hover:bg-blue-50 rounded cursor-pointer">
-                    <input type="checkbox" class="month-checkbox text-blue-600 focus:ring-blue-500 rounded" value="{{ forloop.counter }}" data-name="{{ month }}">
-                    <span class="text-xs text-gray-700">{{ month }}</span>
+                  <label class="flex items-center gap-2 p-2 hover:bg-[rgba(184,219,217,.15)] rounded cursor-pointer">
+                    <input type="checkbox" class="month-checkbox text-[#2f4550] focus:ring-[#b8dbd9] rounded" value="{{ forloop.counter }}" data-name="{{ month }}">
+                    <span class="text-xs text-[#586f7c]">{{ month }}</span>
                   </label>
                   {% endfor %}
                 </div>
@@ -346,22 +346,22 @@
 
         {# Opciones de filtro diario #}
         <div id="filtro-diario-opciones" {% if selected_periodo != 'diario' %}style="display:none"{% endif %}>
-          <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
-            <p class="text-xs font-bold text-slate-600 mb-2 flex items-center gap-1.5">
-              <i class="fas fa-calendar-day text-blue-500"></i> Tipo de consulta diaria
+          <div class="bg-[#f4f4f9] border border-[#d8dce6] rounded-lg p-3">
+            <p class="text-xs font-bold text-[#586f7c] mb-2 flex items-center gap-1.5">
+              <i class="fas fa-calendar-day text-[#586f7c]"></i> Tipo de consulta diaria
             </p>
             <div class="flex flex-wrap gap-4 mb-3">
               <label class="flex items-center gap-2 cursor-pointer">
                 <input type="radio" name="tipo_fecha" value="dia" id="radio-dia"
-                  class="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                  class="w-4 h-4 text-[#2f4550] focus:ring-[#b8dbd9]"
                   {% if selected_dia or not selected_fecha_inicio %}checked{% endif %}>
-                <span class="text-xs font-medium text-gray-600"><i class="fas fa-calendar-day text-blue-500 mr-1"></i> Día específico</span>
+                <span class="text-xs font-medium text-[#586f7c]"><i class="fas fa-calendar-day text-[#586f7c] mr-1"></i> Día específico</span>
               </label>
               <label class="flex items-center gap-2 cursor-pointer">
                 <input type="radio" name="tipo_fecha" value="rango" id="radio-rango"
-                  class="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                  class="w-4 h-4 text-[#2f4550] focus:ring-[#b8dbd9]"
                   {% if selected_fecha_inicio %}checked{% endif %}>
-                <span class="text-xs font-medium text-gray-600"><i class="fas fa-calendar-alt text-blue-500 mr-1"></i> Rango de fechas</span>
+                <span class="text-xs font-medium text-[#586f7c]"><i class="fas fa-calendar-alt text-[#586f7c] mr-1"></i> Rango de fechas</span>
               </label>
             </div>
 
@@ -388,7 +388,7 @@
         {# Botón aplicar #}
         <div class="flex items-center gap-2 pt-1">
           <button type="submit"
-            class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 px-5 py-2 rounded shadow-sm transition-colors">
+            class="inline-flex items-center gap-1.5 text-xs font-bold text-[#f4f4f9] bg-[#2f4550] hover:bg-[#2f4550] px-5 py-2 rounded shadow-sm transition-colors">
             <i class="fas fa-search"></i> Aplicar Filtros
           </button>
         </div>
@@ -399,8 +399,8 @@
   {# ── KPI Cards — 6 métricas ── #}
   <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-5">
 
-    <div class="kpi-card" style="border-left-color:#1e3a5f" title="${{ total_ventas|us_currency:2 }}">
-      <div class="kpi-icon-wrap" style="background:#1e3a5f"><i class="fas fa-dollar-sign"></i></div>
+    <div class="kpi-card" style="border-left-color:#2f4550" title="${{ total_ventas|us_currency:2 }}">
+      <div class="kpi-icon-wrap" style="background:#2f4550"><i class="fas fa-dollar-sign"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Total Ventas</p>
         <p class="kpi-value" id="kpi-total-ventas">${{ total_ventas|us_currency:2 }}</p>
@@ -415,32 +415,32 @@
       </div>
     </div>
 
-    <div class="kpi-card" style="border-left-color:#2563eb" title="${{ saldo_pendiente_total|us_currency:2 }}">
-      <div class="kpi-icon-wrap" style="background:#2563eb"><i class="fas fa-exclamation-triangle"></i></div>
+    <div class="kpi-card" style="border-left-color:#586f7c" title="${{ saldo_pendiente_total|us_currency:2 }}">
+      <div class="kpi-icon-wrap" style="background:#586f7c"><i class="fas fa-exclamation-triangle"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Pendiente</p>
         <p class="kpi-value" id="kpi-saldo-pendiente">${{ saldo_pendiente_total|us_currency:2 }}</p>
       </div>
     </div>
 
-    <div class="kpi-card" style="border-left-color:#1d4ed8">
-      <div class="kpi-icon-wrap" style="background:#1d4ed8"><i class="fas fa-receipt"></i></div>
+    <div class="kpi-card" style="border-left-color:#586f7c">
+      <div class="kpi-icon-wrap" style="background:#586f7c"><i class="fas fa-receipt"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Transacciones</p>
         <p class="kpi-value" id="kpi-transacciones">{{ numero_transacciones }}</p>
       </div>
     </div>
 
-    <div class="kpi-card" style="border-left-color:#1aadbc" title="${{ venta_maxima|us_currency:2 }}">
-      <div class="kpi-icon-wrap" style="background:#1aadbc"><i class="fas fa-arrow-up"></i></div>
+    <div class="kpi-card" style="border-left-color:#b8dbd9" title="${{ venta_maxima|us_currency:2 }}">
+      <div class="kpi-icon-wrap" style="background:#b8dbd9"><i class="fas fa-arrow-up"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Venta Máxima</p>
         <p class="kpi-value" id="kpi-venta-maxima">${{ venta_maxima|us_currency:2 }}</p>
       </div>
     </div>
 
-    <div class="kpi-card" style="border-left-color:#0891b2" title="${{ promedio_ventas|us_currency:2 }}">
-      <div class="kpi-icon-wrap" style="background:#0891b2"><i class="fas fa-calculator"></i></div>
+    <div class="kpi-card" style="border-left-color:#586f7c" title="${{ promedio_ventas|us_currency:2 }}">
+      <div class="kpi-icon-wrap" style="background:#586f7c"><i class="fas fa-calculator"></i></div>
       <div class="kpi-body">
         <p class="kpi-label">Promedio</p>
         <p class="kpi-value" id="kpi-promedio">${{ promedio_ventas|us_currency:2 }}</p>
@@ -451,7 +451,7 @@
 
   {# ── Botón exportar PDF ── #}
   <div class="flex items-center justify-between mb-3">
-    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+    <span class="text-xs font-bold text-[#586f7c] uppercase tracking-wider flex items-center gap-1.5">
       <i class="fas fa-chart-line text-blue-400"></i> Análisis visual
     </span>
     <button type="button" id="btn-export-pdf" onclick="exportVentasPDF()" class="btn-export-pdf">
@@ -464,7 +464,7 @@
 
     <div class="s-card">
       <div class="s-card-head">
-        <div class="s-card-ico" style="background:#dbeafe"><i class="fas fa-chart-pie text-blue-600"></i></div>
+        <div class="s-card-ico" style="background:rgba(184,219,217,.15)"><i class="fas fa-chart-pie text-[#2f4550]"></i></div>
         <span class="s-card-title">Distribución por Modalidad</span>
       </div>
       <div class="s-card-body">
@@ -474,7 +474,7 @@
 
     <div class="s-card">
       <div class="s-card-head">
-        <div class="s-card-ico" style="background:#fef3c7"><i class="fas fa-chart-pie text-amber-500"></i></div>
+        <div class="s-card-ico" style="background:rgba(201,162,39,.08)"><i class="fas fa-chart-pie text-[#c9a227]"></i></div>
         <span class="s-card-title">Estados de Cobranza</span>
       </div>
       <div class="s-card-body">
@@ -487,7 +487,7 @@
   {# ── Gráfico: Top 10 clientes ── #}
   <div class="s-card mb-5">
     <div class="s-card-head">
-      <div class="s-card-ico" style="background:#dbeafe"><i class="fas fa-users text-blue-600"></i></div>
+      <div class="s-card-ico" style="background:rgba(184,219,217,.15)"><i class="fas fa-users text-[#2f4550]"></i></div>
       <span class="s-card-title">Top 10 Clientes por Monto de Ventas</span>
     </div>
     <div class="s-card-body">
@@ -498,7 +498,7 @@
   {# ── Tabla de detalle ── #}
   <div class="s-card mb-5">
     <div class="s-card-head">
-      <div class="s-card-ico" style="background:#dbeafe"><i class="fas fa-table text-blue-600"></i></div>
+      <div class="s-card-ico" style="background:rgba(184,219,217,.15)"><i class="fas fa-table text-[#2f4550]"></i></div>
       <span class="s-card-title">Detalle de Ventas</span>
     </div>
     <div class="s-card-body" id="ventas-table-container">
@@ -522,29 +522,29 @@
         <tbody>
           {% for balance in balances %}
           <tr>
-            <td class="font-mono text-xs text-gray-500">{{ balance.numero_secuencial }}</td>
+            <td class="font-mono text-xs text-[#586f7c]">{{ balance.numero_secuencial }}</td>
 
-            <td><span class="font-medium text-gray-900">{{ balance.cliente_nombre }}</span></td>
+            <td><span class="font-medium text-[#2f4550]">{{ balance.cliente_nombre }}</span></td>
 
             <td>
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800">{{ balance.cuenta_numero }}</span>
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-[rgba(184,219,217,.2)] text-[#2f4550]">{{ balance.cuenta_numero }}</span>
             </td>
 
-            <td class="text-sm text-gray-600">{{ balance.banco_nombre }}</td>
+            <td class="text-sm text-[#586f7c]">{{ balance.banco_nombre }}</td>
 
-            <td class="text-sm text-gray-600">{{ balance.sucursal_nombre }}</td>
+            <td class="text-sm text-[#586f7c]">{{ balance.sucursal_nombre }}</td>
 
-            <td class="text-sm text-gray-600">{{ balance.fecha|date:"d/m/Y" }}</td>
+            <td class="text-sm text-[#586f7c]">{{ balance.fecha|date:"d/m/Y" }}</td>
 
-            <td class="text-right font-semibold text-emerald-700" data-order="{{ balance.total_ventas|unlocalize }}">
+            <td class="text-right font-semibold text-[#5a7d6b]" data-order="{{ balance.total_ventas|unlocalize }}">
               ${{ balance.total_ventas|us_currency:2 }}
             </td>
 
-            <td class="text-right font-semibold text-blue-700" data-order="{{ balance.total_pagado|unlocalize }}">
+            <td class="text-right font-semibold text-[#2f4550]" data-order="{{ balance.total_pagado|unlocalize }}">
               ${{ balance.total_pagado|us_currency:2 }}
             </td>
 
-            <td class="text-right font-semibold text-red-700" data-order="{{ balance.saldo_pendiente|unlocalize }}">
+            <td class="text-right font-semibold text-[#b85450]" data-order="{{ balance.saldo_pendiente|unlocalize }}">
               ${{ balance.saldo_pendiente|us_currency:2 }}
             </td>
 
@@ -552,7 +552,7 @@
               <div class="flex flex-col items-center space-y-1">
                 <span class="{{ balance.estado_cobranza|estado_badge_class }}">{{ balance.estado_cobranza }}</span>
                 {% if balance.fecha_vencimiento %}
-                  <small class="text-xs text-gray-400">{{ balance.fecha_vencimiento|date:"d/m/Y" }}</small>
+                  <small class="text-xs text-[#b8dbd9]">{{ balance.fecha_vencimiento|date:"d/m/Y" }}</small>
                 {% endif %}
               </div>
             </td>
@@ -576,11 +576,11 @@
       </table>
       {% else %}
       <div class="text-center py-12">
-        <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-          <i class="fas fa-inbox text-gray-400 text-2xl"></i>
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-[#f4f4f9] rounded-full mb-4">
+          <i class="fas fa-inbox text-[#b8dbd9] text-2xl"></i>
         </div>
-        <p class="text-gray-600 font-semibold">No hay datos de ventas disponibles</p>
-        <p class="text-gray-400 text-sm mt-1">Intente modificar los filtros para ver resultados.</p>
+        <p class="text-[#586f7c] font-semibold">No hay datos de ventas disponibles</p>
+        <p class="text-[#b8dbd9] text-sm mt-1">Intente modificar los filtros para ver resultados.</p>
       </div>
       {% endif %}
     </div>

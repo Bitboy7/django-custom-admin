@@ -1,44 +1,273 @@
-{% extends "admin/base_site.html" %}
 {% load i18n %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% trans "Cuenta bloqueada" %} — Agrícola de la Costa San Luis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-{% block content %}
-<div style="max-width:480px;margin:60px auto;padding:0 16px">
-  <div style="background:#fff;border:1px solid #dde3ec;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(30,58,95,.08)">
+    :root {
+      --black: #000000;
+      --charcoal-blue: #2f4550;
+      --blue-slate: #586f7c;
+      --light-blue: #b8dbd9;
+      --ghost-white: #f4f4f9;
+    }
 
-    <div style="background:linear-gradient(135deg,#7f1d1d,#b91c1c 100%);padding:28px 32px 24px">
-      <div style="color:#fff;font-size:20px;font-weight:700">
-        <i class="fas fa-ban" style="margin-right:8px"></i>{% trans "Cuenta bloqueada temporalmente" %}
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--ghost-white);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      color: var(--black);
+    }
+
+    .lockout-card {
+      width: 100%;
+      max-width: 480px;
+      background: var(--ghost-white);
+      border: 1px solid #d8dce6;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(47,69,80,.08);
+      animation: cardEnter .5s cubic-bezier(0.25,1,0.5,1) forwards;
+      opacity: 0;
+      transform: translateY(12px);
+    }
+
+    @keyframes cardEnter {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .lockout-header {
+      background: linear-gradient(135deg, #4a2f2f, #6b4545);
+      padding: 28px 32px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .lockout-header::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 140px; height: 140px;
+      border-radius: 50%;
+      background: rgba(244,244,249,.06);
+    }
+    .lockout-header::after {
+      content: '';
+      position: absolute;
+      bottom: -20px; left: -20px;
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: rgba(244,244,249,.04);
+    }
+    .lockout-header-icon {
+      width: 48px; height: 48px;
+      background: rgba(244,244,249,.15);
+      border: 1px solid rgba(244,244,249,.2);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; color: var(--ghost-white);
+      margin-bottom: 14px;
+      position: relative;
+      z-index: 1;
+    }
+    .lockout-header-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--ghost-white);
+      position: relative;
+      z-index: 1;
+      letter-spacing: -.3px;
+    }
+    .lockout-header-subtitle {
+      color: rgba(244,244,249,.75);
+      font-size: 13px;
+      margin-top: 6px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .lockout-body {
+      padding: 28px 32px;
+    }
+
+    .alert-danger {
+      background: #fef5f5;
+      border: 1px solid #e8b4b0;
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: #6b4545;
+      line-height: 1.6;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .alert-danger i {
+      margin-top: 2px;
+      flex-shrink: 0;
+      color: #b85450;
+    }
+
+    .alert-info {
+      background: rgba(184,219,217,.12);
+      border: 1px solid rgba(184,219,217,.35);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 24px;
+    }
+    .alert-info-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--charcoal-blue);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .alert-info-title i { color: var(--blue-slate); }
+    .alert-info-text {
+      font-size: 13px;
+      color: var(--charcoal-blue);
+      line-height: 1.6;
+    }
+
+    .timer-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: linear-gradient(135deg, #fef5f5, var(--ghost-white));
+      border: 1px solid #e8b4b0;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 24px;
+    }
+    .timer-icon {
+      width: 44px; height: 44px;
+      background: rgba(184,84,80,.08);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; color: #b85450;
+      flex-shrink: 0;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .6; }
+    }
+    .timer-text {
+      font-size: 14px;
+      font-weight: 700;
+      color: #6b4545;
+    }
+    .timer-sub {
+      font-size: 12px;
+      color: var(--blue-slate);
+      margin-top: 2px;
+    }
+
+    .btn-back {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      background: var(--ghost-white);
+      color: var(--charcoal-blue);
+      border: 1.5px solid #d8dce6;
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all .2s;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .btn-back:hover {
+      background: rgba(184,219,217,.1);
+      border-color: var(--light-blue);
+      color: var(--black);
+    }
+
+    .lockout-footer {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--blue-slate);
+      font-weight: 500;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .lockout-card { animation: none; opacity: 1; transform: none; }
+      .timer-icon { animation: none; }
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 16px; }
+      .lockout-body { padding: 24px 20px; }
+      .lockout-header { padding: 24px 20px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="lockout-card">
+    <div class="lockout-header">
+      <div class="lockout-header-icon">
+        <i class="fas fa-ban"></i>
       </div>
-      <div style="color:rgba(255,255,255,.75);font-size:13px;margin-top:6px">
-        {% trans "Se han detectado demasiados intentos de acceso fallidos." %}
-      </div>
+      <div class="lockout-header-title">{% trans "Cuenta bloqueada temporalmente" %}</div>
+      <div class="lockout-header-subtitle">{% trans "Se han detectado demasiados intentos de acceso fallidos." %}</div>
     </div>
 
-    <div style="padding:32px">
-      <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:16px 20px;margin-bottom:24px">
-        <p style="margin:0;font-size:14px;color:#7f1d1d;line-height:1.6">
-          <i class="fas fa-exclamation-triangle" style="margin-right:8px;color:#b91c1c"></i>
-          {% trans "Tu cuenta ha sido bloqueada después de varios intentos fallidos de inicio de sesión. Por seguridad, el acceso está deshabilitado temporalmente." %}
-        </p>
+    <div class="lockout-body">
+      <div class="alert-danger">
+        <i class="fas fa-triangle-exclamation"></i>
+        <span>{% trans "Tu cuenta ha sido bloqueada después de varios intentos fallidos de inicio de sesión. Por seguridad, el acceso está deshabilitado temporalmente." %}</span>
       </div>
 
-      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:16px 20px;margin-bottom:24px">
-        <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#0c4a6e">
-          <i class="fas fa-clock" style="margin-right:6px"></i>{% trans "¿Cuándo se desbloquea?" %}
-        </p>
-        <p style="margin:0;font-size:13px;color:#0369a1;line-height:1.6">
-          {% trans "El bloqueo se levanta automáticamente después de 1 hora. Si necesitas acceso inmediato, contacta al administrador del sistema." %}
-        </p>
+      <div class="timer-box">
+        <div class="timer-icon">
+          <i class="fas fa-clock"></i>
+        </div>
+        <div>
+          <div class="timer-text">{% trans "Espera 1 hora" %}</div>
+          <div class="timer-sub">{% trans "El bloqueo se levanta automáticamente" %}</div>
+        </div>
       </div>
 
-      <a href="{% url 'two_factor:login' %}"
-         style="display:block;text-align:center;background:#f2f4f7;color:#1a2332;border:1px solid #dde3ec;
-                border-radius:8px;padding:11px;font-size:14px;font-weight:600;text-decoration:none;
-                transition:background .2s"
-         onmouseover="this.style.background='#e5e9f0'" onmouseout="this.style.background='#f2f4f7'">
-        <i class="fas fa-arrow-left" style="margin-right:6px"></i>{% trans "Volver al inicio de sesión" %}
+      <div class="alert-info">
+        <div class="alert-info-title">
+          <i class="fas fa-circle-question"></i>{% trans "¿Necesitas ayuda?" %}
+        </div>
+        <div class="alert-info-text">
+          {% trans "Si necesitas acceso inmediato o crees que esto es un error, contacta al administrador del sistema." %}
+        </div>
+      </div>
+
+      <a href="{% url 'two_factor:login' %}" class="btn-back">
+        <i class="fas fa-arrow-left"></i>{% trans "Volver al inicio de sesión" %}
       </a>
+
+      <div class="lockout-footer">
+        <i class="fas fa-shield-halved" style="margin-right:4px;"></i>{% trans "Protegido por django-axes" %}
+      </div>
     </div>
   </div>
-</div>
-{% endblock %}
+
+</body>
+</html>

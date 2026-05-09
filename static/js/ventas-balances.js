@@ -82,18 +82,18 @@ function initializeVentasCharts() {
   // Configuración por defecto para todos los gráficos
   Chart.defaults.font.family = "'Inter', 'Segoe UI', 'Arial', sans-serif";
   Chart.defaults.font.size = 12;
-  Chart.defaults.color = "#374151";
+  Chart.defaults.color = "#586f7c";
 
   // Paleta de colores personalizada
   const colorPalette = {
-    primary: "#10B981",
-    secondary: "#3B82F6",
-    success: "#059669",
-    warning: "#F59E0B",
-    danger: "#EF4444",
-    info: "#06B6D4",
+    primary: "#5a7d6b",
+    secondary: "#586f7c",
+    success: "#5a7d6b",
+    warning: "#c9a227",
+    danger: "#b85450",
+    info: "#586f7c",
     purple: "#8B5CF6",
-    gray: "#6B7280",
+    gray: "#586f7c",
   };
 
   // Gráfico de modalidades de pago
@@ -118,7 +118,7 @@ function initializeVentasCharts() {
           {
             data: modalidadValues,
             backgroundColor: [colorPalette.success, colorPalette.warning],
-            hoverBackgroundColor: ["#047857", "#D97706"],
+            hoverBackgroundColor: ["#5a7d6b", "#c9a227"],
             borderWidth: 2,
             borderColor: "#ffffff",
           },

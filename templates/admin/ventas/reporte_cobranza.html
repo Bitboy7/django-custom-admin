@@ -17,14 +17,14 @@
   }
   .rc-table th,
   .rc-table td {
-    border: 1px solid #9ca3af;
+    border: 1px solid #b8dbd9;
     padding: 5px 8px;
     white-space: nowrap;
   }
 
   .rc-header-section {
     background-color: #fef08a;
-    color: #1e3a8a;
+    color: #2f4550;
     font-weight: 700;
     text-align: center;
     font-size: 0.85rem;
@@ -32,8 +32,8 @@
   }
 
   .rc-header-col {
-    background-color: #fde68a;
-    color: #1e3a8a;
+    background-color: rgba(201,162,39,.15);
+    color: #2f4550;
     font-weight: 700;
     text-align: center;
   }
@@ -43,7 +43,7 @@
   }
 
   .rc-total td {
-    background-color: #67e8f9;
+    background-color: #b8dbd9;
     font-weight: 700;
   }
 
@@ -54,7 +54,7 @@
 
   .rc-anticipo td {
     background-color: #f0fdf4;
-    color: #065f46;
+    color: #5a7d6b;
     font-style: italic;
   }
 
@@ -68,12 +68,12 @@
   }
 
   .rc-impuesto-header td {
-    background-color: #fde68a;
+    background-color: rgba(201,162,39,.15);
     font-weight: 700;
   }
 
   .rc-impuesto-total td {
-    background-color: #67e8f9;
+    background-color: #b8dbd9;
     font-weight: 700;
   }
 
@@ -82,17 +82,17 @@
   }
 
   .rc-zero {
-    color: #9ca3af;
+    color: #b8dbd9;
   }
 
   /* Moneda por fila */
   .rc-row-usd td { background-color: #f0fdf4; }
   .rc-mon { text-align: center; font-weight: 700; font-size: 0.7rem; padding: 2px 5px; border-radius: 3px; white-space: nowrap; }
-  .rc-mon-usd { color: #166534; background-color: #bbf7d0; }
-  .rc-mon-mxn { color: #1e40af; background-color: #bfdbfe; }
+  .rc-mon-usd { color: #3d6b2c; background-color: #bbf7d0; }
+  .rc-mon-mxn { color: #586f7c; background-color: rgba(184,219,217,.3); }
   /* Footer cartera */
-  .rc-equiv-row td { background-color: #dcfce7; color: #14532d; font-weight: 600; }
-  .rc-grand-total td { background-color: #0c4a6e; color: #fff; font-weight: 700; font-size: 0.9rem; }
+  .rc-equiv-row td { background-color: rgba(184,219,217,.2); color: #3d6b2c; font-weight: 600; }
+  .rc-grand-total td { background-color: #2f4550; color: #fff; font-weight: 700; font-size: 0.9rem; }
 
   .rc-scroll {
     overflow-x: auto;
@@ -125,20 +125,20 @@
     display: block;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #374151;
+    color: #586f7c;
     margin-bottom: 0.25rem;
   }
 
   .rc-filter-card input[type="date"],
   .rc-filter-card input[type="number"] {
-    border: 1px solid #d1d5db;
+    border: 1px solid #d8dce6;
     border-radius: 4px;
     padding: 6px 10px;
     font-size: 0.875rem;
   }
 
   .rc-btn-primary {
-    background-color: #1d4ed8;
+    background-color: #586f7c;
     color: #fff;
     border: none;
     border-radius: 4px;
@@ -149,11 +149,11 @@
   }
 
   .rc-btn-primary:hover {
-    background-color: #1e40af;
+    background-color: #586f7c;
   }
 
   .rc-btn-secondary {
-    color: #6b7280;
+    color: #586f7c;
     font-size: 0.875rem;
     text-decoration: underline;
     align-self: center;
@@ -179,25 +179,25 @@
   <!-- ENCABEZADO -->
   <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
     <div>
-      <h1 style="font-size:1.4rem; font-weight:700; color:#1e3a8a; margin:0;">
-        <i class="fas fa-file-invoice-dollar" style="color:#3b82f6; margin-right:0.4rem;"></i>
+      <h1 style="font-size:1.4rem; font-weight:700; color:#2f4550; margin:0;">
+        <i class="fas fa-file-invoice-dollar" style="color:#586f7c; margin-right:0.4rem;"></i>
         Reporte global de cobranza
       </h1>
-      <p style="color:#6b7280; font-size:0.875rem; margin:4px 0 0;">
+      <p style="color:#586f7c; font-size:0.875rem; margin:4px 0 0;">
         Ventas x cobrar &bull; Maquila x cobrar &bull; Obligaciones fiscales
       </p>
     </div>
     <div class="rc-export-buttons" style="display:flex; gap:0.5rem;">
       <a href="{% url 'admin:ventas_reporte_cobranza_excel' %}?fecha_inicio={{ fecha_inicio_str }}&fecha_fin={{ fecha_fin_str }}{% if tipo_cambio_input %}&tipo_cambio={{ tipo_cambio_input }}{% endif %}"
-        style="background:#10b981; color:#fff; border:none; border-radius:4px; padding:8px 16px; font-size:0.875rem; text-decoration:none; display:inline-flex; align-items:center;">
+        style="background:#5a7d6b; color:#fff; border:none; border-radius:4px; padding:8px 16px; font-size:0.875rem; text-decoration:none; display:inline-flex; align-items:center;">
         <i class="fas fa-file-excel" style="margin-right:0.3rem;"></i> Excel
       </a>
       <a href="{% url 'admin:ventas_reporte_cobranza_pdf' %}?fecha_inicio={{ fecha_inicio_str }}&fecha_fin={{ fecha_fin_str }}{% if tipo_cambio_input %}&tipo_cambio={{ tipo_cambio_input }}{% endif %}"
-        style="background:#ef4444; color:#fff; border:none; border-radius:4px; padding:8px 16px; font-size:0.875rem; text-decoration:none; display:inline-flex; align-items:center;">
+        style="background:#b85450; color:#fff; border:none; border-radius:4px; padding:8px 16px; font-size:0.875rem; text-decoration:none; display:inline-flex; align-items:center;">
         <i class="fas fa-file-pdf" style="margin-right:0.3rem;"></i> PDF
       </a>
       <button onclick="window.print()"
-        style="background:#374151; color:#fff; border:none; border-radius:4px; padding:8px 16px; font-size:0.875rem; cursor:pointer;">
+        style="background:#586f7c; color:#fff; border:none; border-radius:4px; padding:8px 16px; font-size:0.875rem; cursor:pointer;">
         <i class="fas fa-print" style="margin-right:0.3rem;"></i> Imprimir
       </button>
     </div>
@@ -215,7 +215,7 @@
         <input type="date" name="fecha_fin" value="{{ fecha_fin_str }}">
       </div>
       <div>
-        <label>Tipo de cambio USD <span style="font-weight:normal; color:#9ca3af;">(override)</span></label>
+        <label>Tipo de cambio USD <span style="font-weight:normal; color:#b8dbd9;">(override)</span></label>
         <input type="number" name="tipo_cambio" value="{{ tipo_cambio_input }}"
           step="0.0001" min="0" placeholder="Ej: 17.5990" style="width:140px;">
       </div>
@@ -223,7 +223,7 @@
         <i class="fas fa-search" style="margin-right:0.25rem;"></i> Generar
       </button>
       <a href="{% url 'admin:ventas_reporte_cobranza' %}"
-        style="color:#6b7280; font-size:0.875rem; text-decoration:underline; align-self:center;">Limpiar</a>
+        style="color:#586f7c; font-size:0.875rem; text-decoration:underline; align-self:center;">Limpiar</a>
     </form>
   </div>
 
@@ -242,7 +242,7 @@
               MAQUILA Y VENTAS X COBRAR
             </th>
             {% if total_anticipos > 0 %}
-            <th class="rc-header-section" style="background-color:#bfdbfe;">
+            <th class="rc-header-section" style="background-color:rgba(184,219,217,.3);">
               SALDO A<br>FAVOR CLIENTE
             </th>
             {% endif %}
@@ -255,7 +255,7 @@
             {% endfor %}
             <th class="rc-header-col" style="min-width:140px;">TOTAL X COBRAR</th>
             {% if total_anticipos > 0 %}
-            <th class="rc-header-col" style="background-color:#dbeafe; min-width:120px;">SALDO A FAVOR</th>
+            <th class="rc-header-col" style="background-color:rgba(184,219,217,.15); min-width:120px;">SALDO A FAVOR</th>
             {% endif %}
           </tr>
         </thead>
@@ -263,7 +263,7 @@
           {% if total_anticipos > 0 %}
           <tr class="rc-anticipo">
             <td class="font-semibold">SALDO A FAVOR DEL CLIENTE
-              <span style="font-size:0.68rem; font-weight:400; color:#065f46;">
+              <span style="font-size:0.68rem; font-weight:400; color:#5a7d6b;">
                 (anticipos pendientes + excedentes de anticipos aplicados)
               </span>
             </td>
@@ -289,14 +289,14 @@
             {% endfor %}
             <td class="rc-num rc-col-total">{% if fila.moneda == 'USD' %}US{% endif %}$ {{ fila.total|floatformat:2|intcomma }}</td>
             {% if total_anticipos > 0 %}
-            <td class="rc-num" style="background-color:#dbeafe;">
+            <td class="rc-num" style="background-color:rgba(184,219,217,.15);">
               {% if fila.anticipo > 0 %}$ {{ fila.anticipo|floatformat:2|intcomma }}{% else %}-{% endif %}
             </td>
             {% endif %}
           </tr>
           {% empty %}
           <tr>
-            <td colspan="{{ sucursales|length|add:3 }}" style="text-align:center; color:#9ca3af; padding:1rem; font-style:italic;">
+            <td colspan="{{ sucursales|length|add:3 }}" style="text-align:center; color:#b8dbd9; padding:1rem; font-style:italic;">
               Sin ventas pendientes en el período seleccionado.
             </td>
           </tr>
@@ -357,18 +357,18 @@
             {% if total_anticipos > 0 %}<td></td>{% endif %}
           </tr>
           {% if total_anticipos > 0 %}
-          <tr style="background-color:#1e40af; color:#fff; font-weight:700;">
+          <tr style="background-color:#586f7c; color:#fff; font-weight:700;">
             <td colspan="2">(-) SALDO A FAVOR ANTICIPOS</td>
             {% for suc in sucursales %}<td></td>{% endfor %}
-            <td class="rc-num" style="font-size:0.9rem; color:#bfdbfe;">
+            <td class="rc-num" style="font-size:0.9rem; color:rgba(184,219,217,.3);">
               ($ {{ total_anticipos|floatformat:2|intcomma }})
             </td>
             <td></td>
           </tr>
-          <tr style="background-color:#0f172a; color:#fff; font-weight:700;">
+          <tr style="background-color:#2f4550; color:#fff; font-weight:700;">
             <td colspan="2">DEUDA NETA A COBRAR (MXN)</td>
             {% for suc in sucursales %}<td></td>{% endfor %}
-            <td class="rc-num" style="font-size:1rem; color:#fde68a; letter-spacing:0.02em;">
+            <td class="rc-num" style="font-size:1rem; color:rgba(201,162,39,.15); letter-spacing:0.02em;">
               $ {{ deuda_neta_mxn|floatformat:2|intcomma }}
             </td>
             <td></td>
@@ -417,7 +417,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="{{ sucursales|length|add:2 }}" style="text-align:center; color:#9ca3af; padding:1rem; font-style:italic;">
+            <td colspan="{{ sucursales|length|add:2 }}" style="text-align:center; color:#b8dbd9; padding:1rem; font-style:italic;">
               Sin maquila pendiente en el período seleccionado.
             </td>
           </tr>
@@ -442,7 +442,7 @@
             {% for suc in sucursales %}<td></td>{% endfor %}
             <td></td>
           </tr>
-          <tr class="rc-subtotal" style="background-color:#34d399; color:#064e3b;">
+          <tr class="rc-subtotal" style="background-color:#34d399; color:#3d6b2c;">
             <td style="font-weight:700;">PESOS MEXICANOS</td>
             <td class="rc-num" style="font-weight:700;">$</td>
             {% for suc in sucursales %}<td></td>{% endfor %}
@@ -464,7 +464,7 @@
       <table class="rc-table">
         <thead>
           <tr>
-            <th class="rc-header-section" colspan="2" style="background-color:#1e40af; font-size:0.85rem;">
+            <th class="rc-header-section" colspan="2" style="background-color:#586f7c; font-size:0.85rem;">
               SALDO A FAVOR — ANTICIPOS PENDIENTES DE APLICAR
             </th>
           </tr>
@@ -476,23 +476,23 @@
         <tbody>
           {% for row in anticipos_saldo_favor %}
           <tr class="rc-row">
-            <td class="font-medium text-gray-800">{{ row.cliente.nombre|upper }}</td>
-            <td class="rc-num" style="color:#1e40af; font-weight:600;">
+            <td class="font-medium text-[#2f4550]">{{ row.cliente.nombre|upper }}</td>
+            <td class="rc-num" style="color:#586f7c; font-weight:600;">
               $ {{ row.saldo|floatformat:2|intcomma }}
             </td>
           </tr>
           {% endfor %}
         </tbody>
         <tfoot>
-          <tr style="background-color:#1e3a8a; color:#fff; font-weight:700;">
+          <tr style="background-color:#2f4550; color:#fff; font-weight:700;">
             <td style="padding:8px 12px;">TOTAL SALDO A FAVOR</td>
             <td class="rc-num" style="font-size:1rem;">
               $ {{ total_anticipos|floatformat:2|intcomma }}
             </td>
           </tr>
-          <tr style="background-color:#0f172a; color:#fff; font-weight:700;">
+          <tr style="background-color:#2f4550; color:#fff; font-weight:700;">
             <td style="padding:8px 12px;">DEUDA NETA (CARTERA − SALDO A FAVOR)</td>
-            <td class="rc-num" style="font-size:1rem; color:#fde68a;">
+            <td class="rc-num" style="font-size:1rem; color:rgba(201,162,39,.15);">
               $ {{ deuda_neta_mxn|floatformat:2|intcomma }}
             </td>
           </tr>
@@ -549,7 +549,7 @@
     </div>
   </div>
   {% else %}
-  <div style="background:#fefce8; border:1px solid #fde68a; border-radius:0.5rem; padding:1rem; max-width:32rem; font-size:0.875rem; color:#92400e;">
+  <div style="background:#fefce8; border:1px solid rgba(201,162,39,.15); border-radius:0.5rem; padding:1rem; max-width:32rem; font-size:0.875rem; color:#c9a227;">
     <i class="fas fa-info-circle" style="margin-right:0.5rem;"></i>
     No hay ninguna <strong>Obligación Fiscal</strong> registrada aún.
     Puedes agregarla desde el

@@ -24,18 +24,18 @@ TEMPLATE = """\
      DASHBOARD  ·  Teal-Navy Financial Theme
      ════════════════════════════════════════════════════════ */
   :root {
-    --tl:  #1aadbc;
-    --tl2: #0d8fa2;
-    --tl3: #c4f0f5;
-    --nv:  #1e3a5f;
-    --nv2: #2d5282;
-    --gr:  #22c55e;
-    --rd:  #ef4444;
-    --am:  #f59e0b;
-    --bg:  #f2f4f7;
+    --tl:  #b8dbd9;
+    --tl2: #b8dbd9;
+    --tl3: rgba(184,219,217,.3);
+    --nv:  #2f4550;
+    --nv2: #586f7c;
+    --gr:  #5a7d6b;
+    --rd:  #b85450;
+    --am:  #c9a227;
+    --bg:  #f4f4f9;
     --card:#ffffff;
-    --bdr: #dde3ec;
-    --txt: #1a2332;
+    --bdr: #d8dce6;
+    --txt: #2f4550;
     --mut: #7a8899;
     --sh:  0 1px 5px rgba(0,0,0,.07);
   }
@@ -59,8 +59,8 @@ TEMPLATE = """\
   .ks-lbl { font-size: 11px; color: var(--mut); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ks-val { font-size: 19px; font-weight: 700; color: var(--txt); margin: 4px 0 6px; line-height: 1; }
   .ks-bdg { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 20px; white-space: nowrap; }
-  .ks-up  { background: #dcfce7; color: #15803d; }
-  .ks-dn  { background: #fee2e2; color: #b91c1c; }
+  .ks-up  { background: rgba(184,219,217,.2); color: #3d6b2c; }
+  .ks-dn  { background: rgba(184,84,80,.1); color: #b85450; }
   .ks-neu { background: #f1f5f9; color: var(--mut); }
   .ks-tl-bar { position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: var(--tl); }
 
@@ -82,10 +82,10 @@ TEMPLATE = """\
 
   /* ── Pills ───────────────────────────────────────────── */
   .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
-  .pill-gr  { background: #dcfce7; color: #15803d; }
-  .pill-rd  { background: #fee2e2; color: #b91c1c; }
-  .pill-am  { background: #fef9c3; color: #92400e; }
-  .pill-bl  { background: #dbeafe; color: #1d4ed8; }
+  .pill-gr  { background: rgba(184,219,217,.2); color: #3d6b2c; }
+  .pill-rd  { background: rgba(184,84,80,.1); color: #b85450; }
+  .pill-am  { background: #fef9c3; color: #c9a227; }
+  .pill-bl  { background: rgba(184,219,217,.15); color: #586f7c; }
   .pill-mut { background: #f1f5f9; color: var(--mut); }
 
   /* ── Stat Cards (footer) ─────────────────────────────── */
@@ -257,8 +257,8 @@ TEMPLATE = """\
         <canvas id="carteraDonut" style="max-height:180px"></canvas>
       </div>
       <div class="c-lgnd">
-        <span><span class="c-lgnd-dot" style="background:#1aadbc"></span>Vigente</span>
-        <span><span class="c-lgnd-dot" style="background:#1e3a5f"></span>Vencida</span>
+        <span><span class="c-lgnd-dot" style="background:#b8dbd9"></span>Vigente</span>
+        <span><span class="c-lgnd-dot" style="background:#2f4550"></span>Vencida</span>
         <span style="margin-left:auto;font-weight:700;color:var(--txt)" id="kpiMorosidad">—</span>&nbsp;morosidad
       </div>
     </div>
@@ -351,27 +351,27 @@ TEMPLATE = """\
       <div class="c-body">
         <div class="q-grid">
           <a href="/admin/ventas/ventas/add/" class="q-btn">
-            <div class="q-icon" style="background:#dcfce7;color:#15803d">&#128196;</div>
+            <div class="q-icon" style="background:rgba(184,219,217,.2);color:#3d6b2c">&#128196;</div>
             <div class="q-label">Nueva Venta</div>
           </a>
           <a href="/admin/gastos/gasto/add/" class="q-btn">
-            <div class="q-icon" style="background:#fee2e2;color:#b91c1c">&#128184;</div>
+            <div class="q-icon" style="background:rgba(184,84,80,.1);color:#b85450">&#128184;</div>
             <div class="q-label">Nuevo Gasto</div>
           </a>
           <a href="/admin/ventas/ventas/?estado_cobranza__in=Vencida" class="q-btn">
-            <div class="q-icon" style="background:#fef9c3;color:#92400e">&#9888;&#65039;</div>
+            <div class="q-icon" style="background:#fef9c3;color:#c9a227">&#9888;&#65039;</div>
             <div class="q-label">CxC Vencidas</div>
           </a>
           <a href="/admin/catalogo/" class="q-btn">
-            <div class="q-icon" style="background:#dbeafe;color:#1d4ed8">&#128230;</div>
+            <div class="q-icon" style="background:rgba(184,219,217,.15);color:#586f7c">&#128230;</div>
             <div class="q-label">Catálogo</div>
           </a>
           <a href="/admin/compras/compra/add/" class="q-btn">
-            <div class="q-icon" style="background:#ede9fe;color:#7c3aed">&#128722;</div>
+            <div class="q-icon" style="background:rgba(47,69,80,.05);color:#7c3aed">&#128722;</div>
             <div class="q-label">Nueva Compra</div>
           </a>
           <a href="/admin/auditoria/" class="q-btn">
-            <div class="q-icon" style="background:#f0fdf4;color:#15803d">&#128269;</div>
+            <div class="q-icon" style="background:#f0fdf4;color:#3d6b2c">&#128269;</div>
             <div class="q-label">Auditoría</div>
           </a>
         </div>
@@ -383,21 +383,21 @@ TEMPLATE = """\
   <!-- ═══ Footer Stats ════════════════════════════════════ -->
   <div class="g4">
     <div class="stat-card">
-      <div class="stat-icon" style="background:#dbeafe;color:#1d4ed8">&#128100;</div>
+      <div class="stat-icon" style="background:rgba(184,219,217,.15);color:#586f7c">&#128100;</div>
       <div>
         <div style="font-size:22px;font-weight:700;color:var(--txt)">{{ total_users }}</div>
         <div style="font-size:11.5px;color:var(--mut)">Usuarios activos</div>
       </div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon" style="background:#dcfce7;color:#15803d">&#128230;</div>
+      <div class="stat-icon" style="background:rgba(184,219,217,.2);color:#3d6b2c">&#128230;</div>
       <div>
         <div style="font-size:22px;font-weight:700;color:var(--txt)">{{ productos_vendidos }}</div>
         <div style="font-size:11.5px;color:var(--mut)">Productos vendidos</div>
       </div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon" style="background:#fef9c3;color:#92400e">&#127991;&#65039;</div>
+      <div class="stat-icon" style="background:#fef9c3;color:#c9a227">&#127991;&#65039;</div>
       <div>
         <div style="font-size:22px;font-weight:700;color:var(--txt)">{{ total_categorias }}</div>
         <div style="font-size:11.5px;color:var(--mut)">Categorías activas</div>
@@ -424,8 +424,8 @@ TEMPLATE = """\
   'use strict';
 
   /* ── Paleta ────────────────────────────────────────────── */
-  const TEAL = '#1aadbc', NAVY = '#1e3a5f';
-  const PAL  = ['#1aadbc','#1e3a5f','#5dd0d7','#2d6a9f','#82dce0','#4e8bc4','#b3edf2','#35435a'];
+  const TEAL = '#b8dbd9', NAVY = '#2f4550';
+  const PAL  = ['#b8dbd9','#2f4550','#5dd0d7','#2d6a9f','#82dce0','#4e8bc4','#b3edf2','#35435a'];
 
   /* ── Datos desde Django ─────────────────────────────────── */
   const meses   = {{ meses_labels|safe }};
@@ -590,8 +590,8 @@ TEMPLATE = """\
       datasets: [{
         label: 'Balance',
         data: balance,
-        backgroundColor: balance.map(v => v >= 0 ? '#22c55e70' : '#ef444470'),
-        borderColor:      balance.map(v => v >= 0 ? '#22c55e'   : '#ef4444'),
+        backgroundColor: balance.map(v => v >= 0 ? '#5a7d6b70' : '#b8545070'),
+        borderColor:      balance.map(v => v >= 0 ? '#5a7d6b'   : '#b85450'),
         borderWidth: 1.5,
         borderRadius: 6,
         borderSkipped: false
@@ -609,7 +609,7 @@ TEMPLATE = """\
   /* ── Toast helper ───────────────────────────────────────── */
   function showToast(title, msg, type) {
     const icons  = { success: '&#9989;', warning: '&#9888;&#65039;', error: '&#10060;', info: '&#8505;&#65039;' };
-    const colors = { success: '#22c55e', warning: '#f59e0b', error: '#ef4444', info: '#1aadbc' };
+    const colors = { success: '#5a7d6b', warning: '#c9a227', error: '#b85450', info: '#b8dbd9' };
     const t = type || 'info';
     const el = document.createElement('div');
     el.className = 'toast-el';

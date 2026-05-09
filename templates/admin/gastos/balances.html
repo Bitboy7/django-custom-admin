@@ -30,7 +30,7 @@
 <style>
   /* ── Page base ── */
   #content-main { padding: 0; }
-  #content { padding: 1.25rem; background-color: #f0f4f8; min-height: 100vh; }
+  #content { padding: 1.25rem; background-color: #f4f4f9; min-height: 100vh; }
 
   /* ── AdminLTE/Jazzmin compat ── */
   .main-header .navbar-brand, .main-header .nav-link,
@@ -63,15 +63,15 @@
   .kpi-body { flex: 1; min-width: 0; }
   .kpi-label {
     font-size: .6rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .08em; color: #94a3b8; margin-bottom: .15rem;
+    letter-spacing: .08em; color: #586f7c; margin-bottom: .15rem;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .kpi-value {
-    font-size: 1.15rem; font-weight: 800; color: #0f172a; line-height: 1.15;
+    font-size: 1.15rem; font-weight: 800; color: #2f4550; line-height: 1.15;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .kpi-sub {
-    font-size: .65rem; color: #94a3b8; margin-top: .2rem;
+    font-size: .65rem; color: #586f7c; margin-top: .2rem;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
@@ -86,7 +86,7 @@
     display: flex; align-items: center; gap: .5rem;
     padding: .625rem 1rem;
     background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #d8dce6;
   }
   .s-card-ico {
     width: 1.75rem; height: 1.75rem;
@@ -94,7 +94,7 @@
     display: flex; align-items: center; justify-content: center;
     font-size: .75rem;
   }
-  .s-card-title { font-size: .8rem; font-weight: 700; color: #334155; }
+  .s-card-title { font-size: .8rem; font-weight: 700; color: #2f4550; }
   .s-card-body { padding: 1rem; }
 
   /* ── Filter Card ── */
@@ -108,27 +108,27 @@
   }
   .filter-stripe {
     height: 3px;
-    background: linear-gradient(90deg, #1e3a8a, #3b82f6);
+    background: linear-gradient(90deg, #2f4550, #586f7c);
     border-radius: .5rem .5rem 0 0;
   }
   .filter-head {
     padding: .625rem 1rem;
     background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #d8dce6;
     display: flex; align-items: center; gap: .5rem;
   }
   .filter-select {
-    width: 100%; background: #fff; border: 1px solid #d1d5db;
+    width: 100%; background: #fff; border: 1px solid #d8dce6;
     border-radius: .375rem; padding: .375rem .625rem;
-    font-size: .8rem; color: #374151;
+    font-size: .8rem; color: #586f7c;
     transition: border-color .15s, box-shadow .15s;
   }
-  .filter-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
-  .filter-label { display: block; font-size: .7rem; font-weight: 700; color: #64748b; margin-bottom: .25rem; }
+  .filter-select:focus { outline: none; border-color: #a1b3cf; box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+  .filter-label { display: block; font-size: .7rem; font-weight: 700; color: #586f7c; margin-bottom: .25rem; }
 
   /* ── DataTable overrides ── */
   table.dataTable thead th {
-    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+    background: linear-gradient(135deg, #252526 0%, #535657 100%) !important;
     color: #fff !important;
     border: none !important;
     font-size: .7rem !important; font-weight: 700 !important;
@@ -136,17 +136,17 @@
     padding: .75rem 1rem !important;
   }
   table.dataTable tfoot th {
-    background: #eff6ff !important;
-    color: #1e40af !important;
+    background: rgba(184,219,217,.1) !important;
+    color: #586f7c !important;
     font-weight: 700 !important;
     font-size: .75rem !important;
   }
   table.dataTable.stripe tbody tr.odd { background-color: #f8fafc; }
-  table.dataTable.hover tbody tr:hover > * { background-color: #eff6ff !important; box-shadow: none; }
+  table.dataTable.hover tbody tr:hover > * { background-color: rgba(184,219,217,.1) !important; box-shadow: none; }
   table.dataTable tbody td { font-size: .8rem; }
   div.dataTables_wrapper div.dataTables_filter input,
   div.dataTables_wrapper div.dataTables_length select {
-    border: 1px solid #d1d5db; border-radius: .375rem; font-size: .78rem;
+    border: 1px solid #d8dce6; border-radius: .375rem; font-size: .78rem;
     padding: .25rem .5rem;
   }
   .dt-buttons .dt-button {
@@ -156,12 +156,12 @@
   /* ── Scroll bar thin ── */
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: #f1f5f9; }
-  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: #b8dbd9; border-radius: 3px; }
 
   /* ── Donut custom legend ── */
   #donut-legend { overflow-y: auto; }
   #donut-legend::-webkit-scrollbar { width: 4px; }
-  #donut-legend::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+  #donut-legend::-webkit-scrollbar-thumb { background: #b8dbd9; border-radius: 2px; }
   .donut-legend-item {
     display: flex; align-items: center; gap: .4rem;
     padding: .2rem .3rem; border-radius: .25rem;
@@ -171,16 +171,30 @@
   .donut-legend-item.hidden-slice { opacity: .4; }
   .donut-legend-swatch { flex-shrink: 0; width: 10px; height: 10px; border-radius: 2px; }
   .donut-legend-label {
-    flex: 1; font-size: .7rem; color: #374151;
+    flex: 1; font-size: .7rem; color: #586f7c;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .donut-legend-pct { flex-shrink: 0; font-size: .65rem; color: #94a3b8; }
+  .donut-legend-pct { flex-shrink: 0; font-size: .65rem; color: #586f7c; }
+
+  /* ── Typography override (Tailwind preflight reset fix) ── */
+  #content, #content-main, #content *,
+  .kpi-card, .kpi-label, .kpi-value, .kpi-sub,
+  .s-card, .s-card-title, .s-card-body,
+  .filter-card, .filter-select, .filter-label,
+  table.dataTable, table.dataTable th, table.dataTable td,
+  .dt-buttons .dt-button,
+  input, select, button, textarea {
+    font-family: "Inter", -apple-system, "Segoe UI", "Helvetica Neue", sans-serif !important;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Libre Baskerville", "Georgia", "Times New Roman", serif !important;
+  }
 
   /* ── Export PDF button ── */
   .btn-export-pdf {
     display: inline-flex; align-items: center; gap: .375rem;
     font-size: .75rem; font-weight: 700; color: #fff;
-    background: linear-gradient(135deg, #dc2626, #ef4444);
+    background: linear-gradient(135deg, #b85450, #b85450);
     border: none; border-radius: .375rem;
     padding: .35rem .8rem; cursor: pointer;
     box-shadow: 0 1px 3px rgba(220,38,38,.3);
@@ -193,32 +207,57 @@
 {% endblock %}
 
 {% block content %}
-<div class="text-gray-800">
+<div class="text-[#2f4550]">
 
   {# ── Toast de notificación ── #}
   <div id="toast-notification" class="fixed top-4 right-4 z-50 transform translate-x-full transition-all duration-300 opacity-0">
-    <div class="bg-white border-l-4 border-blue-600 shadow-xl rounded-md p-4 flex items-start gap-3 max-w-xs">
-      <div class="w-8 h-8 rounded bg-blue-100 flex items-center justify-center flex-shrink-0">
-        <i class="fas fa-filter text-blue-600 text-sm"></i>
+    <div class="bg-[#f4f4f9] border-l-4 border-[#2f4550] shadow-xl rounded-md p-4 flex items-start gap-3 max-w-xs">
+      <div class="w-8 h-8 rounded bg-[rgba(184,219,217,.2)] flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-filter text-[#2f4550] text-sm"></i>
       </div>
       <div class="flex-1 min-w-0">
-        <p class="text-sm font-bold text-gray-800" id="toast-title">¡Filtros aplicados!</p>
-        <p class="text-xs text-gray-500 mt-0.5" id="toast-message">La información ha sido filtrada según los criterios seleccionados.</p>
+        <p class="text-sm font-bold text-[#2f4550]" id="toast-title">¡Filtros aplicados!</p>
+        <p class="text-xs text-[#586f7c] mt-0.5" id="toast-message">La información ha sido filtrada según los criterios seleccionados.</p>
       </div>
-      <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors ml-1" onclick="hideToast()">
+      <button type="button" class="text-[#b8dbd9] hover:text-[#586f7c] transition-colors ml-1" onclick="hideToast()">
         <i class="fas fa-times text-xs"></i>
       </button>
     </div>
   </div>
 
   {# ── Aviso inicial ── #}
-  <div id="warning-message" class="bg-amber-50 border-l-4 border-amber-400 rounded-r-md p-3 mb-4 flex items-center gap-3" role="alert">
-    <div class="w-7 h-7 rounded bg-amber-100 flex items-center justify-center flex-shrink-0">
-      <i class="fas fa-exclamation-triangle text-amber-500 text-xs"></i>
+  <div id="warning-message" class="bg-[rgba(201,162,39,.08)] border-l-4 border-amber-400 rounded-r-md p-3 mb-4 flex items-center gap-3" role="alert">
+    <div class="w-7 h-7 rounded bg-[rgba(201,162,39,.15)] flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-exclamation-triangle text-[#c9a227] text-xs"></i>
     </div>
     <div>
-      <p class="text-xs font-bold text-amber-800">Atención</p>
-      <p class="text-xs text-amber-700">El filtro por defecto es diario. Por favor, seleccione el periodo deseado.</p>
+      <p class="text-xs font-bold text-[#c9a227]">Atención</p>
+      <p class="text-xs text-[#c9a227]">El filtro por defecto es diario. Por favor, seleccione el periodo deseado.</p>
+    </div>
+  </div>
+
+  {# ── Skeleton (shown during HTMX request) ── #}
+  <div id="balances-skeleton" class="htmx-indicator mb-5">
+    <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-5">
+      {% for i in "123456" %}
+      <div class="kpi-card" style="border-left-color:#d8dce6">
+        <div class="htmx-skeleton htmx-skeleton-circle" style="background:#d8dce6"></div>
+        <div class="kpi-body w-full">
+          <div class="htmx-skeleton htmx-skeleton-block" style="width:60%;height:0.6rem;margin-bottom:0.4rem;"></div>
+          <div class="htmx-skeleton htmx-skeleton-block" style="width:80%;height:0.9rem;"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="s-card mb-5">
+      <div class="s-card-body">
+        <div class="htmx-skeleton htmx-skeleton-block" style="height:12rem;"></div>
+      </div>
+    </div>
+    <div class="s-card mb-5">
+      <div class="s-card-body">
+        <div class="htmx-skeleton htmx-skeleton-block" style="height:8rem;"></div>
+      </div>
     </div>
   </div>
 
@@ -226,24 +265,29 @@
   <div class="filter-card">
     <div class="filter-stripe"></div>
     <div class="filter-head">
-      <i class="fas fa-sliders-h text-blue-700 text-sm"></i>
-      <span class="text-sm font-bold text-gray-700">Filtros de búsqueda</span>
+      <i class="fas fa-sliders-h text-[#2f4550] text-sm"></i>
+      <span class="text-sm font-bold text-[#586f7c]">Filtros de b&uacute;squeda</span>
       <span class="relative group ml-1">
         <i class="fas fa-question-circle text-blue-400 cursor-pointer text-xs"></i>
-        <div class="absolute left-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-xl p-4 text-xs text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 pointer-events-none" style="top:100%">
-          <strong class="text-gray-800 block mb-2">¿Cómo usar el módulo de gastos?</strong>
+        <div class="absolute left-0 mt-2 w-80 bg-[#f4f4f9] border border-[#d8dce6] rounded-lg shadow-xl p-4 text-xs text-[#586f7c] opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 pointer-events-none" style="top:100%">
+          <strong class="text-[#2f4550] block mb-2">&iquest;C&oacute;mo usar el m&oacute;dulo de gastos?</strong>
           <ul class="space-y-1.5">
-            <li><span class="font-semibold text-gray-700">Cuenta:</span> Filtra los gastos por número de cuenta bancaria.</li>
-            <li><span class="font-semibold text-gray-700">Sucursal:</span> Gastos asociados a una sucursal.</li>
-            <li><span class="font-semibold text-gray-700">Año:</span> Consultar gastos del periodo.</li>
-            <li><span class="font-semibold text-gray-700">Meses:</span> Uno o varios meses.</li>
-            <li><span class="font-semibold text-gray-700">Periodo:</span> <span class="text-blue-600 font-semibold">Diario</span>, <span class="text-blue-600 font-semibold">Semanal</span> o <span class="text-blue-600 font-semibold">Mensual</span>.</li>
+            <li><span class="font-semibold text-[#586f7c]">Cuenta:</span> Filtra los gastos por n&uacute;mero de cuenta bancaria.</li>
+            <li><span class="font-semibold text-[#586f7c]">Sucursal:</span> Gastos asociados a una sucursal.</li>
+            <li><span class="font-semibold text-[#586f7c]">A&ntilde;o:</span> Consultar gastos del periodo.</li>
+            <li><span class="font-semibold text-[#586f7c]">Meses:</span> Uno o varios meses.</li>
+            <li><span class="font-semibold text-[#586f7c]">Periodo:</span> <span class="text-[#2f4550] font-semibold">Diario</span>, <span class="text-[#2f4550] font-semibold">Semanal</span> o <span class="text-[#2f4550] font-semibold">Mensual</span>.</li>
           </ul>
         </div>
       </span>
     </div>
     <div class="p-4">
-      <form method="get" action="{% url 'admin:gastos_gastos_balances' %}" class="space-y-3">
+      <form method="get" action="{% url 'admin:gastos_gastos_balances' %}" class="space-y-3"
+            hx-get="{% url 'admin:gastos_gastos_balances' %}"
+            hx-target="#balances-results"
+            hx-swap="innerHTML"
+            hx-indicator="#balances-skeleton"
+            hx-push-url="true">
         <div class="flex flex-wrap gap-3 mb-2">
 
           {# Cuenta #}
@@ -286,17 +330,17 @@
               <button type="button" id="month-selector-btn" class="filter-select text-left w-full">
                 <span id="month-selector-text">Todos los meses</span>
               </button>
-              <div id="month-dropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg hidden">
+              <div id="month-dropdown" class="absolute z-50 w-full mt-1 bg-[#f4f4f9] border border-[#d8dce6] rounded-md shadow-lg hidden">
                 <div class="p-2 max-h-64 overflow-y-auto">
-                  <label class="flex items-center gap-2 p-2 hover:bg-blue-50 rounded cursor-pointer">
-                    <input type="checkbox" id="month-all" class="text-blue-600 focus:ring-blue-500 rounded">
-                    <span class="text-xs font-semibold text-gray-700">Todos los meses</span>
+                  <label class="flex items-center gap-2 p-2 hover:bg-[rgba(184,219,217,.15)] rounded cursor-pointer">
+                    <input type="checkbox" id="month-all" class="text-[#2f4550] focus:ring-[#b8dbd9] rounded">
+                    <span class="text-xs font-semibold text-[#586f7c]">Todos los meses</span>
                   </label>
                   <hr class="my-1 border-gray-100">
                   {% for month in months %}
-                  <label class="flex items-center gap-2 p-2 hover:bg-blue-50 rounded cursor-pointer">
-                    <input type="checkbox" class="month-checkbox text-blue-600 focus:ring-blue-500 rounded" value="{{ forloop.counter }}" data-name="{{ month }}">
-                    <span class="text-xs text-gray-700">{{ month }}</span>
+                  <label class="flex items-center gap-2 p-2 hover:bg-[rgba(184,219,217,.15)] rounded cursor-pointer">
+                    <input type="checkbox" class="month-checkbox text-[#2f4550] focus:ring-[#b8dbd9] rounded" value="{{ forloop.counter }}" data-name="{{ month }}">
+                    <span class="text-xs text-[#586f7c]">{{ month }}</span>
                   </label>
                   {% endfor %}
                 </div>
@@ -317,22 +361,22 @@
 
         {# Opciones de filtro diario #}
         <div id="filtro-diario-opciones" {% if selected_periodo != 'diario' %}style="display:none"{% endif %}>
-          <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
-            <p class="text-xs font-bold text-slate-600 mb-2 flex items-center gap-1.5">
-              <i class="fas fa-calendar-day text-blue-500"></i> Tipo de consulta diaria
+          <div class="bg-[#f4f4f9] border border-[#d8dce6] rounded-lg p-3">
+            <p class="text-xs font-bold text-[#586f7c] mb-2 flex items-center gap-1.5">
+              <i class="fas fa-calendar-day text-[#586f7c]"></i> Tipo de consulta diaria
             </p>
             <div class="flex flex-wrap gap-4 mb-3">
               <label class="flex items-center gap-2 cursor-pointer">
                 <input type="radio" name="tipo_fecha" value="dia" id="radio-dia"
-                  class="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                  class="w-4 h-4 text-[#2f4550] focus:ring-[#b8dbd9]"
                   {% if selected_dia or not selected_fecha_inicio %}checked{% endif %}>
-                <span class="text-xs font-medium text-gray-600"><i class="fas fa-calendar-day text-blue-500 mr-1"></i> Día específico</span>
+                <span class="text-xs font-medium text-[#586f7c]"><i class="fas fa-calendar-day text-[#586f7c] mr-1"></i> Día específico</span>
               </label>
               <label class="flex items-center gap-2 cursor-pointer">
                 <input type="radio" name="tipo_fecha" value="rango" id="radio-rango"
-                  class="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
+                  class="w-4 h-4 text-[#5a7d6b] focus:ring-[#b8dbd9]"
                   {% if selected_fecha_inicio %}checked{% endif %}>
-                <span class="text-xs font-medium text-gray-600"><i class="fas fa-calendar-alt text-emerald-500 mr-1"></i> Rango de fechas</span>
+                <span class="text-xs font-medium text-[#586f7c]"><i class="fas fa-calendar-alt text-[#5a7d6b] mr-1"></i> Rango de fechas</span>
               </label>
             </div>
 
@@ -361,11 +405,11 @@
         {# Botones #}
         <div class="flex items-center gap-2 pt-1">
           <button type="button" id="clear-months"
-            class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 px-3 py-1.5 rounded hover:bg-gray-50 transition-colors">
+            class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#586f7c] hover:text-[#586f7c] border border-[#d8dce6] px-3 py-1.5 rounded hover:bg-[#f4f4f9] transition-colors">
             <i class="fas fa-times"></i> Limpiar
           </button>
           <button type="button" id="apply-months"
-            class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 px-5 py-2 rounded shadow-sm transition-colors">
+            class="inline-flex items-center gap-1.5 text-xs font-bold text-[#f4f4f9] bg-[#2f4550] hover:bg-[#2f4550] px-5 py-2 rounded shadow-sm transition-colors">
             <i class="fas fa-search"></i> Aplicar Filtros
           </button>
         </div>
@@ -373,168 +417,9 @@
     </div>
   </div>
 
-  {# ── KPI Cards — 6 métricas en una fila ── #}
-  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-5">
-
-    {# Acumulado — navy (sidebar) #}
-    <div class="kpi-card" style="border-left-color:#1e3a5f" title="${{ total_gastos|us_currency:2 }}">
-      <div class="kpi-icon-wrap" style="background:#1e3a5f"><i class="fas fa-coins"></i></div>
-      <div class="kpi-body">
-        <p class="kpi-label">Acumulado</p>
-        <p id="kpi-total-gastos" class="kpi-value">${{ total_gastos|us_currency:2 }}</p>
-      </div>
-    </div>
-
-    {# Promedio — dark teal #}
-    <div class="kpi-card" style="border-left-color:#0369a1" title="${{ promedio_gastos|us_currency:2 }}">
-      <div class="kpi-icon-wrap" style="background:#0369a1"><i class="fas fa-calculator"></i></div>
-      <div class="kpi-body">
-        <p class="kpi-label">Promedio</p>
-        <p id="kpi-promedio" class="kpi-value">${{ promedio_gastos|us_currency:2 }}</p>
-      </div>
-    </div>
-
-    {# Transacciones — mid blue #}
-    <div class="kpi-card" style="border-left-color:#2563eb">
-      <div class="kpi-icon-wrap" style="background:#2563eb"><i class="fas fa-exchange-alt"></i></div>
-      <div class="kpi-body">
-        <p class="kpi-label">Transacciones</p>
-        <p id="kpi-transacciones" class="kpi-value">{{ numero_transacciones }}</p>
-      </div>
-    </div>
-
-    {# Máximo — royal blue #}
-    <div class="kpi-card" style="border-left-color:#1d4ed8" title="${{ gasto_maximo|us_currency:2 }} — {{ categoria_gasto_maximo }}">
-      <div class="kpi-icon-wrap" style="background:#1d4ed8"><i class="fas fa-arrow-up"></i></div>
-      <div class="kpi-body">
-        <p class="kpi-label">Máximo</p>
-        <p id="kpi-maximo" class="kpi-value">${{ gasto_maximo|us_currency:2 }}</p>
-        <p id="kpi-sub-maximo" class="kpi-sub">{{ categoria_gasto_maximo }}</p>
-      </div>
-    </div>
-
-    {# Mínimo — teal (navbar accent) #}
-    <div class="kpi-card" style="border-left-color:#1aadbc" title="${{ gasto_minimo|us_currency:2 }} — {{ categoria_gasto_minimo }}">
-      <div class="kpi-icon-wrap" style="background:#1aadbc"><i class="fas fa-arrow-down"></i></div>
-      <div class="kpi-body">
-        <p class="kpi-label">Mínimo</p>
-        <p id="kpi-minimo" class="kpi-value">${{ gasto_minimo|us_currency:2 }}</p>
-        <p id="kpi-sub-minimo" class="kpi-sub">{{ categoria_gasto_minimo }}</p>
-      </div>
-    </div>
-
-    {# Media — steel blue #}
-    <div class="kpi-card" style="border-left-color:#0891b2" title="${{ gasto_mediano|us_currency:2 }}">
-      <div class="kpi-icon-wrap" style="background:#0891b2"><i class="fas fa-equals"></i></div>
-      <div class="kpi-body">
-        <p class="kpi-label">Media</p>
-        <p id="kpi-mediano" class="kpi-value">${{ gasto_mediano|us_currency:2 }}</p>
-      </div>
-    </div>
-
-  </div>
-
-  {# ── Gráficos: dos columnas iguales ── #}
-  <div class="flex items-center justify-between mb-3">
-    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-      <i class="fas fa-chart-line text-blue-400"></i> Análisis visual
-    </span>
-    <button type="button" id="btn-export-pdf" onclick="exportBalancesPDF()" class="btn-export-pdf">
-      <i class="fas fa-file-pdf"></i> Exportar PDF
-    </button>
-  </div>
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
-
-    {# Barras horizontal — por categoría #}
-    <div class="s-card">
-      <div class="s-card-head">
-        <div class="s-card-ico" style="background:#fef3c7"><i class="fas fa-chart-bar text-amber-500"></i></div>
-        <span class="s-card-title">Gastos por categoría</span>
-      </div>
-      <div class="s-card-body" style="overflow-y:auto;">
-        <div id="barChartContainer" style="height:300px"><canvas id="gastosCategoriasChart"></canvas></div>
-      </div>
-    </div>
-
-    {# Donut — distribución + leyenda scrollable #}
-    <div class="s-card">
-      <div class="s-card-head">
-        <div class="s-card-ico" style="background:#ede9fe"><i class="fas fa-chart-pie text-violet-500"></i></div>
-        <span class="s-card-title">Distribución de gastos</span>
-      </div>
-      <div class="s-card-body">
-        <div style="display:flex; gap:14px; height:300px; align-items:stretch;">
-          <div style="position:relative; flex:0 0 210px;"><canvas id="distribucionGastosChart"></canvas></div>
-          <div id="donut-legend" style="flex:1; overflow-y:auto; min-height:0; padding-top:2px;"></div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  {# ── Tabla de detalle ── #}
-  <div class="s-card mb-5">
-    <div class="s-card-head">
-      <div class="s-card-ico" style="background:#dbeafe"><i class="fas fa-table text-blue-600"></i></div>
-      <span class="s-card-title">Detalle de gastos por categoría y cuenta</span>
-    </div>
-    <div class="s-card-body" id="gastos-table-container">
-      {% if balances %}
-      <table id="gastosTable" class="display responsive nowrap min-w-full hover stripe" style="width:100%">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Categoría</th>
-            <th>N° Cuenta</th>
-            <th>Banco</th>
-            <th>Sucursal</th>
-            <th>Fecha</th>
-            <th>Total</th>
-            <th>Acumulado</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for balance in balances %}
-          <tr>
-            <td class="font-mono text-xs text-gray-500">{{ balance.numero_secuencial }}</td>
-            <td>
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800">{{ balance.id_cat_gastos__nombre }}</span>
-            </td>
-            <td>{% if balance.id_cuenta_banco__numero_cuenta %}{{ balance.id_cuenta_banco__numero_cuenta }}{% else %}<span class="text-gray-400">—</span>{% endif %}</td>
-            <td>{% if balance.id_cuenta_banco__id_banco__nombre %}{{ balance.id_cuenta_banco__id_banco__nombre }}{% else %}<span class="text-gray-400">—</span>{% endif %}</td>
-            <td>{% if balance.id_sucursal__nombre %}{{ balance.id_sucursal__nombre }}{% else %}<span class="text-gray-400">—</span>{% endif %}</td>
-            <td class="text-gray-600">
-              {% if selected_periodo == 'diario' %}
-                {% if balance.fecha %}{{ balance.fecha|date:"Y-m-d" }}{% else %}—{% endif %}
-              {% elif selected_periodo == 'semanal' %}
-                {% if balance.semana %}{{ balance.semana|date:"Y-m-d" }}{% else %}—{% endif %}
-              {% elif selected_periodo == 'mensual' %}
-                {% if balance.mes %}{{ balance.mes|date:"Y-m" }}{% else %}—{% endif %}
-              {% endif %}
-            </td>
-            <td class="text-right font-semibold text-blue-700" data-order="{{ balance.total_gastos|unlocalize }}">${{ balance.total_gastos|us_currency:2 }}</td>
-            <td class="text-right font-semibold text-emerald-700" data-order="{{ balance.acumulado|unlocalize }}">${{ balance.acumulado|us_currency:2 }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-        <tfoot>
-          <tr>
-            <th colspan="6" class="text-right">Total general:</th>
-            <th class="text-right">${{ total_gastos|us_currency:2 }}</th>
-            <th></th>
-          </tr>
-        </tfoot>
-      </table>
-      {% else %}
-      <div class="text-center py-12">
-        <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-          <i class="fas fa-inbox text-gray-400 text-2xl"></i>
-        </div>
-        <p class="text-gray-600 font-semibold">No hay datos disponibles</p>
-        <p class="text-gray-400 text-sm mt-1">Intente modificar los filtros para ver resultados.</p>
-      </div>
-      {% endif %}
-    </div>
+  {# ── Resultados din&aacute;micos (HTMX target) ── #}
+  <div id="balances-results">
+    {% include "admin/gastos/partials/balances_results.html" %}
   </div>
 
 </div>{# /wrapper #}
@@ -783,20 +668,37 @@
       });
   }
 
+  function initBalancesAfterSwap() {
+    if (typeof reinitGastosDataTable === 'function') reinitGastosDataTable();
+    if (typeof updateChartsData === 'function') {
+      setTimeout(function () {
+        updateChartsData();
+        window.dispatchEvent(new Event('chartsDataUpdated'));
+      }, 300);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     var form = document.querySelector('form[action*="gastos_balances"]');
     if (!form) return;
 
-    // Intercept real submit events
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      doAjaxFilter(form);
-    });
+    // Only use legacy AJAX if HTMX is not loaded
+    if (typeof htmx === 'undefined') {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        doAjaxFilter(form);
+      });
+      form.submit = function () {
+        doAjaxFilter(form);
+      };
+    }
+  });
 
-    // Override programmatic form.submit() used by multi-month-selector
-    form.submit = function () {
-      doAjaxFilter(form);
-    };
+  // Re-initialize DataTables and charts after HTMX swaps the results
+  document.addEventListener('htmx:afterSwap', function (evt) {
+    if (evt.detail.target && evt.detail.target.id === 'balances-results') {
+      initBalancesAfterSwap();
+    }
   });
 })();
 </script>

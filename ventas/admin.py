@@ -1755,7 +1755,7 @@ class VentasAdmin(ModelAdmin):
             'CustomTitle',
             parent=styles['Heading1'],
             fontSize=16,
-            textColor=colors.HexColor('#1E3A8A'),
+            textColor=colors.HexColor('#2f4550'),
             alignment=TA_CENTER,
             spaceAfter=12
         )
@@ -1764,7 +1764,7 @@ class VentasAdmin(ModelAdmin):
             'SectionTitle',
             parent=styles['Heading2'],
             fontSize=12,
-            textColor=colors.HexColor('#1E3A8A'),
+            textColor=colors.HexColor('#2f4550'),
             alignment=TA_CENTER,
             spaceAfter=8
         )
@@ -1814,13 +1814,13 @@ class VentasAdmin(ModelAdmin):
         col_widths = [2.0*inch, 0.5*inch] + [1.0*inch] * len(sucursales) + [1.2*inch]
         ventas_table = Table(ventas_data, colWidths=col_widths)
         ventas_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FDE68A')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1E3A8A')),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('rgba(201,162,39,.15)')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#2f4550')),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 8),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
-            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#67E8F9')),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#b8dbd9')),
             ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('ALIGN', (-1, 1), (-1, -1), 'RIGHT'),
@@ -1852,8 +1852,8 @@ class VentasAdmin(ModelAdmin):
 
         maquila_table = Table(maquila_data, colWidths=col_widths)
         maquila_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FDE68A')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1E3A8A')),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('rgba(201,162,39,.15)')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#2f4550')),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 8),
@@ -1883,13 +1883,13 @@ class VentasAdmin(ModelAdmin):
             
             impuestos_table = Table(impuestos_data, colWidths=[5*inch, 2*inch])
             impuestos_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FDE68A')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1E3A8A')),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('rgba(201,162,39,.15)')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#2f4550')),
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                 ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('FONTSIZE', (0, 0), (-1, -1), 9),
-                ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#67E8F9')),
+                ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#b8dbd9')),
                 ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ]))
@@ -2084,7 +2084,7 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
         ('Información del Pago', {
             'fields': ('venta', 'get_saldo_venta', 'fecha_pago', 'monto_pago'),
             'description': mark_safe(
-                '<strong style="color:#047857;">⚠️ Controles Bancarios Activos:</strong> '
+                '<strong style="color:#5a7d6b;">⚠️ Controles Bancarios Activos:</strong> '
                 'No se permiten pagos a ventas completadas ni sobrepagos.'
             ),
         }),
@@ -2101,7 +2101,7 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
         """Muestra el saldo pendiente de la venta"""
         if obj and obj.venta:
             saldo = obj.venta.saldo_pendiente()
-            color = '#047857' if saldo > 0 else '#6b7280'
+            color = '#5a7d6b' if saldo > 0 else '#586f7c'
             return format_html(
                 '<strong style="color:{}">Saldo pendiente: ${}</strong>',
                 color, f'{float(saldo):,.2f}'
@@ -2112,11 +2112,11 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
     def get_venta_info(self, obj):
         """Información de la venta con indicador de estado"""
         estado_color = {
-            'Pagado': '#10b981',
-            'Pendiente': '#f59e0b',
-            'Parcial': '#3b82f6',
-            'Vencido': '#ef4444',
-        }.get(obj.venta.estado_cobranza, '#6b7280')
+            'Pagado': '#5a7d6b',
+            'Pendiente': '#c9a227',
+            'Parcial': '#586f7c',
+            'Vencido': '#b85450',
+        }.get(obj.venta.estado_cobranza, '#586f7c')
         
         return format_html(
             '{} - {} <span style="color:{}; font-weight:600;">●</span>',
@@ -2130,8 +2130,8 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
         """Muestra el saldo pendiente después de este pago"""
         saldo = obj.venta.saldo_pendiente()
         if saldo <= 0:
-            return mark_safe('<span style="color:#10b981; font-weight:600;">✓ Pagado</span>')
-        return format_html('<span style="color:#f59e0b;">${}</span>', f'{float(saldo):,.2f}')
+            return mark_safe('<span style="color:#5a7d6b; font-weight:600;">✓ Pagado</span>')
+        return format_html('<span style="color:#c9a227;">${}</span>', f'{float(saldo):,.2f}')
     get_saldo_pendiente.short_description = 'Saldo Restante'
     
     def get_comprobante(self, obj):
@@ -2154,7 +2154,7 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
                 'onclick="return previewComprobante(event, this);" '
                 'style="text-decoration:none; cursor:pointer;" '
                 'title="Click para ver comprobante">'
-                '{} <span style="color:#3b82f6; text-decoration:underline;">{}</span>'
+                '{} <span style="color:#586f7c; text-decoration:underline;">{}</span>'
                 '</a>',
                 obj.comprobante_pago.url,
                 file_type.lower(),
@@ -2162,13 +2162,13 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
                 icon,
                 file_type
             )
-        return mark_safe('<span style="color:#9ca3af;">Sin comprobante</span>')
+        return mark_safe('<span style="color:#b8dbd9;">Sin comprobante</span>')
     get_comprobante.short_description = 'Comprobante'
     
     def preview_comprobante(self, obj):
         """Muestra preview del comprobante en el formulario de detalle"""
         if not obj.comprobante_pago:
-            return mark_safe('<p style="color:#9ca3af;">No hay comprobante adjunto</p>')
+            return mark_safe('<p style="color:#b8dbd9;">No hay comprobante adjunto</p>')
         
         file_ext = obj.comprobante_pago.name.split('.')[-1].lower()
         
@@ -2177,10 +2177,10 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
                 '<div style="margin-top:10px;">'
                 '<a href="{}" target="_blank">'
                 '<img src="{}" style="max-width:400px; max-height:400px; '
-                'border:2px solid #e5e7eb; border-radius:8px; cursor:pointer;" '
+                'border:2px solid #d8dce6; border-radius:8px; cursor:pointer;" '
                 'alt="Comprobante de pago" />'
                 '</a>'
-                '<p style="margin-top:5px; color:#6b7280; font-size:12px;">'
+                '<p style="margin-top:5px; color:#586f7c; font-size:12px;">'
                 'Click en la imagen para verla en tamaño completo'
                 '</p>'
                 '</div>',
@@ -2192,11 +2192,11 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
                 '<div style="margin-top:10px;">'
                 '<a href="{}" target="_blank" '
                 'style="display:inline-block; padding:10px 20px; '
-                'background:#3b82f6; color:white; text-decoration:none; '
+                'background:#586f7c; color:white; text-decoration:none; '
                 'border-radius:6px; font-weight:500;">'
                 '📄 Abrir PDF en nueva pestaña'
                 '</a>'
-                '<p style="margin-top:10px; color:#6b7280; font-size:12px;">'
+                '<p style="margin-top:10px; color:#586f7c; font-size:12px;">'
                 'Archivo: {}'
                 '</p>'
                 '</div>',
@@ -2208,11 +2208,11 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
                 '<div style="margin-top:10px;">'
                 '<a href="{}" target="_blank" '
                 'style="display:inline-block; padding:10px 20px; '
-                'background:#6b7280; color:white; text-decoration:none; '
+                'background:#586f7c; color:white; text-decoration:none; '
                 'border-radius:6px; font-weight:500;">'
                 '📎 Descargar archivo'
                 '</a>'
-                '<p style="margin-top:10px; color:#6b7280; font-size:12px;">'
+                '<p style="margin-top:10px; color:#586f7c; font-size:12px;">'
                 'Archivo: {}'
                 '</p>'
                 '</div>',

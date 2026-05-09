@@ -19,8 +19,8 @@
     theme: {
       extend: {
         colors: {
-          teal:  { DEFAULT:'#1aadbc', dark:'#0d8fa2', light:'#c4f0f5' },
-          navy:  { DEFAULT:'#1e3a5f', mid:'#2d5282' },
+          teal:  { DEFAULT:'#b8dbd9', dark:'#b8dbd9', light:'rgba(184,219,217,.3)' },
+          navy:  { DEFAULT:'#2f4550', mid:'#586f7c' },
           dash:  { bg:'var(--surface-bg)', card:'var(--surface-card)', border:'var(--border-default)', txt:'var(--text-primary)', muted:'var(--text-muted)' }
         }
       }
@@ -66,7 +66,7 @@
   .dash-status-warning { background: var(--accent-amber-bg); color: var(--accent-amber); }
   .dash-status-slate   { background: var(--surface-hover);   color: var(--text-muted); }
   .dash-welcome {
-    background: linear-gradient(135deg, #2f2d5b 0%, #0d8fa2 100%);
+    background: linear-gradient(135deg, #2f2d5b 0%, #b8dbd9 100%);
     border-radius: 1rem;
     color: #fff;
   }
@@ -104,7 +104,7 @@
 
     {# 1 — Ventas del Mes #}
     <div class="ks relative p-4 border-r dash-border">
-      <div class="absolute top-0 left-0 w-1 h-full bg-[#1aadbc] rounded-l-2xl"></div>
+      <div class="absolute top-0 left-0 w-1 h-full bg-[#b8dbd9] rounded-l-2xl"></div>
       <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">Ventas del Mes</div>
       <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1">${{ total_ventas|us_currency:0 }}</div>
       <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if ventas_trend >= 0 %} dash-status-success{% else %} dash-status-danger{% endif %}">
@@ -114,7 +114,7 @@
 
     {# 2 — Gastos del Mes #}
     <div class="ks relative p-4 border-r dash-border">
-      <div class="absolute top-0 left-0 w-1 h-full bg-[#1e3a5f] rounded-l-2xl"></div>
+      <div class="absolute top-0 left-0 w-1 h-full bg-[#2f4550] rounded-l-2xl"></div>
       <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">Gastos del Mes</div>
       <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1">${{ total_gastos|us_currency:0 }}</div>
       <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if gastos_trend <= 0 %} dash-status-success{% else %} dash-status-danger{% endif %}">
@@ -124,9 +124,9 @@
 
     {# 3 — Balance Neto #}
     <div class="ks relative p-4 border-r dash-border">
-      <div class="absolute top-0 left-0 w-1 h-full rounded-l-2xl{% if balance_neto >= 0 %} bg-green-500{% else %} bg-red-500{% endif %}"></div>
+      <div class="absolute top-0 left-0 w-1 h-full rounded-l-2xl{% if balance_neto >= 0 %} bg-[#5a7d6b]{% else %} bg-[#b85450]{% endif %}"></div>
       <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">Balance Neto</div>
-      <div class="text-xl font-bold my-1.5 leading-none pl-1{% if balance_neto >= 0 %} text-green-600{% else %} text-red-600{% endif %}">${{ balance_neto|us_currency:0 }}</div>
+      <div class="text-xl font-bold my-1.5 leading-none pl-1{% if balance_neto >= 0 %} text-[#5a7d6b]{% else %} text-[#b85450]{% endif %}">${{ balance_neto|us_currency:0 }}</div>
       <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if balance_trend >= 0 %} dash-status-success{% else %} dash-status-danger{% endif %}">
         <i class="fas fa-arrow-{% if balance_trend >= 0 %}up{% else %}down{% endif %} text-[9px]"></i> {{ balance_trend|floatformat:1 }}%
       </span>
@@ -134,7 +134,7 @@
 
     {# 4 — Margen Neto (JS computed) #}
     <div class="ks relative p-4 border-r dash-border">
-      <div class="absolute top-0 left-0 w-1 h-full bg-[#0d8fa2] rounded-l-2xl"></div>
+      <div class="absolute top-0 left-0 w-1 h-full bg-[#b8dbd9] rounded-l-2xl"></div>
       <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold pl-1">Margen Neto</div>
       <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1" id="kpiMargen">&#8212;</div>
       <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full dash-status-slate" id="kpiMargenBdg">calc&#8230;</span>
@@ -150,15 +150,15 @@
 
     {# 6 — CxC Vencidas #}
     <div class="ks relative p-4 border-r dash-border">
-      <div class="absolute top-0 left-0 w-1 h-full bg-red-500 rounded-l-2xl"></div>
+      <div class="absolute top-0 left-0 w-1 h-full bg-[#b85450] rounded-l-2xl"></div>
       <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">CxC Vencidas</div>
-      <div class="text-xl font-bold text-red-600 my-1.5 leading-none pl-1">${{ ventas_vencidas|us_currency:0 }}</div>
+      <div class="text-xl font-bold text-[#b85450] my-1.5 leading-none pl-1">${{ ventas_vencidas|us_currency:0 }}</div>
       <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full dash-status-danger"><i class="fas fa-arrow-up text-[9px]"></i> {{ ventas_vencidas_count }} fact.</span>
     </div>
 
     {# 7 — Clientes Activos #}
     <div class="ks relative p-4">
-      <div class="absolute top-0 left-0 w-1 h-full bg-[#2d5282] rounded-l-2xl"></div>
+      <div class="absolute top-0 left-0 w-1 h-full bg-[#586f7c] rounded-l-2xl"></div>
       <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">Clientes Activos</div>
       <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1">{{ total_clientes }}</div>
       <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if clientes_trend >= 0 %} dash-status-success{% else %} dash-status-danger{% endif %}">
@@ -199,8 +199,8 @@
         <canvas id="carteraDonut" style="max-height:170px"></canvas>
       </div>
       <div class="flex flex-wrap gap-3 px-5 py-3 border-t dash-border text-xs dash-muted items-center">
-        <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#1aadbc]"></span>Vigente</span>
-        <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#1e3a5f]"></span>Vencida</span>
+        <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#b8dbd9]"></span>Vigente</span>
+        <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#2f4550]"></span>Vencida</span>
         <span class="ml-auto font-bold dash-text" id="kpiMorosidad">&#8212;</span>
         <span>morosidad</span>
       </div>
@@ -387,15 +387,15 @@
   const v = n => rs.getPropertyValue(n).trim();
   const surfaceCard  = v('--surface-card')  || '#ffffff';
   const surfaceBg    = v('--surface-bg')    || '#f5f2eb';
-  const textPrimary  = v('--text-primary')  || '#1a2332';
+  const textPrimary  = v('--text-primary')  || '#2f4550';
   const textMuted    = v('--text-muted')    || '#7a8899';
-  const borderDefault= v('--border-default')|| '#dde3ec';
+  const borderDefault= v('--border-default')|| '#d8dce6';
   const accentGreen  = v('--accent-green')  || '#2d7a3a';
   const accentRed    = v('--accent-red')    || '#c53030';
-  const brandTeal    = v('--brand-teal')    || '#1aadbc';
+  const brandTeal    = v('--brand-teal')    || '#b8dbd9';
   const TEAL = brandTeal;
-  const NAVY = '#1e3a5f';
-  const PAL  = ['#1aadbc','#1e3a5f','#5dd0d7','#2d6a9f','#82dce0','#4e8bc4','#b3edf2','#35435a'];
+  const NAVY = '#2f4550';
+  const PAL  = ['#b8dbd9','#2f4550','#5dd0d7','#2d6a9f','#82dce0','#4e8bc4','#b3edf2','#35435a'];
 
   const meses   = {{ meses_labels|safe }};
   const ventas  = {{ ventas_mensuales|safe }};
@@ -501,8 +501,8 @@
     data: { labels:meses, datasets:[{
       label: 'Balance',
       data: balance,
-      backgroundColor: balance.map(v => v>=0?'#22c55e70':'#ef444470'),
-      borderColor:      balance.map(v => v>=0?'#22c55e':'#ef4444'),
+      backgroundColor: balance.map(v => v>=0?'#5a7d6b70':'#b8545070'),
+      borderColor:      balance.map(v => v>=0?'#5a7d6b':'#b85450'),
       borderWidth: 1.5, borderRadius: 6, borderSkipped: false
     }]},
     options: { ...base, scales:{
@@ -519,7 +519,7 @@
       error:   '<i class="fas fa-circle-xmark"></i>',
       info:    '<i class="fas fa-circle-info"></i>'
     };
-    const colors = {success: accentGreen, warning:'#f59e0b',error: accentRed,info: TEAL};
+    const colors = {success: accentGreen, warning:'#c9a227',error: accentRed,info: TEAL};
     const t = type||'info';
     const el = document.createElement('div');
     el.className = 'pointer-events-auto dash-card shadow-lg p-3 flex items-start gap-3 min-w-[220px] max-w-[300px] relative overflow-hidden t-slide';

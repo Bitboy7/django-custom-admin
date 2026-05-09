@@ -1,13 +1,13 @@
 /**
  * Mejoras para el formulario de login
  * - Mostrar/ocultar contraseña
- * - Validación visual
+ * - Validación visual en tiempo real
+ * - Animaciones de entrada
  */
 
 (function () {
   "use strict";
 
-  // Esperar a que el DOM esté listo
   document.addEventListener("DOMContentLoaded", function () {
     initPasswordToggle();
     initFormEnhancements();
@@ -17,119 +17,95 @@
    * Inicializa el botón para mostrar/ocultar contraseña
    */
   function initPasswordToggle() {
-    // Buscar el campo de contraseña
     const passwordInput = document.querySelector(
       'input[type="password"][name="password"]'
     );
 
-    if (!passwordInput) {
-      return;
-    }
+    if (!passwordInput) return;
 
-    // Crear el botón de toggle
+    const fieldWrap = passwordInput.closest(".field-wrap");
+    if (!fieldWrap) return;
+
+    fieldWrap.style.position = "relative";
+
     const toggleButton = createToggleButton();
+    fieldWrap.appendChild(toggleButton);
 
-    // Obtener el contenedor del input
-    const inputGroup =
-      passwordInput.closest(".input-group") || passwordInput.parentElement;
-
-    if (!inputGroup) {
-      return;
-    }
-
-    // Asegurarse de que el contenedor tenga posición relativa
-    if (!inputGroup.classList.contains("input-group")) {
-      inputGroup.style.position = "relative";
-    }
-
-    // Agregar el botón al contenedor
-    inputGroup.appendChild(toggleButton);
-
-    // Agregar evento click al botón
     toggleButton.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
       togglePasswordVisibility(passwordInput, toggleButton);
     });
 
-    // Ajustar el padding del input para dar espacio al botón
-    adjustInputPadding(passwordInput);
+    // Ajustar padding del input
+    const currentPadding = parseFloat(window.getComputedStyle(passwordInput).paddingRight) || 0;
+    passwordInput.style.paddingRight = Math.max(currentPadding, 48) + "px";
   }
 
-  /**
-   * Crea el botón de toggle
-   */
   function createToggleButton() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "password-toggle-btn";
     button.setAttribute("aria-label", "Mostrar contraseña");
     button.setAttribute("title", "Mostrar contraseña");
+    button.style.cssText =
+      "position:absolute;right:12px;top:50%;transform:translateY(-50%);" +
+      "background:none;border:none;padding:6px;cursor:pointer;" +
+      "color:#586f7c;font-size:14px;line-height:1;border-radius:6px;" +
+      "transition:color .2s,background .2s;";
 
     const icon = document.createElement("i");
     icon.className = "fas fa-eye";
     button.appendChild(icon);
 
+    button.addEventListener("mouseenter", function () {
+      this.style.color = "#586f7c";
+      this.style.background = "#f4f4f9";
+    });
+    button.addEventListener("mouseleave", function () {
+      this.style.color = this.classList.contains("active") ? "#2f4550" : "#586f7c";
+      this.style.background = "transparent";
+    });
+
     return button;
   }
 
-  /**
-   * Alterna la visibilidad de la contraseña
-   */
   function togglePasswordVisibility(input, button) {
     const icon = button.querySelector("i");
     const isPassword = input.type === "password";
 
     if (isPassword) {
-      // Mostrar contraseña
       input.type = "text";
       icon.className = "fas fa-eye-slash";
       button.setAttribute("aria-label", "Ocultar contraseña");
       button.setAttribute("title", "Ocultar contraseña");
       button.classList.add("active");
+      button.style.color = "#2f4550";
     } else {
-      // Ocultar contraseña
       input.type = "password";
       icon.className = "fas fa-eye";
       button.setAttribute("aria-label", "Mostrar contraseña");
       button.setAttribute("title", "Mostrar contraseña");
       button.classList.remove("active");
+      button.style.color = "#586f7c";
     }
 
-    // Mantener el focus en el input
     input.focus();
-  }
-
-  /**
-   * Ajusta el padding del input para dar espacio al botón
-   */
-  function adjustInputPadding(input) {
-    const currentPaddingRight = window.getComputedStyle(input).paddingRight;
-    const additionalPadding = 45; // Espacio para el botón
-
-    // Si ya tiene padding considerable, usarlo, sino agregar
-    const currentPadding = parseFloat(currentPaddingRight) || 0;
-    const newPadding = Math.max(currentPadding, additionalPadding);
-
-    input.style.paddingRight = newPadding + "px";
   }
 
   /**
    * Mejoras adicionales del formulario
    */
   function initFormEnhancements() {
-    // Agregar validación visual en tiempo real
     const inputs = document.querySelectorAll(
       'input[type="text"], input[type="password"], input[type="email"]'
     );
 
     inputs.forEach(function (input) {
-      // Validación al perder el foco
       input.addEventListener("blur", function () {
         validateInput(this);
       });
 
-      // Limpiar validación al escribir
       input.addEventListener("input", function () {
         if (this.classList.contains("is-invalid")) {
           this.classList.remove("is-invalid");
@@ -137,7 +113,6 @@
       });
     });
 
-    // Prevenir envío de formulario vacío
     const form = document.querySelector("form");
     if (form) {
       form.addEventListener("submit", function (e) {
@@ -152,26 +127,34 @@
 
         if (!isValid) {
           e.preventDefault();
-          // Focus en el primer campo inválido
           const firstInvalid = form.querySelector(".is-invalid");
-          if (firstInvalid) {
-            firstInvalid.focus();
+          if (firstInvalid) firstInvalid.focus();
+        } else {
+          // Deshabilitar botón y mostrar spinner durante envío
+          const btn = form.querySelector('.btn-submit');
+          if (btn) {
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> ' + (btn.textContent.trim().split(' ')[0] || 'Procesando...');
+            // Restaurar después de 10s por si hay error de red
+            setTimeout(function() {
+              btn.disabled = false;
+              btn.style.opacity = '';
+              btn.innerHTML = originalHTML;
+            }, 10000);
           }
         }
       });
     }
   }
 
-  /**
-   * Valida un input individual
-   */
   function validateInput(input) {
     if (input.hasAttribute("required") && !input.value.trim()) {
       input.classList.add("is-invalid");
       return false;
     }
 
-    // Validación de email si es un campo de email
     if (input.type === "email" && input.value.trim()) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(input.value)) {
@@ -182,29 +165,5 @@
 
     input.classList.remove("is-invalid");
     return true;
-  }
-
-  /**
-   * Animación de entrada para el formulario
-   */
-  function animateFormEntry() {
-    const formGroups = document.querySelectorAll(".form-group, .input-group");
-    formGroups.forEach(function (group, index) {
-      group.style.opacity = "0";
-      group.style.transform = "translateY(20px)";
-
-      setTimeout(function () {
-        group.style.transition = "all 0.4s ease-out";
-        group.style.opacity = "1";
-        group.style.transform = "translateY(0)";
-      }, index * 100);
-    });
-  }
-
-  // Ejecutar animación si el navegador lo soporta
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", animateFormEntry);
-  } else {
-    animateFormEntry();
   }
 })();

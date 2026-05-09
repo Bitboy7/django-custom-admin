@@ -202,7 +202,7 @@ document.addEventListener("DOMContentLoaded", function () {
           extend: "copy",
           text: '<i class="fas fa-copy"></i> Copiar',
           className:
-            "bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
+            "bg-[#586f7c] hover:bg-[#2f4550] text-[#f4f4f9] px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
           exportOptions: {
             columns: ":visible",
             orthogonal: "export",
@@ -212,7 +212,7 @@ document.addEventListener("DOMContentLoaded", function () {
           extend: "excel",
           text: '<i class="fas fa-file-excel"></i> Excel',
           className:
-            "bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
+            "bg-[#5a7d6b] hover:bg-[#586f7c] text-[#f4f4f9] px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
           title: function () {
             return getReportTitle();
           },
@@ -418,7 +418,7 @@ document.addEventListener("DOMContentLoaded", function () {
           extend: "pdf",
           text: '<i class="fas fa-file-pdf"></i> PDF',
           className:
-            "bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
+            "bg-[#b85450] hover:bg-[#8b4545] text-[#f4f4f9] px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
           title: "",
           filename: function () {
             return "compras_" + getCurrentDateFormatted("filename");
@@ -466,9 +466,9 @@ document.addEventListener("DOMContentLoaded", function () {
               doc.content[0].layout = {
                 fillColor: function (rowIndex) {
                   return rowIndex === 0
-                    ? "#3b82f6"
+                    ? "#586f7c"
                     : rowIndex % 2 === 0
-                    ? "#f3f4f6"
+                    ? "#f4f4f9"
                     : null;
                 },
                 hLineWidth: function (i, node) {
@@ -480,10 +480,10 @@ document.addEventListener("DOMContentLoaded", function () {
                   return 0.5;
                 },
                 hLineColor: function () {
-                  return "#d1d5db";
+                  return "#d8dce6";
                 },
                 vLineColor: function () {
-                  return "#d1d5db";
+                  return "#d8dce6";
                 },
               };
             }
@@ -493,7 +493,7 @@ document.addEventListener("DOMContentLoaded", function () {
           extend: "print",
           text: '<i class="fas fa-print"></i> Imprimir',
           className:
-            "bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
+            "bg-purple-600 hover:bg-purple-700 text-[#f4f4f9] px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
           title: function () {
             return getReportTitle();
           },

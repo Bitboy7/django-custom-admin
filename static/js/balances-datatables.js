@@ -531,25 +531,25 @@ document.addEventListener("DOMContentLoaded", function () {
       var lengthSelect = document.querySelector(".dataTables_length select");
       if (lengthSelect) {
         lengthSelect.style.backgroundColor = "white";
-        lengthSelect.style.border = "1px solid #d1d5db";
+        lengthSelect.style.border = "1px solid #d8dce6";
         lengthSelect.style.borderRadius = "6px";
         lengthSelect.style.padding = "6px 12px";
         lengthSelect.style.fontSize = "14px";
-        lengthSelect.style.color = "#374151";
+        lengthSelect.style.color = "#586f7c";
         lengthSelect.style.marginLeft = "8px";
         lengthSelect.style.marginRight = "8px";
       }
       var lengthLabel = document.querySelector(".dataTables_length");
       if (lengthLabel) {
         lengthLabel.style.fontSize = "14px";
-        lengthLabel.style.color = "#6b7280";
+        lengthLabel.style.color = "#586f7c";
         lengthLabel.style.fontWeight = "500";
       }
     }
     setTimeout(function () {
       var copyBtn = document.querySelector(".dt-button.btn-copy");
       if (copyBtn) {
-        copyBtn.style.backgroundColor = "#3B82F6";
+        copyBtn.style.backgroundColor = "#586f7c";
         copyBtn.style.color = "white";
         copyBtn.style.border = "none";
         copyBtn.style.padding = "6px 12px";
@@ -559,7 +559,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       var csvBtn = document.querySelector(".dt-button.btn-csv");
       if (csvBtn) {
-        csvBtn.style.backgroundColor = "#10B981";
+        csvBtn.style.backgroundColor = "#5a7d6b";
         csvBtn.style.color = "white";
         csvBtn.style.border = "none";
         csvBtn.style.padding = "6px 12px";
@@ -569,7 +569,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       var excelBtn = document.querySelector(".dt-button.btn-excel");
       if (excelBtn) {
-        excelBtn.style.backgroundColor = "#059669";
+        excelBtn.style.backgroundColor = "#5a7d6b";
         excelBtn.style.color = "white";
         excelBtn.style.border = "none";
         excelBtn.style.padding = "6px 12px";
@@ -579,7 +579,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       var pdfBtn = document.querySelector(".dt-button.btn-pdf");
       if (pdfBtn) {
-        pdfBtn.style.backgroundColor = "#EF4444";
+        pdfBtn.style.backgroundColor = "#b85450";
         pdfBtn.style.color = "white";
         pdfBtn.style.border = "none";
         pdfBtn.style.padding = "6px 12px";

@@ -3,6 +3,7 @@ from django.contrib.admin import ModelAdmin
 from django.contrib.admin import SimpleListFilter
 from django.template.response import TemplateResponse
 from django.urls import path
+from django.http import HttpResponse
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from import_export.admin import ImportExportModelAdmin
@@ -516,6 +517,7 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
         from app.services.balance_service import BalanceAnalysisService
         from django.http import JsonResponse
         from django.template.loader import render_to_string
+        import json
         balance_service = BalanceAnalysisService()
         context = balance_service.get_full_context(request)
         context.update(self.admin_site.each_context(request))
@@ -525,6 +527,24 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
             'opts': self.model._meta,
             'has_view_permission': self.has_view_permission(request),
         })
+
+        is_htmx = request.headers.get('HX-Request') == 'true'
+
+        if is_htmx:
+            results_html = render_to_string(
+                'admin/gastos/partials/balances_results.html',
+                context,
+                request=request,
+            )
+            response = HttpResponse(results_html)
+            response['HX-Trigger'] = json.dumps({
+                'showToast': {
+                    'type': 'info',
+                    'title': 'Filtros aplicados',
+                    'message': 'La informaci&oacute;n ha sido filtrada seg&uacute;n los criterios seleccionados.'
+                }
+            })
+            return response
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             table_html = render_to_string(

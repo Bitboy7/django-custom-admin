@@ -51,7 +51,7 @@ class PagoVentaForm(forms.ModelForm):
         if self.instance and self.instance.pk and self.instance.venta:
             saldo = self.instance.venta.saldo_pendiente()
             self.fields['monto_pago'].help_text = (
-                f'<strong style="color:#047857;">Saldo pendiente: ${saldo:,.2f}</strong><br>'
+                f'<strong style="color:#5a7d6b;">Saldo pendiente: ${saldo:,.2f}</strong><br>'
                 'No se permiten sobrepagos por controles bancarios.'
             )
         elif 'venta' in self.initial and self.initial['venta']:
@@ -59,7 +59,7 @@ class PagoVentaForm(forms.ModelForm):
                 venta = Ventas.objects.get(pk=self.initial['venta'])
                 saldo = venta.saldo_pendiente()
                 self.fields['monto_pago'].help_text = (
-                    f'<strong style="color:#047857;">Saldo pendiente: ${saldo:,.2f}</strong>'
+                    f'<strong style="color:#5a7d6b;">Saldo pendiente: ${saldo:,.2f}</strong>'
                 )
             except:
                 pass

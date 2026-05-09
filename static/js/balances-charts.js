@@ -186,11 +186,11 @@ function toggleDonutSlice(index) {
  */
 function buildCategoryRows(labels, data) {
   var headerRow = [
-    { text: "", fillColor: "#1e3a8a", color: "#fff", fontSize: 7 },
+    { text: "", fillColor: "#2f4550", color: "#fff", fontSize: 7 },
     {
       text: "#",
       bold: true,
-      fillColor: "#1e3a8a",
+      fillColor: "#2f4550",
       color: "#fff",
       fontSize: 7,
       alignment: "center",
@@ -198,14 +198,14 @@ function buildCategoryRows(labels, data) {
     {
       text: "Categoría",
       bold: true,
-      fillColor: "#1e3a8a",
+      fillColor: "#2f4550",
       color: "#fff",
       fontSize: 7,
     },
     {
       text: "Total",
       bold: true,
-      fillColor: "#1e3a8a",
+      fillColor: "#2f4550",
       color: "#fff",
       fontSize: 7,
       alignment: "right",
@@ -213,7 +213,7 @@ function buildCategoryRows(labels, data) {
     {
       text: "%",
       bold: true,
-      fillColor: "#1e3a8a",
+      fillColor: "#2f4550",
       color: "#fff",
       fontSize: 7,
       alignment: "right",
@@ -249,7 +249,7 @@ function buildCategoryRows(labels, data) {
       { text: String(idx + 1), fontSize: 7, alignment: "center" },
       { text: item.l, fontSize: 7 },
       { text: formatted, bold: true, fontSize: 7, alignment: "right" },
-      { text: pct, fontSize: 7, alignment: "right", color: "#374151" },
+      { text: pct, fontSize: 7, alignment: "right", color: "#586f7c" },
     ]);
   });
   return rows;
@@ -279,14 +279,14 @@ function exportBalancesPDF() {
       {
         text: "Métrica",
         bold: true,
-        fillColor: "#1e3a8a",
+        fillColor: "#2f4550",
         color: "#fff",
         fontSize: 8,
       },
       {
         text: "Valor",
         bold: true,
-        fillColor: "#1e3a8a",
+        fillColor: "#2f4550",
         color: "#fff",
         fontSize: 8,
       },
@@ -317,11 +317,11 @@ function exportBalancesPDF() {
         )
       : [
           [
-            { text: "", fillColor: "#1e3a8a", color: "#fff", fontSize: 7 },
+            { text: "", fillColor: "#2f4550", color: "#fff", fontSize: 7 },
             {
               text: "#",
               bold: true,
-              fillColor: "#1e3a8a",
+              fillColor: "#2f4550",
               color: "#fff",
               fontSize: 7,
               alignment: "center",
@@ -329,14 +329,14 @@ function exportBalancesPDF() {
             {
               text: "Categoría",
               bold: true,
-              fillColor: "#1e3a8a",
+              fillColor: "#2f4550",
               color: "#fff",
               fontSize: 7,
             },
             {
               text: "Total",
               bold: true,
-              fillColor: "#1e3a8a",
+              fillColor: "#2f4550",
               color: "#fff",
               fontSize: 7,
               alignment: "right",
@@ -344,7 +344,7 @@ function exportBalancesPDF() {
             {
               text: "%",
               bold: true,
-              fillColor: "#1e3a8a",
+              fillColor: "#2f4550",
               color: "#fff",
               fontSize: 7,
               alignment: "right",
@@ -364,7 +364,7 @@ function exportBalancesPDF() {
   var filterSummary = getFilterSummary();
   var filterRows = filterSummary.map(function (f) {
     return [
-      { text: f.label, fontSize: 8, color: "#6b7280", bold: true },
+      { text: f.label, fontSize: 8, color: "#586f7c", bold: true },
       { text: f.value, fontSize: 8, color: "#111827" },
     ];
   });
@@ -446,14 +446,14 @@ function exportBalancesPDF() {
         header: {
           fontSize: 20,
           bold: true,
-          color: "#1e3a8a",
+          color: "#2f4550",
           margin: [0, 0, 0, 2],
         },
-        subheader: { fontSize: 9, color: "#6b7280" },
+        subheader: { fontSize: 9, color: "#586f7c" },
         sectionTitle: {
           fontSize: 11,
           bold: true,
-          color: "#1e3a8a",
+          color: "#2f4550",
           margin: [0, 6, 0, 3],
         },
       },
@@ -593,7 +593,7 @@ function createGastosCategoriasChart() {
     }
   } else {
     document.querySelector("#gastosCategoriasChart").closest("div").innerHTML =
-      '<div class="flex flex-col items-center justify-center h-full"><i class="fas fa-info-circle text-gray-300 text-4xl mb-2"></i><p class="text-gray-500">No hay datos disponibles para mostrar</p></div>';
+      '<div class="flex flex-col items-center justify-center h-full"><i class="fas fa-info-circle text-[#b8dbd9] text-4xl mb-2"></i><p class="text-[#586f7c]">No hay datos disponibles para mostrar</p></div>';
     return true;
   }
 }

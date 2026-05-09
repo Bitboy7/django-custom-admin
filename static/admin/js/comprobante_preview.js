@@ -131,7 +131,7 @@
       content.innerHTML = `
                 <div class="comprobante-pdf">
                     <div class="pdf-notice">
-                        <p style="text-align:center; margin-bottom:16px; color:#374151; font-weight:500;">
+                        <p style="text-align:center; margin-bottom:16px; color:#586f7c; font-weight:500;">
                             📄 Comprobante PDF disponible
                         </p>
                         <div style="display:flex; gap:12px; justify-content:center; margin-bottom:16px; flex-wrap:wrap;">
@@ -146,7 +146,7 @@
                     <div id="pdf-inline-container" style="display:none; width:100%; height:550px;">
                         <iframe src="${fileUrl}#view=FitH" 
                                class="pdf-viewer"
-                               style="width:100%; height:100%; border:2px solid #e5e7eb; border-radius:8px;"
+                               style="width:100%; height:100%; border:2px solid #d8dce6; border-radius:8px;"
                                frameborder="0"
                                aria-label="Visor de PDF del comprobante">
                         </iframe>

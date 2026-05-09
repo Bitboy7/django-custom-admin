@@ -41,35 +41,35 @@
 
 /* Copiar */
 .dt-button.btn-copy {
-  background-color: var(--c-blue, #2563eb) !important;
+  background-color: var(--c-blue, #586f7c) !important;
   color: #fff !important;
 }
-.dt-button.btn-copy:hover { background-color: var(--c-blue-hover, #1d4ed8) !important; }
+.dt-button.btn-copy:hover { background-color: var(--c-blue-hover, #586f7c) !important; }
 
 /* CSV */
 .dt-button.btn-csv {
-  background-color: var(--c-green, #059669) !important;
+  background-color: var(--c-green, #5a7d6b) !important;
   color: #fff !important;
 }
-.dt-button.btn-csv:hover { background-color: #047857 !important; }
+.dt-button.btn-csv:hover { background-color: #5a7d6b !important; }
 
 /* Excel */
 .dt-button.btn-excel {
-  background-color: #166534 !important;
+  background-color: #3d6b2c !important;
   color: #fff !important;
 }
-.dt-button.btn-excel:hover { background-color: #14532d !important; }
+.dt-button.btn-excel:hover { background-color: #3d6b2c !important; }
 
 /* PDF */
 .dt-button.btn-pdf {
-  background-color: var(--c-red, #dc2626) !important;
+  background-color: var(--c-red, #b85450) !important;
   color: #fff !important;
 }
-.dt-button.btn-pdf:hover { background-color: #b91c1c !important; }
+.dt-button.btn-pdf:hover { background-color: #b85450 !important; }
 
 /* Imprimir */
 .dt-button.btn-print {
-  background-color: var(--c-text-soft, #475569) !important;
+  background-color: var(--c-text-soft, #586f7c) !important;
   color: #fff !important;
 }
 .dt-button.btn-print:hover { background-color: var(--c-navy-light, #2e5c8a) !important; }

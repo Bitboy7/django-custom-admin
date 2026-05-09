@@ -5,225 +5,271 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% trans "Sesión cerrada" %} — Agrícola de la Costa San Luis</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --black: #000000;
+      --charcoal-blue: #2f4550;
+      --blue-slate: #586f7c;
+      --light-blue: #b8dbd9;
+      --ghost-white: #f4f4f9;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f0f4f8;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--ghost-white);
       min-height: 100vh;
       display: flex;
       align-items: stretch;
+      color: var(--black);
     }
 
-    /* ── LEFT PANEL ── */
     .l-brand {
-      width: 48%;
-      background: linear-gradient(160deg, #0d2a47 0%, #0d8fa2 60%, #08b5ab 100%);
+      width: 46%;
+      background: linear-gradient(165deg, #1a2e38 0%, var(--charcoal-blue) 40%, var(--blue-slate) 100%);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 52px 56px;
+      padding: 48px 52px;
       position: relative;
       overflow: hidden;
     }
     .l-brand::before {
       content: '';
       position: absolute;
-      top: -120px; right: -120px;
-      width: 420px; height: 420px;
-      border-radius: 50%;
-      background: rgba(255,255,255,.05);
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
     }
-    .l-brand::after {
-      content: '';
+    .deco-circle {
       position: absolute;
-      bottom: -80px; left: -60px;
-      width: 300px; height: 300px;
       border-radius: 50%;
-      background: rgba(255,255,255,.04);
+      background: rgba(244,244,249,.04);
+      pointer-events: none;
     }
+    .deco-circle-1 { top: -100px; right: -100px; width: 380px; height: 380px; }
+    .deco-circle-2 { bottom: -60px; left: -40px; width: 260px; height: 260px; background: rgba(244,244,249,.03); }
 
     .brand-logo {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
       position: relative;
       z-index: 1;
     }
     .brand-logo-icon {
-      width: 44px; height: 44px;
-      background: rgba(255,255,255,.18);
-      border-radius: 12px;
+      width: 48px; height: 48px;
+      background: rgba(244,244,249,.12);
+      border: 1px solid rgba(244,244,249,.18);
+      border-radius: 14px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 20px; color: #fff;
-      backdrop-filter: blur(4px);
+      font-size: 22px; color: var(--light-blue);
     }
     .brand-logo-text {
-      font-size: 15px;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 16px;
       font-weight: 700;
-      color: #fff;
+      color: var(--ghost-white);
       letter-spacing: -.2px;
-      line-height: 1.2;
+      line-height: 1.25;
     }
     .brand-logo-text span {
       display: block;
+      font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 11px;
-      font-weight: 400;
-      color: rgba(255,255,255,.65);
-      letter-spacing: .3px;
+      font-weight: 500;
+      color: rgba(244,244,249,.55);
+      letter-spacing: .4px;
+      text-transform: uppercase;
     }
 
-    .brand-body { position: relative; z-index: 1; }
-
+    .brand-body {
+      position: relative; z-index: 1;
+      margin-top: auto; margin-bottom: auto;
+      padding: 40px 0;
+    }
     .brand-badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      background: rgba(255,255,255,.12);
-      border: 1px solid rgba(255,255,255,.2);
-      border-radius: 20px;
-      padding: 5px 14px;
+      gap: 8px;
+      background: rgba(184,219,217,.15);
+      border: 1px solid rgba(184,219,217,.25);
+      border-radius: 24px;
+      padding: 6px 16px;
       font-size: 12px;
-      color: rgba(255,255,255,.85);
-      font-weight: 500;
+      color: var(--light-blue);
+      font-weight: 600;
       margin-bottom: 28px;
-      backdrop-filter: blur(4px);
     }
     .brand-headline {
-      font-size: 36px;
-      font-weight: 800;
-      color: #fff;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 38px;
+      font-weight: 700;
+      color: var(--ghost-white);
       line-height: 1.15;
-      letter-spacing: -1px;
-      margin-bottom: 16px;
+      letter-spacing: -.5px;
+      margin-bottom: 18px;
     }
     .brand-headline em {
       font-style: normal;
-      color: #7de8f0;
+      color: var(--light-blue);
+      position: relative;
+    }
+    .brand-headline em::after {
+      content: '';
+      position: absolute;
+      bottom: 2px; left: 0; right: 0;
+      height: 4px;
+      background: rgba(184,219,217,.35);
+      border-radius: 2px;
+      z-index: -1;
     }
     .brand-sub {
       font-size: 15px;
-      color: rgba(255,255,255,.65);
-      line-height: 1.6;
-      max-width: 340px;
-    }
-
-    .brand-features {
-      margin-top: 36px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      position: relative; z-index: 1;
-    }
-    .brand-feature {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 13px;
-      color: rgba(255,255,255,.8);
-    }
-    .brand-feature-icon {
-      width: 32px; height: 32px;
-      background: rgba(255,255,255,.1);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px; color: #7de8f0;
-      flex-shrink: 0;
+      color: rgba(244,244,249,.6);
+      line-height: 1.65;
+      max-width: 360px;
     }
 
     .brand-footer {
       font-size: 12px;
-      color: rgba(255,255,255,.4);
+      color: rgba(244,244,249,.35);
       position: relative; z-index: 1;
     }
 
-    /* ── RIGHT PANEL ── */
     .l-form {
       flex: 1;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      padding: 52px 48px;
-      background: #fff;
+      padding: 48px 44px;
+      background: var(--ghost-white);
     }
 
     .form-wrap {
       width: 100%;
-      max-width: 380px;
+      max-width: 400px;
       text-align: center;
+      animation: formEnter .6s cubic-bezier(0.25,1,0.5,1) forwards;
+      opacity: 0;
+      transform: translateY(16px);
     }
 
-    /* Logout icon */
+    @keyframes formEnter {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     .logout-icon-wrap {
-      width: 72px; height: 72px;
-      background: linear-gradient(135deg, #f0fdf9, #e0f7f9);
-      border: 2px solid #b2e4ec;
-      border-radius: 20px;
+      width: 80px; height: 80px;
+      background: rgba(184,219,217,.15);
+      border: 2px solid rgba(184,219,217,.35);
+      border-radius: 22px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 30px;
-      color: #0d8fa2;
+      font-size: 32px;
+      color: var(--charcoal-blue);
       margin: 0 auto 28px;
+      animation: iconPop .5s .2s cubic-bezier(0.25,1,0.5,1) forwards;
+      opacity: 0;
+      transform: scale(.8);
+    }
+
+    @keyframes iconPop {
+      to { opacity: 1; transform: scale(1); }
     }
 
     .form-eyebrow {
-      font-size: 12px;
-      font-weight: 600;
-      color: #0d8fa2;
-      letter-spacing: 1px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--charcoal-blue);
+      letter-spacing: 1.5px;
       text-transform: uppercase;
       margin-bottom: 10px;
     }
     .form-title {
-      font-size: 28px;
-      font-weight: 800;
-      color: #0d2a47;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 30px;
+      font-weight: 700;
+      color: var(--black);
       letter-spacing: -.5px;
       margin-bottom: 10px;
+      line-height: 1.2;
     }
     .form-subtitle {
       font-size: 14px;
-      color: #8a9bb0;
+      color: var(--blue-slate);
       line-height: 1.6;
       margin-bottom: 36px;
     }
 
-    /* Login button */
     .btn-login {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
       width: 100%;
-      background: linear-gradient(135deg, #1e3a5f 0%, #0d8fa2 100%);
-      color: #fff;
+      background: var(--charcoal-blue);
+      color: var(--ghost-white);
       border: none;
       border-radius: 10px;
-      padding: 13px 20px;
+      padding: 14px 20px;
       font-size: 14px;
       font-weight: 700;
       cursor: pointer;
       text-decoration: none;
-      letter-spacing: .2px;
-      transition: opacity .2s, transform .1s;
-      box-shadow: 0 4px 16px rgba(13, 143, 162, .3);
+      letter-spacing: .3px;
+      transition: opacity .2s, transform .15s, box-shadow .2s, background .2s;
+      box-shadow: 0 4px 16px rgba(47,69,80,.25);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      position: relative;
+      overflow: hidden;
     }
-    .btn-login:hover { opacity: .92; transform: translateY(-1px); }
-    .btn-login:active { transform: translateY(0); opacity: 1; }
+    .btn-login::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(244,244,249,.1), transparent);
+      transform: translateX(-100%);
+      transition: transform .5s;
+    }
+    .btn-login:hover {
+      background: var(--blue-slate);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(47,69,80,.3);
+    }
+    .btn-login:hover::before {
+      transform: translateX(100%);
+    }
+    .btn-login:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(47,69,80,.2);
+    }
 
     .form-footer {
       margin-top: 28px;
       font-size: 12px;
-      color: #b0bec5;
+      color: var(--blue-slate);
+      font-weight: 500;
     }
 
+    @media (prefers-reduced-motion: reduce) {
+      .form-wrap, .logout-icon-wrap { animation: none; opacity: 1; transform: none; }
+    }
+
+    @media (max-width: 900px) {
+      .l-brand { width: 42%; padding: 40px 36px; }
+      .brand-headline { font-size: 30px; }
+    }
     @media (max-width: 768px) {
       .l-brand { display: none; }
-      .l-form { padding: 40px 24px; }
+      .l-form { padding: 36px 24px; }
     }
   </style>
 </head>
@@ -231,8 +277,11 @@
 
   <!-- LEFT: Brand panel -->
   <div class="l-brand">
+    <div class="deco-circle deco-circle-1"></div>
+    <div class="deco-circle deco-circle-2"></div>
+
     <div class="brand-logo">
-      <div class="brand-logo-icon"><i class="fas fa-leaf"></i></div>
+      <div class="brand-logo-icon"><i class="fas fa-seedling"></i></div>
       <div class="brand-logo-text">
         Agrícola de la Costa
         <span>San Luis S.P.R. de R.L.</span>
@@ -241,34 +290,19 @@
 
     <div class="brand-body">
       <div class="brand-badge">
-        <i class="fas fa-shield-alt"></i>
+        <i class="fas fa-shield-halved"></i>
         {% trans "Acceso Seguro" %}
       </div>
       <div class="brand-headline">
-        {% trans "Sistema" %}<br><em>{% trans "Administrativo" %}</em>
+        {% trans "Gestiona tu" %}<br><em>{% trans "operación" %}</em>
       </div>
       <div class="brand-sub">
-        {% trans "Plataforma centralizada para la gestión de gastos, ventas, cobranza y operaciones de la empresa." %}
-      </div>
-
-      <div class="brand-features">
-        <div class="brand-feature">
-          <div class="brand-feature-icon"><i class="fas fa-chart-line"></i></div>
-          {% trans "Análisis financiero en tiempo real" %}
-        </div>
-        <div class="brand-feature">
-          <div class="brand-feature-icon"><i class="fas fa-file-invoice-dollar"></i></div>
-          {% trans "Gestión de facturas y cobranza" %}
-        </div>
-        <div class="brand-feature">
-          <div class="brand-feature-icon"><i class="fas fa-user-shield"></i></div>
-          {% trans "Autenticación en dos factores (2FA)" %}
-        </div>
+        {% trans "Plataforma centralizada para la gestión financiera, control de gastos, ventas de fruta y operaciones agrícolas de la costa de Sinaloa." %}
       </div>
     </div>
 
     <div class="brand-footer">
-      &copy; {% now "Y" %} Agrícola de la Costa San Luis. Todos los derechos reservados.
+      &copy; {% now "Y" %} Agrícola de la Costa San Luis
     </div>
   </div>
 
@@ -277,13 +311,13 @@
     <div class="form-wrap">
 
       <div class="logout-icon-wrap">
-        <i class="fas fa-sign-out-alt"></i>
+        <i class="fas fa-arrow-right-from-bracket"></i>
       </div>
 
       <div class="form-eyebrow">{% trans "Sesión terminada" %}</div>
       <div class="form-title">{% trans "Has cerrado sesión" %}</div>
       <div class="form-subtitle">
-        {% trans "Tu sesión ha sido cerrada correctamente. Tus datos están seguros." %}
+        {% trans "Tu sesión ha finalizado correctamente. Para continuar trabajando, vuelve a iniciar sesión." %}
       </div>
 
       <a href="{% url 'two_factor:login' %}" class="btn-login">
@@ -292,7 +326,7 @@
       </a>
 
       <div class="form-footer">
-        {% trans "Acceso restringido. Solo personal autorizado." %}
+        <i class="fas fa-lock" style="margin-right:4px; font-size:10px;"></i>{% trans "Acceso restringido. Solo personal autorizado." %}
       </div>
 
     </div>

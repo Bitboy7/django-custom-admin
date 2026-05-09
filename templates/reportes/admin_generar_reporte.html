@@ -45,7 +45,7 @@
   /* ── Body card ── */
   .rg-body {
     background: #fff;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #d8dce6;
     border-top: none;
     border-radius: 0 0 10px 10px;
     padding: 28px 32px 8px;
@@ -60,7 +60,7 @@
     font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;
-    color: #94a3b8;
+    color: #586f7c;
     margin-bottom: 10px;
     display: flex;
     align-items: center;
@@ -70,7 +70,7 @@
     content: '';
     flex: 1;
     height: 1px;
-    background: #e2e8f0;
+    background: #d8dce6;
   }
 
   /* ── Period badge ── */
@@ -78,9 +78,9 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    color: #1d4ed8;
+    background: rgba(184,219,217,.1);
+    border: 1px solid rgba(184,219,217,.3);
+    color: #586f7c;
     border-radius: 20px;
     padding: 4px 14px;
     font-size: .8rem;
@@ -102,16 +102,16 @@
     display: block;
     font-size: .58rem;
     font-weight: 500;
-    color: #475569;
+    color: #586f7c;
     margin-bottom: 6px;
   }
   .rg-date-grid input[type="date"] {
     width: 100%;
     padding: 9px 12px;
-    border: 1.5px solid #e2e8f0;
+    border: 1.5px solid #d8dce6;
     border-radius: 7px;
     font-size: .9rem;
-    color: #1e293b;
+    color: #2f4550;
     background: #f8fafc;
     transition: border-color .2s, box-shadow .2s;
     box-sizing: border-box;
@@ -130,7 +130,7 @@
     gap: 8px;
     background: #f0fdf4;
     border: 1px solid #bbf7d0;
-    color: #166534;
+    color: #3d6b2c;
     border-radius: 8px;
     padding: 7px 14px;
     font-size: .82rem;
@@ -149,11 +149,11 @@
     align-items: center;
     gap: 7px;
     background: #f1f5f9;
-    border: 1px solid #cbd5e1;
+    border: 1px solid #b8dbd9;
     border-radius: 20px;
     padding: 5px 12px 5px 8px;
     font-size: .82rem;
-    color: #334155;
+    color: #2f4550;
   }
   .rg-recipient-pill .pill-avatar {
     width: 22px;
@@ -170,7 +170,7 @@
   }
   .rg-no-recipients {
     font-size: .83rem;
-    color: #94a3b8;
+    color: #586f7c;
     font-style: italic;
   }
 
@@ -179,14 +179,14 @@
     display: flex;
     gap: 12px;
     background: #fffbeb;
-    border: 1px solid #fde68a;
-    border-left: 4px solid #f59e0b;
+    border: 1px solid rgba(201,162,39,.15);
+    border-left: 4px solid #c9a227;
     border-radius: 8px;
     padding: 13px 16px;
     margin-bottom: 26px;
   }
   .rg-notice i {
-    color: #d97706;
+    color: #c9a227;
     font-size: 1rem;
     margin-top: 2px;
     flex-shrink: 0;
@@ -195,20 +195,20 @@
     display: block;
     font-size: .83rem;
     font-weight: 700;
-    color: #92400e;
+    color: #c9a227;
     margin-bottom: 3px;
   }
   .rg-notice-body p {
     margin: 0;
     font-size: .8rem;
-    color: #78350f;
+    color: #c9a227;
     line-height: 1.5;
   }
 
   /* ── Footer actions ── */
   .rg-footer {
     background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #d8dce6;
     border-top: none;
     border-radius: 0 0 10px 10px;
     padding: 16px 32px;
@@ -237,27 +237,27 @@
     box-shadow: 0 2px 8px rgba(37,99,168,.3);
   }
   .rg-btn-primary:hover {
-    background: #1d4ed8;
+    background: #586f7c;
     box-shadow: 0 4px 14px rgba(37,99,168,.4);
     color: #fff;
   }
   .rg-btn-secondary {
-    background: #e2e8f0;
-    color: #334155;
+    background: #d8dce6;
+    color: #2f4550;
   }
   .rg-btn-secondary:hover {
-    background: #cbd5e1;
-    color: #1e293b;
+    background: #b8dbd9;
+    color: #2f4550;
   }
   .rg-btn-ghost {
     background: transparent;
-    color: #64748b;
-    border: 1.5px solid #e2e8f0;
+    color: #586f7c;
+    border: 1.5px solid #d8dce6;
   }
   .rg-btn-ghost:hover {
     background: #f1f5f9;
-    color: #334155;
-    border-color: #cbd5e1;
+    color: #2f4550;
+    border-color: #b8dbd9;
   }
   .rg-footer-spacer { flex: 1; }
 
@@ -285,7 +285,7 @@
   .rg-spinner {
     width: 48px;
     height: 48px;
-    border: 4px solid #e2e8f0;
+    border: 4px solid #d8dce6;
     border-top-color: #2563a8;
     border-radius: 50%;
     animation: rg-spin .8s linear infinite;
@@ -295,12 +295,12 @@
   .rg-spinner-box h4 {
     margin: 0 0 6px;
     font-size: 1rem;
-    color: #1e293b;
+    color: #2f4550;
   }
   .rg-spinner-box p {
     margin: 0;
     font-size: .8rem;
-    color: #64748b;
+    color: #586f7c;
     line-height: 1.5;
   }
 </style>
@@ -352,7 +352,7 @@
       <div class="rg-section">
         <div class="rg-section-label"><i class="fas fa-microchip"></i> Modelo de IA</div>
         <span class="rg-model-chip">
-          <i class="fas fa-brain" style="color:#16a34a;"></i>
+          <i class="fas fa-brain" style="color:#5a7d6b;"></i>
           {% if config.modelo_ia %}{{ config.modelo_ia }}{% else %}Modelo por defecto del entorno{% endif %}
         </span>
       </div>

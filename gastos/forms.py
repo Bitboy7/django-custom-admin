@@ -117,26 +117,26 @@ class GastoForm(forms.ModelForm):
 
         widgets = {
             'id_sucursal': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white transition-colors duration-200 appearance-none'
+                'class': 'w-full px-3 py-2 pr-10 border border-[#d8dce6] rounded-lg shadow-sm focus:ring-2 focus:ring-[#b8dbd9] focus:border-[#b8dbd9] bg-[#f4f4f9] transition-colors duration-200 appearance-none'
             }),
             'id_cat_gastos': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white transition-colors duration-200 appearance-none'
+                'class': 'w-full px-3 py-2 pr-10 border border-[#d8dce6] rounded-lg shadow-sm focus:ring-2 focus:ring-[#b8dbd9] focus:border-[#b8dbd9] bg-[#f4f4f9] transition-colors duration-200 appearance-none'
             }),
             'monto': forms.NumberInput(attrs={
-                'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200',
+                'class': 'w-full px-3 py-2 border border-[#d8dce6] rounded-lg shadow-sm focus:ring-2 focus:ring-[#b8dbd9] focus:border-[#b8dbd9] transition-colors duration-200',
                 'step': '0.01',
                 'placeholder': 'Ingrese el monto'
             }),
             'descripcion': forms.Textarea(attrs={
-                'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200',
+                'class': 'w-full px-3 py-2 border border-[#d8dce6] rounded-lg shadow-sm focus:ring-2 focus:ring-[#b8dbd9] focus:border-[#b8dbd9] transition-colors duration-200',
                 'rows': 3,
                 'placeholder': 'Descripción del gasto...'
             }),
             'id_cuenta_banco': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white transition-colors duration-200 appearance-none'
+                'class': 'w-full px-3 py-2 pr-10 border border-[#d8dce6] rounded-lg shadow-sm focus:ring-2 focus:ring-[#b8dbd9] focus:border-[#b8dbd9] bg-[#f4f4f9] transition-colors duration-200 appearance-none'
             }),
             'fecha': forms.DateInput(attrs={
-                'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200',
+                'class': 'w-full px-3 py-2 border border-[#d8dce6] rounded-lg shadow-sm focus:ring-2 focus:ring-[#b8dbd9] focus:border-[#b8dbd9] transition-colors duration-200',
                 'type': 'date'
             }),
         }

@@ -16,14 +16,14 @@
   <tbody>
     {% for balance in balances %}
     <tr>
-      <td class="font-mono text-xs text-gray-500">{{ balance.numero_secuencial }}</td>
+      <td class="font-mono text-xs text-[#586f7c]">{{ balance.numero_secuencial }}</td>
       <td>
-        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800">{{ balance.id_cat_gastos__nombre }}</span>
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-[rgba(184,219,217,.2)] text-[#2f4550]">{{ balance.id_cat_gastos__nombre }}</span>
       </td>
-      <td>{% if balance.id_cuenta_banco__numero_cuenta %}{{ balance.id_cuenta_banco__numero_cuenta }}{% else %}<span class="text-gray-400">—</span>{% endif %}</td>
-      <td>{% if balance.id_cuenta_banco__id_banco__nombre %}{{ balance.id_cuenta_banco__id_banco__nombre }}{% else %}<span class="text-gray-400">—</span>{% endif %}</td>
-      <td>{% if balance.id_sucursal__nombre %}{{ balance.id_sucursal__nombre }}{% else %}<span class="text-gray-400">—</span>{% endif %}</td>
-      <td class="text-gray-600">
+      <td>{% if balance.id_cuenta_banco__numero_cuenta %}{{ balance.id_cuenta_banco__numero_cuenta }}{% else %}<span class="text-[#b8dbd9]">—</span>{% endif %}</td>
+      <td>{% if balance.id_cuenta_banco__id_banco__nombre %}{{ balance.id_cuenta_banco__id_banco__nombre }}{% else %}<span class="text-[#b8dbd9]">—</span>{% endif %}</td>
+      <td>{% if balance.id_sucursal__nombre %}{{ balance.id_sucursal__nombre }}{% else %}<span class="text-[#b8dbd9]">—</span>{% endif %}</td>
+      <td class="text-[#586f7c]">
         {% if selected_periodo == 'diario' %}
           {% if balance.fecha %}{{ balance.fecha|date:"Y-m-d" }}{% else %}—{% endif %}
         {% elif selected_periodo == 'semanal' %}
@@ -32,8 +32,8 @@
           {% if balance.mes %}{{ balance.mes|date:"Y-m" }}{% else %}—{% endif %}
         {% endif %}
       </td>
-      <td class="text-right font-semibold text-blue-700" data-order="{{ balance.total_gastos|unlocalize }}">${{ balance.total_gastos|us_currency:2 }}</td>
-      <td class="text-right font-semibold text-emerald-700" data-order="{{ balance.acumulado|unlocalize }}">${{ balance.acumulado|us_currency:2 }}</td>
+      <td class="text-right font-semibold text-[#2f4550]" data-order="{{ balance.total_gastos|unlocalize }}">${{ balance.total_gastos|us_currency:2 }}</td>
+      <td class="text-right font-semibold text-[#5a7d6b]" data-order="{{ balance.acumulado|unlocalize }}">${{ balance.acumulado|us_currency:2 }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -47,10 +47,10 @@
 </table>
 {% else %}
 <div class="text-center py-12">
-  <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-    <i class="fas fa-inbox text-gray-400 text-2xl"></i>
+  <div class="inline-flex items-center justify-center w-16 h-16 bg-[#f4f4f9] rounded-full mb-4">
+    <i class="fas fa-inbox text-[#b8dbd9] text-2xl"></i>
   </div>
-  <p class="text-gray-600 font-semibold">No hay datos disponibles</p>
-  <p class="text-gray-400 text-sm mt-1">Intente modificar los filtros para ver resultados.</p>
+  <p class="text-[#586f7c] font-semibold">No hay datos disponibles</p>
+  <p class="text-[#b8dbd9] text-sm mt-1">Intente modificar los filtros para ver resultados.</p>
 </div>
 {% endif %}

@@ -3,9 +3,9 @@
 
 {% block content %}
 <div style="max-width:520px;margin:40px auto;padding:0 16px">
-  <div style="background:#fff;border:1px solid #dde3ec;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(30,58,95,.08)">
+  <div style="background:#fff;border:1px solid #d8dce6;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(30,58,95,.08)">
 
-    <div style="background:linear-gradient(135deg,#1e3a5f 0%,#0d8fa2 100%);padding:28px 32px 24px">
+    <div style="background:linear-gradient(135deg,#2f4550 0%,#b8dbd9 100%);padding:28px 32px 24px">
       <div style="color:#fff;font-size:20px;font-weight:700">
         <i class="fas fa-mobile-alt" style="margin-right:8px"></i>{% trans "Configurar Autenticación en Dos Pasos" %}
       </div>
@@ -15,11 +15,11 @@
     </div>
 
     {# Stepper #}
-    <div style="display:flex;background:#f2f4f7;border-bottom:1px solid #dde3ec">
+    <div style="display:flex;background:#f4f4f9;border-bottom:1px solid #d8dce6">
       {% for step in wizard.steps.all %}
       <div style="flex:1;text-align:center;padding:10px 4px;font-size:11px;font-weight:600;
-                  color:{% if step == wizard.steps.current %}#1aadbc{% else %}#7a8899{% endif %};
-                  border-bottom:{% if step == wizard.steps.current %}2px solid #1aadbc{% else %}2px solid transparent{% endif %}">
+                  color:{% if step == wizard.steps.current %}#b8dbd9{% else %}#7a8899{% endif %};
+                  border-bottom:{% if step == wizard.steps.current %}2px solid #b8dbd9{% else %}2px solid transparent{% endif %}">
         {{ forloop.counter }}. {{ step|capfirst }}
       </div>
       {% endfor %}
@@ -28,21 +28,21 @@
     <div style="padding:28px 32px">
 
       {% if wizard.steps.current == 'generator' %}
-        <p style="font-size:14px;color:#1a2332;margin-bottom:20px">
+        <p style="font-size:14px;color:#2f4550;margin-bottom:20px">
           {% trans "Escanea este código QR con tu aplicación de autenticación:" %}
         </p>
         <div style="text-align:center;margin-bottom:20px">
           <img src="{{ QR_URL }}" alt="QR Code"
-               style="border:8px solid #f2f4f7;border-radius:12px;max-width:200px">
+               style="border:8px solid #f4f4f9;border-radius:12px;max-width:200px">
         </div>
         <details style="margin-bottom:20px">
           <summary style="font-size:12px;color:#7a8899;cursor:pointer">{% trans "¿No puedes escanear? Ingresa el código manualmente" %}</summary>
-          <code style="display:block;background:#f2f4f7;border-radius:8px;padding:10px;margin-top:10px;font-size:13px;word-break:break-all">{{ otpauth_url }}</code>
+          <code style="display:block;background:#f4f4f9;border-radius:8px;padding:10px;margin-top:10px;font-size:13px;word-break:break-all">{{ otpauth_url }}</code>
         </details>
       {% endif %}
 
       {% if wizard.steps.current == 'validation' %}
-        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#1d4ed8">
+        <div style="background:rgba(184,219,217,.1);border:1px solid rgba(184,219,217,.3);border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#586f7c">
           <i class="fas fa-info-circle" style="margin-right:6px"></i>
           {% trans "Ingresa el código de 6 dígitos que muestra tu aplicación para confirmar la configuración." %}
         </div>
@@ -54,16 +54,16 @@
 
         {% for field in form.visible_fields %}
         <div style="margin-bottom:18px">
-          <label style="display:block;font-size:12px;font-weight:600;color:#1a2332;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">
+          <label style="display:block;font-size:12px;font-weight:600;color:#2f4550;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">
             {{ field.label }}
           </label>
           {{ field }}
-          {% if field.errors %}<div style="color:#b91c1c;font-size:12px;margin-top:4px">{{ field.errors.0 }}</div>{% endif %}
+          {% if field.errors %}<div style="color:#b85450;font-size:12px;margin-top:4px">{{ field.errors.0 }}</div>{% endif %}
         </div>
         {% endfor %}
 
         <button type="submit"
-                style="width:100%;background:linear-gradient(135deg,#1e3a5f,#0d8fa2);color:#fff;border:none;
+                style="width:100%;background:linear-gradient(135deg,#2f4550,#b8dbd9);color:#fff;border:none;
                        border-radius:8px;padding:12px;font-size:14px;font-weight:600;cursor:pointer">
           {% trans "Continuar" %} <i class="fas fa-arrow-right" style="margin-left:6px"></i>
         </button>
@@ -73,11 +73,11 @@
 </div>
 <style>
   input[type=text], input[type=number] {
-    width:100%;box-sizing:border-box;border:1px solid #dde3ec;border-radius:8px;
+    width:100%;box-sizing:border-box;border:1px solid #d8dce6;border-radius:8px;
     padding:10px 14px;font-size:14px;outline:none;transition:border-color .2s;
   }
   input[type=text]:focus, input[type=number]:focus {
-    border-color:#1aadbc;box-shadow:0 0 0 3px rgba(26,173,188,.15);
+    border-color:#b8dbd9;box-shadow:0 0 0 3px rgba(26,173,188,.15);
   }
 </style>
 {% endblock %}

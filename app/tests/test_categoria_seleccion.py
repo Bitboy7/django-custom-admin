@@ -37,6 +37,6 @@ for categoria in categorias_django:
 print()
 print("=== RESULTADO ESPERADO ===")
 print("- El dropdown debería mostrar 'Vehículos y Transporte' como seleccionado")
-print("- Debería tener fondo verde (bg-green-50)")
+print("- Debería tener fondo verde (bg-[rgba(184,219,217,.1)])")
 print("- Debería mostrar el badge 'IA' en la esquina")
 print("- Debería mostrar '✨ Vehículos y Transporte' debajo del select")

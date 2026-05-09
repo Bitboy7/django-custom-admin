@@ -156,7 +156,7 @@
       input.setAttribute("readonly", "readonly");
       input.style.background = "#f1f5f9";
       input.style.cursor = "not-allowed";
-      input.style.color = "#475569";
+      input.style.color = "#586f7c";
       /* Also hide the calendar icon/button if present */
       var wrapper = input.closest(".related-widget-wrapper, .input-group");
       if (wrapper) {
@@ -269,7 +269,7 @@
   function flash(id, color) {
     var input = el(id);
     if (!input) return;
-    color = color || "#d1fae5";
+    color = color || "rgba(184,219,217,.1)";
     input.style.transition = "background-color 0.3s";
     input.style.backgroundColor = color;
     setTimeout(function () {
@@ -286,7 +286,7 @@
       var s = document.createElement("span");
       s.className = "vf-req";
       s.setAttribute("aria-hidden", "true");
-      s.style.cssText = "color:#dc2626;font-weight:700;margin-left:2px;";
+      s.style.cssText = "color:#b85450;font-weight:700;margin-left:2px;";
       s.textContent = " *";
       label.appendChild(s);
     } else if (!show && marker) {
@@ -325,7 +325,7 @@
       ID.fechaVen,
       "vf-badge-vencimiento",
       "🗓 " + dy + "/" + mo + "/" + y + " (" + terminoDias + " días)",
-      "#0d8fa2",
+      "#b8dbd9",
     );
   }
 
@@ -377,7 +377,7 @@
         s2set(ID.estadoCob, "Pendiente");
       }
 
-      tabBadge("Modalidad", "vf-tb-modal", "CRÉDITO", "#0d8fa2");
+      tabBadge("Modalidad", "vf-tb-modal", "CRÉDITO", "#b8dbd9");
     } else {
       /* Contado: clear due date, remove badges */
       var fvEl = el(ID.fechaVen);
@@ -422,17 +422,17 @@
         ID.tipoVenta,
         "vf-badge-tipoventa",
         "🌍 " + (data.pais_nombre || "Extranjero"),
-        "#1e3a5f",
+        "#2f4550",
       );
-      flash(ID.tipoVenta, "#dbeafe");
+      flash(ID.tipoVenta, "rgba(184,219,217,.15)");
 
       /* 4. Tab badge on "Mercado y Exportación" */
-      tabBadge("Mercado", "vf-tb-mercado", "AUTO", "#1e3a5f");
+      tabBadge("Mercado", "vf-tb-mercado", "AUTO", "#2f4550");
 
       /* 5. Fill mercado_destino if available */
       if (data.mercado_destino_id) {
         s2set(ID.mercado, String(data.mercado_destino_id));
-        flash(ID.mercado, "#d1fae5");
+        flash(ID.mercado, "rgba(184,219,217,.1)");
         console.log("Cliente nacional detectado:", data.pais_nombre);
         /* Domestic client: set Nacional and unlock tipo_venta */
         s2set(ID.tipoVenta, "Nacional");
@@ -450,7 +450,7 @@
         var termEl = el(ID.termino);
         if (modalEl && modalEl.value === "Credito" && termEl && !termEl.value) {
           s2set(ID.termino, String(data.termino_credito_id));
-          flash(ID.termino, "#d1fae5");
+          flash(ID.termino, "rgba(184,219,217,.1)");
           fetchDiasAndRecalc(data.termino_credito_id);
         }
       }
