@@ -23,7 +23,7 @@
 /* Plus Jakarta Sans: 300, 400, 500, 600, 700, 800 (body / UI) */
 /* JetBrains Mono: 400, 500 (código / datos) */
 
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap");
 
 /* ── THEME: LIGHT (default) ──────────────────────────────────── */
 :root {
@@ -70,6 +70,16 @@
   /* Ghost white */
   --ghost-white: #f4f4f9;
 
+  /* Brand aliases — mapped to palette tokens (consumed by layout, tables, components) */
+  --brand-navy: var(--charcoal-blue); /* #2f4550 – sidebar / header bg */
+  --brand-navy-dark: var(--charcoal-blue-dark); /* #1f2f38 – navbar bg */
+  --brand-navy-light: var(--blue-slate); /* #586f7c – lighter panel bg */
+  --brand-teal: var(--blue-slate); /* #586f7c – primary accent / buttons */
+  --brand-teal-dark: var(
+    --blue-slate-dark
+  ); /* #425864 – hover / pressed accent */
+  --brand-teal-light: var(--light-blue); /* #b8dbd9 – soft highlight on dark */
+
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(47, 69, 80, 0.06);
   --shadow-md: 0 4px 14px rgba(47, 69, 80, 0.08);
@@ -92,8 +102,8 @@
   --duration-slow: 350ms;
 
   /* Typography */
-  --font-display: "Playfair Display", "Georgia", "Times New Roman", serif;
-  --font-body: "Plus Jakarta Sans", -apple-system, "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-display: "Roboto", -apple-system, "Segoe UI", sans-serif;
+  --font-body: "Roboto", -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "Cascadia Code", "Consolas", monospace;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.8125rem;

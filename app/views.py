@@ -209,30 +209,78 @@ def dashboard_callback(request, context):
             ventas_mensuales.insert(0, float(ventas_mes))
         
         # Actividad reciente
+        _ACCION_META = {
+            'login':  ('fa-right-to-bracket', '#5a7d6b', 'success'),
+            'logout': ('fa-right-from-bracket', '#586f7c', 'info'),
+            'create': ('fa-plus',               '#5a7d6b', 'success'),
+            'update': ('fa-pen',                '#c9a227', 'warning'),
+            'delete': ('fa-trash',              '#b85450', 'error'),
+            'view':   ('fa-eye',                '#586f7c', 'info'),
+            'other':  ('fa-circle-info',        '#586f7c', 'info'),
+        }
         recent_activities = []
         try:
-            activities = LogActividad.objects.order_by('-fecha_evento')[:5]
+            activities = LogActividad.objects.order_by('-fecha_hora')[:8]
             for activity in activities:
+                icon, color, status = _ACCION_META.get(
+                    activity.tipo_accion, ('fa-circle-info', '#586f7c', 'info')
+                )
                 recent_activities.append({
-                    'description': activity.descripcion_evento,
-                    'user': activity.usuario.username if activity.usuario else 'Sistema',
-                    'timestamp': activity.fecha_evento,
-                    'status': 'success',
-                    'icon': 'edit',
-                    'color': 'blue'
+                    'description': activity.descripcion,
+                    'user': activity.nombre_usuario or (
+                        activity.usuario.username if activity.usuario else 'Sistema'
+                    ),
+                    'timestamp': activity.fecha_hora,
+                    'status': status,
+                    'icon': icon,
+                    'color': color,
                 })
-        except:
-            # Si no hay modelo de auditoría o hay errores, crear actividades dummy
-            recent_activities = [
-                {
-                    'description': 'Sistema iniciado correctamente',
-                    'user': 'Sistema',
-                    'timestamp': now,
-                    'status': 'success',
-                    'icon': 'check',
-                    'color': 'green'
+        except Exception:
+            recent_activities = []
+
+        # Fallback: complementar con Django admin LogEntry si hay menos de 3 entradas
+        if len(recent_activities) < 3:
+            try:
+                from django.contrib.admin.models import LogEntry
+                _LE_META = {
+                    1: ('fa-plus',  '#5a7d6b', 'success'),
+                    2: ('fa-pen',   '#c9a227', 'warning'),
+                    3: ('fa-trash', '#b85450', 'error'),
                 }
-            ]
+                _ACTION_LABELS = {1: 'Agregó', 2: 'Modificó', 3: 'Eliminó'}
+                for entry in LogEntry.objects.select_related(
+                    'user', 'content_type'
+                ).order_by('-action_time')[:8]:
+                    icon, color, status = _LE_META.get(
+                        entry.action_flag, ('fa-circle-info', '#586f7c', 'info')
+                    )
+                    label = _ACTION_LABELS.get(entry.action_flag, 'Acción en')
+                    ct = entry.content_type.name if entry.content_type else ''
+                    recent_activities.append({
+                        'description': f"{label} {ct}: {entry.object_repr}",
+                        'user': (
+                            entry.user.get_full_name() or entry.user.username
+                            if entry.user else 'Admin'
+                        ),
+                        'timestamp': entry.action_time,
+                        'status': status,
+                        'icon': icon,
+                        'color': color,
+                    })
+                recent_activities.sort(key=lambda x: x['timestamp'], reverse=True)
+                recent_activities = recent_activities[:8]
+            except Exception:
+                pass
+
+        if not recent_activities:
+            recent_activities = [{
+                'description': 'Sistema iniciado correctamente',
+                'user': 'Sistema',
+                'timestamp': now,
+                'status': 'success',
+                'icon': 'fa-check',
+                'color': '#5a7d6b',
+            }]
         
         # Conteos del mes
         gastos_count = Gastos.objects.filter(

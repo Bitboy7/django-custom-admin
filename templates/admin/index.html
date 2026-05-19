@@ -94,8 +94,65 @@
 {% block content %}
 <div id="tw-dashboard" class="pb-10">
 
-  
+  {# ── WELCOME BANNER ─────────────────────────────────────────────── #}
+  <div class="flex items-center justify-between mb-4 px-0.5">
+    <p class="m-0 text-[13px] font-semibold dash-text leading-none">
+      <span id="dashGreeting">Bienvenido</span><span class="font-normal dash-muted">, {{ user.get_full_name|default:user.username }}</span>
+    </p>
+    <time class="text-[11px] dash-muted tabular-nums capitalize" id="dashDateTime"></time>
+  </div>
 
+  {# ═══════════════════════════════════════════════════════════════ #}
+  {# QUICK ACCESS STRIP — fila única #}
+  {# ═══════════════════════════════════════════════════════════════ #}
+  <div class="dash-card mb-4">
+    <div class="flex items-center gap-1 px-4 py-2.5 overflow-x-auto">
+      <span
+        class="text-[10px] uppercase tracking-widest font-bold dash-muted shrink-0 pr-3 mr-1 border-r dash-border">Acceso
+        rápido</span>
+      <a href="/admin/ventas/ventas/add/"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline flex-1 min-w-fit dash-btn transition-all">
+        <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+          style="background:var(--accent-green-bg);color:var(--accent-green)"><i
+            class="fas fa-file-invoice text-[11px]"></i></div>
+        <span class="text-[12px] font-semibold dash-text whitespace-nowrap">Nueva Venta</span>
+      </a>
+      <a href="/admin/gastos/gasto/add/"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline flex-1 min-w-fit dash-btn transition-all">
+        <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+          style="background:var(--accent-red-bg);color:var(--accent-red)"><i
+            class="fas fa-money-bill-wave text-[11px]"></i></div>
+        <span class="text-[12px] font-semibold dash-text whitespace-nowrap">Nuevo Gasto</span>
+      </a>
+      <a href="/admin/ventas/ventas/?estado_cobranza__in=Vencida"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline flex-1 min-w-fit dash-btn transition-all">
+        <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+          style="background:var(--accent-amber-bg);color:var(--accent-amber)"><i
+            class="fas fa-triangle-exclamation text-[11px]"></i></div>
+        <span class="text-[12px] font-semibold dash-text whitespace-nowrap">CxC Vencidas</span>
+      </a>
+      <a href="/admin/catalogo/"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline flex-1 min-w-fit dash-btn transition-all">
+        <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+          style="background:var(--accent-blue-bg);color:var(--accent-blue)"><i
+            class="fas fa-boxes-stacked text-[11px]"></i></div>
+        <span class="text-[12px] font-semibold dash-text whitespace-nowrap">Cat&#225;logo</span>
+      </a>
+      <a href="/admin/compras/compra/add/"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline flex-1 min-w-fit dash-btn transition-all">
+        <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+          style="background:rgba(107,70,193,0.12);color:#6b46c1"><i class="fas fa-cart-plus text-[11px]"></i></div>
+        <span class="text-[12px] font-semibold dash-text whitespace-nowrap">Nueva Compra</span>
+      </a>
+      <a href="/admin/auditoria/"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline flex-1 min-w-fit dash-btn transition-all">
+        <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+          style="background:rgba(88,111,124,0.12);color:var(--blue-slate)"><i
+            class="fas fa-magnifying-glass text-[11px]"></i></div>
+        <span class="text-[12px] font-semibold dash-text whitespace-nowrap">Auditor&#237;a</span>
+      </a>
+    </div>
+  </div>
 
   {# ═══════════════════════════════════════════════════════════════ #}
   {# KPI STRIP — 7 metrics                                          #}
@@ -252,85 +309,47 @@
 
   </div>{# /row2 #}
 
-  {# ═══════════════════════════════════════════════════════════════ #}
-  {# ROW 3 — Activity Feed + Quick Access                           #}
-  {# ═══════════════════════════════════════════════════════════════ #}
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 
-    {# Activity Feed #}
-    <div class="dash-card">
-      <div class="px-5 pt-4 pb-3 border-b dash-border">
+
+  {# ═══════════════════════════════════════════════════════════════ #}
+  {# ACTIVITY FEED — ancho completo                                  #}
+  {# ═══════════════════════════════════════════════════════════════ #}
+  <div class="dash-card mb-4">
+    <div class="flex items-center justify-between px-5 pt-4 pb-3 border-b dash-border">
+      <div>
         <div class="text-[13px] font-bold dash-text">Actividad Reciente</div>
         <div class="text-xs dash-muted mt-0.5">&#218;ltimas acciones en el sistema</div>
       </div>
-      <div class="px-5 py-2">
-        {% for act in recent_activities %}
-        <div class="flex items-start gap-3 py-3{% if not forloop.last %} dash-activity-item{% endif %}">
-          <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0"
-               style="background:{{ act.color }}20;color:{{ act.color }}">{{ act.icon }}</div>
-          <div class="flex-1 min-w-0">
-            <div class="text-[13px] dash-text leading-snug">{{ act.description }}</div>
-            <div class="text-xs dash-muted mt-0.5">{{ act.user }} &middot; {{ act.timestamp }}</div>
-          </div>
-          <span class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full
-            {% if act.status == 'success' %}dash-status-success
-            {% elif act.status == 'warning' %}dash-status-warning
-            {% elif act.status == 'error' %}dash-status-danger
-            {% else %}dash-status-slate{% endif %}">
-            {{ act.status }}
-          </span>
-        </div>
-        {% empty %}
-        <p class="text-xs dash-muted text-center py-6">Sin actividad reciente</p>
-        {% endfor %}
-      </div>
+      <a href="/es/admin/auditoria/logactividad/" class="text-xs font-semibold no-underline" style="color:var(--brand-teal)">Ver todo &#8250;</a>
     </div>
-
-    {# Quick Access #}
-    <div class="dash-card">
-      <div class="px-5 pt-4 pb-3 border-b dash-border">
-        <div class="text-[13px] font-bold dash-text">Acceso R&#225;pido</div>
-        <div class="text-xs dash-muted mt-0.5">M&#243;dulos principales</div>
-      </div>
-      <div class="p-5">
-        <div class="grid grid-cols-3 gap-3">
-          {% with btns=''%}
-          <a href="/admin/ventas/ventas/add/"
-             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline dash-btn transition-all">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style="background:var(--accent-green-bg);color:var(--accent-green)"><i class="fas fa-file-invoice text-sm"></i></div>
-            <span class="text-xs font-semibold dash-text text-center leading-tight">Nueva Venta</span>
-          </a>
-          <a href="/admin/gastos/gasto/add/"
-             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline dash-btn transition-all">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style="background:var(--accent-red-bg);color:var(--accent-red)"><i class="fas fa-money-bill-wave text-sm"></i></div>
-            <span class="text-xs font-semibold dash-text text-center leading-tight">Nuevo Gasto</span>
-          </a>
-          <a href="/admin/ventas/ventas/?estado_cobranza__in=Vencida"
-             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline dash-btn transition-all">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style="background:var(--accent-amber-bg);color:var(--accent-amber)"><i class="fas fa-triangle-exclamation text-sm"></i></div>
-            <span class="text-xs font-semibold dash-text text-center leading-tight">CxC Vencidas</span>
-          </a>
-          <a href="/admin/catalogo/"
-             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline dash-btn transition-all">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style="background:var(--accent-blue-bg);color:var(--accent-blue)"><i class="fas fa-boxes-stacked text-sm"></i></div>
-            <span class="text-xs font-semibold dash-text text-center leading-tight">Cat&#225;logo</span>
-          </a>
-          <a href="/admin/compras/compra/add/"
-             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline dash-btn transition-all">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style="background:rgba(107,70,193,0.12);color:#6b46c1"><i class="fas fa-cart-plus text-sm"></i></div>
-            <span class="text-xs font-semibold dash-text text-center leading-tight">Nueva Compra</span>
-          </a>
-          <a href="/admin/auditoria/"
-             class="flex flex-col items-center justify-center gap-2 py-4 rounded-xl no-underline dash-btn transition-all">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style="background:rgba(13,148,136,0.12);color:var(--brand-teal)"><i class="fas fa-magnifying-glass text-sm"></i></div>
-            <span class="text-xs font-semibold dash-text text-center leading-tight">Auditor&#237;a</span>
-          </a>
-          {% endwith %}
+    <div class="px-5 py-2 grid grid-cols-1 md:grid-cols-2">
+      {% for act in recent_activities %}
+      <div class="flex items-start gap-3 py-3{% if not forloop.last %} dash-activity-item{% endif %}">
+        <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+             style="background:{{ act.color }}20;color:{{ act.color }}">
+          <i class="fas {{ act.icon }} text-xs"></i>
         </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-[13px] dash-text leading-snug truncate">{{ act.description }}</div>
+          <div class="text-xs dash-muted mt-0.5">{{ act.user }} &middot; {{ act.timestamp|naturaltime }}</div>
+        </div>
+        <span class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full
+          {% if act.status == 'success' %}dash-status-success
+          {% elif act.status == 'warning' %}dash-status-warning
+          {% elif act.status == 'error' %}dash-status-danger
+          {% else %}dash-status-slate{% endif %}">
+          {{ act.status }}
+        </span>
       </div>
+      {% empty %}
+      <div class="col-span-2 py-8 text-center">
+        <p class="text-xs dash-muted">Sin actividad reciente</p>
+      </div>
+      {% endfor %}
     </div>
+  </div>
 
-  </div>{# /row3 #}
+
 
   {# ═══════════════════════════════════════════════════════════════ #}
   {# FOOTER STATS — 4 cards                                         #}
@@ -540,6 +559,24 @@
     showToast('Dashboard cargado', 'Datos actualizados correctamente.', 'success');
   });
 
+})();
+</script>
+
+<script>
+/* ── Welcome greeting ───────────────────────────────────────────── */
+(function () {
+  var h = new Date().getHours();
+  var greet = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
+  var g = document.getElementById('dashGreeting');
+  if (g) g.textContent = greet;
+  var dt = document.getElementById('dashDateTime');
+  if (dt) {
+    var fmt = new Intl.DateTimeFormat('es-MX', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+    dt.textContent = fmt.format(new Date());
+  }
 })();
 </script>
 {% endblock %}

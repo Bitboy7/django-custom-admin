@@ -153,6 +153,10 @@
     border-radius: .375rem !important; font-size: .7rem !important;
     padding: .3rem .65rem !important; font-weight: 600 !important;
   }
+  /* ── HTMX indicator: use display:none so skeleton doesn't occupy layout space ── */
+  .htmx-indicator { display: none !important; opacity: 1 !important; }
+  .htmx-request.htmx-indicator { display: block !important; }
+
   /* ── Scroll bar thin ── */
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: #f1f5f9; }
