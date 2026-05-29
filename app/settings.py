@@ -191,6 +191,7 @@ JAZZMIN_SETTINGS = {
         "catalogo.Estado",
         "catalogo.Pais",
         "auditoria",
+        "reportes",
         "auditoria.LogActividad",
         "admin.LogEntry",
         "capital_inversiones",
@@ -246,6 +247,12 @@ JAZZMIN_SETTINGS = {
                 "url": "admin:reportes_configuracionreporte_changelist",
                 "icon": "fas fa-robot",
                 "permissions": ["reportes.view_configuracionreporte"]
+            },
+            {
+                "name": "Predicciones y Proyecciones",
+                "url": "admin:reportes_forecast",
+                "icon": "fas fa-chart-line",
+                "permissions": ["reportes.view_reporteejecutivo"]
             },
             {
                 "name": "Historial de reportes",
