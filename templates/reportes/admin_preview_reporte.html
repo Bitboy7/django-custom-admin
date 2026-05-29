@@ -1,175 +1,424 @@
 {% extends "admin/base_site.html" %}
 {% load i18n %}
 
+{% block extrastyle %}
+<style>
+  /* ── Paleta Agrícola de la Costa ──────────────────────────────── */
+  /* charcoal-blue #2f4550 | blue-slate #586f7c | light-blue #b8dbd9 */
+  /* ghost-white #f4f4f9  | amber #c9a227 | green #5a7d6b | red #b85450 */
+
+  .rp-wrap { width: 100%; }
+
+  /* ── Header strip ─────────────────────────────────────────────── */
+  .rp-header {
+    background: linear-gradient(135deg, #2f4550 0%, #586f7c 100%);
+    border-radius: 10px 10px 0 0;
+    padding: 24px 28px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .rp-header-left { display: flex; align-items: center; gap: 14px; }
+  .rp-header-icon {
+    width: 44px; height: 44px;
+    background: rgba(184,219,217,.18);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; color: #b8dbd9; flex-shrink: 0;
+  }
+  .rp-header h2 { margin: 0; font-size: 1.1rem; font-weight: 700; color: #fff; }
+  .rp-header-meta { margin: 3px 0 0; font-size: .78rem; color: rgba(184,219,217,.8); display: flex; gap: 18px; flex-wrap: wrap; }
+  .rp-header-meta span { display: flex; align-items: center; gap: 5px; }
+  .rp-badge-preview {
+    background: #c9a227; color: #fff;
+    border-radius: 20px; padding: 4px 12px;
+    font-size: .7rem; font-weight: 700; letter-spacing: .06em;
+    white-space: nowrap; flex-shrink: 0;
+  }
+
+  /* ── Body ─────────────────────────────────────────────────────── */
+  .rp-body {
+    background: #fff;
+    border: 1px solid #d8dce6;
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  /* ── Semáforo banner ──────────────────────────────────────────── */
+  .rp-semaforo {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 24px; font-size: .84rem; font-weight: 600;
+    border-left: 5px solid;
+  }
+  .rp-semaforo.verde  { background: rgba(90,125,107,.08); border-color: #5a7d6b; color: #3d5e4a; }
+  .rp-semaforo.amarillo { background: rgba(201,162,39,.08); border-color: #c9a227; color: #7a5f0a; }
+  .rp-semaforo.rojo   { background: rgba(184,84,80,.08); border-color: #b85450; color: #7a2b28; }
+  .rp-semaforo-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+  .verde  .rp-semaforo-dot { background: #5a7d6b; }
+  .amarillo .rp-semaforo-dot { background: #c9a227; }
+  .rojo   .rp-semaforo-dot { background: #b85450; }
+
+  /* ── KPI grid ─────────────────────────────────────────────────── */
+  .rp-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-bottom: 1px solid #d8dce6;
+  }
+  @media (max-width: 680px) { .rp-kpis { grid-template-columns: 1fr 1fr; } }
+  .rp-kpi {
+    padding: 24px 22px;
+    border-right: 1px solid #d8dce6;
+    position: relative;
+  }
+  .rp-kpi:last-child { border-right: none; }
+  .rp-kpi-accent { height: 3px; border-radius: 2px; margin-bottom: 16px; }
+  .rp-kpi-label {
+    font-size: .68rem; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: #586f7c; margin-bottom: 8px;
+  }
+  .rp-kpi-value {
+    font-size: 1.6rem; font-weight: 800; color: #2f4550;
+    font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+  .rp-kpi-value.positive { color: #5a7d6b; }
+  .rp-kpi-value.negative { color: #b85450; }
+  .rp-kpi-sub { font-size: .72rem; color: #586f7c; margin-top: 6px; }
+
+  /* ── Two-column body layout ───────────────────────────────────── */
+  .rp-body-grid {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    min-height: 0;
+  }
+  @media (max-width: 760px) { .rp-body-grid { grid-template-columns: 1fr; } }
+  .rp-col-main { border-right: 1px solid #eef0f4; min-width: 0; }
+  .rp-col-side { background: #fafbfc; min-width: 0; }
+
+  /* ── Section rows ─────────────────────────────────────────────── */
+  .rp-section { padding: 22px 24px; border-bottom: 1px solid #eef0f4; }
+  .rp-col-side .rp-section { padding: 20px 18px; }
+  .rp-section:last-child { border-bottom: none; }
+  .rp-section-label {
+    font-size: .68rem; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: #586f7c; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .rp-section-label::after { content: ''; flex: 1; height: 1px; background: #eef0f4; }
+
+  /* ── Análisis text ────────────────────────────────────────────── */
+  .rp-analysis {
+    font-size: .875rem; line-height: 1.75; color: #2f4550;
+    background: #f4f4f9; border-radius: 8px;
+    padding: 16px 20px;
+    border-left: 4px solid #b8dbd9;
+  }
+
+  /* ── Two-col grid (alertas/recomendaciones) ───────────────────── */
+  .rp-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .rp-two-col { grid-template-columns: 1fr; } }
+
+  .rp-list-card { border-radius: 8px; overflow: hidden; }
+  .rp-list-header {
+    padding: 11px 16px; font-size: .75rem; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .rp-list-header.warn  { background: rgba(201,162,39,.10); color: #7a5f0a; border-bottom: 2px solid #c9a227; }
+  .rp-list-header.green { background: rgba(90,125,107,.10); color: #3d5e4a; border-bottom: 2px solid #5a7d6b; }
+  .rp-list-item {
+    padding: 11px 16px; font-size: .82rem; color: #2f4550; line-height: 1.5;
+    border-bottom: 1px solid #f0f2f6; background: #fff;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .rp-list-item:last-child { border-bottom: none; }
+  .rp-list-item::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 6px;
+  }
+  .rp-list-card.warn  .rp-list-item::before { background: #c9a227; }
+  .rp-list-card.green .rp-list-item::before { background: #5a7d6b; }
+
+  /* ── CxC cards ────────────────────────────────────────────────── */
+  .rp-cxc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 500px) { .rp-cxc-grid { grid-template-columns: 1fr; } }
+  .rp-col-side .rp-cxc-grid { grid-template-columns: 1fr; }
+  .rp-cxc-card {
+    border-radius: 8px; padding: 16px 14px; text-align: center;
+  }
+  .rp-cxc-card.vigente {
+    background: rgba(90,125,107,.07);
+    border: 1.5px solid rgba(90,125,107,.25);
+  }
+  .rp-cxc-card.vencido {
+    background: rgba(184,84,80,.07);
+    border: 1.5px solid rgba(184,84,80,.25);
+  }
+  .rp-cxc-label { font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 8px; }
+  .rp-cxc-card.vigente .rp-cxc-label { color: #5a7d6b; }
+  .rp-cxc-card.vencido .rp-cxc-label { color: #b85450; }
+  .rp-cxc-val { font-size: 1.5rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .rp-cxc-card.vigente .rp-cxc-val { color: #3d5e4a; }
+  .rp-cxc-card.vencido .rp-cxc-val { color: #b85450; }
+  .rp-cxc-count { font-size: .75rem; margin-top: 5px; }
+  .rp-cxc-card.vigente .rp-cxc-count { color: #5a7d6b; }
+  .rp-cxc-card.vencido .rp-cxc-count { color: #b85450; }
+
+  /* ── Tendencias ───────────────────────────────────────────────── */
+  .rp-trend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .rp-col-side .rp-trend-grid { grid-template-columns: 1fr; }
+  .rp-trend-chip {
+    background: #fff; border: 1px solid #d8dce6;
+    border-radius: 8px; padding: 10px 14px; font-size: .8rem; color: #2f4550;
+  }
+  .rp-trend-chip .chip-label { color: #586f7c; font-size: .68rem; display: block; margin-bottom: 3px; letter-spacing: .05em; text-transform: uppercase; }
+  .rp-trend-chip .chip-val { font-weight: 700; font-size: .9rem; }
+  .rp-trend-chip .chip-val.up   { color: #5a7d6b; }
+  .rp-trend-chip .chip-val.down { color: #b85450; }
+
+  /* ── Footer actions ───────────────────────────────────────────── */
+  .rp-footer {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 16px 24px;
+    background: #f4f4f9;
+    border: 1px solid #d8dce6;
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    margin-bottom: 32px;
+  }
+  .rp-btn-primary {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: #2f4550; color: #fff;
+    border: none; border-radius: 8px; padding: 9px 18px;
+    font-size: .84rem; font-weight: 600; cursor: pointer;
+    text-decoration: none; transition: background .18s;
+  }
+  .rp-btn-primary:hover { background: #1f2f38; color: #fff; text-decoration: none; }
+  .rp-btn-secondary {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: transparent; color: #586f7c;
+    border: 1.5px solid #b8dbd9; border-radius: 8px; padding: 8px 16px;
+    font-size: .84rem; font-weight: 600; cursor: pointer;
+    text-decoration: none; transition: border-color .18s, color .18s;
+  }
+  .rp-btn-secondary:hover { border-color: #586f7c; color: #2f4550; text-decoration: none; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div style="max-width:760px;">
+<div class="rp-wrap">
 
   {% if messages %}
   {% for msg in messages %}
-  <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
+  <div class="alert alert-{{ msg.tags }} mb-3">{{ msg }}</div>
   {% endfor %}
   {% endif %}
 
-  <!-- Encabezado -->
-  <div class="card card-primary card-outline mb-3">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <h3 class="card-title mb-0">
-        <i class="fas fa-eye mr-2"></i>Preview del Reporte Ejecutivo
-      </h3>
-      <span class="badge badge-warning">PREVIEW — No guardado</span>
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="rp-header">
+    <div class="rp-header-left">
+      <div class="rp-header-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+      <div>
+        <h2>Reporte Ejecutivo Financiero</h2>
+        <div class="rp-header-meta">
+          <span><i class="far fa-calendar-alt"></i> {{ reporte.periodo_inicio|date:"d/m/Y" }} &rarr; {{ reporte.periodo_fin|date:"d/m/Y" }}</span>
+          <span><i class="fas fa-robot"></i> {{ reporte.modelo_ia_usado|default:"—" }}</span>
+        </div>
+      </div>
     </div>
-    <div class="card-body">
-      <dl class="row mb-0">
-        <dt class="col-sm-3">Período</dt>
-        <dd class="col-sm-9">{{ reporte.periodo_inicio|date:"d/m/Y" }} — {{ reporte.periodo_fin|date:"d/m/Y" }}</dd>
-        <dt class="col-sm-3">Modelo IA</dt>
-        <dd class="col-sm-9">{{ reporte.modelo_ia_usado }}</dd>
-      </dl>
-    </div>
+    <span class="rp-badge-preview"><i class="fas fa-eye mr-1"></i> PREVIEW</span>
   </div>
 
-  <!-- Semáforo -->
-  {% with kpis=resumen_data.kpis %}
-  {% if kpis.semaforo_financiero %}
-  {% if kpis.semaforo_financiero == "verde" %}
-  <div class="alert alert-success font-weight-bold">
-    <i class="fas fa-circle mr-1"></i> Estado financiero: VERDE
-    {% if kpis.prioridad %} — {{ kpis.prioridad }}{% endif %}
-  </div>
-  {% elif kpis.semaforo_financiero == "amarillo" %}
-  <div class="alert alert-warning font-weight-bold">
-    <i class="fas fa-circle mr-1"></i> Estado financiero: AMARILLO
-    {% if kpis.prioridad %} — {{ kpis.prioridad }}{% endif %}
-  </div>
-  {% else %}
-  <div class="alert alert-danger font-weight-bold">
-    <i class="fas fa-circle mr-1"></i> Estado financiero: ROJO
-    {% if kpis.prioridad %} — {{ kpis.prioridad }}{% endif %}
-  </div>
-  {% endif %}
-  {% endif %}
-  {% endwith %}
+  <div class="rp-body">
 
-  <!-- KPIs financieros -->
-  <div class="row">
-    <div class="col-sm-3">
-      <div class="info-box bg-blue">
-        <span class="info-box-icon"><i class="fas fa-chart-bar"></i></span>
-        <div class="info-box-content">
-          <span class="info-box-text">Ventas</span>
-          <span class="info-box-number">${{ reporte.total_ventas|floatformat:2 }}</span>
-        </div>
-      </div>
-    </div>
-    <div class="col-sm-3">
-      <div class="info-box bg-orange">
-        <span class="info-box-icon"><i class="fas fa-receipt"></i></span>
-        <div class="info-box-content">
-          <span class="info-box-text">Gastos</span>
-          <span class="info-box-number">${{ reporte.total_gastos|floatformat:2 }}</span>
-        </div>
-      </div>
-    </div>
-    <div class="col-sm-3">
-      <div class="info-box bg-purple">
-        <span class="info-box-icon"><i class="fas fa-shopping-cart"></i></span>
-        <div class="info-box-content">
-          <span class="info-box-text">Compras</span>
-          <span class="info-box-number">${{ reporte.total_compras|floatformat:2 }}</span>
-        </div>
-      </div>
-    </div>
-    <div class="col-sm-3">
-      <div class="info-box {% if reporte.margen_bruto >= 0 %}bg-success{% else %}bg-danger{% endif %}">
-        <span class="info-box-icon"><i class="fas fa-balance-scale"></i></span>
-        <div class="info-box-content">
-          <span class="info-box-text">Balance neto</span>
-          <span class="info-box-number">${{ reporte.margen_bruto|floatformat:2 }}</span>
-          <span class="progress-description">{{ reporte.margen_porcentaje|floatformat:1 }}% margen</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Resumen ejecutivo -->
-  {% if resumen_data.resumen_ejecutivo %}
-  <div class="card card-outline card-primary mb-3">
-    <div class="card-header"><h4 class="card-title">Análisis del período</h4></div>
-    <div class="card-body">
-      <p style="line-height:1.7">{{ resumen_data.resumen_ejecutivo }}</p>
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Alertas y Recomendaciones -->
-  <div class="row">
-    {% if resumen_data.alertas %}
-    <div class="col-sm-6">
-      <div class="card card-outline card-warning">
-        <div class="card-header"><h4 class="card-title"><i class="fas fa-exclamation-triangle mr-1"></i>Alertas</h4></div>
-        <div class="card-body p-0">
-          <ul class="list-group list-group-flush">
-            {% for alerta in resumen_data.alertas %}
-            <li class="list-group-item">{{ alerta }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-      </div>
+    <!-- ── Semáforo ───────────────────────────────────────────────── -->
+    {% with kpis=resumen_data.kpis %}
+    {% if kpis.semaforo_financiero %}
+    <div class="rp-semaforo {{ kpis.semaforo_financiero }}">
+      <div class="rp-semaforo-dot"></div>
+      <span>
+        Estado financiero:
+        <strong>{{ kpis.semaforo_financiero|upper }}</strong>
+        {% if kpis.prioridad %} &mdash; {{ kpis.prioridad }}{% endif %}
+      </span>
     </div>
     {% endif %}
+    {% endwith %}
 
-    {% if resumen_data.recomendaciones %}
-    <div class="col-sm-6">
-      <div class="card card-outline card-success">
-        <div class="card-header"><h4 class="card-title"><i class="fas fa-lightbulb mr-1"></i>Recomendaciones</h4></div>
-        <div class="card-body p-0">
-          <ul class="list-group list-group-flush">
-            {% for rec in resumen_data.recomendaciones %}
-            <li class="list-group-item">{{ rec }}</li>
-            {% endfor %}
-          </ul>
+    <!-- ── KPIs principales ───────────────────────────────────────── -->
+    <div class="rp-kpis">
+      <div class="rp-kpi">
+        <div class="rp-kpi-accent" style="background:#586f7c;"></div>
+        <div class="rp-kpi-label"><i class="fas fa-chart-line mr-1"></i>Ventas</div>
+        <div class="rp-kpi-value">${{ reporte.total_ventas|floatformat:0 }}</div>
+        {% with d=resumen_data.datos_financieros %}
+        {% if d.tendencia_ventas_pct %}
+        <div class="rp-kpi-sub">
+          {% if d.tendencia_ventas_pct >= 0 %}▲{% else %}▼{% endif %}
+          {{ d.tendencia_ventas_pct|floatformat:1 }}% vs período ant.
         </div>
+        {% endif %}
+        {% endwith %}
+      </div>
+
+      <div class="rp-kpi">
+        <div class="rp-kpi-accent" style="background:#c9a227;"></div>
+        <div class="rp-kpi-label"><i class="fas fa-receipt mr-1"></i>Gastos</div>
+        <div class="rp-kpi-value">${{ reporte.total_gastos|floatformat:0 }}</div>
+        {% with d=resumen_data.datos_financieros %}
+        {% if d.tendencia_gastos_pct %}
+        <div class="rp-kpi-sub">
+          {% if d.tendencia_gastos_pct >= 0 %}▲{% else %}▼{% endif %}
+          {{ d.tendencia_gastos_pct|floatformat:1 }}% vs período ant.
+        </div>
+        {% endif %}
+        {% endwith %}
+      </div>
+
+      <div class="rp-kpi">
+        <div class="rp-kpi-accent" style="background:#b8dbd9;"></div>
+        <div class="rp-kpi-label"><i class="fas fa-shopping-basket mr-1"></i>Compras</div>
+        <div class="rp-kpi-value">${{ reporte.total_compras|floatformat:0 }}</div>
+        {% with d=resumen_data.datos_financieros %}
+        {% if d.tendencia_compras_pct %}
+        <div class="rp-kpi-sub">
+          {% if d.tendencia_compras_pct >= 0 %}▲{% else %}▼{% endif %}
+          {{ d.tendencia_compras_pct|floatformat:1 }}% vs período ant.
+        </div>
+        {% endif %}
+        {% endwith %}
+      </div>
+
+      <div class="rp-kpi">
+        <div class="rp-kpi-accent" style="background:{% if reporte.margen_bruto >= 0 %}#5a7d6b{% else %}#b85450{% endif %};"></div>
+        <div class="rp-kpi-label"><i class="fas fa-balance-scale mr-1"></i>Balance neto</div>
+        <div class="rp-kpi-value {% if reporte.margen_bruto >= 0 %}positive{% else %}negative{% endif %}">
+          ${{ reporte.margen_bruto|floatformat:0 }}
+        </div>
+        <div class="rp-kpi-sub">{{ reporte.margen_porcentaje|floatformat:1 }}% margen</div>
       </div>
     </div>
-    {% endif %}
-  </div>
 
-  <!-- Cuentas por cobrar -->
-  {% with d=resumen_data.datos_financieros %}
-  {% if d %}
-  <div class="card card-outline card-info mb-3">
-    <div class="card-header"><h4 class="card-title">Cuentas por cobrar</h4></div>
-    <div class="card-body">
-      <div class="row text-center">
-        <div class="col-sm-6">
-          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:16px">
-            <div class="text-muted" style="font-size:11px;text-transform:uppercase">Vigente + Parcial</div>
-            <div style="font-size:22px;font-weight:700;color:#3d6b2c">${{ d.cuentas_por_cobrar|floatformat:2 }}</div>
-            <div style="font-size:12px;color:#3d6b2c">{{ d.ventas_pendientes_count }} ventas</div>
+    <!-- ── Two-column body: main (izq) + sidebar (der) ────────────── -->
+    <div class="rp-body-grid">
+
+      <!-- ── Columna principal ───────────────────────────────────── -->
+      <div class="rp-col-main">
+
+        {% if resumen_data.resumen_ejecutivo %}
+        <div class="rp-section">
+          <div class="rp-section-label"><i class="fas fa-brain"></i> Análisis del período</div>
+          <p class="rp-analysis">{{ resumen_data.resumen_ejecutivo }}</p>
+        </div>
+        {% endif %}
+
+        {% if resumen_data.alertas or resumen_data.recomendaciones %}
+        <div class="rp-section" style="border-bottom:none;">
+          <div class="rp-section-label"><i class="fas fa-tasks"></i> Alertas y recomendaciones</div>
+          <div class="rp-two-col">
+
+            {% if resumen_data.alertas %}
+            <div class="rp-list-card warn">
+              <div class="rp-list-header warn"><i class="fas fa-exclamation-triangle"></i> Alertas</div>
+              {% for alerta in resumen_data.alertas %}
+              <div class="rp-list-item">{{ alerta }}</div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if resumen_data.recomendaciones %}
+            <div class="rp-list-card green">
+              <div class="rp-list-header green"><i class="fas fa-lightbulb"></i> Recomendaciones</div>
+              {% for rec in resumen_data.recomendaciones %}
+              <div class="rp-list-item">{{ rec }}</div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
           </div>
         </div>
-        <div class="col-sm-6">
-          <div style="background:#fef2f2;border:1px solid #e8b4b0;border-radius:6px;padding:16px">
-            <div class="text-muted" style="font-size:11px;text-transform:uppercase">Vencido</div>
-            <div style="font-size:22px;font-weight:700;color:#b85450">${{ d.ventas_vencidas|floatformat:2 }}</div>
-            <div style="font-size:12px;color:#b85450">{{ d.ventas_vencidas_count }} ventas</div>
+        {% endif %}
+
+      </div><!-- .rp-col-main -->
+
+      <!-- ── Columna lateral ─────────────────────────────────────── -->
+      <div class="rp-col-side">
+
+        {% with d=resumen_data.datos_financieros %}
+        {% if d %}
+        <div class="rp-section">
+          <div class="rp-section-label"><i class="fas fa-hand-holding-usd"></i> Cuentas por cobrar</div>
+          <div class="rp-cxc-grid">
+            <div class="rp-cxc-card vigente">
+              <div class="rp-cxc-label">Vigente + Parcial</div>
+              <div class="rp-cxc-val">${{ d.cuentas_por_cobrar|floatformat:0 }}</div>
+              <div class="rp-cxc-count">{{ d.ventas_pendientes_count }} venta{{ d.ventas_pendientes_count|pluralize:"s" }}</div>
+            </div>
+            <div class="rp-cxc-card vencido">
+              <div class="rp-cxc-label">Vencido</div>
+              <div class="rp-cxc-val">${{ d.ventas_vencidas|floatformat:0 }}</div>
+              <div class="rp-cxc-count">{{ d.ventas_vencidas_count }} venta{{ d.ventas_vencidas_count|pluralize:"s" }}</div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-  {% endwith %}
+        {% endif %}
+        {% endwith %}
 
-  <!-- Botones de acción -->
-  <div class="mt-3">
-    <a href="{% url 'admin:reportes_generar_reporte' config.pk %}"
-       class="btn btn-primary">
-      <i class="fas fa-paper-plane mr-1"></i> Generar y enviar este reporte
+        {% with d=resumen_data.datos_financieros %}
+        {% if d %}
+        <div class="rp-section" style="border-bottom:none;">
+          <div class="rp-section-label"><i class="fas fa-chart-area"></i> Tendencias</div>
+          <div class="rp-trend-grid">
+            <div class="rp-trend-chip">
+              <span class="chip-label">Ventas</span>
+              <span class="chip-val {% if d.tendencia_ventas_pct >= 0 %}up{% else %}down{% endif %}">
+                {% if d.tendencia_ventas_pct >= 0 %}▲{% else %}▼{% endif %}
+                {{ d.tendencia_ventas_pct|floatformat:1 }}%
+              </span>
+            </div>
+            <div class="rp-trend-chip">
+              <span class="chip-label">Gastos</span>
+              <span class="chip-val {% if d.tendencia_gastos_pct <= 0 %}up{% else %}down{% endif %}">
+                {% if d.tendencia_gastos_pct >= 0 %}▲{% else %}▼{% endif %}
+                {{ d.tendencia_gastos_pct|floatformat:1 }}%
+              </span>
+            </div>
+            <div class="rp-trend-chip">
+              <span class="chip-label">Compras</span>
+              <span class="chip-val {% if d.tendencia_compras_pct <= 0 %}up{% else %}down{% endif %}">
+                {% if d.tendencia_compras_pct >= 0 %}▲{% else %}▼{% endif %}
+                {{ d.tendencia_compras_pct|floatformat:1 }}%
+              </span>
+            </div>
+            <div class="rp-trend-chip">
+              <span class="chip-label">Clientes nuevos</span>
+              <span class="chip-val" style="color:#2f4550;">{{ d.clientes_nuevos }}</span>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+      </div><!-- .rp-col-side -->
+
+    </div><!-- .rp-body-grid -->
+
+  </div><!-- .rp-body -->
+
+  <!-- ── Acciones ──────────────────────────────────────────────────── -->
+  <div class="rp-footer">
+    <a href="{% url 'admin:reportes_generar_reporte' config.pk %}" class="rp-btn-primary">
+      <i class="fas fa-paper-plane"></i> Generar y enviar
     </a>
-    <a href="{% url 'admin:reportes_configuracionreporte_changelist' %}"
-       class="btn btn-outline-secondary ml-2">Volver a configuración</a>
+    <a href="{% url 'admin:reportes_configuracionreporte_changelist' %}" class="rp-btn-secondary">
+      <i class="fas fa-arrow-left"></i> Volver a configuración
+    </a>
   </div>
 
-</div>
+</div><!-- .rp-wrap -->
 {% endblock %}

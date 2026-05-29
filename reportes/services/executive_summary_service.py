@@ -262,7 +262,7 @@ def generar_resumen_ejecutivo(
     import os
 
     # Determinar modelo a usar
-    effective_model = modelo_ia or os.getenv("GOOGLE_API_MODEL", "gemini-2.5-flash")
+    effective_model = modelo_ia or os.getenv("GOOGLE_API_MODEL")
 
     logger.info(
         "Generando resumen ejecutivo: %s → %s con modelo %s",

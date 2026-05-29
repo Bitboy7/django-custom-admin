@@ -14,7 +14,7 @@ import logging
 from datetime import date, datetime
 
 from django.contrib import admin, messages
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -382,6 +382,254 @@ class ReporteEjecutivoAdmin(admin.ModelAdmin):
         "resumen_ia_renderizado",
     )
     ordering = ("-fecha_generacion",)
+
+    # ── URLs extra ────────────────────────────────────────────────────────── #
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path(
+                "forecast/",
+                self.admin_site.admin_view(self.view_forecast),
+                name="reportes_forecast",
+            ),
+            path(
+                "forecast/pdf/",
+                self.admin_site.admin_view(self.view_forecast_pdf),
+                name="reportes_forecast_pdf",
+            ),
+        ]
+        return custom + urls
+
+    # ── Vista: forecast ───────────────────────────────────────────────────── #
+
+    def view_forecast(self, request):
+        from catalogo.models import Sucursal
+        from app.services.forecast_service import ForecastService
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Predicciones y Proyecciones",
+            "opts": self.model._meta,
+            "sucursales": Sucursal.objects.all(),
+            "has_data": False,
+        }
+
+        if request.method == "GET" and request.GET:
+            year = request.GET.get("year", str(datetime.now().year))
+            sucursal_id = request.GET.get("sucursal_id", "") or None
+            months_ahead = request.GET.get("months_ahead", "3")
+            model_type = request.GET.get("model_type", "polynomial")
+
+            try:
+                year_int = int(year)
+            except (ValueError, TypeError):
+                year_int = datetime.now().year
+
+            try:
+                months_int = int(months_ahead)
+                months_int = max(1, min(months_int, 12))
+            except (ValueError, TypeError):
+                months_int = 3
+
+            if sucursal_id:
+                try:
+                    sucursal_id = int(sucursal_id)
+                except (ValueError, TypeError):
+                    sucursal_id = None
+
+            try:
+                fc = ForecastService()
+                result = fc.generate_all_forecasts(
+                    year=year_int,
+                    sucursal_id=sucursal_id,
+                    months_ahead=months_int,
+                    model_type=model_type,
+                )
+                context["forecast_data"] = result
+                context["has_data"] = True
+            except Exception as exc:
+                messages.error(request, f"Error al generar predicciones: {exc}")
+                logger.exception("Error en forecast")
+
+            context["selected_year"] = year_int
+            context["selected_sucursal_id"] = sucursal_id
+            context["selected_months_ahead"] = months_int
+            context["selected_model_type"] = model_type
+
+        return TemplateResponse(request, "reportes/admin_forecast.html", context)
+
+    # ── Vista: exportar forecast a PDF ─────────────────────────────────────── #
+
+    def view_forecast_pdf(self, request):
+        from io import BytesIO
+        from reportlab.lib.pagesizes import letter, landscape
+        from reportlab.lib import colors
+        from reportlab.lib.units import inch
+        from reportlab.platypus import (
+            SimpleDocTemplate, Table, TableStyle, Paragraph,
+            Spacer, PageBreak
+        )
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+        from app.services.forecast_service import ForecastService
+
+        year_str = request.GET.get("year", str(datetime.now().year))
+        sucursal_id = request.GET.get("sucursal_id", "") or None
+        months_ahead = request.GET.get("months_ahead", "3")
+        model_type = request.GET.get("model_type", "polynomial")
+
+        try:
+            year_int = int(year_str)
+        except (ValueError, TypeError):
+            year_int = datetime.now().year
+
+        try:
+            months_int = int(months_ahead)
+            months_int = max(1, min(months_int, 12))
+        except (ValueError, TypeError):
+            months_int = 3
+
+        if sucursal_id:
+            try:
+                sucursal_id = int(sucursal_id)
+            except (ValueError, TypeError):
+                sucursal_id = None
+
+        fc = ForecastService()
+        data = fc.generate_all_forecasts(
+            year=year_int,
+            sucursal_id=sucursal_id,
+            months_ahead=months_int,
+            model_type=model_type,
+            force_refresh=True,
+        )
+
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=landscape(letter),
+            leftMargin=0.5 * inch,
+            rightMargin=0.5 * inch,
+            topMargin=0.5 * inch,
+            bottomMargin=0.5 * inch,
+        )
+        elements = []
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle(
+            "ForecastTitle",
+            parent=styles["Heading1"],
+            fontSize=16,
+            textColor=colors.HexColor("#2f4550"),
+            alignment=TA_CENTER,
+            spaceAfter=12,
+        )
+        section_style = ParagraphStyle(
+            "ForecastSection",
+            parent=styles["Heading2"],
+            fontSize=12,
+            textColor=colors.HexColor("#2f4550"),
+            alignment=TA_CENTER,
+            spaceAfter=8,
+        )
+        metric_label = ParagraphStyle(
+            "MetricLabel",
+            parent=styles["Normal"],
+            fontSize=8,
+            textColor=colors.HexColor("#586f7c"),
+        )
+        metric_value = ParagraphStyle(
+            "MetricValue",
+            parent=styles["Normal"],
+            fontSize=9,
+            textColor=colors.HexColor("#2f4550"),
+        )
+        cell_style = ParagraphStyle(
+            "CellStyle",
+            parent=styles["Normal"],
+            fontSize=8,
+            alignment=TA_CENTER,
+        )
+
+        elements.append(Paragraph("PREDICCIONES Y PROYECCIONES FINANCIERAS", title_style))
+        elements.append(Paragraph(
+            f"Año base: {year_int} | Meses proyectados: {months_int} | "
+            f"Modelo: {'Regresion polinomial' if model_type == 'polynomial' else 'Regresion lineal'}",
+            section_style
+        ))
+        elements.append(Spacer(1, 0.2 * inch))
+
+        sections = [
+            ("gastos", "GASTOS PROYECTADOS", colors.HexColor("#b85450")),
+            ("ventas", "VENTAS PROYECTADAS", colors.HexColor("#5a7d6b")),
+            ("compras", "COMPRAS PROYECTADAS", colors.HexColor("#586f7c")),
+            ("balance_neto", "BALANCE NETO PROYECTADO", colors.HexColor("#c9a227")),
+        ]
+
+        for key, title, accent in sections:
+            fc_data = data.get("forecasts", {}).get(key)
+            if not fc_data:
+                continue
+
+            elements.append(Paragraph(title, section_style))
+            elements.append(Spacer(1, 0.1 * inch))
+
+            metrics = fc_data.get("metrics", {})
+            if metrics and metrics.get("r2_score") is not None:
+                metric_items = [
+                    Paragraph(f"R² = {metrics.get('r2_score', '-')}", metric_label),
+                    Paragraph(
+                        f"Tendencia: {metrics.get('trend_direction', '-').upper()} "
+                        f"({metrics.get('trend_strength', 0)}%)",
+                        metric_label
+                    ),
+                ]
+                if metrics.get("predicted_change_pct") is not None:
+                    pct = metrics.get("predicted_change_pct", 0)
+                    sign = "+" if pct >= 0 else ""
+                    metric_items.append(
+                        Paragraph(f"Cambio prox. mes: {sign}{pct}%", metric_label)
+                    )
+                mt = Table([[metric_items]], colWidths=[3 * inch, 3 * inch, 3 * inch])
+                mt.setStyle(TableStyle([
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ]))
+                elements.append(mt)
+                elements.append(Spacer(1, 0.1 * inch))
+
+            table_data = [["PERIODO", "PREDICCION", "LIM. INFERIOR", "LIM. SUPERIOR"]]
+            for p in fc_data.get("predictions", []):
+                table_data.append([
+                    Paragraph(p.get("periodo_label", ""), cell_style),
+                    Paragraph(f"${p.get('predicted', 0):,.2f}", cell_style),
+                    Paragraph(f"${p.get('lower', 0):,.2f}", cell_style),
+                    Paragraph(f"${p.get('upper', 0):,.2f}", cell_style),
+                ])
+
+            col_w = [2.5 * inch, 1.6 * inch, 1.6 * inch, 1.6 * inch]
+            tbl = Table(table_data, colWidths=col_w)
+            tbl.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), accent),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
+                ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+                ("ALIGN", (1, 1), (-1, -1), "RIGHT"),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f4f4f9")]),
+            ]))
+            elements.append(tbl)
+            elements.append(Spacer(1, 0.2 * inch))
+
+        doc.build(elements)
+        buffer.seek(0)
+        response = HttpResponse(buffer.read(), content_type="application/pdf")
+        filename = f"predicciones_{year_int}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
 
     fieldsets = (
         (
