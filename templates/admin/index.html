@@ -9,25 +9,9 @@
   {% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}
 {% endblock %}
 
-{# ── Tailwind CDN + critical overrides loaded in <head> ─────────────── #}
+{# ── CSS variables loaded via admin_custom.css (no CDN Tailwind) ─── #}
 {% block extrahead %}
 {{ block.super }}
-<script>
-  tailwind.config = {
-    corePlugins: { preflight: false },
-    important: '#tw-dashboard',
-    theme: {
-      extend: {
-        colors: {
-          teal:  { DEFAULT:'#b8dbd9', dark:'#b8dbd9', light:'rgba(184,219,217,.3)' },
-          navy:  { DEFAULT:'#2f4550', mid:'#586f7c' },
-          dash:  { bg:'var(--surface-bg)', card:'var(--surface-card)', border:'var(--border-default)', txt:'var(--text-primary)', muted:'var(--text-muted)' }
-        }
-      }
-    }
-  }
-</script>
-<script src="https://cdn.tailwindcss.com"></script>
 <style>
   /* ── Full width fixes ─────────────────────────────────────────── */
   #tw-dashboard       { width:100%; max-width:100%; }
