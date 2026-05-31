@@ -1,5 +1,5 @@
 {% extends "admin/base_site.html" %}
-{% load i18n static %}
+{% load i18n static l10n %}
 
 {% block extrastyle %}
 <style>
@@ -147,6 +147,68 @@
     justify-content: flex-end;
     gap: 10px;
   }
+
+  /* ── Info box ──────────────────────────────────────── */
+  .fc-info {
+    border-bottom: 1px solid #eef0f4;
+  }
+  .fc-info-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: rgba(184,219,217,.15);
+    cursor: pointer;
+    font-size: .75rem;
+    font-weight: 700;
+    color: var(--charcoal);
+    letter-spacing: .03em;
+    user-select: none;
+  }
+  .fc-info-toggle:hover {
+    background: rgba(184,219,217,.25);
+  }
+  .fc-info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--amber);
+    color: #fff;
+    font-size: .7rem;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .fc-info-content {
+    display: none;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    padding: 16px 24px;
+    background: #fff;
+    font-size: .75rem;
+    color: var(--slate);
+    line-height: 1.55;
+  }
+  .fc-info.open .fc-info-content {
+    display: grid;
+  }
+  .fc-info.open .fc-info-toggle {
+    border-bottom: 1px solid rgba(201,162,39,.2);
+  }
+  .fc-info-col h4 {
+    font-size: .76rem;
+    font-weight: 800;
+    color: var(--charcoal);
+    margin: 0 0 6px;
+    letter-spacing: .03em;
+  }
+  .fc-info-col p {
+    margin: 0;
+  }
+  .fc-info-col strong {
+    color: var(--charcoal);
+  }
 </style>
 {% endblock %}
 
@@ -160,15 +222,18 @@
       </div>
     </div>
     {% if has_data %}
+    {% localize off %}
     <a href="{% url 'admin:reportes_forecast_pdf' %}?year={{ selected_year }}&sucursal_id={{ selected_sucursal_id|default:'' }}&months_ahead={{ selected_months_ahead }}&model_type={{ selected_model_type }}"
        class="fc-btn fc-btn-pdf" target="_blank">
       Exportar PDF
     </a>
+    {% endlocalize %}
     {% endif %}
   </div>
 
   <div class="fc-body">
     <div class="fc-form-wrap">
+      {% localize off %}
       <form class="fc-form" method="GET">
         <div class="fc-form-group">
           <label>Año base</label>
@@ -200,6 +265,40 @@
         </div>
         <button type="submit" class="fc-btn fc-btn-primary">Generar predicciones</button>
       </form>
+      {% endlocalize %}
+    </div>
+
+    <div class="fc-info">
+      <div class="fc-info-toggle" onclick="this.parentElement.classList.toggle('open')">
+        <span class="fc-info-icon">?</span>
+        <span>Como funcionan los modelos de prediccion</span>
+      </div>
+      <div class="fc-info-content">
+        <div class="fc-info-col">
+          <h4>Regresion Lineal</h4>
+          <p>
+            Traza una <strong>linea recta</strong> que mejor se ajusta a los datos historicos.
+            Util para tendencias estables sin mucha fluctuacion. Ideal cuando los ingresos/gastos
+            crecen o decrecen de forma constante mes a mes.
+          </p>
+        </div>
+        <div class="fc-info-col">
+          <h4>Regresion Polinomial</h4>
+          <p>
+            Traza una <strong>curva</strong> (grado 2-4) que se adapta a patrones no lineales.
+            Captura estacionalidad, aceleraciones y desaceleraciones. Recomendado para datos
+            agricolas donde los ingresos varian por temporada de cosecha.
+          </p>
+        </div>
+        <div class="fc-info-col">
+          <h4>Metricas clave</h4>
+          <p>
+            <strong>R&sup2; (R-cuadrado):</strong> Que tan bien se ajusta el modelo a los datos (0-1).<br>
+            <strong>Banda de confianza:</strong> Rango donde se espera que caiga el valor real con 95% de probabilidad.<br>
+            <strong>Tendencia:</strong> Direccion general proyectada (creciente, decreciente, estable).
+          </p>
+        </div>
+      </div>
     </div>
 
     {% if has_data %}
@@ -274,26 +373,22 @@
     <span style="font-size:.68rem;color:var(--slate);margin-right:auto;display:flex;align-items:center;">
       Generado: {{ forecast_data.params.generated_at }}
     </span>
+    {% localize off %}
     <a href="{% url 'admin:reportes_forecast_pdf' %}?year={{ selected_year }}&sucursal_id={{ selected_sucursal_id|default:'' }}&months_ahead={{ selected_months_ahead }}&model_type={{ selected_model_type }}"
        class="fc-btn fc-btn-pdf">
       Exportar PDF
     </a>
+    {% endlocalize %}
   </div>
   {% endif %}
 </div>
 
 {% if has_data %}
+{{ forecast_json|json_script:"forecast-data" }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
 (function() {
-  const colors = {
-    gastos: { main: '#b85450', band: 'rgba(184,84,80,.15)' },
-    ventas: { main: '#5a7d6b', band: 'rgba(90,125,107,.15)' },
-    compras: { main: '#586f7c', band: 'rgba(88,111,124,.15)' },
-    balance_neto: { main: '#c9a227', band: 'rgba(201,162,39,.15)' }
-  };
-
-  const forecastData = {{ forecast_data.forecasts|safe }};
+  const forecastData = JSON.parse(document.getElementById('forecast-data').textContent);
 
   Object.keys(forecastData).forEach(function(key) {
     const fc = forecastData[key];

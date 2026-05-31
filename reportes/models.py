@@ -108,6 +108,11 @@ class ReporteEjecutivo(models.Model):
 
     # Contenido generado por IA
     resumen_ia = models.TextField(blank=True, verbose_name="Resumen generado por IA")
+    proyecciones_json = models.TextField(
+        blank=True,
+        verbose_name="Proyecciones de ventas (scikit-learn)",
+        help_text="Proyecciones financieras generadas con scikit-learn (JSON).",
+    )
     modelo_ia_usado = models.CharField(
         max_length=120, blank=True, verbose_name="Modelo de IA usado"
     )

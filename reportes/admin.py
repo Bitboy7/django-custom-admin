@@ -81,6 +81,7 @@ def _crear_y_guardar_reporte(config: ConfiguracionReporte, user, fecha_inicio: d
         datos = resultado.get("datos_financieros", {})
         margen = datos.get("margen_bruto_pct", 0)
         balance = datos.get("balance_neto", 0)
+        proyecciones = resultado.get("proyecciones_ventas", {})
 
         reporte.resumen_ia = json.dumps(resultado, ensure_ascii=False)
         reporte.total_ventas = datos.get("total_ventas", 0)
@@ -89,6 +90,7 @@ def _crear_y_guardar_reporte(config: ConfiguracionReporte, user, fecha_inicio: d
         reporte.margen_bruto = balance
         reporte.margen_porcentaje = margen
         reporte.modelo_ia_usado = resultado.get("modelo_usado", "")
+        reporte.proyecciones_json = json.dumps(proyecciones, ensure_ascii=False) if proyecciones else ""
         reporte.estado = ReporteEjecutivo.Estado.GENERADO
         reporte.save()
 
@@ -380,6 +382,7 @@ class ReporteEjecutivoAdmin(admin.ModelAdmin):
         "fecha_generacion",
         "destinatarios_enviados",
         "resumen_ia_renderizado",
+        "proyecciones_renderizado",
     )
     ordering = ("-fecha_generacion",)
 
@@ -447,6 +450,7 @@ class ReporteEjecutivoAdmin(admin.ModelAdmin):
                     model_type=model_type,
                 )
                 context["forecast_data"] = result
+                context["forecast_json"] = json.dumps(result["forecasts"], default=str)
                 context["has_data"] = True
             except Exception as exc:
                 messages.error(request, f"Error al generar predicciones: {exc}")
@@ -661,7 +665,7 @@ class ReporteEjecutivoAdmin(admin.ModelAdmin):
         (
             "Contenido generado",
             {
-                "fields": ("resumen_ia_renderizado",),
+                "fields": ("resumen_ia_renderizado", "proyecciones_renderizado"),
             },
         ),
         (
@@ -717,6 +721,67 @@ class ReporteEjecutivoAdmin(admin.ModelAdmin):
         return format_html('<span style="color:{}">{}</span>', color, formatted)
 
     margen_pct_fmt.short_description = "Margen"
+
+    def proyecciones_renderizado(self, obj):
+        """Renderiza las proyecciones JSON como HTML."""
+        if not obj.proyecciones_json:
+            return "Sin proyecciones"
+
+        try:
+            data = json.loads(obj.proyecciones_json)
+        except (json.JSONDecodeError, TypeError):
+            return "Datos de proyección no disponibles"
+
+        if "error" in data:
+            return format_html(
+                '<span style="color:#dc3545">Error: {}</span>', data["error"]
+            )
+
+        metrics = data.get("metrics", {})
+        predictions = data.get("predictions", [])
+        historical = data.get("historical", [])
+
+        html = ['<div style="font-size:12px">']
+
+        if metrics:
+            r2 = metrics.get("r2_score", "-")
+            trend = metrics.get("trend_direction", "-")
+            strength = metrics.get("trend_strength", 0)
+            change_pct = metrics.get("predicted_change_pct", 0)
+            sign = "+" if change_pct >= 0 else ""
+            html.append(
+                f'<p><strong>Modelo:</strong> scikit-learn | '
+                f'<strong>R²:</strong> {r2} | '
+                f'<strong>Tendencia:</strong> {trend} ({strength}%) | '
+                f'<strong>Cambio prox. mes:</strong> {sign}{change_pct}%</p>'
+            )
+
+        if predictions:
+            html.append(
+                '<table style="width:100%;border-collapse:collapse;margin-top:8px">'
+                '<tr style="background:#2f4550;color:#fff">'
+                '<th style="padding:4px 8px;text-align:left">Período</th>'
+                '<th style="padding:4px 8px;text-align:right">Proyección</th>'
+                '<th style="padding:4px 8px;text-align:right">Lím. Inferior</th>'
+                '<th style="padding:4px 8px;text-align:right">Lím. Superior</th>'
+                '</tr>'
+            )
+            for i, p in enumerate(predictions):
+                bg = "#f4f4f9" if i % 2 == 0 else "#fff"
+                html.append(
+                    f'<tr style="background:{bg}">'
+                    f'<td style="padding:3px 8px">{p["periodo_label"]}</td>'
+                    f'<td style="padding:3px 8px;text-align:right">${p["predicted"]:,.2f}</td>'
+                    f'<td style="padding:3px 8px;text-align:right">${p["lower"]:,.2f}</td>'
+                    f'<td style="padding:3px 8px;text-align:right">${p["upper"]:,.2f}</td>'
+                    f'</tr>'
+                )
+            html.append('</table>')
+
+        html.append('</div>')
+        return mark_safe("".join(html))
+
+    proyecciones_renderizado.short_description = "Proyecciones de ventas"
 
     def resumen_ia_renderizado(self, obj):
         """Renderiza el JSON del resumen IA como HTML legible en el admin."""

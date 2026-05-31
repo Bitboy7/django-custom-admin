@@ -3,16 +3,16 @@ Servicio de IA para la generación de reportes ejecutivos financieros.
 
 Usa LangChain (cadena simple: prompt | model | StrOutputParser) con los mismos
 modelos LLM configurados en la variable de entorno GOOGLE_API_MODEL / OPENROUTER_API_MODEL.
-Consulta los datos financieros directamente via ORM (siguiendo el patrón de app/views.py)
-ya que VentasAnalysisService no está implementado aún.
+Incluye proyecciones de ventas con scikit-learn (ForecastService).
 """
 
 from __future__ import annotations
 
 import json
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+from typing import Optional
 
 from django.db.models import Count, Sum
 from django.utils import timezone
@@ -22,6 +22,93 @@ from ventas.models import Ventas, Cliente
 from gastos.models import Compra
 
 logger = logging.getLogger(__name__)
+
+# --------------------------------------------------------------------------- #
+# Proyecciones de ventas con scikit-learn                                       #
+# --------------------------------------------------------------------------- #
+
+
+def _get_ventas_proyecciones(
+    fecha_fin: date,
+    months_ahead: int = 6,
+    model_type: str = "polynomial",
+) -> dict:
+    """
+    Genera proyecciones de ventas con scikit-learn usando ForecastService.
+
+    Retorna un dict con:
+      - proyecciones_text: texto formateado para el prompt del LLM
+      - proyecciones_raw: datos crudos para almacenar en el modelo
+    """
+    from app.services.forecast_service import ForecastService
+    from app.services.base_report_service import BaseReportService
+
+    class VentasForecastAdapter(BaseReportService):
+        def get_model(self):
+            return Ventas
+
+        def get_date_field(self) -> str:
+            return 'fecha_salida_manifiesto'
+
+        def get_amount_field(self) -> str:
+            return 'monto'
+
+        def get_group_fields(self, periodo: str):
+            return ['sucursal_id__nombre']
+
+    try:
+        forecast = ForecastService()
+        adapter = VentasForecastAdapter()
+
+        year = fecha_fin.year
+        filters = {
+            'fecha_salida_manifiesto__year__gte': max(year - 2, 2020),
+        }
+
+        result = forecast.forecast_from_service(
+            service=adapter,
+            filters=filters,
+            months_ahead=months_ahead,
+            model_type=model_type,
+        )
+
+        metrics = result.get('metrics', {})
+        predictions = result.get('predictions', [])
+        historical = result.get('historical', [])
+
+        lines = []
+        for p in predictions:
+            lines.append(
+                f"  {p['periodo_label']}: ${p['predicted']:,.2f} "
+                f"(rango: ${p['lower']:,.2f} – ${p['upper']:,.2f})"
+            )
+
+        proyecciones_text = (
+            f"R² = {metrics.get('r2_score', 'N/A')} | "
+            f"Tendencia: {metrics.get('trend_direction', 'N/A')} "
+            f"({metrics.get('trend_strength', 0):.1f}%) | "
+            f"Cambio prox. mes: {metrics.get('predicted_change_pct', 0):+.1f}%\n"
+            + "\n".join(lines)
+        )
+
+        return {
+            'proyecciones_text': proyecciones_text,
+            'proyecciones_raw': {
+                'historical': historical,
+                'predictions': predictions,
+                'metrics': metrics,
+                'model_info': result.get('model_info', {}),
+                'generated_at': datetime.now().isoformat(),
+            },
+        }
+
+    except Exception as exc:
+        logger.warning(f"No se pudieron generar proyecciones de ventas: {exc}")
+        return {
+            'proyecciones_text': "  (No se pudieron generar proyecciones)",
+            'proyecciones_raw': {'error': str(exc)},
+        }
+
 
 # --------------------------------------------------------------------------- #
 # System prompt                                                                 #
@@ -54,6 +141,9 @@ TENDENCIAS (vs período anterior)
   Gastos   : {tendencia_gastos_pct:+.1f}%
   Compras  : {tendencia_compras_pct:+.1f}%
 
+PROYECCIONES DE VENTAS (scikit-learn)
+{proyecciones_ventas}
+
 TOP CATEGORÍAS DE GASTOS
 {top_categorias_gastos}
 
@@ -69,7 +159,7 @@ CLIENTES
 INSTRUCCIONES DE FORMATO
 Devuelve ÚNICAMENTE un objeto JSON válido con la siguiente estructura, sin texto extra:
 {{
-  "resumen_ejecutivo": "<párrafo de 3-5 oraciones en español con el análisis narrativo del período>",
+  "resumen_ejecutivo": "<párrafo de 3-5 oraciones en español con el análisis narrativo del período, incluyendo una oración sobre la tendencia proyectada de ventas>",
   "alertas": [
     "<alerta 1 breve>",
     "<alerta 2 breve>"
@@ -89,6 +179,12 @@ Criterios para semaforo_financiero:
   verde   → balance_neto > 0 y cuentas vencidas < 10% del total cobrar
   amarillo→ balance_neto > 0 pero alertas moderadas, o cuentas vencidas entre 10%-25%
   rojo    → balance_neto < 0, o cuentas vencidas > 25% del total cobrar
+
+NOTA SOBRE PROYECCIONES:
+  Las proyecciones de ventas fueron generadas con scikit-learn (regresión sobre
+  datos históricos). Incluye un breve comentario sobre la tendencia proyectada
+  en el resumen_ejecutivo y genera alertas/recomendaciones si la proyección
+  muestra una caída o crecimiento significativo (>10%).
 """
 
 # --------------------------------------------------------------------------- #
@@ -99,7 +195,7 @@ Criterios para semaforo_financiero:
 def _get_financial_data(fecha_inicio: date, fecha_fin: date) -> dict:
     """
     Reúne todos los KPIs financieros del período indicado.
-    Sigue el mismo patrón de consultas que app/views.py.
+    Incluye proyecciones de ventas con scikit-learn.
     """
     # ── Helper para período anterior ──────────────────────────────────────── #
     delta = fecha_fin - fecha_inicio + timedelta(days=1)
@@ -192,6 +288,9 @@ def _get_financial_data(fecha_inicio: date, fecha_fin: date) -> dict:
         fecha_registro__range=(pi_aware, pf_aware)
     ).count()
 
+    # ── Proyecciones de ventas con scikit-learn ─────────────────────────── #
+    proyecciones = _get_ventas_proyecciones(fecha_fin)
+
     return {
         "total_ventas": float(total_ventas),
         "total_gastos": float(total_gastos),
@@ -201,6 +300,8 @@ def _get_financial_data(fecha_inicio: date, fecha_fin: date) -> dict:
         "tendencia_ventas_pct": tendencia_ventas,
         "tendencia_gastos_pct": tendencia_gastos,
         "tendencia_compras_pct": tendencia_compras,
+        "proyecciones_ventas": proyecciones['proyecciones_text'],
+        "proyecciones_ventas_raw": proyecciones['proyecciones_raw'],
         "top_categorias_gastos": top_cats_text or "  (sin datos)",
         "cuentas_por_cobrar": float(cuentas_por_cobrar),
         "ventas_pendientes_count": ventas_pendientes_count,
@@ -322,6 +423,7 @@ def generar_resumen_ejecutivo(
         }
 
     resultado["datos_financieros"] = datos
+    resultado["proyecciones_ventas"] = datos.get("proyecciones_ventas_raw", {})
     resultado["modelo_usado"] = effective_model
     return resultado
 

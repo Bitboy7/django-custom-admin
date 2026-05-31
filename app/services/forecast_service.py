@@ -183,7 +183,7 @@ class ForecastService:
             (lower_bound, upper_bound, residual_std)
         """
         residuals = y - model.predict(X)
-        residual_std = float(np.std(residuals))
+        residual_std = self._sanitize_float(np.std(residuals), 0)
 
         z_score = 1.96
         margin = z_score * residual_std
@@ -283,27 +283,27 @@ class ForecastService:
         result = {
             'service_name': model_name,
             'historical': [
-                {'periodo_label': lbl, 'total': val}
+                {'periodo_label': lbl, 'total': self._sanitize_float(val, 0)}
                 for lbl, val in zip(historical_labels, y.tolist())
             ],
             'predictions': [
                 {
                     'periodo_label': lbl,
-                    'predicted': round(float(pred), 2),
-                    'lower': round(float(lo), 2),
-                    'upper': round(float(up), 2),
+                    'predicted': round(self._sanitize_float(pred, 0), 2),
+                    'lower': round(self._sanitize_float(lo, 0), 2),
+                    'upper': round(self._sanitize_float(up, 0), 2),
                 }
                 for lbl, pred, lo, up in zip(
                     future_labels, predictions, lower, upper
                 )
             ],
             'metrics': {
-                'r2_score': round(r2_score, 4),
-                'residual_std': round(residual_std, 2),
+                'r2_score': round(self._sanitize_float(r2_score, 0), 4),
+                'residual_std': round(self._sanitize_float(residual_std, 0), 2),
                 'trend_direction': trend_direction,
-                'trend_strength': trend_strength,
-                'last_historical_value': round(float(y[-1]), 2),
-                'next_predicted_value': round(float(predictions[0]), 2),
+                'trend_strength': round(self._sanitize_float(trend_strength, 0), 2),
+                'last_historical_value': round(self._sanitize_float(y[-1], 0), 2),
+                'next_predicted_value': round(self._sanitize_float(predictions[0], 0), 2),
                 'predicted_change_pct': self._pct_change(y[-1], predictions[0]),
             },
             'model_info': {
@@ -505,6 +505,20 @@ class ForecastService:
         }
 
     @staticmethod
+    def _sanitize_float(value, default: float = 0.0) -> float:
+        """
+        Convierte a float seguro, reemplazando NaN/Inf por default.
+        Evita que valores no serializables lleguen al frontend.
+        """
+        try:
+            result = float(value)
+            if result != result or result == float('inf') or result == float('-inf'):
+                return default
+            return result
+        except (ValueError, TypeError):
+            return default
+
+    @staticmethod
     def _analyze_trend(
         predictions: np.ndarray,
         historical_y: np.ndarray
@@ -518,8 +532,8 @@ class ForecastService:
         if len(predictions) < 2:
             return 'estable', 0.0
 
-        last_historical = float(historical_y[-1])
-        last_predicted = float(predictions[-1])
+        last_historical = ForecastService._sanitize_float(historical_y[-1])
+        last_predicted = ForecastService._sanitize_float(predictions[-1])
 
         if last_historical == 0:
             return 'estable', 0.0
@@ -537,6 +551,8 @@ class ForecastService:
 
     @staticmethod
     def _pct_change(from_val: float, to_val: float) -> float:
+        from_val = ForecastService._sanitize_float(from_val)
+        to_val = ForecastService._sanitize_float(to_val)
         if from_val == 0:
             return 0.0
         return round(((to_val - from_val) / from_val) * 100, 2)
