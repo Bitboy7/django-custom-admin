@@ -1,22 +1,20 @@
 # ========== STAGE 1: Build CSS con Node.js 20 Alpine ==========
 FROM node:20-alpine AS node-builder
 
-WORKDIR /app
+WORKDIR /build
 
+# Instalar dependencias (sin cached layers)
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --omit=optional
 
+# Copiar archivos de configuración
 COPY tailwind.config.js postcss.config.js ./
-COPY static/css/ ./static/css/
-COPY templates ./templates
-COPY app/templates ./app/templates
-COPY auditoria/templates ./auditoria/templates 2>/dev/null || true
-COPY catalogo/templates ./catalogo/templates 2>/dev/null || true
-COPY gastos/templates ./gastos/templates 2>/dev/null || true
-COPY ventas/templates ./ventas/templates 2>/dev/null || true
-COPY capital_inversiones/templates ./capital_inversiones/templates 2>/dev/null || true
-COPY reportes/templates ./reportes/templates 2>/dev/null || true
 
+# Copiar archivos fuente necesarios para Tailwind content scanning
+# En lugar de múltiples COPY, hacer un COPY general y filtrar con .dockerignore
+COPY . ./
+
+# Compilar CSS (limpio y directo)
 RUN npm run build:css
 
 # ========== STAGE 2: Python 3.12 + Gunicorn ==========
@@ -53,8 +51,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copiar el resto del código de la aplicación
 COPY . .
 
-# Copiar CSS compilado desde stage anterior
-COPY --from=node-builder /app/static/css/output.css ./static/css/output.css
+# Copiar CSS compilado desde stage anterior (stage 1 usa WORKDIR /build)
+COPY --from=node-builder /build/static/css/output.css ./static/css/output.css
 
 # Crear directorios necesarios
 RUN mkdir -p /app/static/static-only /app/media /app/logs && \

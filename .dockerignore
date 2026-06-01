@@ -54,12 +54,15 @@ logs/
 node_modules/
 npm-debug.log*
 
-# Documentation
+# Documentation (exclude large files but keep required config)
 README.md
+README_SUGERIDO.md
 Docs/
+TAILWIND_SETUP.md
 
-# Development files
+# Development scripts (but keep package.json for npm ci)
 runserver.bat
-tailwind.config.js
-package.json
-package-lock.json
+runserver.sh
+docker-build-css.sh
+tailwind.bat
+
