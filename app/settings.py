@@ -147,7 +147,7 @@ JAZZMIN_SETTINGS = {
     
     # Hide these apps when generating side menu e.g (auth)
     # axes/otp_* se reubican dentro de Auditoría mediante custom_links.
-    "hide_apps": ["axes", "otp_static", "otp_totp", "two_factor"],
+    "hide_apps": ["axes", "otp_static", "otp_totp", "two_factor", "capital_inversiones"],
     
     # Ocultar modelos de catálogo/configuración poco frecuentes del menú principal.
     # Agente y TerminoCredito se reubican en CATÁLOGO mediante custom_links.
@@ -156,6 +156,7 @@ JAZZMIN_SETTINGS = {
     "hide_models": [
         "ventas.Agente",
         "ventas.TerminoCredito",
+        "ventas.EstadoCuentaCliente",
         "reportes.ConfiguracionReporte",
         "reportes.ReporteEjecutivo",
         "reportes.DestinatarioReporte",
@@ -301,6 +302,12 @@ JAZZMIN_SETTINGS = {
                 "url": "admin:axes_accessfailurelog_changelist",
                 "icon": "fas fa-exclamation-triangle",
                 "permissions": ["axes.view_accessfailurelog"],
+            },
+            {
+                "name": "Estados de Cuenta",
+                "url": "admin:ventas_estadocuentacliente_changelist",
+                "icon": "fas fa-file-invoice",
+                "permissions": ["ventas.view_estadocuentacliente"],
             },
         ],
     },

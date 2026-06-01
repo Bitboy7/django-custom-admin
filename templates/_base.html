@@ -34,16 +34,92 @@
     /* Navbar */
     .navbar-brand {
       background-color: var(--charcoal-blue);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      padding: 1rem;
+      box-shadow: 0 1px 10px rgba(0, 0, 0, 0.15);
     }
+
+    .navbar-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 0 1rem;
+    }
+
+    .brand-link {
+      display: inline-flex;
+      align-items: center;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--ghost-white);
+      text-decoration: none;
+    }
+
+    .brand-link:hover {
+      color: var(--ghost-white);
+    }
+
+    .nav-icon,
+    .brand-link .nav-icon {
+      margin-right: 0.5rem;
+    }
+
+    .dropdown-arrow {
+      margin-left: 0.35rem;
+      font-size: 0.85rem;
+    }
+
+    .navbar-toggle {
+      display: none;
+      border: none;
+      background: transparent;
+      color: var(--ghost-white);
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+    }
+
+    .navbar-toggle:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(244, 244, 249, 0.35);
+    }
+
+    .navbar-menu {
+      width: 100%;
+    }
+
+    .navbar-menu-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin: 1rem 0 0;
+      padding: 0;
+      list-style: none;
+      font-size: 0.9375rem;
+      font-weight: 500;
+    }
+
+    .navbar-menu-list li {
+      margin: 0;
+    }
+
     .nav-link {
-      color: rgba(244,244,249,.75);
-      transition: color .2s;
+      display: inline-flex;
+      align-items: center;
+      color: rgba(244, 244, 249, 0.75);
+      text-decoration: none;
+      padding: 0.5rem 0;
+      transition: color 0.2s ease;
     }
+
     .nav-link:hover {
       color: var(--ghost-white);
     }
 
-    /* Dropdown Menu Styles */
     .dropdown {
       position: relative;
       display: inline-block;
@@ -54,20 +130,20 @@
       position: absolute;
       background-color: var(--charcoal-blue);
       min-width: 220px;
-      box-shadow: 0px 8px 16px 0px rgba(47,69,80,0.2);
+      box-shadow: 0px 8px 16px 0px rgba(47, 69, 80, 0.2);
       z-index: 1000;
       border-radius: 0.375rem;
       margin-top: 0.5rem;
     }
 
     .dropdown-content a {
-      color: rgba(244,244,249,.8);
+      color: rgba(244, 244, 249, 0.8);
       padding: 12px 16px;
       text-decoration: none;
       display: flex;
       align-items: center;
       transition: all 0.2s ease;
-      border-bottom: 1px solid rgba(244,244,249,0.08);
+      border-bottom: 1px solid rgba(244, 244, 249, 0.08);
     }
 
     .dropdown-content a:last-child {
@@ -92,8 +168,23 @@
       color: var(--ghost-white) !important;
     }
 
-    /* Mobile dropdown styles */
     @media (max-width: 768px) {
+      .navbar-toggle {
+        display: inline-flex;
+      }
+
+      .navbar-menu {
+        display: none;
+      }
+
+      .navbar-menu.show {
+        display: block;
+      }
+
+      .navbar-menu-list {
+        margin-top: 1rem;
+      }
+
       .dropdown-content {
         position: static;
         box-shadow: none;
@@ -101,14 +192,22 @@
         margin-top: 0;
         padding-left: 1rem;
       }
+    }
 
-      .mobile-dropdown-content {
-        display: none;
-        margin-top: 0.5rem;
+    @media (min-width: 769px) {
+      .navbar-menu {
+        display: block;
       }
 
-      .mobile-dropdown-content.show {
-        display: block;
+      .navbar-menu-list {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin-top: 0;
+      }
+
+      .navbar-menu-list li {
+        margin: 0;
       }
     }
   </style>
@@ -122,82 +221,82 @@
 
 <body>
   <!-- Navbar -->
-  <nav class="navbar-brand p-4 sticky top-0 shadow z-30">
-    <div class="w-full px-4 flex flex-wrap justify-between items-center">
-      <a href="{% url 'admin:index' %}" class="flex items-center text-lg font-semibold" style="color: var(--ghost-white);">
-        <i class="fas fa-tractor mr-2" style="color: var(--light-blue);"></i> Agrícola de la Costa
+  <nav class="navbar-brand">
+    <div class="navbar-container">
+      <a href="{% url 'admin:index' %}" class="brand-link">
+        <i class="fas fa-tractor nav-icon" style="color: var(--light-blue);"></i> Agrícola de la Costa
       </a>
 
       <button data-collapse-toggle="navbar-menu" type="button"
-        class="inline-flex items-center p-2 ml-3 text-sm rounded-lg md:hidden focus:outline-none focus:ring-2"
+        class="navbar-toggle"
         style="color: var(--ghost-white);"
         onmouseover="this.style.backgroundColor='var(--blue-slate)'"
         onmouseout="this.style.backgroundColor='transparent'"
         aria-controls="navbar-menu" aria-expanded="false">
         <span class="sr-only">Abrir menú principal</span>
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+        <svg class="navbar-toggle-icon" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" style="width: 1.5rem; height: 1.5rem;">
           <path fill-rule="evenodd"
             d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
             clip-rule="evenodd"></path>
         </svg>
       </button>
 
-      <div class="hidden w-full md:block md:w-auto" id="navbar-menu">
-        <ul class="flex flex-col mt-4 md:flex-row md:space-x-6 md:mt-0 md:text-sm md:font-medium">
+      <div class="navbar-menu" id="navbar-menu">
+        <ul class="navbar-menu-list">
           <li>
-            <a href="{% url 'admin:index' %}" class="nav-link flex items-center py-2">
-              <i class="fas fa-tachometer-alt mr-1"></i> Panel de Control
+            <a href="{% url 'admin:index' %}" class="nav-link">
+              <i class="fas fa-tachometer-alt nav-icon"></i> Panel de Control
             </a>
           </li>
           <li>
-            <a href="{% url 'balances' %}" class="nav-link flex items-center py-2">
-              <i class="fas fa-file-invoice-dollar mr-1"></i> Gastos
+            <a href="{% url 'balances' %}" class="nav-link">
+              <i class="fas fa-file-invoice-dollar nav-icon"></i> Gastos
             </a>
           </li>
           <li>
-            <a href="{% url 'gastos:compras_balances' %}" class="nav-link flex items-center py-2">
-              <i class="fas fa-shopping-cart mr-1"></i> Compras
+            <a href="{% url 'gastos:compras_balances' %}" class="nav-link">
+              <i class="fas fa-shopping-cart nav-icon"></i> Compras
             </a>
           </li>
           <li>
-            <a href="{% url 'ventas:ventas_balances' %}" class="nav-link flex items-center py-2">
-              <i class="fas fa-chart-bar mr-1"></i> Ventas
+            <a href="{% url 'ventas:ventas_balances' %}" class="nav-link">
+              <i class="fas fa-chart-bar nav-icon"></i> Ventas
             </a>
           </li>
           <li>
-            <a href="{% url 'gastos:ingresar_gasto_factura' %}" class="nav-link flex items-center py-2">
-              <i class="fas fa-brain mr-1"></i> Documentos IA
+            <a href="{% url 'gastos:ingresar_gasto_factura' %}" class="nav-link">
+              <i class="fas fa-brain nav-icon"></i> Documentos IA
             </a>
           </li>
 
           <!-- Menú desplegable de Inversiones -->
           <li class="dropdown">
-            <a href="#" class="dropdown-toggle nav-link flex items-center py-2">
-              <i class="fas fa-chart-line mr-1"></i> Capital e Inversiones
-              <i class="fas fa-chevron-down ml-1 text-xs"></i>
+            <a href="#" class="dropdown-toggle nav-link">
+              <i class="fas fa-chart-line nav-icon"></i> Capital e Inversiones
+              <i class="fas fa-chevron-down nav-icon dropdown-arrow"></i>
             </a>
             <div class="dropdown-content">
               <a href="{% url 'capital_inversiones:dashboard' %}">
-                <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
+                <i class="fas fa-tachometer-alt nav-icon"></i> Dashboard
               </a>
               <a href="{% url 'capital_inversiones:reporte_sucursal' %}">
-                <i class="fas fa-building mr-2"></i> Reporte por Sucursal
+                <i class="fas fa-building nav-icon"></i> Reporte por Sucursal
               </a>
               <a href="{% url 'capital_inversiones:reporte_categoria' %}">
-                <i class="fas fa-tags mr-2"></i> Reporte por Categoría
+                <i class="fas fa-tags nav-icon"></i> Reporte por Categoría
               </a>
               <a href="{% url 'capital_inversiones:reporte_rendimientos' %}">
-                <i class="fas fa-percentage mr-2"></i> Análisis de Rendimientos
+                <i class="fas fa-percentage nav-icon"></i> Análisis de Rendimientos
               </a>
               <a href="{% url 'admin:capital_inversiones_inversion_changelist' %}">
-                <i class="fas fa-cog mr-2"></i> Administrar Inversiones
+                <i class="fas fa-cog nav-icon"></i> Administrar Inversiones
               </a>
             </div>
           </li>
 
           <li>
-            <a href="{% url 'export_full_report' %}" class="nav-link flex items-center py-2">
-              <i class="fas fa-file-excel mr-1"></i> Exportar reporte completo
+            <a href="{% url 'export_full_report' %}" class="nav-link">
+              <i class="fas fa-file-excel nav-icon"></i> Exportar reporte completo
             </a>
           </li>
         </ul>

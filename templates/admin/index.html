@@ -56,6 +56,59 @@
   }
   .dash-activity-item { border-bottom: 1px solid var(--border-default); }
 
+  /* ── Dashboard layout helpers ─────────────────────────────────── */
+  .dashboard-quick-access {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.75rem;
+    align-items: center;
+    overflow-x: auto;
+    padding: 0.75rem 1rem;
+  }
+  .dashboard-quick-access a {
+    min-width: 170px;
+    flex: 0 0 auto;
+  }
+  .dashboard-kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .dashboard-kpi-item {
+    min-height: 135px;
+    padding: 1rem;
+    position: relative;
+  }
+  .dashboard-chart-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 320px;
+  }
+  .dashboard-chart-header {
+    padding: 1.25rem 1.25rem 1rem;
+    border-bottom: 1px solid var(--border-default);
+  }
+  .dashboard-chart-body {
+    flex: 1;
+    padding: 1rem;
+    position: relative;
+    min-height: 220px;
+  }
+  .dashboard-chart-body canvas {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 260px;
+  }
+  .dashboard-chart-footer {
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--border-default);
+  }
+  .dashboard-chart-footer span {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
   /* ── Toast animations ─────────────────────────────────────────── */
   @keyframes tProg    { from{width:100%} to{width:0%} }
   .t-prog             { animation:tProg 4.2s linear forwards; }
@@ -90,46 +143,46 @@
   {# QUICK ACCESS STRIP — fila única #}
   {# ═══════════════════════════════════════════════════════════════ #}
   <div class="dash-card mb-4">
-    <div class="flex items-center gap-1 px-4 py-2.5 overflow-x-auto">
+    <div class="dashboard-quick-access">
       <span
         class="text-[10px] uppercase tracking-widest font-bold dash-muted shrink-0 pr-3 mr-1 border-r dash-border">Acceso
         rápido</span>
-      <a href="/admin/ventas/ventas/add/"
-        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline flex-1 min-w-fit dash-btn transition-all">
+      <a href="{% url 'admin:ventas_ventas_add' %}"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline dash-btn transition-all">
         <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
           style="background:var(--accent-green-bg);color:var(--accent-green)"><i
             class="fas fa-file-invoice text-[11px]"></i></div>
         <span class="text-[12px] font-semibold dash-text whitespace-nowrap">Nueva Venta</span>
       </a>
-      <a href="/admin/gastos/gasto/add/"
-        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline flex-1 min-w-fit dash-btn transition-all">
+      <a href="{% url 'admin:gastos_gastos_add' %}"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline dash-btn transition-all">
         <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
           style="background:var(--accent-red-bg);color:var(--accent-red)"><i
             class="fas fa-money-bill-wave text-[11px]"></i></div>
         <span class="text-[12px] font-semibold dash-text whitespace-nowrap">Nuevo Gasto</span>
       </a>
-      <a href="/admin/ventas/ventas/?estado_cobranza__in=Vencida"
-        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline flex-1 min-w-fit dash-btn transition-all">
+      <a href="{% url 'admin:ventas_ventas_changelist' %}?estado_cobranza__in=Vencida"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline dash-btn transition-all">
         <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
           style="background:var(--accent-amber-bg);color:var(--accent-amber)"><i
             class="fas fa-triangle-exclamation text-[11px]"></i></div>
         <span class="text-[12px] font-semibold dash-text whitespace-nowrap">CxC Vencidas</span>
       </a>
-      <a href="/admin/catalogo/"
-        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline flex-1 min-w-fit dash-btn transition-all">
+      <a href="{% url 'admin:app_list' 'catalogo' %}"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline dash-btn transition-all">
         <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
           style="background:var(--accent-blue-bg);color:var(--accent-blue)"><i
             class="fas fa-boxes-stacked text-[11px]"></i></div>
         <span class="text-[12px] font-semibold dash-text whitespace-nowrap">Cat&#225;logo</span>
       </a>
-      <a href="/admin/compras/compra/add/"
-        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline flex-1 min-w-fit dash-btn transition-all">
+      <a href="{% url 'admin:gastos_compra_add' %}"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline dash-btn transition-all">
         <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
           style="background:rgba(107,70,193,0.12);color:#6b46c1"><i class="fas fa-cart-plus text-[11px]"></i></div>
         <span class="text-[12px] font-semibold dash-text whitespace-nowrap">Nueva Compra</span>
       </a>
-      <a href="/admin/auditoria/"
-        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline flex-1 min-w-fit dash-btn transition-all">
+      <a href="{% url 'admin:app_list' 'auditoria' %}"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline dash-btn transition-all">
         <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
           style="background:rgba(88,111,124,0.12);color:var(--blue-slate)"><i
             class="fas fa-magnifying-glass text-[11px]"></i></div>
@@ -141,10 +194,10 @@
   {# ═══════════════════════════════════════════════════════════════ #}
   {# KPI STRIP — 7 metrics                                          #}
   {# ═══════════════════════════════════════════════════════════════ #}
-  <div class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 dash-card mb-5">
+  <div class="dashboard-kpi-strip dash-card mb-5">
 
     {# 1 — Ventas del Mes #}
-    <div class="ks relative p-4 border-r dash-border">
+    <div class="ks relative p-4 dashboard-kpi-item">
       <div class="absolute top-0 left-0 w-1 h-full bg-[#b8dbd9] rounded-l-2xl"></div>
       <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">Ventas del Mes</div>
       <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1">${{ total_ventas|us_currency:0 }}</div>
@@ -154,7 +207,7 @@
     </div>
 
     {# 2 — Gastos del Mes #}
-    <div class="ks relative p-4 border-r dash-border">
+    <div class="ks relative p-4 dashboard-kpi-item">
       <div class="absolute top-0 left-0 w-1 h-full bg-[#2f4550] rounded-l-2xl"></div>
       <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">Gastos del Mes</div>
       <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1">${{ total_gastos|us_currency:0 }}</div>
@@ -164,7 +217,7 @@
     </div>
 
     {# 3 — Balance Neto #}
-    <div class="ks relative p-4 border-r dash-border">
+    <div class="ks relative p-4 dashboard-kpi-item">
       <div class="absolute top-0 left-0 w-1 h-full rounded-l-2xl{% if balance_neto >= 0 %} bg-[#5a7d6b]{% else %} bg-[#b85450]{% endif %}"></div>
       <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">Balance Neto</div>
       <div class="text-xl font-bold my-1.5 leading-none pl-1{% if balance_neto >= 0 %} text-[#5a7d6b]{% else %} text-[#b85450]{% endif %}">${{ balance_neto|us_currency:0 }}</div>
@@ -174,7 +227,7 @@
     </div>
 
     {# 4 — Margen Neto (JS computed) #}
-    <div class="ks relative p-4 border-r dash-border">
+    <div class="ks relative p-4 dashboard-kpi-item">
       <div class="absolute top-0 left-0 w-1 h-full bg-[#b8dbd9] rounded-l-2xl"></div>
       <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold pl-1">Margen Neto</div>
       <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1" id="kpiMargen">&#8212;</div>
@@ -182,7 +235,7 @@
     </div>
 
     {# 5 — CxC Vigentes #}
-    <div class="ks relative p-4 border-r dash-border">
+    <div class="ks relative p-4 dashboard-kpi-item">
       <div class="absolute top-0 left-0 w-1 h-full bg-amber-400 rounded-l-2xl"></div>
       <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">CxC Vigentes</div>
       <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1">${{ ventas_vigentes|us_currency:0 }}</div>
@@ -190,7 +243,7 @@
     </div>
 
     {# 6 — CxC Vencidas #}
-    <div class="ks relative p-4 border-r dash-border">
+    <div class="ks relative p-4 dashboard-kpi-item">
       <div class="absolute top-0 left-0 w-1 h-full bg-[#b85450] rounded-l-2xl"></div>
       <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">CxC Vencidas</div>
       <div class="text-xl font-bold text-[#b85450] my-1.5 leading-none pl-1">${{ ventas_vencidas|us_currency:0 }}</div>
@@ -198,7 +251,7 @@
     </div>
 
     {# 7 — Clientes Activos #}
-    <div class="ks relative p-4">
+    <div class="ks relative p-4 dashboard-kpi-item">
       <div class="absolute top-0 left-0 w-1 h-full bg-[#586f7c] rounded-l-2xl"></div>
       <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">Clientes Activos</div>
       <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1">{{ total_clientes }}</div>
@@ -215,31 +268,31 @@
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
 
     {# Chart 1 — Ventas por Mes Bar #}
-    <div class="dash-card">
-      <div class="flex items-start justify-between px-5 pt-4 pb-3 border-b dash-border">
+    <div class="dash-card dashboard-chart-card">
+      <div class="dashboard-chart-header flex items-start justify-between">
         <div>
           <div class="text-[13px] font-bold dash-text">Ventas por Mes</div>
           <div class="text-xs dash-muted mt-0.5">Facturaci&#243;n mensual</div>
         </div>
-        <a href="/admin/ventas/ventas/" class="text-xs font-semibold no-underline" style="color:var(--brand-teal)">Ver todo &#8250;</a>
+        <a href="{% url 'admin:ventas_ventas_changelist' %}" class="text-xs font-semibold no-underline" style="color:var(--brand-teal)">Ver todo &#8250;</a>
       </div>
-      <div class="p-4" style="height:210px;position:relative">
+      <div class="dashboard-chart-body">
         <canvas id="ventasBarChart"></canvas>
       </div>
     </div>
 
     {# Chart 2 — Cartera Donut #}
-    <div class="dash-card">
-      <div class="flex items-start justify-between px-5 pt-4 pb-3 border-b dash-border">
+    <div class="dash-card dashboard-chart-card">
+      <div class="dashboard-chart-header flex items-start justify-between">
         <div>
           <div class="text-[13px] font-bold dash-text">Cartera de Cobro</div>
           <div class="text-xs dash-muted mt-0.5">Vigente vs Vencida</div>
         </div>
       </div>
-      <div class="flex items-center justify-center p-4" style="height:170px;position:relative">
+      <div class="dashboard-chart-body flex items-center justify-center">
         <canvas id="carteraDonut" style="max-height:170px"></canvas>
       </div>
-      <div class="flex flex-wrap gap-3 px-5 py-3 border-t dash-border text-xs dash-muted items-center">
+      <div class="dashboard-chart-footer flex flex-wrap gap-3 items-center">
         <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#b8dbd9]"></span>Vigente</span>
         <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#2f4550]"></span>Vencida</span>
         <span class="ml-auto font-bold dash-text" id="kpiMorosidad">&#8212;</span>
@@ -248,18 +301,20 @@
     </div>
 
     {# Chart 3 — Gastos Donut #}
-    <div class="dash-card">
-      <div class="flex items-start justify-between px-5 pt-4 pb-3 border-b dash-border">
+    <div class="dash-card dashboard-chart-card">
+      <div class="dashboard-chart-header flex items-start justify-between">
         <div>
           <div class="text-[13px] font-bold dash-text">Gastos por Categor&#237;a</div>
           <div class="text-xs dash-muted mt-0.5">Distribuci&#243;n actual</div>
         </div>
-        <a href="/admin/gastos/gasto/" class="text-xs font-semibold no-underline" style="color:var(--brand-teal)">Ver todo &#8250;</a>
+        <a href="{% url 'admin:gastos_gastos_changelist' %}" class="text-xs font-semibold no-underline" style="color:var(--brand-teal)">Ver todo &#8250;</a>
       </div>
-      <div class="flex items-center justify-center p-4" style="height:170px;position:relative">
-        <canvas id="gastosDonut" style="max-height:170px"></canvas>
+      <div class="dashboard-chart-body flex items-center justify-center">
+        <canvas id="gastosDonut" class="dashboard-donut-canvas"></canvas>
       </div>
-      <div class="flex flex-wrap gap-1.5 px-5 py-3 border-t dash-border" id="gastosLgnd"></div>
+      <div class="dashboard-chart-footer">
+        <div class="flex flex-wrap gap-1.5" id="gastosLgnd"></div>
+      </div>
     </div>
 
   </div>{# /row1 #}
@@ -270,23 +325,23 @@
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 
     {# Chart 4 — Tendencias Line #}
-    <div class="dash-card">
-      <div class="px-5 pt-4 pb-3 border-b dash-border">
+    <div class="dash-card dashboard-chart-card">
+      <div class="dashboard-chart-header">
         <div class="text-[13px] font-bold dash-text">Tendencias</div>
         <div class="text-xs dash-muted mt-0.5">Ventas vs Gastos &mdash; &#250;ltimos 6 meses</div>
       </div>
-      <div class="p-4" style="height:240px;position:relative">
+      <div class="dashboard-chart-body">
         <canvas id="tendenciasChart"></canvas>
       </div>
     </div>
 
     {# Chart 5 — Balance Bar #}
-    <div class="dash-card">
-      <div class="px-5 pt-4 pb-3 border-b dash-border">
+    <div class="dash-card dashboard-chart-card">
+      <div class="dashboard-chart-header">
         <div class="text-[13px] font-bold dash-text">Balance Mensual</div>
         <div class="text-xs dash-muted mt-0.5">Resultado neto por mes</div>
       </div>
-      <div class="p-4" style="height:240px;position:relative">
+      <div class="dashboard-chart-body">
         <canvas id="balanceBarChart"></canvas>
       </div>
     </div>
@@ -338,7 +393,7 @@
   {# ═══════════════════════════════════════════════════════════════ #}
   {# FOOTER STATS — 4 cards                                         #}
   {# ═══════════════════════════════════════════════════════════════ #}
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+  <div class="grid grid-cols-4 gap-4 w-full">
 
     <div class="dash-card p-5 flex items-center gap-4">
       <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0" style="background:var(--accent-blue-bg);color:var(--accent-blue)"><i class="fas fa-users"></i></div>
@@ -453,7 +508,7 @@
   });
 
   /* ── 2. Cartera Donut ───────────────────────────────────────────── */
-  new Chart('carteraDonut', {
+  new Chart(document.getElementById('carteraDonut'), {
     type: 'doughnut',
     data: {
       labels: ['Vigente','Vencida'],
@@ -465,7 +520,7 @@
   });
 
   /* ── 3. Gastos Donut ────────────────────────────────────────────── */
-  new Chart('gastosDonut', {
+  new Chart(document.getElementById('gastosDonut'), {
     type: 'doughnut',
     data: {
       labels: catLbls,
