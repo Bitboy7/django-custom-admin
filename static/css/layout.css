@@ -65,6 +65,13 @@ body .brand-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: none !important;
+}
+
+/* Hide navbar logo and images */
+body .brand-link .brand-image,
+body .brand-link img {
+  display: none !important;
 }
 
 /* Navbar search */
