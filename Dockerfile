@@ -3,18 +3,14 @@ FROM node:20-alpine AS node-builder
 
 WORKDIR /build
 
-# Instalar dependencias (sin cached layers)
+# Instalar dependencias
 COPY package*.json ./
 RUN npm ci --omit=optional
 
-# Copiar archivos de configuración
-COPY tailwind.config.js postcss.config.js ./
+# Copiar todo lo necesario para Tailwind
+COPY . .
 
-# Copiar archivos fuente necesarios para Tailwind content scanning
-# En lugar de múltiples COPY, hacer un COPY general y filtrar con .dockerignore
-COPY . ./
-
-# Compilar CSS (limpio y directo)
+# Compilar CSS
 RUN npm run build:css
 
 # ========== STAGE 2: Python 3.12 + Gunicorn ==========

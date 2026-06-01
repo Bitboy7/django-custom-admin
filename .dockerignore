@@ -2,7 +2,7 @@
 .git
 .gitignore
 
-# Environment files
+# Environment files  
 .env
 .env.local
 .env.example
@@ -50,19 +50,26 @@ Thumbs.db
 logs/
 *.log
 
-# Node modules
+# Node modules (gets removed anyway)
 node_modules/
 npm-debug.log*
 
-# Documentation (exclude large files but keep required config)
+# Documentation (just large files, NOT config)
+Docs/
 README.md
 README_SUGERIDO.md
-Docs/
+DESIGN.md
+PRODUCT.md
 TAILWIND_SETUP.md
 
-# Development scripts (but keep package.json for npm ci)
+# Dev scripts
 runserver.bat
 runserver.sh
 docker-build-css.sh
 tailwind.bat
+
+# Test cache
+.pytest_cache/
+.coverage
+htmlcov/
 
