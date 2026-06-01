@@ -1,4 +1,25 @@
-# Usar una imagen base oficial de Python 3.12
+# ========== STAGE 1: Build CSS con Node.js 20 Alpine ==========
+FROM node:20-alpine AS node-builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY tailwind.config.js postcss.config.js ./
+COPY static/css/ ./static/css/
+COPY templates ./templates
+COPY app/templates ./app/templates
+COPY auditoria/templates ./auditoria/templates 2>/dev/null || true
+COPY catalogo/templates ./catalogo/templates 2>/dev/null || true
+COPY gastos/templates ./gastos/templates 2>/dev/null || true
+COPY ventas/templates ./ventas/templates 2>/dev/null || true
+COPY capital_inversiones/templates ./capital_inversiones/templates 2>/dev/null || true
+COPY reportes/templates ./reportes/templates 2>/dev/null || true
+
+RUN npm run build:css
+
+# ========== STAGE 2: Python 3.12 + Gunicorn ==========
 FROM python:3.12-slim
 
 # Configurar variables de entorno para Python
@@ -31,6 +52,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copiar el resto del código de la aplicación
 COPY . .
+
+# Copiar CSS compilado desde stage anterior
+COPY --from=node-builder /app/static/css/output.css ./static/css/output.css
 
 # Crear directorios necesarios
 RUN mkdir -p /app/static/static-only /app/media /app/logs && \
