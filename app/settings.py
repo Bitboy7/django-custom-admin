@@ -568,7 +568,7 @@ LOCALE_PATHS = [
 STATIC_URL = "/static/"
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-STATIC_ROOT = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'static-only')
+STATIC_ROOT = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'staticfiles')
 
 STATICFILES_DIRS = (
     os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static'),
@@ -619,9 +619,8 @@ if not DEBUG:
     # Cambiado a CompressedStaticFilesStorage para evitar hashing de nombres
     # que causa conflictos con custom_css de Jazzmin
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
-    # Configuración adicional para archivos estáticos
-    WHITENOISE_USE_FINDERS = True
-    WHITENOISE_AUTOREFRESH = True
+    # Servir estáticos directamente desde STATIC_ROOT (más eficiente en producción)
+    WHITENOISE_USE_FINDERS = False
     # Configuración para servir archivos media con WhiteNoise en producción
     WHITENOISE_ROOT = MEDIA_ROOT
     # Añadir configuración para servir archivos media

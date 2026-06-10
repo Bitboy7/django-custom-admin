@@ -904,7 +904,7 @@ class SaldoCliente(models.Model):
     )
     venta = models.OneToOneField(
         Ventas,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name='saldo_cxc',
         unique=True,
         help_text="Venta que origina este saldo"

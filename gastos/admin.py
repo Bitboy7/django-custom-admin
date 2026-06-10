@@ -629,9 +629,6 @@ class ComprasAdmin(ImportExportModelAdmin, ModelAdmin):
                 'js/compra_calculator.js',
                 'js/scripts.js',
             )
-            css = {
-                'all': ('css/admin_custom.css',)
-            }
  
 class SaldoMensualResource(resources.ModelResource):
     cuenta = fields.Field(

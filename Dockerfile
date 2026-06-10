@@ -51,7 +51,7 @@ COPY . .
 COPY --from=node-builder /build/static/css/output.css ./static/css/output.css
 
 # Crear directorios necesarios
-RUN mkdir -p /app/static/static-only /app/media /app/logs && \
+RUN mkdir -p /app/staticfiles /app/media /app/logs && \
     mkdir -p /app/media/bancos /app/media/catalogo /app/media/clientes /app/media/paises /app/media/productores /app/media/temp_documents /app/media/temp_invoices
 
 # Dar permisos al script de entrada (ya copiado con COPY . .)
