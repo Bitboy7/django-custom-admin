@@ -178,8 +178,9 @@ document.addEventListener("DOMContentLoaded", function () {
           className: "dt-button btn-copy",
           text: '<i class="fas fa-copy mr-1"></i> Copiar',
           exportOptions: {
-            columns: ":visible",
+            columns: [5, 0, 1, 2, 3, 4, 6, 7],
             orthogonal: "export",
+            footer: true,
           },
         },
         {
@@ -189,8 +190,9 @@ document.addEventListener("DOMContentLoaded", function () {
           charset: "utf-8",
           bom: true,
           exportOptions: {
-            columns: ":visible",
+            columns: [5, 0, 1, 2, 3, 4, 6, 7],
             orthogonal: "export",
+            footer: true,
           },
         },
         {
@@ -204,204 +206,186 @@ document.addEventListener("DOMContentLoaded", function () {
             return "gastos-detalle-" + getCurrentDateFormatted("filename");
           },
           exportOptions: {
-            columns: ":visible",
+            columns: [5, 0, 1, 2, 3, 4, 6, 7],
             orthogonal: "export",
+            footer: true,
           },
           customize: function (xlsx) {
-            console.log("Iniciando customize...");
-            console.log("Estructura xlsx:", Object.keys(xlsx));
-            console.log("Estructura xlsx.xl:", Object.keys(xlsx.xl));
-
-            // Por ahora, solo retornar sin hacer cambios para verificar que funcione
-            // Una vez que funcione, agregaremos la segunda hoja
-            console.log("Excel exportado sin modificaciones");
+            // Footer con total se incluye via exportOptions.footer:true
           },
         },
         {
           text: '<i class="fas fa-chart-pie mr-1"></i> Resumen Excel',
           className: "dt-button btn-summary-excel",
           action: function (e, dt, button, config) {
-            // Procesar datos para el resumen
-            var sucursalData = {};
             var table = $("#gastosTable").DataTable();
             var data = table.rows({ search: "applied" }).data();
+            var totalFiltrado = 0;
 
-            // Agrupar por sucursal → cuenta → categoría
+            // Extraer cada fila con: fecha, sucursal, cuenta, categoria, total
+            var rows = [];
             for (var i = 0; i < data.length; i++) {
               var rowData = data[i];
               var tempDiv = document.createElement("div");
 
+              tempDiv.innerHTML = rowData[5];
+              var fecha = (tempDiv.textContent || tempDiv.innerText || rowData[5]).trim();
+
               tempDiv.innerHTML = rowData[4];
-              var sucursal = (
-                tempDiv.textContent ||
-                tempDiv.innerText ||
-                rowData[4]
-              ).trim();
+              var sucursal = (tempDiv.textContent || tempDiv.innerText || rowData[4]).trim();
 
               tempDiv.innerHTML = rowData[2];
-              var cuenta = (
-                tempDiv.textContent ||
-                tempDiv.innerText ||
-                rowData[2]
-              ).trim();
+              var cuenta = (tempDiv.textContent || tempDiv.innerText || rowData[2]).trim();
 
               tempDiv.innerHTML = rowData[1];
-              var categoria = (
-                tempDiv.textContent ||
-                tempDiv.innerText ||
-                rowData[1]
-              ).trim();
+              var categoria = (tempDiv.textContent || tempDiv.innerText || rowData[1]).trim();
 
               var totalCell = table.cell(i, 6).node();
-              var cellText = (
-                totalCell.textContent ||
-                totalCell.innerText ||
-                ""
-              ).trim();
+              var cellText = (totalCell.textContent || totalCell.innerText || "").trim();
               var totalValue = parseFloat(cellText.replace(/[$\s]/g, ""));
               if (isNaN(totalValue)) totalValue = 0;
 
-              if (!sucursalData[sucursal]) {
-                sucursalData[sucursal] = { cuentas: {}, total: 0 };
-              }
-              if (!sucursalData[sucursal].cuentas[cuenta]) {
-                sucursalData[sucursal].cuentas[cuenta] = {
-                  categorias: {},
-                  total: 0,
-                };
-              }
-              if (
-                !sucursalData[sucursal].cuentas[cuenta].categorias[categoria]
-              ) {
-                sucursalData[sucursal].cuentas[cuenta].categorias[categoria] =
-                  0;
-              }
-
-              sucursalData[sucursal].cuentas[cuenta].categorias[categoria] +=
-                totalValue;
-              sucursalData[sucursal].cuentas[cuenta].total += totalValue;
-              sucursalData[sucursal].total += totalValue;
+              rows.push({
+                fecha: fecha,
+                sucursal: sucursal,
+                cuenta: cuenta,
+                categoria: categoria,
+                total: totalValue,
+              });
+              totalFiltrado += totalValue;
             }
 
-            // Preparar datos para exportación HTML
-            var headers = ["Sucursal", "Cuenta", "Categoría", "Total"];
+            // Ordenar: sucursal → cuenta → fecha descendente
+            rows.sort(function (a, b) {
+              if (a.sucursal !== b.sucursal) return a.sucursal.localeCompare(b.sucursal);
+              if (a.cuenta !== b.cuenta) return a.cuenta.localeCompare(b.cuenta);
+              return (b.fecha || "").localeCompare(a.fecha || "");
+            });
+
+            // Agrupar por sucursal → cuenta con subtotales
             var htmlData = [];
             var grandTotal = 0;
+            var lastSucursal = null;
+            var lastCuenta = null;
+            var sucTotal = 0;
+            var ctaTotal = 0;
 
-            // Ordenar sucursales por total descendente
-            var sortedSucursales = Object.keys(sucursalData).sort(
-              function (a, b) {
-                return sucursalData[b].total - sucursalData[a].total;
-              },
-            );
+            for (var r = 0; r < rows.length; r++) {
+              var row = rows[r];
 
-            // Construir HTML para cada fila
-            sortedSucursales.forEach(function (sucursal) {
-              var sucData = sucursalData[sucursal];
-              var sortedCuentas = Object.keys(sucData.cuentas).sort(
-                function (a, b) {
-                  return sucData.cuentas[b].total - sucData.cuentas[a].total;
-                },
-              );
+              // Nueva sucursal? Cerrar cuenta y sucursal anterior
+              if (lastSucursal && row.sucursal !== lastSucursal) {
+                if (lastCuenta) {
+                  htmlData.push({ fecha: "", sucursal: "", cuenta: lastCuenta + " - SUBTOTAL", categoria: "", total: ctaTotal, isSubtotal: true });
+                  lastCuenta = null;
+                }
+                htmlData.push({ fecha: "", sucursal: lastSucursal + " - SUBTOTAL", cuenta: "", categoria: "", total: sucTotal, isSubtotal: true });
+                htmlData.push({ fecha: "", sucursal: "", cuenta: "", categoria: "", total: "", isSubtotal: false });
+                grandTotal += sucTotal;
+                sucTotal = 0;
+              }
 
-              sortedCuentas.forEach(function (cuenta) {
-                var cuentaData = sucData.cuentas[cuenta];
-                var sortedCategorias = Object.keys(cuentaData.categorias).sort(
-                  function (a, b) {
-                    return cuentaData.categorias[b] - cuentaData.categorias[a];
-                  },
-                );
+              // Nueva cuenta dentro de la misma sucursal?
+              if (lastCuenta && row.cuenta !== lastCuenta && row.sucursal === lastSucursal) {
+                htmlData.push({ fecha: "", sucursal: "", cuenta: lastCuenta + " - SUBTOTAL", categoria: "", total: ctaTotal, isSubtotal: true });
+                ctaTotal = 0;
+              }
 
-                // Agregar categorías
-                sortedCategorias.forEach(function (categoria) {
-                  htmlData.push({
-                    sucursal: sucursal,
-                    cuenta: cuenta,
-                    categoria: categoria,
-                    total: cuentaData.categorias[categoria],
-                    isSubtotal: false,
-                  });
-                });
+              htmlData.push({ fecha: row.fecha, sucursal: row.sucursal, cuenta: row.cuenta, categoria: row.categoria, total: row.total, isSubtotal: false });
+              ctaTotal += row.total;
+              sucTotal += row.total;
+              lastSucursal = row.sucursal;
+              lastCuenta = row.cuenta;
+            }
 
-                // Subtotal de cuenta
-                htmlData.push({
-                  sucursal: sucursal,
-                  cuenta: cuenta + " - SUBTOTAL",
-                  categoria: "",
-                  total: cuentaData.total,
-                  isSubtotal: true,
-                });
-              });
+            // Cerrar ultimo grupo
+            if (lastCuenta) {
+              htmlData.push({ fecha: "", sucursal: "", cuenta: lastCuenta + " - SUBTOTAL", categoria: "", total: ctaTotal, isSubtotal: true });
+            }
+            if (lastSucursal) {
+              htmlData.push({ fecha: "", sucursal: lastSucursal + " - SUBTOTAL", cuenta: "", categoria: "", total: sucTotal, isSubtotal: true });
+              grandTotal += sucTotal;
+            }
 
-              // Subtotal de sucursal
-              htmlData.push({
-                sucursal: sucursal + " - SUBTOTAL",
-                cuenta: "",
-                categoria: "",
-                total: sucData.total,
-                isSubtotal: true,
-              });
+            htmlData.push({ fecha: "", sucursal: "TOTAL GENERAL", cuenta: "", categoria: "", total: grandTotal, isSubtotal: true });
 
-              // Línea en blanco
-              htmlData.push({
-                sucursal: "",
-                cuenta: "",
-                categoria: "",
-                total: "",
-                isSubtotal: false,
-              });
+            // --- Tabla de categorias (reemplaza los graficos que Excel no puede renderizar) ---
+            var categoriasTable = "";
+            try {
+              if (window.balancesCategoriasLabels && window.balancesCategoriasLabels.length > 0) {
+                categoriasTable += '<h2 style="color:#2f4550;font-family:Arial,sans-serif;margin-top:20px;">Gastos por Categor&iacute;a</h2>';
+                categoriasTable += '<table><thead><tr><th>#</th><th>Categor&iacute;a</th><th>Total</th><th>%</th></tr></thead><tbody>';
+                var catData = window.balancesCategoriasData || [];
+                var catTotal = catData.reduce(function(a,b){return a+b;}, 0);
+                for (var ci = 0; ci < window.balancesCategoriasLabels.length; ci++) {
+                  var pct = catTotal > 0 ? ((catData[ci] / catTotal) * 100).toFixed(1) + "%" : "0.0%";
+                  categoriasTable += '<tr><td>' + (ci+1) + '</td><td>' + window.balancesCategoriasLabels[ci] + '</td><td class="num-col">$' + catData[ci].toLocaleString("en-US", {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td><td class="num-col">' + pct + '</td></tr>';
+                }
+                categoriasTable += '<tr class="subtotal"><td colspan="2"><strong>TOTAL</strong></td><td class="num-col">$' + catTotal.toLocaleString("en-US", {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td><td class="num-col">100.0%</td></tr>';
+                categoriasTable += '</tbody></table>';
+              }
+            } catch(err) {
+              categoriasTable = "";
+            }
 
-              grandTotal += sucData.total;
-            });
+            // --- Sumatoria de gastos filtrados ---
+            var sumatoriaHTML = "";
+            if (totalFiltrado > 0) {
+              var formattedSum = "$" + totalFiltrado.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              sumatoriaHTML = '<div style="background:#2f4550;color:#fff;padding:10px 16px;border-radius:6px;margin-bottom:16px;font-family:Arial,sans-serif;"><strong>Sumatoria total de gastos filtrados:</strong> ' + formattedSum + '</div>';
+            }
 
-            // Total general
-            htmlData.push({
-              sucursal: "TOTAL GENERAL",
-              cuenta: "",
-              categoria: "",
-              total: grandTotal,
-              isSubtotal: true,
-            });
+            var html = '<html><head><meta charset="UTF-8"><style>' +
+              "body{font-family:Arial,sans-serif;margin:20px;color:#2f4550;}" +
+              "h1{color:#2f4550;border-bottom:2px solid #b8dbd9;padding-bottom:6px;}" +
+              "h2{color:#2f4550;margin-top:24px;}" +
+              "table{border-collapse:collapse;width:100%;margin-bottom:20px;}" +
+              "th{background:#2f4550;color:#fff;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;}" +
+              "td{padding:6px 10px;border:1px solid #d8dce6;font-size:11px;}" +
+              "tr:nth-child(even){background:#f8fafc;}" +
+              ".subtotal td{background:#E6F3FF;font-weight:bold;}" +
+              ".total-general td{background:#2f4550;color:#fff;font-weight:bold;}" +
+              ".fecha-col{white-space:nowrap;}" +
+              ".num-col{text-align:right;white-space:nowrap;}" +
+              "</style></head><body>";
 
-            // Crear tabla HTML con encoding UTF-8
-            var html = '<html><head><meta charset="UTF-8"></head><body>';
-            html += "<table>";
-            html += "<thead><tr>";
-            html +=
-              "<th>Sucursal</th><th>Cuenta</th><th>Categoría</th><th>Total</th>";
-            html += "</tr></thead><tbody>";
+            html += "<h1>" + (getReportTitle ? getReportTitle() : "Resumen de Gastos") + "</h1>";
+            html += sumatoriaHTML;
+
+            html += "<table><thead><tr>" +
+              "<th>Fecha</th><th>Sucursal</th><th>Cuenta</th><th>Categor&iacute;a</th><th>Total</th>" +
+              "</tr></thead><tbody>";
 
             htmlData.forEach(function (row) {
-              var style = row.isSubtotal
-                ? ' style="background-color: #E6F3FF; font-weight: bold;"'
-                : "";
-              html += "<tr" + style + ">";
+              var cssClass = "";
+              if (row.sucursal === "TOTAL GENERAL") {
+                cssClass = ' class="total-general"';
+              } else if (row.isSubtotal) {
+                cssClass = ' class="subtotal"';
+              }
+              html += "<tr" + cssClass + ">";
+              html += '<td class="fecha-col">' + row.fecha + "</td>";
               html += "<td>" + row.sucursal + "</td>";
               html += "<td>" + row.cuenta + "</td>";
               html += "<td>" + row.categoria + "</td>";
-              html +=
-                "<td>" +
-                (row.total !== ""
-                  ? "$" +
-                    row.total.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })
-                  : "") +
+              html += '<td class="num-col">' +
+                (row.total !== "" ? "$" + row.total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "") +
                 "</td>";
               html += "</tr>";
             });
 
-            html += "</tbody></table></body></html>";
+            html += "</tbody></table>";
 
-            // Crear blob con BOM para UTF-8 y descargar
+            if (categoriasTable) { html += categoriasTable; }
+
+            html += "</body></html>";
+
             var BOM = "\uFEFF";
-            var blob = new Blob([BOM + html], {
-              type: "application/vnd.ms-excel;charset=utf-8",
-            });
+            var blob = new Blob([BOM + html], { type: "application/vnd.ms-excel;charset=utf-8" });
             var link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = "gastos-resumen-detallado.xls";
+            var now = new Date();
+            link.download = "gastos-resumen-" + now.toISOString().slice(0, 10) + ".xls";
             link.click();
           },
         },
@@ -411,10 +395,8 @@ document.addEventListener("DOMContentLoaded", function () {
           text: '<i class="fas fa-file-pdf mr-1"></i> PDF',
           title: "",
           customize: function (doc) {
-            // Obtener título dinámico basado en filtros
             var reportTitle = getReportTitle();
 
-            // Configurar documento usando utilidades
             configurePdfDocument(doc, {
               reportTitle: reportTitle,
               systemName: "2026 - Agricola de la Costa San Luis S.P.R de R.L.",
@@ -422,12 +404,12 @@ document.addEventListener("DOMContentLoaded", function () {
               pageMargins: [40, 80, 40, 60],
             });
 
-            // Personalización adicional específica de gastos
             if (doc.content[0].table) {
+              // Widths reordenados para export: Fecha, #, Categoria, Cuenta, Banco, Sucursal, Total, Acumulado
               doc.content[0].table.widths = [
                 "auto",
-                "*",
                 "auto",
+                "*",
                 "auto",
                 "auto",
                 "auto",
@@ -436,14 +418,13 @@ document.addEventListener("DOMContentLoaded", function () {
               ];
               doc.content[0].table.headerRows = 1;
 
-              // Alternar colores de las filas
               doc.content[0].layout = {
-                fillColor: function (rowIndex) {
-                  return rowIndex === 0
-                    ? "#34495e"
-                    : rowIndex % 2 === 0
-                      ? "#ecf0f1"
-                      : null;
+                fillColor: function (rowIndex, node, columnIndex) {
+                  if (rowIndex === 0) return "#34495e";
+                  // Footer row (data rows + 1 = footer index)
+                  var dataRows = doc.content[0].table.body.length - 2;
+                  if (rowIndex === dataRows + 1) return "#2f4550";
+                  return rowIndex % 2 === 0 ? "#ecf0f1" : null;
                 },
                 hLineWidth: function (i, node) {
                   return i === 0 || i === 1 || i === node.table.body.length
@@ -463,8 +444,9 @@ document.addEventListener("DOMContentLoaded", function () {
             }
           },
           exportOptions: {
-            columns: ":visible",
+            columns: [5, 0, 1, 2, 3, 4, 6, 7],
             orthogonal: "export",
+            footer: true,
           },
         },
         {
@@ -472,8 +454,9 @@ document.addEventListener("DOMContentLoaded", function () {
           className: "dt-button btn-print",
           text: '<i class="fas fa-print mr-1"></i> Imprimir',
           exportOptions: {
-            columns: ":visible",
+            columns: [5, 0, 1, 2, 3, 4, 6, 7],
             orthogonal: "export",
+            footer: true,
           },
         },
       ],

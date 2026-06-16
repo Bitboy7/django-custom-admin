@@ -595,15 +595,78 @@
       language: { url: '/static/js/datatables-spanish.json' },
       order: [[5, 'desc']],
       columnDefs: [
-        { targets: [6, 7], type: 'num-fmt', className: 'text-right dt-body-right' },
+        {
+          targets: [6, 7],
+          type: 'num-fmt',
+          className: 'text-right dt-body-right',
+          render: function(data, type) {
+            if (type === 'display') return data;
+            var cleanText = getCleanTextFromHTML(data);
+            var numValue = parseNumericString(cleanText);
+            if (!isNaN(numValue)) return type === 'export' ? numValue.toFixed(2) : numValue;
+            return 0;
+          }
+        },
         { targets: '_all', className: 'dt-body-left' }
       ],
       buttons: [
-        { extend: 'copy', text: '<i class="fas fa-copy"></i>', className: 'btn-copy dt-button', titleAttr: 'Copiar' },
-        { extend: 'csv', text: '<i class="fas fa-file-csv"></i>', className: 'btn-csv dt-button', titleAttr: 'CSV', filename: 'acumulado-gastos' },
-        { extend: 'excel', text: '<i class="fas fa-file-excel"></i>', className: 'btn-excel dt-button', titleAttr: 'Excel', filename: 'acumulado-gastos', title: 'Acumulado de Gastos', exportOptions: { columns: ':visible' } },
-        { extend: 'pdf', text: '<i class="fas fa-file-pdf"></i>', className: 'btn-pdf dt-button', titleAttr: 'PDF', filename: 'acumulado-gastos', title: 'Acumulado de Gastos', orientation: 'landscape', pageSize: 'A4', exportOptions: { columns: ':visible' } },
-        { extend: 'print', text: '<i class="fas fa-print"></i>', className: 'btn-print dt-button', titleAttr: 'Imprimir', title: 'Acumulado de Gastos', exportOptions: { columns: ':visible' } }
+        { extend: 'copy', text: '<i class="fas fa-copy"></i>', className: 'btn-copy dt-button', titleAttr: 'Copiar', exportOptions: { columns: [5, 0, 1, 2, 3, 4, 6, 7], orthogonal: 'export', footer: true } },
+        { extend: 'csv', text: '<i class="fas fa-file-csv"></i>', className: 'btn-csv dt-button', titleAttr: 'CSV', filename: 'acumulado-gastos', charset: 'utf-8', bom: true, exportOptions: { columns: [5, 0, 1, 2, 3, 4, 6, 7], orthogonal: 'export', footer: true } },
+        { extend: 'excel', text: '<i class="fas fa-file-excel"></i>', className: 'btn-excel dt-button', titleAttr: 'Excel', filename: 'acumulado-gastos', title: 'Acumulado de Gastos', exportOptions: { columns: [5, 0, 1, 2, 3, 4, 6, 7], orthogonal: 'export', footer: true }, customize: function(xlsx) { /** @see balances-datatables.js for full customize */ } },
+        {
+          text: '<i class="fas fa-chart-pie"></i> Resumen',
+          className: 'dt-button btn-summary-excel',
+          titleAttr: 'Exportar resumen con gráficos',
+          action: function(e, dt, node, config) {
+            var table = $('#gastosTable').DataTable();
+            var data = table.rows({ search: 'applied' }).data();
+            var totalFiltrado = 0;
+            var rows = [];
+            for (var i = 0; i < data.length; i++) {
+              var rowData = data[i];
+              var tempDiv = document.createElement('div');
+              tempDiv.innerHTML = rowData[5]; var fecha = (tempDiv.textContent || tempDiv.innerText || rowData[5]).trim();
+              tempDiv.innerHTML = rowData[4]; var sucursal = (tempDiv.textContent || tempDiv.innerText || rowData[4]).trim();
+              tempDiv.innerHTML = rowData[2]; var cuenta = (tempDiv.textContent || tempDiv.innerText || rowData[2]).trim();
+              tempDiv.innerHTML = rowData[1]; var categoria = (tempDiv.textContent || tempDiv.innerText || rowData[1]).trim();
+              var totalCell = table.cell(i, 6).node();
+              var cellText = (totalCell.textContent || totalCell.innerText || '').trim();
+              var totalValue = parseFloat(cellText.replace(/[$\s]/g, ''));
+              if (isNaN(totalValue)) totalValue = 0;
+              rows.push({fecha:fecha,sucursal:sucursal,cuenta:cuenta,categoria:categoria,total:totalValue});
+              totalFiltrado += totalValue;
+            }
+            rows.sort(function(a,b){ if(a.sucursal!==b.sucursal)return a.sucursal.localeCompare(b.sucursal); if(a.cuenta!==b.cuenta)return a.cuenta.localeCompare(b.cuenta); return (b.fecha||'').localeCompare(a.fecha||''); });
+            var htmlData=[],grandTotal=0,lastSucursal=null,lastCuenta=null,sucTotal=0,ctaTotal=0;
+            for(var r=0;r<rows.length;r++){
+              var row=rows[r];
+              if(lastSucursal&&row.sucursal!==lastSucursal){if(lastCuenta){htmlData.push({fecha:'',sucursal:'',cuenta:lastCuenta+' - SUBTOTAL',categoria:'',total:ctaTotal,isSubtotal:true});lastCuenta=null;}htmlData.push({fecha:'',sucursal:lastSucursal+' - SUBTOTAL',cuenta:'',categoria:'',total:sucTotal,isSubtotal:true});htmlData.push({fecha:'',sucursal:'',cuenta:'',categoria:'',total:'',isSubtotal:false});grandTotal+=sucTotal;sucTotal=0;}
+              if(lastCuenta&&row.cuenta!==lastCuenta&&row.sucursal===lastSucursal){htmlData.push({fecha:'',sucursal:'',cuenta:lastCuenta+' - SUBTOTAL',categoria:'',total:ctaTotal,isSubtotal:true});ctaTotal=0;}
+              htmlData.push({fecha:row.fecha,sucursal:row.sucursal,cuenta:row.cuenta,categoria:row.categoria,total:row.total,isSubtotal:false});
+              ctaTotal+=row.total;sucTotal+=row.total;lastSucursal=row.sucursal;lastCuenta=row.cuenta;
+            }
+            if(lastCuenta){htmlData.push({fecha:'',sucursal:'',cuenta:lastCuenta+' - SUBTOTAL',categoria:'',total:ctaTotal,isSubtotal:true});}
+            if(lastSucursal){htmlData.push({fecha:'',sucursal:lastSucursal+' - SUBTOTAL',cuenta:'',categoria:'',total:sucTotal,isSubtotal:true});grandTotal+=sucTotal;}
+            htmlData.push({fecha:'',sucursal:'TOTAL GENERAL',cuenta:'',categoria:'',total:grandTotal,isSubtotal:true});
+            var sumatoriaHTML='';
+            if(totalFiltrado>0){var fs='$'+totalFiltrado.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});sumatoriaHTML='<div style="background:#2f4550;color:#fff;padding:10px 16px;border-radius:6px;margin-bottom:16px;font-family:Arial,sans-serif;"><strong>Sumatoria total de gastos filtrados:</strong> '+fs+'</div>';}
+            var categoriasTable='';
+            try{if(window.balancesCategoriasLabels&&window.balancesCategoriasLabels.length>0){categoriasTable+='<h2 style="color:#2f4550;font-family:Arial,sans-serif;margin-top:20px;">Gastos por Categor&iacute;a</h2><table><thead><tr><th>#</th><th>Categor&iacute;a</th><th>Total</th><th>%</th></tr></thead><tbody>';var catData=window.balancesCategoriasData||[];var catTotal=catData.reduce(function(a,b){return a+b;},0);for(var ci=0;ci<window.balancesCategoriasLabels.length;ci++){var pct=catTotal>0?((catData[ci]/catTotal)*100).toFixed(1)+'%':'0.0%';categoriasTable+='<tr><td>'+(ci+1)+'</td><td>'+window.balancesCategoriasLabels[ci]+'</td><td class="num-col">$'+catData[ci].toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td><td class="num-col">'+pct+'</td></tr>';}categoriasTable+='<tr class="subtotal"><td colspan="2"><strong>TOTAL</strong></td><td class="num-col">$'+catTotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td><td class="num-col">100.0%</td></tr></tbody></table>';}}catch(err){categoriasTable='';}
+            var html='<html><head><meta charset="UTF-8"><style>body{font-family:Arial,sans-serif;margin:20px;color:#2f4550;}h1{color:#2f4550;border-bottom:2px solid #b8dbd9;padding-bottom:6px;}h2{color:#2f4550;margin-top:24px;}table{border-collapse:collapse;width:100%;margin-bottom:20px;}th{background:#2f4550;color:#fff;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;}td{padding:6px 10px;border:1px solid #d8dce6;font-size:11px;}tr:nth-child(even){background:#f8fafc;}.subtotal td{background:#E6F3FF;font-weight:bold;}.total-general td{background:#2f4550;color:#fff;font-weight:bold;}.fecha-col{white-space:nowrap;}.num-col{text-align:right;white-space:nowrap;}</style></head><body>';
+            html+='<h1>Resumen de Gastos</h1>'+sumatoriaHTML;
+            html+='<table><thead><tr><th>Fecha</th><th>Sucursal</th><th>Cuenta</th><th>Categor&iacute;a</th><th>Total</th></tr></thead><tbody>';
+            htmlData.forEach(function(row){var cssClass=row.sucursal==='TOTAL GENERAL'?' class="total-general"':(row.isSubtotal?' class="subtotal"':'');html+='<tr'+cssClass+'><td class="fecha-col">'+row.fecha+'</td><td>'+row.sucursal+'</td><td>'+row.cuenta+'</td><td>'+row.categoria+'</td><td class="num-col">'+(row.total!==''?'$'+row.total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'')+'</td></tr>';});
+            html+='</tbody></table>'+categoriasTable+'</body></html>';
+            var BOM='\uFEFF';
+            var blob=new Blob([BOM+html],{type:'application/vnd.ms-excel;charset=utf-8'});
+            var link=document.createElement('a');
+            link.href=URL.createObjectURL(blob);
+            link.download='gastos-resumen-'+new Date().toISOString().slice(0,10)+'.xls';
+            link.click();
+          }
+        },
+        { extend: 'pdf', text: '<i class="fas fa-file-pdf"></i>', className: 'btn-pdf dt-button', titleAttr: 'PDF', filename: 'acumulado-gastos', title: 'Acumulado de Gastos', orientation: 'landscape', pageSize: 'A4', exportOptions: { columns: [5, 0, 1, 2, 3, 4, 6, 7], orthogonal: 'export', footer: true } },
+        { extend: 'print', text: '<i class="fas fa-print"></i>', className: 'btn-print dt-button', titleAttr: 'Imprimir', title: 'Acumulado de Gastos', exportOptions: { columns: [5, 0, 1, 2, 3, 4, 6, 7], orthogonal: 'export', footer: true } }
       ]
     });
 
