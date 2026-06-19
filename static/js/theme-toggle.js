@@ -29,11 +29,12 @@
 
   /* ── Helpers ──────────────────────────────────────────────────── */
   function getSystemPreference() {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? DARK : LIGHT;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? DARK : LIGHT;
   }
 
   function getStoredTheme() {
-    return localStorage.getItem(THEME_KEY) || AUTO;
+    var stored = localStorage.getItem(THEME_KEY);
+    return stored === LIGHT || stored === DARK || stored === AUTO ? stored : AUTO;
   }
 
   function setStoredTheme(theme) {
@@ -52,11 +53,11 @@
   /* ── Apply theme to DOM ───────────────────────────────────────── */
   function applyTheme(theme) {
     var resolved = getResolvedTheme(theme);
-    if (resolved === DARK) {
-      document.documentElement.setAttribute('data-theme', DARK);
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-    }
+    var mode = theme || getStoredTheme();
+    document.documentElement.setAttribute('data-theme', resolved);
+    document.documentElement.setAttribute('data-theme-mode', mode);
+    document.documentElement.classList.toggle('dark', resolved === DARK);
+    document.documentElement.style.colorScheme = resolved;
   }
 
   /* ── Smooth transition (one-time on toggle) ──────────────────── */
@@ -202,13 +203,22 @@
     createToggleButton();
 
     /* Listen for system theme changes when in auto mode */
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+    var systemThemeQuery = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+    var handleSystemThemeChange = function () {
       if (getStoredTheme() === AUTO) {
         enableTransition();
         applyTheme(AUTO);
         updateToggleButton();
       }
-    });
+    };
+
+    if (systemThemeQuery) {
+      if (systemThemeQuery.addEventListener) {
+        systemThemeQuery.addEventListener('change', handleSystemThemeChange);
+      } else if (systemThemeQuery.addListener) {
+        systemThemeQuery.addListener(handleSystemThemeChange);
+      }
+    }
 
     /* Log the resolved mode for debugging */
     var resolved = getResolvedTheme();

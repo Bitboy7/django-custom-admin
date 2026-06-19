@@ -27,6 +27,8 @@
 
 /* ── THEME: LIGHT (default) ──────────────────────────────────── */
 :root {
+  color-scheme: light;
+
   /* Brand — paleta oficial: tierra húmeda, pizarra costera, mar en calma */
   --black: #000000;
   --charcoal-blue: #2f4550;
@@ -153,6 +155,8 @@
 
 /* ── THEME: DARK ──────────────────────────────────────────────── */
 [data-theme="dark"] {
+  color-scheme: dark;
+
   --surface-bg: #1a1f24;
   --surface-card: #242b32;
   --surface-hover: #2f3840;
@@ -195,9 +199,11 @@
   --accent-blue-bg: rgba(88, 111, 124, 0.12);
 }
 
-/* ── Prefers Dark (auto-detect) ───────────────────────────────── */
+/* ── Prefers Dark (no-JS auto fallback) ────────────────────────── */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+
     --surface-bg: #1a1f24;
     --surface-card: #242b32;
     --surface-hover: #2f3840;

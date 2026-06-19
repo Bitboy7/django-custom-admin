@@ -13,6 +13,32 @@
 {# ── Modular CSS already loaded via Jazzmin custom_css (admin_custom.css → all modules) ── #}
 {% block extrahead %}
 {{ block.super }}
+<script>
+(function () {
+  var KEY = 'agricola-theme';
+  var DARK = 'dark';
+  var LIGHT = 'light';
+  var AUTO = 'auto';
+
+  function getSystemPreference() {
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? DARK : LIGHT;
+  }
+
+  try {
+    var mode = localStorage.getItem(KEY);
+    if (mode !== LIGHT && mode !== DARK && mode !== AUTO) mode = AUTO;
+
+    var resolved = mode === AUTO ? getSystemPreference() : mode;
+    var root = document.documentElement;
+    root.setAttribute('data-theme', resolved);
+    root.setAttribute('data-theme-mode', mode);
+    root.classList.toggle('dark', resolved === DARK);
+    root.style.colorScheme = resolved;
+  } catch (e) {
+    /* localStorage no disponible; tokens.css conserva fallback por sistema. */
+  }
+})();
+</script>
 <link rel="stylesheet" href="{% static 'css/htmx-utils.css' %}">
 {# Google Fonts: Playfair Display + Plus Jakarta Sans + JetBrains Mono #}
 <link rel="preconnect" href="https://fonts.googleapis.com">
