@@ -1,0 +1,352 @@
+/**
+ * Estilos para modal de vista previa de comprobantes
+ * Diseño moderno, responsivo y accesible
+ */
+
+.comprobante-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+}
+
+.comprobante-modal.active {
+  display: flex;
+}
+
+.comprobante-modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.comprobante-modal-content {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  max-width: 90vw;
+  max-height: 90vh;
+  width: 900px;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease-out;
+  z-index: 1;
+}
+
+.comprobante-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 2px solid #d8dce6;
+  background: linear-gradient(135deg, #b8dbd9 0%, #0a7487 100%);
+  border-radius: 12px 12px 0 0;
+}
+
+.comprobante-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: white;
+}
+
+.comprobante-modal-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.comprobante-modal-close:hover,
+.comprobante-modal-close:focus {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+}
+
+.comprobante-modal-body {
+  flex: 1;
+  overflow: auto;
+  padding: 24px;
+  position: relative;
+  min-height: 400px;
+  background: #f4f4f9;
+}
+
+.comprobante-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #586f7c;
+}
+
+.comprobante-loading .spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #d8dce6;
+  border-top-color: #b8dbd9;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+
+.comprobante-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.comprobante-image {
+  max-width: 100%;
+  max-height: 70vh;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.comprobante-image:hover {
+  transform: scale(1.02);
+}
+
+.comprobante-pdf {
+  width: 100%;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pdf-notice {
+  padding: 24px;
+  background: #f4f4f9;
+  border-radius: 8px;
+  border: 2px dashed #b8dbd9;
+}
+
+.pdf-viewer {
+  width: 100%;
+  height: 100%;
+  border: 2px solid #d8dce6;
+  border-radius: 8px;
+  background: white;
+}
+
+#pdf-inline-container {
+  transition: all 0.3s ease;
+}
+
+.pdf-fallback {
+  text-align: center;
+  padding: 16px;
+  background: rgba(201,162,39,.08);
+  border-radius: 8px;
+  border: 1px solid #fbbf24;
+}
+
+.pdf-fallback p {
+  margin: 0 0 12px 0;
+  color: #c9a227;
+}
+
+.comprobante-error,
+.comprobante-generic {
+  text-align: center;
+  padding: 40px;
+}
+
+.comprobante-error p,
+.comprobante-generic p {
+  font-size: 16px;
+  color: #586f7c;
+  margin: 16px 0;
+}
+
+.file-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.comprobante-modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 2px solid #d8dce6;
+  background: white;
+  border-radius: 0 0 12px 12px;
+}
+
+.btn-download,
+.btn-open-new,
+.btn-fallback,
+.btn-pdf-primary,
+.btn-pdf-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  line-height: 1.5;
+}
+
+.btn-download {
+  background: #5a7d6b;
+  color: white;
+  flex: 1;
+}
+
+.btn-download:hover,
+.btn-download:focus {
+  background: #5a7d6b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-open-new {
+  background: #586f7c;
+  color: white;
+  flex: 1;
+}
+
+.btn-open-new:hover,
+.btn-open-new:focus {
+  background: #586f7c;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Botones específicos para PDFs - colores de la app */
+.btn-pdf-primary {
+  background: #b8dbd9 !important;
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(13, 143, 162, 0.2);
+}
+
+.btn-pdf-primary:hover,
+.btn-pdf-primary:focus {
+  background: #0a7487 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(13, 143, 162, 0.35);
+  outline: none;
+}
+
+.btn-pdf-secondary {
+  background: #586f7c !important;
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.btn-pdf-secondary:hover,
+.btn-pdf-secondary:focus {
+  background: #586f7c !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+  outline: none;
+}
+
+.btn-fallback {
+  background: #586f7c;
+  color: white;
+  margin-top: 12px;
+}
+
+.btn-fallback:hover,
+.btn-fallback:focus {
+  background: #586f7c;
+  transform: translateY(-2px);
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .comprobante-modal-content {
+    max-width: 95vw;
+    max-height: 95vh;
+    margin: 10px;
+  }
+
+  .comprobante-modal-body {
+    padding: 16px;
+  }
+
+  .comprobante-modal-footer {
+    flex-direction: column;
+  }
+
+  .comprobante-pdf {
+    height: 400px;
+  }
+}
+
+/* Accesibilidad */
+.comprobante-modal-close:focus-visible,
+.btn-download:focus-visible,
+.btn-open-new:focus-visible,
+.btn-fallback:focus-visible {
+  outline: 3px solid #586f7c;
+  outline-offset: 2px;
+}
+
+/* Reducir movimiento para usuarios con preferencias de accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+  .comprobante-modal-backdrop,
+  .comprobante-modal-content,
+  .comprobante-image,
+  .btn-download,
+  .btn-open-new {
+    animation: none;
+    transition: none;
+  }
+}

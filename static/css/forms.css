@@ -1,0 +1,273 @@
+/*
+ * ═══════════════════════════════════════════════════════════════
+ *  FORMS — Inputs, Selects, Fieldsets, Validation, Money Widget
+ *
+ *  Skills: ui-ux-pro-max (labels, errors, touch, a11y)
+ * ═══════════════════════════════════════════════════════════════
+ */
+
+/* ── Input base ────────────────────────────────────────────────── */
+.form-control,
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="url"],
+input[type="date"],
+input[type="time"],
+input[type="search"],
+input[type="tel"],
+input[type="password"],
+textarea,
+select {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  line-height: var(--line-height-base);
+  transition:
+    border-color var(--duration-fast) var(--ease-default),
+    box-shadow var(--duration-fast) var(--ease-default),
+    background var(--duration-fast) var(--ease-default);
+  min-height: 44px;
+  font-variant-numeric: tabular-nums;
+}
+.form-control:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--border-focus) !important;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+  outline: none !important;
+}
+
+/* Textarea */
+textarea {
+  resize: vertical;
+  min-height: 90px;
+  line-height: var(--line-height-relaxed);
+}
+
+/* Select — custom arrow */
+select:not([multiple]) {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2357534e' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-4) center;
+  padding-right: 2.5rem;
+}
+
+/* Readonly / Disabled */
+input[readonly],
+textarea[readonly],
+input[disabled],
+select[disabled],
+textarea[disabled],
+.vTextField[readonly] {
+  background: var(--surface-bg) !important;
+  border-color: var(--border-default) !important;
+  color: var(--text-muted) !important;
+  cursor: default;
+  box-shadow: none !important;
+}
+
+/* Calculated field */
+.calculated-field {
+  background: var(--surface-bg) !important;
+  border-color: var(--border-default) !important;
+}
+.calculation-highlight {
+  background: rgba(13, 148, 136, 0.06) !important;
+  transition: background var(--duration-fast) var(--ease-default);
+}
+@keyframes valueChange {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+.value-changed { animation: valueChange 0.25s var(--ease-default); }
+
+/* ── Checkboxes & Radios ────────────────────────────────────────── */
+input[type="checkbox"],
+input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand-teal);
+  cursor: pointer;
+  min-height: auto;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* ── Labels ─────────────────────────────────────────────────────── */
+label,
+.form-row > div > label,
+.field-label > label {
+  display: block;
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+  margin-bottom: var(--space-1);
+}
+label.required::after,
+.field-required label::after {
+  content: " *";
+  color: var(--accent-red);
+}
+
+/* Help text */
+.help,
+.help-block {
+  color: var(--text-muted) !important;
+  font-size: var(--font-size-xs);
+  margin-top: var(--space-1);
+  line-height: var(--line-height-relaxed);
+}
+
+/* ── Fieldsets ──────────────────────────────────────────────────── */
+fieldset.module {
+  background: var(--surface-card) !important;
+  border: 1px solid var(--border-default) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--space-6) !important;
+  overflow: hidden;
+}
+fieldset.module > h2 {
+  background: linear-gradient(90deg, var(--brand-navy) 0%, var(--brand-navy-light) 100%) !important;
+  color: var(--text-on-dark) !important;
+  padding: var(--space-3) var(--space-6) !important;
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  border-left: 3px solid var(--brand-teal) !important;
+  margin: 0 !important;
+}
+.form-row {
+  padding: var(--space-4) var(--space-6) !important;
+  border-bottom: 1px solid var(--border-default) !important;
+}
+.form-row:last-child { border-bottom: none !important; }
+
+/* ── Inline formsets ────────────────────────────────────────────── */
+.inline-group { margin-top: var(--space-6); }
+.inline-group .module { margin-bottom: 0 !important; }
+.inline-group h2 {
+  background: linear-gradient(90deg, var(--brand-navy-light) 0%, #1a4068 100%) !important;
+  border-left: 3px solid var(--brand-teal-light) !important;
+  font-size: var(--font-size-xs) !important;
+  letter-spacing: 0.06em !important;
+}
+.add-row a {
+  color: var(--brand-teal-dark) !important;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-default);
+}
+.add-row a:hover { color: var(--brand-teal) !important; text-decoration: underline; }
+.inline-deletelink {
+  color: var(--text-muted) !important;
+  font-size: var(--font-size-xs);
+  text-decoration: none;
+}
+.inline-deletelink:hover { color: var(--accent-red) !important; }
+
+/* ── Validation ─────────────────────────────────────────────────── */
+.errorlist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.errorlist li {
+  background: var(--accent-red-bg) !important;
+  border-left: 4px solid var(--accent-red) !important;
+  color: var(--accent-red) !important;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  margin: var(--space-2) 0;
+}
+
+/* Fields with errors */
+.errors input,
+.errors select,
+.errors textarea,
+.field-error {
+  border-color: var(--accent-red) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
+}
+
+/* Success fields */
+.field-success {
+  border-color: var(--accent-green) !important;
+  box-shadow: 0 0 0 3px rgba(22, 101, 52, 0.1) !important;
+}
+
+/* ── Money widget ───────────────────────────────────────────────── */
+.money-field-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.money-field-wrapper .amount-input {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  min-height: 44px;
+  transition: border-color var(--duration-fast) var(--ease-default), box-shadow var(--duration-fast) var(--ease-default);
+}
+.money-field-wrapper .amount-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+  outline: none;
+}
+.money-field-wrapper .currency-select {
+  min-width: 100px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  min-height: 44px;
+}
+.money-field-wrapper .currency-symbol {
+  font-family: var(--font-body);
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 30px;
+  text-align: center;
+  font-size: var(--font-size-base);
+}
+.money-field-wrapper.error .amount-input,
+.money-field-wrapper.error .currency-select {
+  border-color: var(--accent-red);
+}
+
+@media (max-width: 576px) {
+  .form-row .field-cantidad,
+  .form-row .field-precio_unitario,
+  .form-row .field-monto_total {
+    width: 100%;
+    margin-bottom: var(--space-2);
+  }
+}

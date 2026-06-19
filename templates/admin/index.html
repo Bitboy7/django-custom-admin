@@ -1,738 +1,621 @@
-{% extends 'admin/base.html' %} 
-{% load i18n %} 
-{% load humanize %} 
-{% load static %} 
+{% extends 'admin/base_site.html' %}
+{% load i18n %}
+{% load humanize %}
+{% load static %}
 {% load gastos_tags %}
-{% block breadcrumbs %}
-{% endblock %} 
-{% block title %} 
-{% if subtitle%} {{ subtitle }} | {% endif %} {{ title }} | {{ site_title|default:_('Djangosite admin') }} 
-{% endblock %} 
+{% block breadcrumbs %}{% endblock %}
 
+{% block title %}
+  {% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}
+{% endblock %}
+
+{# ── CSS variables loaded via admin_custom.css (no CDN Tailwind) ─── #}
 {% block extrahead %}
 {{ block.super }}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css" />
-<link rel="stylesheet" href="{% static 'css/dashboard-custom.css' %}">
-{% endblock %} 
-
-{% block styles %}
-{{ block.super }}
 <style>
-  /* Toast Styles */
-  .toast-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 9999;
+  /* ── Full width fixes ─────────────────────────────────────────── */
+  #tw-dashboard       { width:100%; max-width:100%; }
+  #content-main       { padding:0 !important; max-width:100% !important; width:100% !important; box-sizing:border-box !important; }
+  #content            { max-width:100% !important; }
+  #main-content       { padding:0 !important; }
+  .content-wrapper>.content { padding: 0 !important; }
+  .container-fluid    { padding-left: 0 !important; padding-right: 0 !important; }
+  canvas              { max-width:100% !important; display:block; }
+
+  /* ── Dashboard theme-aware classes ────────────────────────────── */
+  .dash-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
   }
-  
-  .toast {
-    background: linear-gradient(135deg, #101429 0%, #152a85 100%) !important;
-    color: white !important;
-    padding: 16px 24px !important;
-    border-radius: 12px !important;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2) !important;
-    margin-bottom: 12px !important;
-    transform: translateX(400px) !important;
-    opacity: 0 !important;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-    min-width: 350px !important;
-    position: relative !important;
-    overflow: hidden !important;
-    display: block !important;
+  .dash-text   { color: var(--text-primary); }
+  .dash-muted  { color: var(--text-muted); }
+  .dash-border { border-color: var(--border-default) !important; }
+  .dash-bg     { background: var(--surface-bg); }
+  .dash-btn {
+    background: var(--surface-hover);
+    border: 1px solid var(--border-default);
+    color: var(--text-primary);
+    transition: all 150ms cubic-bezier(0.4,0,0.2,1);
   }
-  
-  .toast.show {
-    transform: translateX(0) !important;
-    opacity: 1 !important;
+  .dash-btn:hover {
+    background: rgba(13,148,136,0.12);
+    border-color: var(--brand-teal);
+    color: var(--brand-teal-dark);
   }
-  
-  .toast::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.5);
+  .dash-status-success { background: var(--accent-green-bg); color: var(--accent-green); }
+  .dash-status-danger  { background: var(--accent-red-bg);   color: var(--accent-red); }
+  .dash-status-warning { background: var(--accent-amber-bg); color: var(--accent-amber); }
+  .dash-status-slate   { background: var(--surface-hover);   color: var(--text-muted); }
+  .dash-welcome {
+    background: linear-gradient(135deg, #2f2d5b 0%, #b8dbd9 100%);
+    border-radius: 1rem;
+    color: #fff;
   }
-  
-  .toast-header {
+  .dash-activity-item { border-bottom: 1px solid var(--border-default); }
+
+  /* ── Dashboard layout helpers ─────────────────────────────────── */
+  .dashboard-quick-access {
     display: flex;
+    flex-wrap: nowrap;
+    gap: 0.75rem;
     align-items: center;
-    margin-bottom: 8px;
+    overflow-x: auto;
+    padding: 0.75rem 1rem;
   }
-  
-  .toast-icon {
-    font-size: 20px;
-    margin-right: 12px;
-    color: #e0f2fe;
+  .dashboard-quick-access a {
+    min-width: 170px;
+    flex: 0 0 auto;
   }
-  
-  .toast-title {
-    font-weight: 600;
-    font-size: 16px;
-    margin: 0;
+  .dashboard-kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
   }
-  
-  .toast-message {
-    margin: 0;
-    opacity: 0.95;
-    line-height: 1.5;
+  .dashboard-kpi-item {
+    min-height: 135px;
+    padding: 1rem;
+    position: relative;
   }
-  
-  .toast-close {
-    position: absolute;
-    top: 8px;
-    right: 12px;
-    background: none;
-    border: none;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 18px;
-    cursor: pointer;
-    padding: 4px;
-    transition: color 0.2s;
+  .dashboard-chart-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 320px;
   }
-  
-  .toast-close:hover {
-    color: white;
+  .dashboard-chart-header {
+    padding: 1.25rem 1.25rem 1rem;
+    border-bottom: 1px solid var(--border-default);
+  }
+  .dashboard-chart-body {
+    flex: 1;
+    padding: 1rem;
+    position: relative;
+    min-height: 220px;
+  }
+  .dashboard-chart-body canvas {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 260px;
+  }
+  .dashboard-chart-footer {
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--border-default);
+  }
+  .dashboard-chart-footer span {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  /* ── Toast animations ─────────────────────────────────────────── */
+  @keyframes tProg    { from{width:100%} to{width:0%} }
+  .t-prog             { animation:tProg 4.2s linear forwards; }
+  .t-slide            { transform:translateX(110%); transition:transform .3s ease; }
+  .t-slide.t-show     { transform:translateX(0); }
+  /* ── KPI strip responsive dividers ───────────────────────────── */
+  @media(max-width:1279px){
+    .ks:nth-child(4n)  { border-right:0 !important; }
+    .ks:nth-child(n+5) { border-top:1px solid var(--border-default) !important; }
+  }
+  @media(max-width:639px){
+    .ks:nth-child(2n)  { border-right:0 !important; }
+    .ks:nth-child(n+3) { border-top:1px solid var(--border-default) !important; }
   }
 </style>
-{% endblock %} 
+{% endblock %}
+
+{% block styles %}{{ block.super }}{% endblock %}
+
 {% block content %}
-<div class="space-y-6">
-  <!-- Header Section -->
-  <div
-    class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white"
-  >
-    <h1 class="text-3xl font-bold mb-2">
-      <i class="fas fa-tachometer-alt mr-3"></i>
-      Resumen
-    </h1>
-    <div class="mt-4 text-sm">
-      <span class="bg-opacity-20 px-3 py-1">
-        <i class="fas fa-calendar mr-1"></i>
-        Último acceso: {{ last_login|date:"d/m/Y H:i" }}
+<div id="tw-dashboard" class="pb-10">
+
+  {# ── WELCOME BANNER ─────────────────────────────────────────────── #}
+  <div class="flex items-center justify-between mb-4 px-0.5">
+    <p class="m-0 text-[13px] font-semibold dash-text leading-none">
+      <span id="dashGreeting">Bienvenido</span><span class="font-normal dash-muted">, {{ user.get_full_name|default:user.username }}</span>
+    </p>
+    <time class="text-[11px] dash-muted tabular-nums capitalize" id="dashDateTime"></time>
+  </div>
+
+  {# ═══════════════════════════════════════════════════════════════ #}
+  {# QUICK ACCESS STRIP — fila única #}
+  {# ═══════════════════════════════════════════════════════════════ #}
+  <div class="dash-card mb-4">
+    <div class="dashboard-quick-access">
+      <span
+        class="text-[10px] uppercase tracking-widest font-bold dash-muted shrink-0 pr-3 mr-1 border-r dash-border">Acceso
+        rápido</span>
+      <a href="{% url 'admin:ventas_ventas_add' %}"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline dash-btn transition-all">
+        <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+          style="background:var(--accent-green-bg);color:var(--accent-green)"><i
+            class="fas fa-file-invoice text-[11px]"></i></div>
+        <span class="text-[12px] font-semibold dash-text whitespace-nowrap">Nueva Venta</span>
+      </a>
+      <a href="{% url 'admin:gastos_gastos_add' %}"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline dash-btn transition-all">
+        <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+          style="background:var(--accent-red-bg);color:var(--accent-red)"><i
+            class="fas fa-money-bill-wave text-[11px]"></i></div>
+        <span class="text-[12px] font-semibold dash-text whitespace-nowrap">Nuevo Gasto</span>
+      </a>
+      <a href="{% url 'admin:ventas_ventas_changelist' %}?estado_cobranza__in=Vencida"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline dash-btn transition-all">
+        <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+          style="background:var(--accent-amber-bg);color:var(--accent-amber)"><i
+            class="fas fa-triangle-exclamation text-[11px]"></i></div>
+        <span class="text-[12px] font-semibold dash-text whitespace-nowrap">CxC Vencidas</span>
+      </a>
+      <a href="{% url 'admin:app_list' 'catalogo' %}"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline dash-btn transition-all">
+        <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+          style="background:var(--accent-blue-bg);color:var(--accent-blue)"><i
+            class="fas fa-boxes-stacked text-[11px]"></i></div>
+        <span class="text-[12px] font-semibold dash-text whitespace-nowrap">Cat&#225;logo</span>
+      </a>
+      <a href="{% url 'admin:gastos_compra_add' %}"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline dash-btn transition-all">
+        <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+          style="background:rgba(107,70,193,0.12);color:#6b46c1"><i class="fas fa-cart-plus text-[11px]"></i></div>
+        <span class="text-[12px] font-semibold dash-text whitespace-nowrap">Nueva Compra</span>
+      </a>
+      <a href="{% url 'admin:app_list' 'auditoria' %}"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg no-underline dash-btn transition-all">
+        <div class="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+          style="background:rgba(88,111,124,0.12);color:var(--blue-slate)"><i
+            class="fas fa-magnifying-glass text-[11px]"></i></div>
+        <span class="text-[12px] font-semibold dash-text whitespace-nowrap">Auditor&#237;a</span>
+      </a>
+    </div>
+  </div>
+
+  {# ═══════════════════════════════════════════════════════════════ #}
+  {# KPI STRIP — 7 metrics                                          #}
+  {# ═══════════════════════════════════════════════════════════════ #}
+  <div class="dashboard-kpi-strip dash-card mb-5">
+
+    {# 1 — Ventas del Mes #}
+    <div class="ks relative p-4 dashboard-kpi-item">
+      <div class="absolute top-0 left-0 w-1 h-full bg-[#b8dbd9] rounded-l-2xl"></div>
+      <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">Ventas del Mes</div>
+      <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1">${{ total_ventas|us_currency:0 }}</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if ventas_trend >= 0 %} dash-status-success{% else %} dash-status-danger{% endif %}">
+        <i class="fas fa-arrow-{% if ventas_trend >= 0 %}up{% else %}down{% endif %} text-[9px]"></i> {{ ventas_trend|floatformat:1 }}%
       </span>
     </div>
-  </div>
 
-  <!-- Métricas principales -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-    <div class="metric-card">
-      <div class="flex items-center justify-between">
+    {# 2 — Gastos del Mes #}
+    <div class="ks relative p-4 dashboard-kpi-item">
+      <div class="absolute top-0 left-0 w-1 h-full bg-[#2f4550] rounded-l-2xl"></div>
+      <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">Gastos del Mes</div>
+      <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1">${{ total_gastos|us_currency:0 }}</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if gastos_trend <= 0 %} dash-status-success{% else %} dash-status-danger{% endif %}">
+        <i class="fas fa-arrow-{% if gastos_trend <= 0 %}down{% else %}up{% endif %} text-[9px]"></i> {{ gastos_trend|floatformat:1 }}%
+      </span>
+    </div>
+
+    {# 3 — Balance Neto #}
+    <div class="ks relative p-4 dashboard-kpi-item">
+      <div class="absolute top-0 left-0 w-1 h-full rounded-l-2xl{% if balance_neto >= 0 %} bg-[#5a7d6b]{% else %} bg-[#b85450]{% endif %}"></div>
+      <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">Balance Neto</div>
+      <div class="text-xl font-bold my-1.5 leading-none pl-1{% if balance_neto >= 0 %} text-[#5a7d6b]{% else %} text-[#b85450]{% endif %}">${{ balance_neto|us_currency:0 }}</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if balance_trend >= 0 %} dash-status-success{% else %} dash-status-danger{% endif %}">
+        <i class="fas fa-arrow-{% if balance_trend >= 0 %}up{% else %}down{% endif %} text-[9px]"></i> {{ balance_trend|floatformat:1 }}%
+      </span>
+    </div>
+
+    {# 4 — Margen Neto (JS computed) #}
+    <div class="ks relative p-4 dashboard-kpi-item">
+      <div class="absolute top-0 left-0 w-1 h-full bg-[#b8dbd9] rounded-l-2xl"></div>
+      <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold pl-1">Margen Neto</div>
+      <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1" id="kpiMargen">&#8212;</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full dash-status-slate" id="kpiMargenBdg">calc&#8230;</span>
+    </div>
+
+    {# 5 — CxC Vigentes #}
+    <div class="ks relative p-4 dashboard-kpi-item">
+      <div class="absolute top-0 left-0 w-1 h-full bg-amber-400 rounded-l-2xl"></div>
+      <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">CxC Vigentes</div>
+      <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1">${{ ventas_vigentes|us_currency:0 }}</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full dash-status-slate">{{ ventas_vigentes_count }} fact.</span>
+    </div>
+
+    {# 6 — CxC Vencidas #}
+    <div class="ks relative p-4 dashboard-kpi-item">
+      <div class="absolute top-0 left-0 w-1 h-full bg-[#b85450] rounded-l-2xl"></div>
+      <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">CxC Vencidas</div>
+      <div class="text-xl font-bold text-[#b85450] my-1.5 leading-none pl-1">${{ ventas_vencidas|us_currency:0 }}</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full dash-status-danger"><i class="fas fa-arrow-up text-[9px]"></i> {{ ventas_vencidas_count }} fact.</span>
+    </div>
+
+    {# 7 — Clientes Activos #}
+    <div class="ks relative p-4 dashboard-kpi-item">
+      <div class="absolute top-0 left-0 w-1 h-full bg-[#586f7c] rounded-l-2xl"></div>
+      <div class="text-[10px] uppercase tracking-widest dash-muted font-semibold truncate pl-1">Clientes Activos</div>
+      <div class="text-xl font-bold dash-text my-1.5 leading-none pl-1">{{ total_clientes }}</div>
+      <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full{% if clientes_trend >= 0 %} dash-status-success{% else %} dash-status-danger{% endif %}">
+        {% if clientes_trend >= 0 %}+{% endif %}{{ clientes_nuevos }} nuevos
+      </span>
+    </div>
+
+  </div>{# /kpi-strip #}
+
+  {# ═══════════════════════════════════════════════════════════════ #}
+  {# ROW 1 — 3 Charts                                               #}
+  {# ═══════════════════════════════════════════════════════════════ #}
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+
+    {# Chart 1 — Ventas por Mes Bar #}
+    <div class="dash-card dashboard-chart-card">
+      <div class="dashboard-chart-header flex items-start justify-between">
         <div>
-          <div class="metric-label">{% trans "Total Gastos" %}</div>
-          <div class="metric-value text-red-600">
-            ${{ total_gastos|us_currency:2 }}
-          </div>
+          <div class="text-[13px] font-bold dash-text">Ventas por Mes</div>
+          <div class="text-xs dash-muted mt-0.5">Facturaci&#243;n mensual</div>
         </div>
-        <div class="text-red-500 text-3xl">
-          <i class="fas fa-money-bill-wave"></i>
-        </div>
+        <a href="{% url 'admin:ventas_ventas_changelist' %}" class="text-xs font-semibold no-underline" style="color:var(--brand-teal)">Ver todo &#8250;</a>
       </div>
-      <div class="mt-2 text-sm text-gray-500">
-        <i
-          class="fas fa-arrow-{% if gastos_trend > 0 %}up text-red-500{% else %}down text-green-500{% endif %} mr-1"
-        ></i>
-        {{ gastos_trend|us_number:1 }}% {% trans "vs mes anterior" %}
+      <div class="dashboard-chart-body">
+        <canvas id="ventasBarChart"></canvas>
       </div>
     </div>
 
-    <div class="metric-card">
-      <div class="flex items-center justify-between">
+    {# Chart 2 — Cartera Donut #}
+    <div class="dash-card dashboard-chart-card">
+      <div class="dashboard-chart-header flex items-start justify-between">
         <div>
-          <div class="metric-label">{% trans "Total Ventas" %}</div>
-          <div class="metric-value text-green-600">
-            ${{ total_ventas|us_currency:2 }}
-          </div>
-        </div>
-        <div class="text-green-500 text-3xl">
-          <i class="fas fa-chart-line"></i>
+          <div class="text-[13px] font-bold dash-text">Cartera de Cobro</div>
+          <div class="text-xs dash-muted mt-0.5">Vigente vs Vencida</div>
         </div>
       </div>
-      <div class="mt-2 text-sm text-gray-500">
-        <i
-          class="fas fa-arrow-{% if ventas_trend > 0 %}up text-green-500{% else %}down text-red-500{% endif %} mr-1"
-        ></i>
-        {{ ventas_trend|us_number:1 }}% {% trans "vs mes anterior" %}
+      <div class="dashboard-chart-body flex items-center justify-center">
+        <canvas id="carteraDonut" style="max-height:170px"></canvas>
+      </div>
+      <div class="dashboard-chart-footer flex flex-wrap gap-3 items-center">
+        <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#b8dbd9]"></span>Vigente</span>
+        <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#2f4550]"></span>Vencida</span>
+        <span class="ml-auto font-bold dash-text" id="kpiMorosidad">&#8212;</span>
+        <span>morosidad</span>
       </div>
     </div>
 
-    <div class="metric-card">
-      <div class="flex items-center justify-between">
+    {# Chart 3 — Gastos Donut #}
+    <div class="dash-card dashboard-chart-card">
+      <div class="dashboard-chart-header flex items-start justify-between">
         <div>
-          <div class="metric-label">{% trans "Total Compras" %}</div>
-          <div class="metric-value text-blue-600">
-            ${{ total_compras|us_currency:2 }}
-          </div>
+          <div class="text-[13px] font-bold dash-text">Gastos por Categor&#237;a</div>
+          <div class="text-xs dash-muted mt-0.5">Distribuci&#243;n actual</div>
         </div>
-        <div class="text-blue-500 text-3xl">
-          <i class="fas fa-shopping-cart"></i>
-        </div>
+        <a href="{% url 'admin:gastos_gastos_changelist' %}" class="text-xs font-semibold no-underline" style="color:var(--brand-teal)">Ver todo &#8250;</a>
       </div>
-      <div class="mt-2 text-sm text-gray-500">
-        <i
-          class="fas fa-arrow-{% if compras_trend > 0 %}up text-red-500{% else %}down text-green-500{% endif %} mr-1"
-        ></i>
-        {{ compras_trend|us_number:1 }}% {% trans "vs mes anterior" %}
+      <div class="dashboard-chart-body flex items-center justify-center">
+        <canvas id="gastosDonut" class="dashboard-donut-canvas"></canvas>
+      </div>
+      <div class="dashboard-chart-footer">
+        <div class="flex flex-wrap gap-1.5" id="gastosLgnd"></div>
       </div>
     </div>
 
-    <div class="metric-card">
-      <div class="flex items-center justify-between">
-        <div>
-          <div class="metric-label">{% trans "Balance Neto" %}</div>
-          <div
-            class="metric-value {% if balance_neto >= 0 %}text-green-600{% else %}text-red-600{% endif %}"
-          >
-            ${{ balance_neto|us_currency:2 }}
-          </div>
-        </div>
-        <div
-          class="{% if balance_neto >= 0 %}text-green-500{% else %}text-red-500{% endif %} text-3xl"
-        >
-          <i class="fas fa-balance-scale"></i>
-        </div>
-      </div>
-      <div class="mt-2 text-sm text-gray-500">{% trans "Ventas - Gastos - Compras" %}</div>
-    </div>
-  </div>
+  </div>{# /row1 #}
 
-  <!-- Gráficos y estadísticas -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <!-- Gráfico de gastos por categoría -->
-    <div class="chart-container">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4">
-        <i class="fas fa-chart-pie mr-2 text-blue-500"></i>
-        {% trans "Gastos por Categoría" %}
-      </h3>
-      <p class="text-sm text mb-4">
-        {% trans "Distribución de gastos de" %} {{ current_month_name }} {{ current_year }}. 
-        {% if total_categorias > 0 %}
-          {% trans "Mostrando" %} {{ total_categorias }} {% trans "categorías con mayor gasto" %}.
-        {% else %}
-          {% trans "No hay datos de gastos para este mes" %}.
-        {% endif %}
-      </p>
-      <canvas id="gastosChart" height="250"></canvas>
-      <div class="mt-2 text-xs text-gray-500 text-center">
-        {% trans "Haga clic en las etiquetas para mostrar/ocultar categorías" %}
+  {# ═══════════════════════════════════════════════════════════════ #}
+  {# ROW 2 — 2 Charts                                               #}
+  {# ═══════════════════════════════════════════════════════════════ #}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+
+    {# Chart 4 — Tendencias Line #}
+    <div class="dash-card dashboard-chart-card">
+      <div class="dashboard-chart-header">
+        <div class="text-[13px] font-bold dash-text">Tendencias</div>
+        <div class="text-xs dash-muted mt-0.5">Ventas vs Gastos &mdash; &#250;ltimos 6 meses</div>
+      </div>
+      <div class="dashboard-chart-body">
+        <canvas id="tendenciasChart"></canvas>
       </div>
     </div>
 
-    <!-- Gráfico de tendencias -->
-    <div class="chart-container">
-      <h3 class="text-lg font-semibold mb-4">
-        <i class="fas fa-chart-line mr-2 text-green-500"></i>
-        {% trans "Tendencias Mensuales" %}
-      </h3>
-      <p class="text-sm mb-4">
-        {% trans "Comparación de gastos vs ventas en los últimos 6 meses. Permite identificar patrones y tendencias financieras." %}
-      </p>
-      <canvas id="tendenciasChart" height="250"></canvas>
-      <div class="mt-2 text-xs  text-center">
-        {% trans "Montos en MXN (Pesos Mexicanos) - Período:" %} {{ current_year }}
+    {# Chart 5 — Balance Bar #}
+    <div class="dash-card dashboard-chart-card">
+      <div class="dashboard-chart-header">
+        <div class="text-[13px] font-bold dash-text">Balance Mensual</div>
+        <div class="text-xs dash-muted mt-0.5">Resultado neto por mes</div>
       </div>
-    </div>
-  </div>
-
-  <!-- Actividad reciente y accesos rápidos -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <!-- Actividad reciente -->
-    <div class="recent-activity">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4">
-        <i class="fas fa-clock mr-2 text-purple-500"></i>
-        {% trans "Actividad Reciente" %}
-      </h3>
-      <div class="space-y-0">
-        {% for activity in recent_activities %}
-        <div class="activity-item">
-          <div class="flex items-center space-x-3">
-            <div
-              class="w-8 h-8 rounded-full bg-{{ activity.color }}-100 flex items-center justify-center"
-            >
-              <i
-                class="fas fa-{{ activity.icon }} text-{{ activity.color }}-600 text-sm"
-              ></i>
-            </div>
-            <div>
-              <div class="font-medium text-gray-900">
-                {{ activity.description }}
-              </div>
-              <div class="text-sm text-gray-500">
-                {{ activity.user }} - {{ activity.timestamp|timesince }} ago
-              </div>
-            </div>
-          </div>
-          <span class="status-badge status-{{ activity.status }}"
-            >{{ activity.status|title }}</span
-          >
-        </div>
-        {% empty %}
-        <div class="text-center py-8 text-gray-500">
-          <i class="fas fa-info-circle text-2xl mb-2"></i>
-          <p>{% trans "No hay actividad reciente" %}</p>
-        </div>
-        {% endfor %}
+      <div class="dashboard-chart-body">
+        <canvas id="balanceBarChart"></canvas>
       </div>
     </div>
 
-    <!-- Accesos rápidos -->
-    <div class="recent-activity">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4">
-        <i class="fas fa-bolt mr-2 text-yellow-500"></i>
-        {% trans "Accesos Rápidos" %}
-      </h3>
-      <div class="grid grid-cols-2 gap-4">
-        <a
-          href="{% url 'admin:gastos_gastos_add' %}"
-          class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <div class="text-center">
-            <i class="fas fa-plus-circle text-2xl text-red-500 mb-2"></i>
-            <div class="font-medium text-gray-900">{% trans "Nuevo Gasto" %}</div>
-          </div>
-        </a>
-        <a
-          href="{% url 'admin:ventas_ventas_add' %}"
-          class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <div class="text-center">
-            <i class="fas fa-plus-circle text-2xl text-green-500 mb-2"></i>
-            <div class="font-medium text-gray-900">{% trans "Nueva Venta" %}</div>
-          </div>
-        </a>
-        <a
-          href="{% url 'admin:gastos_compra_add' %}"
-          class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <div class="text-center">
-            <i class="fas fa-shopping-cart text-2xl text-blue-500 mb-2"></i>
-            <div class="font-medium text-gray-900">{% trans "Nueva Compra" %}</div>
-          </div>
-        </a>
-        <a
-          href="{% url 'balances' %}"
-          class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <div class="text-center">
-            <i class="fas fa-chart-bar text-2xl text-purple-500 mb-2"></i>
-            <div class="font-medium text-gray-900">{% trans "Ver Balances" %}</div>
-          </div>
-        </a>
-      </div>
-    </div>
-  </div>
-  <!-- Información del sistema -->
-  <div class="bg-white rounded-lg p-6 shadow">
-    <h3 class="text-lg font-semibold text-gray-800 mb-4">
-      <i class="fas fa-info-circle mr-2 text-blue-500"></i>
-      {% trans "Información del Sistema" %}
-    </h3>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm">
-      <div class="flex justify-between">
-        <span class="text-gray-500">{% trans "Versión" %}:</span>
-        <span class="font-medium">1.0.0</span>
-      </div>
-      <div class="flex justify-between">
-        <span class="text-gray-500">{% trans "Total Usuarios" %}:</span>
-        <span class="font-medium">{{ total_users }}</span>
-      </div>
-      <div class="flex justify-between">
-        <span class="text-gray-500">{% trans "Última Actualización" %}:</span>
-        <span class="font-medium">{{ last_update|date:"d/m/Y" }}</span>
-      </div>
+  </div>{# /row2 #}
+
+
+
+  {# ═══════════════════════════════════════════════════════════════ #}
+  {# ACTIVITY FEED — ancho completo                                  #}
+  {# ═══════════════════════════════════════════════════════════════ #}
+  <div class="dash-card mb-4">
+    <div class="flex items-center justify-between px-5 pt-4 pb-3 border-b dash-border">
       <div>
-        <a
-          href="{% url 'user_manual' %}"
-          class="block p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          target="_blank"
-        >
-          <div class="text-center flex flex-col items-center">
-            <i class="fas fa-book text-lg text-indigo-500 mb-1"></i>
-            <div class="font-medium text-sm text-gray-900">{% trans "Manual de Usuario" %}</div>
-          </div>
-        </a>
+        <div class="text-[13px] font-bold dash-text">Actividad Reciente</div>
+        <div class="text-xs dash-muted mt-0.5">&#218;ltimas acciones en el sistema</div>
       </div>
+      <a href="/es/admin/auditoria/logactividad/" class="text-xs font-semibold no-underline" style="color:var(--brand-teal)">Ver todo &#8250;</a>
+    </div>
+    <div class="px-5 py-2 grid grid-cols-1 md:grid-cols-2">
+      {% for act in recent_activities %}
+      <div class="flex items-start gap-3 py-3{% if not forloop.last %} dash-activity-item{% endif %}">
+        <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+             style="background:{{ act.color }}20;color:{{ act.color }}">
+          <i class="fas {{ act.icon }} text-xs"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-[13px] dash-text leading-snug truncate">{{ act.description }}</div>
+          <div class="text-xs dash-muted mt-0.5">{{ act.user }} &middot; {{ act.timestamp|naturaltime }}</div>
+        </div>
+        <span class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full
+          {% if act.status == 'success' %}dash-status-success
+          {% elif act.status == 'warning' %}dash-status-warning
+          {% elif act.status == 'error' %}dash-status-danger
+          {% else %}dash-status-slate{% endif %}">
+          {{ act.status }}
+        </span>
+      </div>
+      {% empty %}
+      <div class="col-span-2 py-8 text-center">
+        <p class="text-xs dash-muted">Sin actividad reciente</p>
+      </div>
+      {% endfor %}
     </div>
   </div>
-</div>
 
-<!-- Toast container -->
-<div id="toastContainer" class="toast-container"></div>
 
+
+  {# ═══════════════════════════════════════════════════════════════ #}
+  {# FOOTER STATS — 4 cards                                         #}
+  {# ═══════════════════════════════════════════════════════════════ #}
+  <div class="grid grid-cols-4 gap-4 w-full">
+
+    <div class="dash-card p-5 flex items-center gap-4">
+      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0" style="background:var(--accent-blue-bg);color:var(--accent-blue)"><i class="fas fa-users"></i></div>
+      <div>
+        <div class="text-2xl font-bold dash-text">{{ total_users }}</div>
+        <div class="text-xs dash-muted mt-0.5">Usuarios activos</div>
+      </div>
+    </div>
+
+    <div class="dash-card p-5 flex items-center gap-4">
+      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0" style="background:var(--accent-green-bg);color:var(--accent-green)"><i class="fas fa-boxes-stacked"></i></div>
+      <div>
+        <div class="text-2xl font-bold dash-text">{{ productos_vendidos }}</div>
+        <div class="text-xs dash-muted mt-0.5">Productos vendidos</div>
+      </div>
+    </div>
+
+    <div class="dash-card p-5 flex items-center gap-4">
+      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0" style="background:var(--accent-amber-bg);color:var(--accent-amber)"><i class="fas fa-tags"></i></div>
+      <div>
+        <div class="text-2xl font-bold dash-text">{{ total_categorias }}</div>
+        <div class="text-xs dash-muted mt-0.5">Categor&#237;as activas</div>
+      </div>
+    </div>
+
+    <div class="dash-card p-5 flex items-center gap-4">
+      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0" style="background:rgba(13,148,136,0.12);color:var(--brand-teal)"><i class="fas fa-calendar-days"></i></div>
+      <div>
+        <div class="text-sm font-bold dash-text leading-snug">{{ last_update }}</div>
+        <div class="text-xs dash-muted mt-0.5">&#218;ltima actualizaci&#243;n</div>
+      </div>
+    </div>
+
+  </div>{# /footer-stats #}
+
+</div>{# /main wrapper #}
+
+{# ── Toast container ─────────────────────────────────────────────── #}
+<div class="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 pointer-events-none" id="toastWrap"></div>
+
+{# ── Chart.js ─────────────────────────────────────────────────────── #}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
-  // Función para mostrar toast
-  function showToast(title, message, duration = 5000) {
-    console.log('showToast called:', title, message); // Debug
-    
-    const toastContainer = document.getElementById('toastContainer');
-    if (!toastContainer) {
-      console.error('Toast container not found!');
-      return;
-    }
-    
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    
-    toast.innerHTML = `
-      <button class="toast-close" onclick="hideToast(this.parentElement)">&times;</button>
-      <div class="toast-header">
-        <i class="fas fa-home toast-icon"></i>
-        <h4 class="toast-title">${title}</h4>
-      </div>
-      <p class="toast-message">${message}</p>
-    `;
-    
-    toastContainer.appendChild(toast);
-    console.log('Toast added to DOM'); // Debug
-    
-    // Mostrar el toast con animación
-    setTimeout(() => {
-      toast.classList.add('show');
-      console.log('Toast show class added'); // Debug
-    }, 100);
-    
-    // Auto ocultar después del tiempo especificado
-    setTimeout(() => {
-      hideToast(toast);
-    }, duration);
+(function () {
+  'use strict';
+
+  /* ── Theme-aware colours ──────────────────────────────────────── */
+  const rs = getComputedStyle(document.documentElement);
+  const v = n => rs.getPropertyValue(n).trim();
+  const surfaceCard  = v('--surface-card')  || '#ffffff';
+  const surfaceBg    = v('--surface-bg')    || '#f5f2eb';
+  const textPrimary  = v('--text-primary')  || '#2f4550';
+  const textMuted    = v('--text-muted')    || '#7a8899';
+  const borderDefault= v('--border-default')|| '#d8dce6';
+  const accentGreen  = v('--accent-green')  || '#2d7a3a';
+  const accentRed    = v('--accent-red')    || '#c53030';
+  const brandTeal    = v('--brand-teal')    || '#b8dbd9';
+  const TEAL = brandTeal;
+  const NAVY = '#2f4550';
+  const PAL  = ['#b8dbd9','#2f4550','#5dd0d7','#2d6a9f','#82dce0','#4e8bc4','#b3edf2','#35435a'];
+
+  const meses   = {{ meses_labels|safe }};
+  const ventas  = {{ ventas_mensuales|safe }};
+  const gastos  = {{ gastos_mensuales|safe }};
+  const catLbls = {{ gastos_categorias_labels|safe }};
+  const catData = {{ gastos_categorias_data|safe }};
+  const cxcVig  = parseFloat('{{ ventas_vigentes }}')  || 0;
+  const cxcVen  = parseFloat('{{ ventas_vencidas }}')  || 0;
+  const tvTotal = parseFloat('{{ total_ventas }}')     || 0;
+  const tvBal   = parseFloat('{{ balance_neto }}')     || 0;
+
+  /* ── Computed KPIs ─────────────────────────────────────────────── */
+  const margenPct = tvTotal > 0 ? (tvBal / tvTotal * 100) : 0;
+  const morosPct  = (cxcVig + cxcVen) > 0 ? (cxcVen / (cxcVig + cxcVen) * 100) : 0;
+
+  const elMargen = document.getElementById('kpiMargen');
+  const elMBdg   = document.getElementById('kpiMargenBdg');
+  const elMoros  = document.getElementById('kpiMorosidad');
+
+  if (elMargen) {
+    elMargen.textContent = margenPct.toFixed(1) + '%';
+    const up = margenPct >= 0;
+    elMBdg.className = 'inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ' +
+      (up ? 'dash-status-success' : 'dash-status-danger');
+    elMBdg.innerHTML = (up ? '<i class="fas fa-arrow-up text-[9px]"></i> ' : '<i class="fas fa-arrow-down text-[9px]"></i> ') + Math.abs(margenPct).toFixed(1) + '%';
   }
-  
-  // Función para ocultar toast
-  function hideToast(toast) {
-    console.log('Hiding toast'); // Debug
-    toast.classList.remove('show');
-    setTimeout(() => {
-      if (toast.parentElement) {
-        toast.parentElement.removeChild(toast);
-        console.log('Toast removed from DOM'); // Debug
-      }
-    }, 400);
-  }
-  
-  // Función de test
-  function testToast() {
-    console.log('Test toast clicked');
-    showToast('Test', 'Este es un toast de prueba', 3000);
-  }
-  
-  // Mostrar toast de bienvenida al cargar la página
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('Toast system: DOM loaded'); // Debug
-    
-    // Para debugging, siempre mostrar el toast
-    setTimeout(() => {
-      console.log('Showing welcome toast (debug mode)'); // Debug
-      showToast(
-        '¡Bienvenido!', 
-        'Bienvenido al sistema de gestión integral de Agrícola de la Costa San Luis',
-        6000
-      );
-    }, 1000);
-    
-    /* 
-    // Código original comentado para debugging
-    const lastWelcome = localStorage.getItem('lastWelcomeToast');
-    const now = new Date().getTime();
-    
-    console.log('Last welcome:', lastWelcome, 'Now:', now); // Debug
-    
-    if (!lastWelcome || (now - parseInt(lastWelcome)) > 30 * 60 * 1000) {
-      console.log('Showing welcome toast'); // Debug
-      setTimeout(() => {
-        showToast(
-          '¡Bienvenido!', 
-          'Bienvenido al sistema de gestión integral de Agrícola de la Costa San Luis',
-          6000
-        );
-        localStorage.setItem('lastWelcomeToast', now.toString());
-      }, 800);
-    } else {
-      console.log('Toast already shown recently'); // Debug
-    }
-    */
+  if (elMoros) elMoros.textContent = morosPct.toFixed(1) + '%';
+
+  /* ── Chart.js defaults ──────────────────────────────────────────── */
+  Chart.defaults.font.family = "'Inter','Segoe UI',system-ui,sans-serif";
+  Chart.defaults.font.size   = 11;
+  Chart.defaults.color       = textMuted;
+  const base = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } };
+
+  /* ── 1. Ventas Bar ──────────────────────────────────────────────── */
+  new Chart('ventasBarChart', {
+    type: 'bar',
+    data: {
+      labels: meses,
+      datasets: [{
+        label: 'Ventas',
+        data: ventas,
+        backgroundColor: ventas.map((_,i) => i === ventas.length-1 ? TEAL : TEAL+'70'),
+        borderRadius: 6,
+        borderSkipped: false
+      }]
+    },
+    options: { ...base, scales: {
+      y: { grid:{ color: borderDefault }, ticks:{ callback: v => '$'+(v/1000).toFixed(0)+'k' } },
+      x: { grid:{ display:false } }
+    }}
   });
+
+  /* ── 2. Cartera Donut ───────────────────────────────────────────── */
+  new Chart(document.getElementById('carteraDonut'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Vigente','Vencida'],
+      datasets: [{ data:[cxcVig,cxcVen], backgroundColor:[TEAL,NAVY], borderWidth:2, borderColor:surfaceCard, hoverOffset:8 }]
+    },
+    options: { ...base, cutout:'65%',
+      plugins: { legend:{ display:false }, tooltip:{ callbacks:{ label: ctx => ' '+ctx.label+': $'+ctx.raw.toLocaleString() } } }
+    }
+  });
+
+  /* ── 3. Gastos Donut ────────────────────────────────────────────── */
+  new Chart(document.getElementById('gastosDonut'), {
+    type: 'doughnut',
+    data: {
+      labels: catLbls,
+      datasets: [{ data:catData, backgroundColor:PAL.slice(0,catData.length), borderWidth:2, borderColor:surfaceCard, hoverOffset:8 }]
+    },
+    options: { ...base, cutout:'60%' }
+  });
+  const lgnd = document.getElementById('gastosLgnd');
+  if (lgnd && catLbls.length) {
+    lgnd.innerHTML = catLbls.map((l,i) =>
+      '<span class="flex items-center gap-1 text-[11px] dash-muted">'+
+      '<span style="width:9px;height:9px;border-radius:50%;background:'+PAL[i%PAL.length]+';display:inline-block"></span>'+l+'</span>'
+    ).join('');
+  }
+
+  /* ── 4. Tendencias Line ─────────────────────────────────────────── */
+  new Chart('tendenciasChart', {
+    type: 'line',
+    data: { labels: meses, datasets: [
+      { label:'Ventas', data:ventas, borderColor:TEAL, backgroundColor:TEAL+'18', borderWidth:2.5, fill:true, tension:.35, pointRadius:4, pointHoverRadius:6, pointBackgroundColor:TEAL },
+      { label:'Gastos', data:gastos, borderColor:NAVY, backgroundColor:NAVY+'12', borderWidth:2.5, fill:true, tension:.35, pointRadius:4, pointHoverRadius:6, pointBackgroundColor:NAVY }
+    ]},
+    options: { ...base,
+      plugins: { legend:{ display:true, position:'top', labels:{ usePointStyle:true, boxWidth:8, padding:16, color:textPrimary } } },
+      scales: {
+        y: { grid:{ color: borderDefault }, ticks:{ callback: v => '$'+(v/1000).toFixed(0)+'k' } },
+        x: { grid:{ display:false } }
+      }
+    }
+  });
+
+  /* ── 5. Balance Bar ─────────────────────────────────────────────── */
+  const balance = ventas.map((v,i) => v - (gastos[i]||0));
+  new Chart('balanceBarChart', {
+    type: 'bar',
+    data: { labels:meses, datasets:[{
+      label: 'Balance',
+      data: balance,
+      backgroundColor: balance.map(v => v>=0?'#5a7d6b70':'#b8545070'),
+      borderColor:      balance.map(v => v>=0?'#5a7d6b':'#b85450'),
+      borderWidth: 1.5, borderRadius: 6, borderSkipped: false
+    }]},
+    options: { ...base, scales:{
+      y: { grid:{ color: borderDefault }, ticks:{ callback: v => '$'+(v/1000).toFixed(0)+'k' } },
+      x: { grid:{ display:false } }
+    }}
+  });
+
+  /* ── Toast helper ───────────────────────────────────────────────── */
+  function showToast(title, msg, type) {
+    const icons  = {
+      success: '<i class="fas fa-check-circle"></i>',
+      warning: '<i class="fas fa-triangle-exclamation"></i>',
+      error:   '<i class="fas fa-circle-xmark"></i>',
+      info:    '<i class="fas fa-circle-info"></i>'
+    };
+    const colors = {success: accentGreen, warning:'#c9a227',error: accentRed,info: TEAL};
+    const t = type||'info';
+    const el = document.createElement('div');
+    el.className = 'pointer-events-auto dash-card shadow-lg p-3 flex items-start gap-3 min-w-[220px] max-w-[300px] relative overflow-hidden t-slide';
+    el.style.borderColor = borderDefault;
+    el.innerHTML =
+      '<div style="width:28px;height:28px;border-radius:8px;background:'+colors[t]+'20;color:'+colors[t]+';display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">'+icons[t]+'</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:12.5px;font-weight:700;color:'+textPrimary+'">'+title+'</div>'+
+        '<div style="font-size:11.5px;color:'+textMuted+';margin-top:2px;line-height:1.4">'+msg+'</div>'+
+      '</div>'+
+      '<button onclick="this.closest(\'.t-slide\').remove()" style="font-size:14px;color:'+textMuted+';background:none;border:none;cursor:pointer;line-height:1">&times;</button>'+
+      '<div class="t-prog" style="position:absolute;bottom:0;left:0;height:3px;background:'+colors[t]+';border-radius:0 0 10px 10px"></div>';
+    document.getElementById('toastWrap').appendChild(el);
+    requestAnimationFrame(() => el.classList.add('t-show'));
+    setTimeout(() => { el.classList.remove('t-show'); setTimeout(() => el.remove(), 380); }, 4400);
+  }
+  window.addEventListener('load', function() {
+    showToast('Dashboard cargado', 'Datos actualizados correctamente.', 'success');
+  });
+
+})();
 </script>
+
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-      // Función para detectar si estamos en modo oscuro
-      function isDarkMode() {
-          return document.documentElement.hasAttribute('data-theme') && 
-                 document.documentElement.getAttribute('data-theme') === 'dark' ||
-                 document.documentElement.classList.contains('dark') ||
-                 document.body.classList.contains('dark') ||
-                 (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches &&
-                  !document.documentElement.hasAttribute('data-theme'));
-      }
-
-      // Función para obtener colores según el tema
-      function getThemeColors() {
-          const darkMode = isDarkMode();
-          return {
-              chartBg: darkMode ? '#1f2937' : '#ffffff',
-              textColor: darkMode ? '#6b7280' : '#6b7280',
-              gridColor: darkMode ? '#374151' : '#e5e7eb',
-              borderColor: darkMode ? '#6b7280' : '#d1d5db',
-              legendTextColor: darkMode ? '#6b7280' : '#374151'
-          };
-      }
-
-      const colors = getThemeColors();
-
-      // Gráfico de gastos por categoría
-      const gastosCtx = document.getElementById('gastosChart').getContext('2d');
-      const gastosChart = new Chart(gastosCtx, {
-          type: 'doughnut',
-          data: {
-              labels: {{ gastos_categorias_labels|safe }},
-              datasets: [{
-                  data: {{ gastos_categorias_data|safe }},
-                  backgroundColor: [
-                      '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
-                      '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384', '#C9CBCF'
-                  ],
-                  borderWidth: 2,
-                  borderColor: colors.borderColor,
-                  hoverOffset: 4
-              }]
-          },
-          options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                  legend: {
-                      position: 'bottom',
-                      labels: {
-                          color: colors.legendTextColor,
-                          padding: 15,
-                          usePointStyle: true,
-                          font: {
-                              size: 11
-                          },
-                          boxWidth: 12,
-                          boxHeight: 12
-                      }
-                  },
-                  tooltip: {
-                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                      titleColor: '#fff',
-                      bodyColor: '#fff',
-                      borderColor: colors.textColor,
-                      borderWidth: 1,
-                      callbacks: {
-                          label: function(context) {
-                              const label = context.label || '';
-                              const value = context.parsed;
-                              const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                              const percentage = ((value / total) * 100).toFixed(1);
-                              return `${label}: $${value.toLocaleString()} MXN (${percentage}%)`;
-                          }
-                      }
-                  }
-              },
-              layout: {
-                  padding: {
-                      top: 10,
-                      bottom: 40,
-                      left: 10,
-                      right: 10
-                  }
-              }
-          }
-      });
-
-      // Gráfico de tendencias
-      const tendenciasCtx = document.getElementById('tendenciasChart').getContext('2d');
-      const tendenciasChart = new Chart(tendenciasCtx, {
-          type: 'line',
-          data: {
-              labels: {{ meses_labels|safe }},
-              datasets: [{
-                  label: 'Gastos ($)',
-                  data: {{ gastos_mensuales|safe }},
-                  borderColor: '#FF6384',
-                  backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                  tension: 0.4,
-                  fill: true,
-                  pointBackgroundColor: '#FF6384',
-                  pointBorderColor: '#fff',
-                  pointBorderWidth: 2,
-                  pointRadius: 4,
-                  pointHoverRadius: 6
-              }, {
-                  label: 'Ventas ($)',
-                  data: {{ ventas_mensuales|safe }},
-                  borderColor: '#36A2EB',
-                  backgroundColor: 'rgba(54, 162, 235, 0.1)',
-                  tension: 0.4,
-                  fill: true,
-                  pointBackgroundColor: '#36A2EB',
-                  pointBorderColor: '#fff',
-                  pointBorderWidth: 2,
-                  pointRadius: 4,
-                  pointHoverRadius: 6
-              }]
-          },
-          options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              interaction: {
-                  mode: 'index',
-                  intersect: false,
-              },
-              plugins: {
-                  legend: {
-                      position: 'top',
-                      labels: {
-                          color: colors.legendTextColor,
-                          usePointStyle: true,
-                          padding: 20,
-                          font: {
-                              size: 12,
-                              weight: 'bold'
-                          }
-                      }
-                  },
-                  tooltip: {
-                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                      titleColor: '#fff',
-                      bodyColor: '#fff',
-                      borderColor: colors.textColor,
-                      borderWidth: 1,
-                      callbacks: {
-                          title: function(context) {
-                              return `Mes: ${context[0].label}`;
-                          },
-                          label: function(context) {
-                              return `${context.dataset.label}: $${context.parsed.y.toLocaleString()} MXN`;
-                          },
-                          afterBody: function(context) {
-                              if (context.length === 2) {
-                                  const gastos = context[0].parsed.y;
-                                  const ventas = context[1].parsed.y;
-                                  const balance = ventas - gastos;
-                                  return [``, `Balance: $${balance.toLocaleString()} MXN`];
-                              }
-                              return [];
-                          }
-                      }
-                  }
-              },
-              scales: {
-                  x: {
-                      display: true,
-                      title: {
-                          display: true,
-                          text: 'Período (Mes/Año)',
-                          color: colors.textColor,
-                          font: {
-                              size: 12,
-                              weight: 'bold'
-                          }
-                      },
-                      ticks: {
-                          color: colors.textColor,
-                          font: {
-                              size: 11
-                          }
-                      },
-                      grid: {
-                          color: colors.gridColor,
-                          drawBorder: false
-                      }
-                  },
-                  y: {
-                      display: true,
-                      title: {
-                          display: true,
-                          text: 'Monto en MXN (Pesos Mexicanos)',
-                          color: colors.textColor,
-                          font: {
-                              size: 12,
-                              weight: 'bold'
-                          }
-                      },
-                      beginAtZero: true,
-                      ticks: {
-                          color: colors.textColor,
-                          font: {
-                              size: 11
-                          },
-                          callback: function(value) {
-                              return '$' + value.toLocaleString() + ' MXN';
-                          }
-                      },
-                      grid: {
-                          color: colors.gridColor,
-                          drawBorder: false
-                      }
-                  }
-              },
-              layout: {
-                  padding: {
-                      top: 10,
-                      bottom: 20,
-                      left: 10,
-                      right: 10
-                  }
-              }
-          }
-      });
-
-      // Función para actualizar los gráficos cuando cambia el tema
-      function updateChartsTheme() {
-          const newColors = getThemeColors();
-          
-          // Actualizar gráfico de gastos
-          gastosChart.options.plugins.legend.labels.color = newColors.legendTextColor;
-          gastosChart.data.datasets[0].borderColor = newColors.borderColor;
-          gastosChart.options.plugins.tooltip.borderColor = newColors.textColor;
-          
-          // Actualizar gráfico de tendencias
-          tendenciasChart.options.plugins.legend.labels.color = newColors.legendTextColor;
-          tendenciasChart.options.plugins.tooltip.borderColor = newColors.textColor;
-          tendenciasChart.options.scales.x.title.color = newColors.textColor;
-          tendenciasChart.options.scales.y.title.color = newColors.textColor;
-          tendenciasChart.options.scales.x.ticks.color = newColors.textColor;
-          tendenciasChart.options.scales.y.ticks.color = newColors.textColor;
-          tendenciasChart.options.scales.x.grid.color = newColors.gridColor;
-          tendenciasChart.options.scales.y.grid.color = newColors.gridColor;
-          
-          // Redibujar los gráficos
-          gastosChart.update();
-          tendenciasChart.update();
-      }
-
-      // Observador para cambios en el atributo data-theme
-      const observer = new MutationObserver(function(mutations) {
-          mutations.forEach(function(mutation) {
-              if (mutation.type === 'attributes' && 
-                  (mutation.attributeName === 'data-theme' || mutation.attributeName === 'class')) {
-                  setTimeout(updateChartsTheme, 100);
-              }
-          });
-      });
-
-      // Observar cambios en el elemento html y body
-      observer.observe(document.documentElement, {
-          attributes: true,
-          attributeFilter: ['data-theme', 'class']
-      });
-      
-      observer.observe(document.body, {
-          attributes: true,
-          attributeFilter: ['class']
-      });
-
-      // Escuchar cambios en las preferencias del sistema
-      if (window.matchMedia) {
-          window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-              setTimeout(updateChartsTheme, 100);
-          });
-      }
-  });
+/* ── Welcome greeting ───────────────────────────────────────────── */
+(function () {
+  var h = new Date().getHours();
+  var greet = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
+  var g = document.getElementById('dashGreeting');
+  if (g) g.textContent = greet;
+  var dt = document.getElementById('dashDateTime');
+  if (dt) {
+    var fmt = new Intl.DateTimeFormat('es-MX', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+    dt.textContent = fmt.format(new Date());
+  }
+})();
 </script>
 {% endblock %}

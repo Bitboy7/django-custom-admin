@@ -169,16 +169,16 @@ document.addEventListener("DOMContentLoaded", function () {
       inputs.forEach(function (input) {
         input.style.borderRadius = "6px";
         input.style.padding = "8px 12px";
-        input.style.border = "1px solid #d1d5db";
+        input.style.border = "1px solid #d8dce6";
         input.style.transition = "all 0.2s ease";
 
         input.addEventListener("focus", function () {
-          this.style.borderColor = "#4f46e5";
+          this.style.borderColor = "#586f7c";
           this.style.boxShadow = "0 0 0 3px rgba(79, 70, 229, 0.1)";
         });
 
         input.addEventListener("blur", function () {
-          this.style.borderColor = "#d1d5db";
+          this.style.borderColor = "#d8dce6";
           this.style.boxShadow = "none";
         });
       });

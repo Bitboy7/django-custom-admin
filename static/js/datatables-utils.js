@@ -58,7 +58,9 @@ function getNumericValueFromNode(node) {
   if (!node) return NaN;
   var dataOrder = node.getAttribute && node.getAttribute("data-order");
   if (dataOrder != null && dataOrder !== "") {
-    var parsed = parseFloat(dataOrder);
+    // Use parseNumericString to correctly handle locale-formatted values like "40,000.00"
+    // where plain parseFloat would stop at the comma and return 40 instead of 40000.
+    var parsed = parseNumericString(dataOrder);
     if (!isNaN(parsed)) return parsed;
   }
 

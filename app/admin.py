@@ -2,8 +2,10 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.models import User, Group
+from auditoria.models import UserProfile
 from django.contrib.admin import SimpleListFilter
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from django.shortcuts import render
 from django.contrib.auth.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 from django.contrib.admin import ModelAdmin
@@ -53,8 +55,17 @@ admin.site.unregister(User)
 admin.site.unregister(Group)
 
 
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name = 'Foto de perfil'
+    verbose_name_plural = 'Foto de perfil'
+    fields = ('avatar',)
+
+
 @admin.register(User)
 class UserAdmin(BaseUserAdmin, ModelAdmin):
+    inlines = (UserProfileInline,)
     # Formularios cargados desde `unfold.forms`
     form = UserChangeForm
     add_form = UserCreationForm
@@ -99,7 +110,7 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
                 '<span style="color: {}; font-weight: bold;">{}</span>',
                 color, role
             )
-        return format_html('<span style="color: #dc3545;">Sin rol</span>')
+        return mark_safe('<span style="color: #dc3545;">Sin rol</span>')
     
     get_role.short_description = 'Rol'
     get_role.admin_order_field = 'groups__name'

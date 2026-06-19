@@ -42,8 +42,9 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = os.getenv("SECURE_HSTS_PRELOAD", "TRUE").lower() in ["true", "1"]
     SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "False").lower() in ["true", "1"]
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "False").lower() in ["true", "1"]
-    CSRF_COOKIE_SECURE = os.getenv("CSRF_COOKIE_SECURE", "False").lower() in ["true", "1"]
+    SESSION_COOKIE_SECURE = True   # HIGH-01: siempre True en producción
+    CSRF_COOKIE_SECURE = True      # HIGH-01: siempre True en producción
+    SESSION_COOKIE_HTTPONLY = True  # Previene acceso vía JavaScript (XSS)
     X_FRAME_OPTIONS = 'DENY'
 
 CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:8000").split(",")
@@ -59,32 +60,38 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     'django.contrib.humanize',
+    'django_extensions',
     'compressor',
     'djmoney',  # Django Money para manejo de monedas
+    # 2FA
+    'django_otp',
+    'django_otp.plugins.otp_totp',
+    'django_otp.plugins.otp_static',
+    'two_factor',
+    # Brute-force protection
+    'axes',
     'app',  # Agregamos la app principal para los comandos de gestión
     'auditoria',  # Sistema de registro de actividad
     'catalogo.apps.CatalogoConfig',
     'gastos.apps.GastosConfig',
     'ventas.apps.VentasConfig',
+    'capital_inversiones.apps.CapitalInversionesConfig',  # Módulo de capital e inversiones
     'import_export',
+    'reportes.apps.ReportesConfig',  # Módulo de reportes ejecutivos IA
 ]
+
+# Callable para Jazzmin: devuelve la URL del avatar del usuario
+def _get_user_avatar(user):
+    try:
+        url = user.profile.avatar_url
+        return url if url else None
+    except Exception:
+        return None
+
 
 # Configuración completa para Django Jazzmin
 JAZZMIN_SETTINGS = {
-    # title of the window (Will default to current_admin_site.site_title if absent or None)
-    "site_title": "Sistema administrativo - Agricola de la Costa San Luis",
-    
-    # Title on the login screen (19 chars max) (defaults to current_admin_site.site_header if absent or None)
-    "site_header": "Agricola de la Costa San Luis",
-    
-    # Title on the brand (19 chars max) (defaults to current_admin_site.site_header if absent or None)
-    "site_brand": "Agricola de la Costa San Luis",
-    
-    # Logo to use for your site, must be present in static files, used for brand on top left
-    "site_logo": "img/logo-sm.png",
-    
-    # Logo to use for your site, must be present in static files, used for login form logo (defaults to site_logo)
-    "login_logo": "img/logo-sm.png",
+
     
     # Logo to use for login form in dark themes (defaults to login_logo)
     "login_logo_dark": None,
@@ -96,43 +103,34 @@ JAZZMIN_SETTINGS = {
     "site_icon": "img/icon.png",
     
     # Welcome text on the login screen
-    "welcome_sign": "Ingresa tus credenciales para iniciar sesión   ",
+    "welcome_sign": "Por favor, inicia sesión para continuar",
     
     # Copyright on the footer
-    "copyright": "Agricola de la Costa San Luis",
+    "copyright": "Agricola de la Costa San Luis S.P.R. de R.L. de C.V.",
     
-    # List of model admins to search from the search bar, search bar omitted if excluded
-    "search_model": ["auth.User", "auth.Group"],
+    # Una sola barra de búsqueda → sin duplicados en la navbar
+    "search_model": ["auth.User"],
     
     # Field name on user model that contains avatar ImageField/URLField/Charfield or a callable that receives the user
-    "user_avatar": None,
+    "user_avatar": _get_user_avatar,
     
     ############
     # Top Menu #
     ############
     
     # Links to put along the top menu
+    # Solo accesos rápidos no disponibles en sidebar.
+    # "Gastos" dropdown se eliminó — ya existe en la barra lateral.
     "topmenu_links": [
-        # Url that gets reversed (Permissions can be added)
-        {"name": "Inicio", "url": "admin:index", "permissions": ["auth.view_user"]},
-        
-        # external url that opens in a new window (Permissions can be added)
-        {"name": "Acumulados", "url": "/balances/", "new_window": False},
-        
-        # model admin to link to (Permissions checked against model)
-        {"model": "auth.User"},
-        
-        # App with dropdown menu to all its models pages (Permissions checked against models)
-        {"app": "gastos"},
+        {"name": "Panel de Control", "url": "admin:index", "permissions": ["auth.view_user"]},
     ],
     
     #############
     # User Menu #
     #############
     
-    # Additional links to include in the user menu on the top right ("app" url type is not allowed)
+    # Accesos rápidos en menú de usuario (avatar top-right)
     "usermenu_links": [
-        {"name": "Acumulados", "url": "/balances/", "icon": "fas fa-chart-line"},
         {"model": "auth.user"}
     ],
     
@@ -144,25 +142,174 @@ JAZZMIN_SETTINGS = {
     "show_sidebar": True,
     
     # Whether to aut expand the menu
-    "navigation_expanded": True,
+    # False = secciones colapsadas por defecto (mejor UX cuando hay muchos ítems)
+    "navigation_expanded": False,
     
     # Hide these apps when generating side menu e.g (auth)
-    "hide_apps": [],
+    # axes/otp_* se reubican dentro de Auditoría mediante custom_links.
+    "hide_apps": ["axes", "otp_static", "otp_totp", "two_factor", "capital_inversiones"],
     
-    # Hide these models when generating side menu (e.g auth.user)
-    "hide_models": [],
+    # Ocultar modelos de catálogo/configuración poco frecuentes del menú principal.
+    # Agente y TerminoCredito se reubican en CATÁLOGO mediante custom_links.
+    # Los 3 modelos de reportes se reubican con mejores nombres via custom_links,
+    # ocultarlos aquí evita que Jazzmin resalte dos ítems a la vez para la misma URL.
+    "hide_models": [
+        "ventas.Agente",
+        "ventas.TerminoCredito",
+        "ventas.EstadoCuentaCliente",
+        "reportes.ConfiguracionReporte",
+        "reportes.ReporteEjecutivo",
+        "reportes.DestinatarioReporte",
+    ],
     
-    # List of apps (and models) to base side menu ordering off of (does not need to contain all apps/models)
-    "order_with_respect_to": ["auth", "gastos", "ventas", "catalogo", "auditoria"],
+    # Ordenamiento del menú lateral: apps primero, luego modelos por frecuencia de uso.
+    # Los ítems más usados aparecen primero dentro de cada sección.
+    "order_with_respect_to": [
+        "auth",
+        "auth.User",
+        "auth.Group",
+        # GASTOS: operacional primero, configuración al final
+        "gastos",
+        "gastos.Gastos",
+        "gastos.Compra",
+        "gastos.Cuenta",
+        "gastos.SaldoMensual",
+        "gastos.CatGastos",
+        "gastos.Banco",
+        # VENTAS: transaccional primero, reportes y obligaciones al final
+        "ventas",
+        "ventas.Ventas",
+        "ventas.Cliente",
+        "ventas.PagoVenta",
+        "ventas.Anticipo",
+        "ventas.EstadoCuentaCliente",
+        "ventas.ObligacionFiscal",
+        # CATÁLOGO: datos de referencia (incluye agente y término crédito reasignados)
+        "catalogo",
+        "catalogo.Sucursal",
+        "catalogo.Producto",
+        "catalogo.Productor",
+        "catalogo.Estado",
+        "catalogo.Pais",
+        "auditoria",
+        "reportes",
+        "auditoria.LogActividad",
+        "admin.LogEntry",
+        "capital_inversiones",
+    ],
     
     # Custom links to append to app groups, keyed on app name
     "custom_links": {
-        "gastos": [{
-            "name": "Subir Factura (IA)", 
-            "url": "/ingresar-factura/", 
-            "icon": "fas fa-file-upload",
-            "permissions": ["gastos.add_gastos"]
-        }]
+        "auth": [
+            {
+                "name": "Administración de grupos",
+                "url": "admin:auth_group_changelist",
+                "icon": "fas fa-users",
+                "permissions": ["auth.view_group"]
+            },
+            {
+                "name": "Verificación en dos pasos (2FA)",
+                "url": "/account/two_factor/",
+                "icon": "fas fa-mobile-alt",
+                "permissions": ["auth.view_group"]
+            },
+        ],
+        "gastos": [
+            {
+                "name": "Acumulado de gastos",
+                "url": "admin:gastos_gastos_balances",
+                "icon": "fas fa-chart-line",
+                "permissions": ["gastos.view_gastos"]
+            },
+            {
+                "name": "Subir Factura (IA)",
+                "url": "/ingresar-factura/",
+                "icon": "fas fa-robot",
+                "permissions": ["gastos.add_gastos"]
+            },
+        ],
+        "ventas": [
+            {
+                "name": "Análisis de ventas",
+                "url": "admin:ventas_ventas_balances",
+                "icon": "fas fa-chart-line",
+                "permissions": ["ventas.view_ventas"]
+            },
+            {
+                "name": "Reporte de cobranza",
+                "url": "admin:ventas_reporte_cobranza",
+                "icon": "fas fa-file-invoice-dollar",
+                "permissions": ["ventas.view_ventas"]
+            },
+        ],
+        "reportes": [
+            {
+                "name": "Resumen Ejecutivo IA",
+                "url": "admin:reportes_configuracionreporte_changelist",
+                "icon": "fas fa-robot",
+                "permissions": ["reportes.view_configuracionreporte"]
+            },
+            {
+                "name": "Predicciones y Proyecciones",
+                "url": "admin:reportes_forecast",
+                "icon": "fas fa-chart-line",
+                "permissions": ["reportes.view_reporteejecutivo"]
+            },
+            {
+                "name": "Historial de reportes",
+                "url": "admin:reportes_reporteejecutivo_changelist",
+                "icon": "fas fa-history",
+                "permissions": ["reportes.view_reporteejecutivo"]
+            },
+            {
+                "name": "Destinatarios",
+                "url": "admin:reportes_destinatarioreporte_changelist",
+                "icon": "fas fa-envelope",
+                "permissions": ["reportes.view_destinatarioreporte"]
+            },
+        ],
+        # Catálogo consolida datos de referencia incluyendo los modelos
+        # de ventas que no son transaccionales (Agente, TerminoCredito).
+        "catalogo": [
+            {
+                "name": "Agentes aduanales",
+                "url": "admin:ventas_agente_changelist",
+                "icon": "fas fa-user-tie",
+                "permissions": ["ventas.view_agente"]
+            },
+            {
+                "name": "Términos de crédito",
+                "url": "admin:ventas_terminocredito_changelist",
+                "icon": "fas fa-handshake",
+                "permissions": ["ventas.view_terminocredito"]
+            },
+        ],
+        "auditoria": [
+            {
+                "name": "Intentos de acceso",
+                "url": "admin:axes_accessattempt_changelist",
+                "icon": "fas fa-user-times",
+                "permissions": ["axes.view_accessattempt"],
+            },
+            {
+                "name": "Registro de accesos",
+                "url": "admin:axes_accesslog_changelist",
+                "icon": "fas fa-list-alt",
+                "permissions": ["axes.view_accesslog"],
+            },
+            {
+                "name": "Fallos de acceso",
+                "url": "admin:axes_accessfailurelog_changelist",
+                "icon": "fas fa-exclamation-triangle",
+                "permissions": ["axes.view_accessfailurelog"],
+            },
+            {
+                "name": "Estados de Cuenta",
+                "url": "admin:ventas_estadocuentacliente_changelist",
+                "icon": "fas fa-file-invoice",
+                "permissions": ["ventas.view_estadocuentacliente"],
+            },
+        ],
     },
     
     # Custom icons for side menu apps/models See https://fontawesome.com/icons?d=gallery&m=free&v=5.0.0,5.0.1,5.0.10,5.0.11,5.0.12,5.0.13,5.0.2,5.0.3,5.0.4,5.0.5,5.0.6,5.0.7,5.0.8,5.0.9,5.1.0,5.1.1,5.2.0,5.3.0,5.3.1,5.4.0,5.4.1,5.4.2,5.5.0,5.6.0,5.6.1,5.6.3,5.7.0,5.7.1,5.7.2,5.8.0,5.8.1,5.8.2,5.9.0,5.10.0,5.10.1,5.10.2,5.11.0,5.11.1,5.11.2,5.12.0,5.12.1,5.13.0,5.13.1,5.14.0,5.15.0,5.15.1,5.15.2,5.15.3,5.15.4&s=solid
@@ -170,26 +317,42 @@ JAZZMIN_SETTINGS = {
         "auth": "fas fa-users-cog",
         "auth.user": "fas fa-user",
         "auth.Group": "fas fa-users",
-        "gastos": "fas fa-money-bill-wave",
-        "gastos.Banco": "fas fa-university",
-        "gastos.Cuenta": "fas fa-credit-card",
-        "gastos.CatGastos": "fas fa-tags",
+        # GASTOS
+        "gastos": "fas fa-file-invoice-dollar",
         "gastos.Gastos": "fas fa-receipt",
         "gastos.Compra": "fas fa-shopping-cart",
-        "gastos.SaldoMensual": "fas fa-chart-line",
+        "gastos.Cuenta": "fas fa-credit-card",
+        "gastos.SaldoMensual": "fas fa-wallet",
+        "gastos.CatGastos": "fas fa-tags",
+        "gastos.Banco": "fas fa-university",
+        # VENTAS
         "ventas": "fas fa-chart-bar",
-        "ventas.Cliente": "fas fa-users",
-        "ventas.Agente": "fas fa-user-tie",
         "ventas.Ventas": "fas fa-cash-register",
+        "ventas.Cliente": "fas fa-user-circle",
+        "ventas.PagoVenta": "fas fa-money-check-alt",
         "ventas.Anticipo": "fas fa-hand-holding-usd",
-        "catalogo": "fas fa-list",
-        "catalogo.Pais": "fas fa-globe",
-        "catalogo.Estado": "fas fa-map",
-        "catalogo.Sucursal": "fas fa-store",
+        "ventas.EstadoCuentaCliente": "fas fa-file-invoice",
+        "ventas.ObligacionFiscal": "fas fa-balance-scale",
+        "ventas.Agente": "fas fa-user-tie",
+        "ventas.TerminoCredito": "fas fa-handshake",
+        # CATÁLOGO (datos de referencia)
+        "catalogo": "fas fa-layer-group",
+        "catalogo.Sucursal": "fas fa-store-alt",
+        "catalogo.Producto": "fas fa-box-open",
         "catalogo.Productor": "fas fa-seedling",
-        "catalogo.Producto": "fas fa-box",
-        "auditoria": "fas fa-history",
+        "catalogo.Estado": "fas fa-map",
+        "catalogo.Pais": "fas fa-globe",
+        # AUDITORÍA
+        "auditoria": "fas fa-shield-alt",
         "auditoria.LogActividad": "fas fa-clipboard-list",
+        "admin.LogEntry": "fas fa-history",
+        "axes.AccessAttempt": "fas fa-user-times",
+        "axes.AccessLog": "fas fa-list-alt",
+        # REPORTES
+        "reportes": "fas fa-file-alt",
+        "reportes.ConfiguracionReporte": "fas fa-cog",
+        "reportes.DestinatarioReporte": "fas fa-envelope",
+        "reportes.ReporteEjecutivo": "fas fa-chart-pie",
     },
     
     # Icons that are used when one is not manually specified
@@ -206,7 +369,7 @@ JAZZMIN_SETTINGS = {
     # UI Tweaks #
     #############
     # Relative paths to custom CSS/JS scripts (must be present in static files)
-    "custom_css": "css/admin_custom.css",
+    "custom_css": "css/output.css",
     "custom_js": "js/admin_import_export.js",
     # Whether to link font from fonts.googleapis.com (use custom_css to supply font otherwise)
     "use_google_fonts_cdn": True,
@@ -227,6 +390,7 @@ JAZZMIN_SETTINGS = {
     "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs"},
     # Add a language dropdown into the admin
     "language_chooser": True,
+    "default_theme_mode": "auto",
 }
 
 JAZZMIN_UI_TWEAKS = {
@@ -245,12 +409,11 @@ JAZZMIN_UI_TWEAKS = {
     "sidebar": "sidebar-dark-primary",
     "sidebar_nav_small_text": False,
     "sidebar_disable_expand": False,
-    "sidebar_nav_child_indent": False,
-    "sidebar_nav_compact_style": False,
+    "sidebar_nav_child_indent": True,    # Indentación visual para jerarquía clara
+    "sidebar_nav_compact_style": True,   # Reduce padding: más ítems visibles sin scroll
     "sidebar_nav_legacy_style": False,
     "sidebar_nav_flat_style": False,
     "theme": "default",
-    "dark_mode_theme": None,
     "button_classes": {
         "primary": "btn-primary",
         "secondary": "btn-secondary",
@@ -269,16 +432,22 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django_otp.middleware.OTPMiddleware",  # 2FA: verifica OTP tras autenticación
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Cache middlewares
+    "app.middleware.cache_middleware.CacheMiddleware",
+    "app.middleware.cache_middleware.DatabaseCacheInvalidationMiddleware",
     # Middlewares de auditoría
     "auditoria.middleware.AuthAuditMiddleware",  # Registro de login/logout
     "auditoria.admin_middleware.AdminAuditMiddleware",  # Registro de actividad en admin
+    # Brute-force lockout (siempre al final)
+    "axes.middleware.AxesMiddleware",
 ]
 
 # Agregar middleware para servir archivos media en producción
-if not DEBUG:
-    MIDDLEWARE.insert(-2, "app.middleware.MediaServeMiddleware")  # Insertar antes de los middlewares de auditoría
+# if not DEBUG:
+#     MIDDLEWARE.insert(-2, "app.middleware.MediaServeMiddleware")  # Insertar antes de los middlewares de auditoría
 
 ROOT_URLCONF = "app.urls"
 
@@ -293,6 +462,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "app.context_processors.site_config",
             ],
         },
     },
@@ -311,6 +481,10 @@ DATABASES = {
           'PASSWORD': os.getenv("DB_PASSWORD"),
           'HOST': os.getenv("DB_HOST"),
           'PORT': os.getenv("DB_PORT"),
+          'OPTIONS': {
+              'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+              'charset': 'utf8mb4',
+          }
      }
 }
 
@@ -324,6 +498,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 12},  # MED-01: mínimo 12 caracteres (NIST SP 800-63B)
     },
     {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
@@ -332,6 +507,27 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
+
+# ─── Authentication backends ────────────────────────────────────────────────
+AUTHENTICATION_BACKENDS = [
+    # axes debe ir PRIMERO para bloquear intentos antes de verificar credenciales
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+# ─── django-axes (brute-force protection) ───────────────────────────────────
+AXES_FAILURE_LIMIT       = 5          # Bloquea tras 5 intentos fallidos
+AXES_COOLOFF_TIME        = 1          # Desbloqueo automático después de 1 hora
+AXES_LOCKOUT_PARAMETERS  = ['username', 'ip_address']  # Bloquea por usuario + IP
+AXES_RESET_ON_SUCCESS    = True       # Resetea el contador al iniciar sesión bien
+AXES_ENABLE_ADMIN        = True       # Muestra intentos en el admin
+AXES_LOCKOUT_TEMPLATE    = 'two_factor/lockout.html'
+AXES_VERBOSE             = False
+
+# ─── django-two-factor-auth ─────────────────────────────────────────────────
+LOGIN_URL          = 'two_factor:login'
+LOGIN_REDIRECT_URL = '/es/admin/'
+TWO_FACTOR_REMEMBER_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 días si marca "recordar"
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
@@ -342,8 +538,14 @@ TIME_ZONE = "America/Mexico_City"
 
 USE_I18N = True  # Habilitar internacionalización
 
-# Desactivamos el soporte de zona horaria para evitar errores con MySQL
-USE_TZ = False
+# HIGH-05: USE_TZ=True almacena en UTC y convierte a America/Mexico_City
+# Compatible con MySQL 8.x (confirmado). Los logs de auditoría tendrán timestamps correctos.
+USE_TZ = True
+
+# MED-05: Gestión de sesiones — expiración en 8 horas (jornada laboral)
+SESSION_COOKIE_AGE = 60 * 60 * 8       # 8 horas en segundos
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Sesión termina al cerrar el navegador
+SESSION_SAVE_EVERY_REQUEST = True       # Reinicia el timer con cada petición activa
 
 # Idiomas disponibles en la aplicación
 LANGUAGES = [
@@ -366,7 +568,7 @@ LOCALE_PATHS = [
 STATIC_URL = "/static/"
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-STATIC_ROOT = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'static-only')
+STATIC_ROOT = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'staticfiles')
 
 STATICFILES_DIRS = (
     os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static'),
@@ -377,6 +579,30 @@ TEMPLATE_DIRS = (
 )
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ===============================
+# CONFIGURACIÓN DE CORREO (EMAIL)
+# ===============================
+# Configura las variables de entorno en .env para activar el envío de correos.
+# Si EMAIL_HOST no está configurado, se usará el backend de consola (solo dev).
+
+_email_host = os.getenv("EMAIL_HOST", "")
+if _email_host:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = _email_host
+    EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+    EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() in ["true", "1", "yes"]
+    EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() in ["true", "1", "yes"]
+    EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "15"))
+    EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+    DEFAULT_FROM_EMAIL = os.getenv(
+        "DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "noreply@empresa.com"
+    )
+else:
+    # En desarrollo sin EMAIL_HOST configurado: imprime los correos en la consola
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    DEFAULT_FROM_EMAIL = "noreply@empresa.com"
 
 # Compressor settings
 COMPRESS_ROOT = BASE_DIR / 'static'
@@ -390,10 +616,11 @@ STATICFILES_FINDERS = [
 
 # Configuración para servir archivos estáticos en producción
 if not DEBUG:
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-    # Configuración adicional para archivos estáticos
-    WHITENOISE_USE_FINDERS = True
-    WHITENOISE_AUTOREFRESH = True
+    # Cambiado a CompressedStaticFilesStorage para evitar hashing de nombres
+    # que causa conflictos con custom_css de Jazzmin
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+    # Servir estáticos directamente desde STATIC_ROOT (más eficiente en producción)
+    WHITENOISE_USE_FINDERS = False
     # Configuración para servir archivos media con WhiteNoise en producción
     WHITENOISE_ROOT = MEDIA_ROOT
     # Añadir configuración para servir archivos media
@@ -421,11 +648,13 @@ LOGGING = {
             'maxBytes': 1024*1024*15,  # 15MB
             'backupCount': 10,
             'formatter': 'verbose',
+            'encoding': 'utf-8',
         },
         'console': {
             'level': 'INFO' if not DEBUG else 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'simple' if DEBUG else 'verbose',
+            'stream': 'ext://sys.stdout',
         },
     },
     'root': {
@@ -446,24 +675,115 @@ LOGGING = {
     },
 }
 
-# Configuración de cache para producción
-if not DEBUG:
+# ===============================
+# CONFIGURACIÓN REDIS CACHE
+# ===============================
+
+# Configuración de Redis Cache con fallback
+REDIS_URL = os.getenv('REDIS_URL', None)
+
+if REDIS_URL:
+    # Configuración Redis (disponible en cualquier entorno que tenga REDIS_URL)
+    try:
+        CACHES = {
+            'default': {
+                'BACKEND': 'django_redis.cache.RedisCache',
+                'LOCATION': REDIS_URL,
+                'OPTIONS': {
+                    'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                    'CONNECTION_POOL_KWARGS': {
+                        'max_connections': 50,
+                        'retry_on_timeout': True,
+                        'socket_connect_timeout': 5,
+                        'socket_timeout': 5,
+                    },
+                    'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+                    'SERIALIZER': 'django_redis.serializers.json.JSONSerializer',
+                    'IGNORE_EXCEPTIONS': True,  # No fallar si Redis no está disponible
+                },
+                'TIMEOUT': 300,  # 5 minutos por defecto
+                'VERSION': 1,
+                'KEY_PREFIX': 'agricola',
+            },
+            # Cache específico para sesiones
+            'sessions': {
+                'BACKEND': 'django_redis.cache.RedisCache',
+                'LOCATION': REDIS_URL.replace('/1', '/2') if '/1' in REDIS_URL else REDIS_URL + '/2',
+                'OPTIONS': {
+                    'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                    'CONNECTION_POOL_KWARGS': {
+                        'max_connections': 20,
+                        'socket_connect_timeout': 5,
+                        'socket_timeout': 5,
+                    },
+                    'IGNORE_EXCEPTIONS': True,
+                },
+                'TIMEOUT': 86400,  # 24 horas para sesiones
+                'KEY_PREFIX': 'agricola_session',
+            },
+            # Cache de largo plazo para datos estáticos
+            'static_data': {
+                'BACKEND': 'django_redis.cache.RedisCache',
+                'LOCATION': REDIS_URL.replace('/1', '/3') if '/1' in REDIS_URL else REDIS_URL + '/3',
+                'OPTIONS': {
+                    'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                    'IGNORE_EXCEPTIONS': True,
+                },
+                'TIMEOUT': 3600,  # 1 hora para datos estáticos
+                'KEY_PREFIX': 'agricola_static',
+            }
+        }
+        
+        # Las sesiones usan la base de datos (más robusto, no depende de Redis)
+        SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+        
+    except Exception as e:
+        print(f"Warning: Could not configure Redis cache: {e}")
+        # Fallback a cache local
+        CACHES = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'LOCATION': 'default-cache',
+                'TIMEOUT': 300,
+                'OPTIONS': {
+                    'MAX_ENTRIES': 1000,
+                }
+            }
+        }
+else:
+    # Configuración para desarrollo (sin Redis requerido)
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-            'LOCATION': 'unique-snowflake',
+            'LOCATION': 'default-cache',
             'TIMEOUT': 300,
             'OPTIONS': {
                 'MAX_ENTRIES': 1000,
             }
+        },
+        'sessions': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'sessions-cache',
+            'TIMEOUT': 86400,
+        },
+        'static_data': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'static-cache',
+            'TIMEOUT': 3600,
         }
     }
-else:
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
-        }
-    }
+
+# Configuración de timeout específicos por tipo de cache
+CACHE_TIMEOUTS = {
+    'balances': 900,          # 15 minutos - Balances de gastos
+    'compras': 900,           # 15 minutos - Balances de compras  
+    'ventas': 900,            # 15 minutos - Balances de ventas
+    'reportes': 1800,         # 30 minutos - Reportes complejos
+    'catalogos': 3600,        # 1 hora - Productores, productos, etc
+    'usuarios': 1800,         # 30 minutos - Datos de usuarios
+    'saldos_mensuales': 1800, # 30 minutos - Saldos mensuales
+    'dashboard': 300,         # 5 minutos - Dashboard principal
+}
 
 # ===============================
 # CONFIGURACIÓN DJANGO MONEY

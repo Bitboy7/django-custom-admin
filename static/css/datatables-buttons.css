@@ -1,121 +1,75 @@
-/* Estilos personalizados para los botones de DataTables */
-.dt-button.btn-copy {
-  background-color: #3b82f6 !important;
-  color: white !important;
-  font-weight: 500 !important;
-  padding: 6px 12px !important;
-  border-radius: 6px !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-  margin-right: 8px !important;
-  margin-bottom: 8px !important;
-  border: none !important;
-  transition: background-color 0.2s ease !important;
-}
+/*
+ * datatables-buttons.css
+ * Estilos de botones de exportación de DataTables
+ * Usa los tokens del sistema de diseño definidos en admin_custom.css
+ */
 
-.dt-button.btn-copy:hover {
-  background-color: #2563eb !important;
-}
-
-.dt-button.btn-csv {
-  background-color: #10b981 !important;
-  color: white !important;
-  font-weight: 500 !important;
-  padding: 6px 12px !important;
-  border-radius: 6px !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-  margin-right: 8px !important;
-  margin-bottom: 8px !important;
-  border: none !important;
-  transition: background-color 0.2s ease !important;
-}
-
-.dt-button.btn-csv:hover {
-  background-color: #059669 !important;
-}
-
-.dt-button.btn-excel {
-  background-color: #059669 !important;
-  color: white !important;
-  font-weight: 500 !important;
-  padding: 6px 12px !important;
-  border-radius: 6px !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-  margin-right: 8px !important;
-  margin-bottom: 8px !important;
-  border: none !important;
-  transition: background-color 0.2s ease !important;
-}
-
-.dt-button.btn-excel:hover {
-  background-color: #047857 !important;
-}
-
-.dt-button.btn-pdf {
-  background-color: #ef4444 !important;
-  color: white !important;
-  font-weight: 500 !important;
-  padding: 6px 12px !important;
-  border-radius: 6px !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-  margin-right: 8px !important;
-  margin-bottom: 8px !important;
-  border: none !important;
-  transition: background-color 0.2s ease !important;
-}
-
-.dt-button.btn-pdf:hover {
-  background-color: #9e1d1d !important;
-}
-
-.dt-button.btn-print {
-  background-color: grey !important;
-  color: white !important;
-  font-weight: 500 !important;
-  padding: 6px 12px !important;
-  border-radius: 6px !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-  margin-right: 8px !important;
-  margin-bottom: 8px !important;
-  border: none !important;
-  transition: background-color 0.2s ease !important;
-}
-
-.dt-button.btn-print:hover {
-  background-color: #b496e9 !important;
-}
-
-/* Asegurar que los botones mantengan su estilo */
-.dt-buttons .dt-button {
-  font-family: inherit !important;
-  font-size: 14px !important;
+/* Base unificado */
+.dt-button {
+  font-family: var(--font, inherit) !important;
+  font-size: .82rem !important;
+  font-weight: 600 !important;
   line-height: 1.5 !important;
+  padding: .4rem .9rem !important;
+  border-radius: var(--r-md, 6px) !important;
+  border: none !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  transition: all var(--t, .18s ease) !important;
+  box-shadow: var(--s-sm, 0 1px 3px rgba(30,58,95,.08)) !important;
+  margin-right: 0 !important;
+  margin-bottom: 0 !important;
 }
 
-/* Contenedor de botones */
+.dt-button:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: var(--s-md, 0 4px 12px rgba(30,58,95,.12)) !important;
+}
+
+.dt-button:focus {
+  outline: 2px solid rgba(37,99,235,.45) !important;
+  outline-offset: 2px !important;
+}
+
+/* Contenedor */
 .dt-buttons {
   display: flex !important;
   flex-wrap: wrap !important;
-  gap: 8px !important;
+  gap: 6px !important;
+  margin-bottom: .75rem !important;
 }
 
-/* Estilos adicionales para mejorar la apariencia */
-.dt-button {
-  font-family: inherit !important;
-  font-size: 14px !important;
-  line-height: 1.5 !important;
-  transition: all 0.2s ease !important;
-  cursor: pointer !important;
-  text-decoration: none !important;
+/* Copiar */
+.dt-button.btn-copy {
+  background-color: var(--c-blue, #586f7c) !important;
+  color: #fff !important;
 }
+.dt-button.btn-copy:hover { background-color: var(--c-blue-hover, #586f7c) !important; }
 
-/* Hover effects generales */
-.dt-button:hover {
-  transform: translateY(-1px) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+/* CSV */
+.dt-button.btn-csv {
+  background-color: var(--c-green, #5a7d6b) !important;
+  color: #fff !important;
 }
+.dt-button.btn-csv:hover { background-color: #5a7d6b !important; }
 
-/* Focus states para accesibilidad */
-.dt-button:focus {
-  outline: 2px solid rgba(59, 130, 246, 0.5) !important;
-  outline-offset: 2px !important;
+/* Excel */
+.dt-button.btn-excel {
+  background-color: #3d6b2c !important;
+  color: #fff !important;
 }
+.dt-button.btn-excel:hover { background-color: #3d6b2c !important; }
+
+/* PDF */
+.dt-button.btn-pdf {
+  background-color: var(--c-red, #b85450) !important;
+  color: #fff !important;
+}
+.dt-button.btn-pdf:hover { background-color: #b85450 !important; }
+
+/* Imprimir */
+.dt-button.btn-print {
+  background-color: var(--c-text-soft, #586f7c) !important;
+  color: #fff !important;
+}
+.dt-button.btn-print:hover { background-color: var(--c-navy-light, #2e5c8a) !important; }

@@ -1,0 +1,427 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+<style>
+  :root {
+    --charcoal: #2f4550;
+    --slate: #586f7c;
+    --light-blue: #b8dbd9;
+    --ghost: #f4f4f9;
+    --amber: #c9a227;
+    --green: #5a7d6b;
+    --red: #b85450;
+  }
+
+  .fc-wrap { width: 100%; }
+
+  .fc-header {
+    background: linear-gradient(135deg, var(--charcoal) 0%, var(--slate) 100%);
+    border-radius: 10px 10px 0 0;
+    padding: 24px 28px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .fc-header h2 { margin: 0; font-size: 1.1rem; font-weight: 700; color: #fff; }
+  .fc-header-meta { font-size: .75rem; color: rgba(184,219,217,.8); display: flex; gap: 16px; flex-wrap: wrap; }
+
+  .fc-body { background: #fff; border: 1px solid #d8dce6; border-top: none; border-radius: 0 0 10px 10px; overflow: hidden; }
+
+  /* ── Form ─────────────────────────────────────────── */
+  .fc-form-wrap {
+    padding: 20px 24px;
+    border-bottom: 1px solid #eef0f4;
+    background: #f8f9fb;
+  }
+  .fc-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .fc-form-group { display: flex; flex-direction: column; gap: 4px; }
+  .fc-form-group label {
+    font-size: .68rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--slate);
+  }
+  .fc-form select, .fc-form input {
+    padding: 6px 10px;
+    border: 1px solid #d8dce6;
+    border-radius: 6px;
+    font-size: .82rem;
+    color: var(--charcoal);
+    background: #fff;
+    min-width: 100px;
+  }
+  .fc-form select:focus, .fc-form input:focus {
+    border-color: var(--amber);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(201,162,39,.15);
+  }
+  .fc-btn {
+    padding: 7px 18px;
+    border: none;
+    border-radius: 6px;
+    font-size: .78rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: .04em;
+    transition: background .2s;
+  }
+  .fc-btn-primary { background: var(--amber); color: #fff; }
+  .fc-btn-primary:hover { background: #b08d1f; }
+  .fc-btn-pdf { background: var(--red); color: #fff; }
+  .fc-btn-pdf:hover { background: #9a3e3b; }
+
+  /* ── KPI metric bar ───────────────────────────────── */
+  .fc-metrics-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1px;
+    background: #d8dce6;
+    border-bottom: 1px solid #d8dce6;
+  }
+  .fc-metric {
+    background: #fff;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .fc-metric-label {
+    font-size: .62rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--slate); margin-bottom: 4px;
+  }
+  .fc-metric-value {
+    font-size: 1.2rem; font-weight: 800; color: var(--charcoal);
+    font-variant-numeric: tabular-nums;
+  }
+  .fc-metric-value.positive { color: var(--green); }
+  .fc-metric-value.negative { color: var(--red); }
+
+  /* ── Chart sections ────────────────────────────────── */
+  .fc-section {
+    padding: 20px 24px;
+    border-bottom: 1px solid #eef0f4;
+  }
+  .fc-section:last-child { border-bottom: none; }
+  .fc-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .fc-section-title {
+    font-size: .88rem;
+    font-weight: 700;
+    color: var(--charcoal);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .fc-section-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .fc-trend-badge {
+    font-size: .65rem; font-weight: 700; letter-spacing: .05em;
+    padding: 3px 10px; border-radius: 12px; text-transform: uppercase;
+  }
+  .fc-trend-badge.creciente { background: rgba(90,125,107,.12); color: var(--green); }
+  .fc-trend-badge.decreciente { background: rgba(184,84,80,.12); color: var(--red); }
+  .fc-trend-badge.estable { background: rgba(88,111,124,.12); color: var(--slate); }
+
+  .fc-chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 320px;
+  }
+  .fc-chart-wrap canvas { width: 100% !important; height: 100% !important; }
+
+  .fc-footer {
+    padding: 16px 24px;
+    background: #f8f9fb;
+    border-top: 1px solid #eef0f4;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fc-wrap">
+  <div class="fc-header">
+    <div>
+      <h2>Predicciones y Proyecciones</h2>
+      <div class="fc-header-meta">
+        <span>Pronostico financiero basado en regresion</span>
+      </div>
+    </div>
+    {% if has_data %}
+    <a href="{% url 'admin:reportes_forecast_pdf' %}?year={{ selected_year }}&sucursal_id={{ selected_sucursal_id|default:'' }}&months_ahead={{ selected_months_ahead }}&model_type={{ selected_model_type }}"
+       class="fc-btn fc-btn-pdf" target="_blank">
+      Exportar PDF
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="fc-body">
+    <div class="fc-form-wrap">
+      <form class="fc-form" method="GET">
+        <div class="fc-form-group">
+          <label>Año base</label>
+          <input type="number" name="year" value="{{ selected_year|default:'2026' }}" min="2020" max="2030">
+        </div>
+        <div class="fc-form-group">
+          <label>Sucursal</label>
+          <select name="sucursal_id">
+            <option value="">Todas</option>
+            {% for s in sucursales %}
+            <option value="{{ s.id }}" {% if selected_sucursal_id == s.id %}selected{% endif %}>{{ s.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="fc-form-group">
+          <label>Meses a proyectar</label>
+          <select name="months_ahead">
+            <option value="3" {% if selected_months_ahead == 3 %}selected{% endif %}>3 meses</option>
+            <option value="6" {% if selected_months_ahead == 6 %}selected{% endif %}>6 meses</option>
+            <option value="12" {% if selected_months_ahead == 12 %}selected{% endif %}>12 meses</option>
+          </select>
+        </div>
+        <div class="fc-form-group">
+          <label>Modelo</label>
+          <select name="model_type">
+            <option value="polynomial" {% if selected_model_type == 'polynomial' %}selected{% endif %}>Regresion polinomial</option>
+            <option value="linear" {% if selected_model_type == 'linear' %}selected{% endif %}>Regresion lineal</option>
+          </select>
+        </div>
+        <button type="submit" class="fc-btn fc-btn-primary">Generar predicciones</button>
+      </form>
+    </div>
+
+    {% if has_data %}
+    {% with forecasts=forecast_data.forecasts %}
+    {% for key, fc in forecasts.items %}
+    {% if fc %}
+    <div class="fc-section">
+      <div class="fc-section-header">
+        <div class="fc-section-title">
+          {% if key == 'gastos' %}
+          <span class="fc-section-dot" style="background:var(--red)"></span> Gastos
+          {% elif key == 'ventas' %}
+          <span class="fc-section-dot" style="background:var(--green)"></span> Ventas
+          {% elif key == 'compras' %}
+          <span class="fc-section-dot" style="background:var(--slate)"></span> Compras
+          {% elif key == 'balance_neto' %}
+          <span class="fc-section-dot" style="background:var(--amber)"></span> Balance Neto
+          {% else %}
+          <span class="fc-section-dot" style="background:var(--slate)"></span> {{ key|title }}
+          {% endif %}
+        </div>
+        {% if fc.metrics %}
+        <span class="fc-trend-badge {{ fc.metrics.trend_direction }}">
+          {{ fc.metrics.trend_direction|upper }}
+        </span>
+        {% endif %}
+      </div>
+
+      {% if fc.metrics and fc.metrics.r2_score %}
+      <div class="fc-metrics-row">
+        <div class="fc-metric">
+          <div class="fc-metric-label">R² Score</div>
+          <div class="fc-metric-value">{{ fc.metrics.r2_score|floatformat:4 }}</div>
+        </div>
+        <div class="fc-metric">
+          <div class="fc-metric-label">Fuerza tendencia</div>
+          <div class="fc-metric-value">{{ fc.metrics.trend_strength }}%</div>
+        </div>
+        <div class="fc-metric">
+          <div class="fc-metric-label">Cambio prox. mes</div>
+          <div class="fc-metric-value {% if fc.metrics.predicted_change_pct >= 0 %}positive{% else %}negative{% endif %}">
+            {% if fc.metrics.predicted_change_pct >= 0 %}+{% endif %}{{ fc.metrics.predicted_change_pct|floatformat:1 }}%
+          </div>
+        </div>
+        <div class="fc-metric">
+          <div class="fc-metric-label">Ultimo historico</div>
+          <div class="fc-metric-value">${{ fc.metrics.last_historical_value|floatformat:0 }}</div>
+        </div>
+        <div class="fc-metric">
+          <div class="fc-metric-label">Prox. prediccion</div>
+          <div class="fc-metric-value">${{ fc.metrics.next_predicted_value|floatformat:0 }}</div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="fc-chart-wrap">
+        <canvas id="chart-{{ key }}"></canvas>
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+    {% endwith %}
+    {% else %}
+    <div style="padding:60px 24px;text-align:center;color:var(--slate);font-size:.88rem;">
+      Selecciona los parametros y presiona <strong>Generar predicciones</strong> para visualizar las proyecciones.
+    </div>
+    {% endif %}
+  </div>
+
+  {% if has_data %}
+  <div class="fc-footer">
+    <span style="font-size:.68rem;color:var(--slate);margin-right:auto;display:flex;align-items:center;">
+      Generado: {{ forecast_data.params.generated_at }}
+    </span>
+    <a href="{% url 'admin:reportes_forecast_pdf' %}?year={{ selected_year }}&sucursal_id={{ selected_sucursal_id|default:'' }}&months_ahead={{ selected_months_ahead }}&model_type={{ selected_model_type }}"
+       class="fc-btn fc-btn-pdf">
+      Exportar PDF
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{% if has_data %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+(function() {
+  const colors = {
+    gastos: { main: '#b85450', band: 'rgba(184,84,80,.15)' },
+    ventas: { main: '#5a7d6b', band: 'rgba(90,125,107,.15)' },
+    compras: { main: '#586f7c', band: 'rgba(88,111,124,.15)' },
+    balance_neto: { main: '#c9a227', band: 'rgba(201,162,39,.15)' }
+  };
+
+  const forecastData = {{ forecast_data.forecasts|safe }};
+
+  Object.keys(forecastData).forEach(function(key) {
+    const fc = forecastData[key];
+    if (!fc) return;
+
+    const canvas = document.getElementById('chart-' + key);
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+
+    const historical = fc.historical || [];
+    const predictions = fc.predictions || [];
+
+    const histLabels = historical.map(function(d) { return d.periodo_label; });
+    const histValues = historical.map(function(d) { return d.total; });
+
+    const predLabels = predictions.map(function(d) { return d.periodo_label; });
+    const predValues = predictions.map(function(d) { return d.predicted; });
+    const lowerValues = predictions.map(function(d) { return d.lower; });
+    const upperValues = predictions.map(function(d) { return d.upper; });
+
+    const allLabels = histLabels.concat(predLabels);
+
+    const histDataset = histValues.concat(new Array(predLabels.length).fill(null));
+    const predDataset = new Array(histLabels.length).fill(null).concat(predValues);
+    const lowerDataset = new Array(histLabels.length).fill(null).concat(lowerValues);
+    const upperDataset = new Array(histLabels.length).fill(null).concat(upperValues);
+
+    const c = colors[key] || { main: '#586f7c', band: 'rgba(88,111,124,.15)' };
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: allLabels,
+        datasets: [
+          {
+            label: 'Historico',
+            data: histDataset,
+            borderColor: c.main,
+            backgroundColor: c.main,
+            borderWidth: 2,
+            pointRadius: 3,
+            fill: false,
+            tension: 0.2
+          },
+          {
+            label: 'Prediccion',
+            data: predDataset,
+            borderColor: c.main,
+            backgroundColor: c.main,
+            borderWidth: 2,
+            borderDash: [6, 4],
+            pointRadius: 4,
+            pointStyle: 'rectRounded',
+            fill: false,
+            tension: 0.2
+          },
+          {
+            label: 'Limite superior',
+            data: upperDataset,
+            borderColor: c.main,
+            backgroundColor: 'transparent',
+            borderWidth: 1,
+            borderDash: [2, 3],
+            pointRadius: 0,
+            fill: false,
+            tension: 0.2
+          },
+          {
+            label: 'Limite inferior',
+            data: lowerDataset,
+            borderColor: c.main,
+            backgroundColor: 'transparent',
+            borderWidth: 1,
+            borderDash: [2, 3],
+            pointRadius: 0,
+            fill: {
+              target: 2,
+              above: c.band
+            },
+            tension: 0.2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              usePointStyle: true,
+              boxWidth: 6,
+              padding: 16,
+              font: { size: 11 },
+              color: '#586f7c'
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                if (ctx.raw === null) return '';
+                return ctx.dataset.label + ': $' + ctx.raw.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { font: { size: 10 }, color: '#586f7c', maxRotation: 45 }
+          },
+          y: {
+            ticks: {
+              font: { size: 10 },
+              color: '#586f7c',
+              callback: function(v) { return '$' + v.toLocaleString('en-US', {maximumFractionDigits: 0}); }
+            },
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

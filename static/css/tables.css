@@ -1,0 +1,286 @@
+/*
+ * ═══════════════════════════════════════════════════════════════
+ *  TABLES — Admin Tables, DataTables, Pagination, Filters
+ *
+ *  Skills: ui-ux-pro-max (readability, a11y, contrast)
+ * ═══════════════════════════════════════════════════════════════
+ */
+
+/* ── Admin result list ──────────────────────────────────────────── */
+body #result_list,
+body .results table,
+body .change-list table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface-card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+}
+
+/* Header */
+body #result_list th,
+body .results table th,
+body .change-list table th {
+  background: var(--brand-navy) !important;
+  color: var(--text-on-dark) !important;
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: var(--space-3) var(--space-4) !important;
+  border: none !important;
+  white-space: nowrap;
+}
+body #result_list th a,
+body .results table th a {
+  color: var(--text-on-dark) !important;
+  text-decoration: none;
+}
+body #result_list th a:hover { color: var(--brand-teal-light) !important; }
+
+/* Body */
+body #result_list td,
+body .results table td,
+body .change-list table td {
+  padding: var(--space-3) var(--space-4) !important;
+  border-bottom: 1px solid var(--border-default) !important;
+  color: var(--text-primary) !important;
+  vertical-align: middle;
+}
+
+/* Zebra striping */
+body #result_list tr:nth-child(even) td,
+body .results table tr:nth-child(even) td {
+  background: rgba(15, 31, 53, 0.015);
+}
+
+/* Hover */
+body #result_list tr:hover td,
+body .results table tr:hover td {
+  background: rgba(13, 148, 136, 0.05) !important;
+}
+
+/* Checkbox column */
+body #result_list tr td.action-checkbox input[type="checkbox"],
+body #result_list tr th.action-checkbox-column input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand-teal);
+}
+
+/* Numeric columns */
+body #result_list td[class*="monto"],
+body #result_list td[class*="cantidad"],
+body #result_list td[class*="total"],
+body #result_list td[class*="saldo"],
+body #result_list td[class*="pago"],
+body #result_list td[class*="limite"],
+body #result_list td[class*="credito"],
+body .results table td.numeric {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-sm);
+}
+
+/* ── Paginator ──────────────────────────────────────────────────── */
+body .paginator {
+  background: var(--surface-card) !important;
+  border-top: 1px solid var(--border-default) !important;
+  padding: var(--space-3) var(--space-6) !important;
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary) !important;
+}
+body .paginator a {
+  color: var(--accent-blue) !important;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: background var(--duration-fast) var(--ease-default);
+}
+body .paginator a:hover {
+  background: rgba(13, 148, 136, 0.08) !important;
+  color: var(--brand-teal-dark) !important;
+}
+body .paginator .this-page {
+  background: var(--brand-teal) !important;
+  color: #fff !important;
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  font-weight: 600;
+}
+
+/* ── Changelist filters ──────────────────────────────────────────── */
+body #changelist-filter {
+  background: var(--surface-card) !important;
+  border-left: 1px solid var(--border-default) !important;
+  padding: var(--space-5) !important;
+  font-family: var(--font-body);
+}
+body #changelist-filter h2 {
+  background: var(--brand-navy) !important;
+  color: #fff !important;
+  padding: var(--space-3) var(--space-5) !important;
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  border-radius: var(--radius-sm);
+  margin: 0 0 var(--space-4) 0;
+}
+body #changelist-filter h3 {
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 700;
+  margin: var(--space-5) 0 var(--space-2);
+}
+body #changelist-filter ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+body #changelist-filter li a {
+  color: var(--text-secondary) !important;
+  font-size: var(--font-size-sm);
+  display: block;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: all var(--duration-fast) var(--ease-default);
+}
+body #changelist-filter li a:hover {
+  background: rgba(13, 148, 136, 0.08) !important;
+  color: var(--brand-teal-dark) !important;
+}
+body #changelist-filter li.selected a {
+  color: var(--brand-teal-dark) !important;
+  font-weight: 700;
+  background: rgba(13, 148, 136, 0.06);
+}
+
+/* ── DataTables ──────────────────────────────────────────────────── */
+.dt-button {
+  font-family: var(--font-body) !important;
+  font-size: var(--font-size-xs) !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+  padding: var(--space-2) var(--space-4) !important;
+  border-radius: var(--radius-md) !important;
+  border: none !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  box-shadow: var(--shadow-sm) !important;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  transition: all var(--duration-fast) var(--ease-default) !important;
+}
+.dt-button:hover { transform: translateY(-1px) !important; box-shadow: var(--shadow-md) !important; }
+.dt-button:focus-visible { outline: 3px solid var(--border-focus); outline-offset: 2px; }
+
+/* DataTable button colors */
+.dt-button.btn-copy  { background: var(--accent-blue) !important; }
+.dt-button.btn-csv   { background: var(--accent-green) !important; }
+.dt-button.btn-excel { background: #155e30 !important; }
+.dt-button.btn-pdf   { background: var(--accent-red) !important; }
+.dt-button.btn-print { background: var(--text-secondary) !important; }
+.dt-button.btn-summary-excel { background: #6d28d9 !important; }
+.dt-button.btn-copy:hover  { background: #586f7c !important; }
+.dt-button.btn-csv:hover   { background: #3d6b2c !important; }
+.dt-button.btn-excel:hover { background: #0f3d22 !important; }
+.dt-button.btn-pdf:hover   { background: #b85450 !important; }
+.dt-button.btn-print:hover { background: var(--brand-navy-light) !important; }
+
+.dt-buttons {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: var(--space-2) !important;
+  margin-bottom: var(--space-4) !important;
+}
+
+/* DataTable pagination */
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  padding: var(--space-1) var(--space-3) !important;
+  margin: 0 2px !important;
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--border-strong) !important;
+  background: var(--surface-card) !important;
+  color: var(--text-secondary) !important;
+  font-family: var(--font-body) !important;
+  font-size: var(--font-size-xs) !important;
+  transition: all var(--duration-fast) var(--ease-default) !important;
+  min-height: 36px;
+  display: inline-flex !important;
+  align-items: center;
+  text-decoration: none !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+  background: rgba(13, 148, 136, 0.08) !important;
+  border-color: var(--brand-teal) !important;
+  color: var(--brand-teal-dark) !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+  background: var(--brand-teal) !important;
+  border-color: var(--brand-teal) !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+  background: var(--surface-bg) !important;
+  border-color: var(--border-default) !important;
+  color: var(--text-muted) !important;
+  cursor: not-allowed !important;
+}
+
+/* DataTable info & length */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_info {
+  font-family: var(--font-body) !important;
+  font-size: var(--font-size-xs) !important;
+  color: var(--text-muted) !important;
+  font-weight: 500 !important;
+}
+.dataTables_wrapper .dataTables_length select {
+  background: var(--surface-card) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--radius-md) !important;
+  padding: var(--space-1) var(--space-2) !important;
+  font-family: var(--font-body) !important;
+  font-size: var(--font-size-xs) !important;
+  color: var(--text-primary) !important;
+  margin: 0 var(--space-2) !important;
+  min-height: auto;
+}
+.dataTables_wrapper .dataTables_filter input {
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--radius-md) !important;
+  padding: var(--space-2) var(--space-4) !important;
+  font-family: var(--font-body) !important;
+  font-size: var(--font-size-xs) !important;
+  margin-left: var(--space-2) !important;
+  min-height: 38px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  transition: border-color var(--duration-fast) var(--ease-default), box-shadow var(--duration-fast) var(--ease-default);
+}
+.dataTables_wrapper .dataTables_filter input:focus {
+  border-color: var(--border-focus) !important;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15) !important;
+  outline: none !important;
+}
+
+/* Hide DataTables processing spinner (uses our skeleton) */
+.dataTables_processing {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  opacity: 0 !important;
+}

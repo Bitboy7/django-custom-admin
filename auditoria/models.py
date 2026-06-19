@@ -103,3 +103,107 @@ class LogActividad(models.Model):
     
     def __str__(self):
         return f"{self.get_tipo_accion_display()} - {self.nombre_usuario} - {self.fecha_hora}"
+
+
+class UserProfile(models.Model):
+    """Perfil extendido de usuario — almacena la foto de perfil."""
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='profile',
+        verbose_name=_('Usuario'),
+    )
+    avatar = models.ImageField(
+        upload_to='avatars/',
+        null=True,
+        blank=True,
+        verbose_name=_('Foto de perfil'),
+        help_text=_('Imagen cuadrada recomendada, mín. 80×80 px.'),
+    )
+
+    class Meta:
+        verbose_name = _('Perfil de usuario')
+        verbose_name_plural = _('Perfiles de usuario')
+
+    def __str__(self):
+        return f'Perfil de {self.user.username}'
+
+    @property
+    def avatar_url(self):
+        """Devuelve la URL del avatar o vacío si no tiene."""
+        if self.avatar and hasattr(self.avatar, 'url'):
+            return self.avatar.url
+        return ''
+
+
+class SiteConfiguration(models.Model):
+    """Configuración global del sitio — singleton (solo un registro con pk=1)."""
+
+    site_title = models.CharField(
+        max_length=200,
+        default='Sistema administrativo - Agricola de la Costa San Luis',
+        verbose_name=_('Título de la pestaña'),
+        help_text=_('Texto que aparece en la pestaña del navegador.'),
+    )
+    site_header = models.CharField(
+        max_length=100,
+        default='Agricola de la Costa San Luis',
+        verbose_name=_('Encabezado del login'),
+        help_text=_('Título principal en la pantalla de inicio de sesión.'),
+    )
+    site_brand = models.CharField(
+        max_length=60,
+        default='Agricola de la Costa',
+        verbose_name=_('Nombre en barra lateral'),
+        help_text=_('Nombre corto que aparece junto al logo en la barra lateral.'),
+    )
+    company_logo = models.ImageField(
+        upload_to='site/',
+        null=True,
+        blank=True,
+        verbose_name=_('Logo de la empresa'),
+        help_text=_('PNG o SVG con fondo transparente. Recomendado ≥ 200 × 60 px.'),
+    )
+    navigation_expanded = models.BooleanField(
+        default=False,
+        verbose_name=_('Sidebar expandido al entrar'),
+        help_text=_('Muestra todas las secciones del menú lateral abiertas al cargar la página.'),
+    )
+    show_ui_builder = models.BooleanField(
+        default=False,
+        verbose_name=_('Habilitar selector de temas'),
+        help_text=_(
+            'Muestra el panel de personalización de tema (UI Builder) en la barra lateral del admin. '
+            'Recomendado solo para administradores durante configuración inicial.'
+        ),
+    )
+    custom_topbar_css = models.TextField(
+        blank=True,
+        verbose_name=_('CSS personalizado para la barra superior'),
+        help_text=_('CSS personalizado que se aplicará a la barra de navegación superior del admin.'),
+    )
+
+    class Meta:
+        verbose_name = _('Configuración del Sitio')
+        verbose_name_plural = _('Configuración del Sitio')
+
+    def __str__(self):
+        return 'Configuración del Sitio'
+
+    def save(self, *args, **kwargs):
+        self.pk = 1  # Singleton: nunca crea un segundo registro
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass  # No se permite eliminar la configuración del sitio
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    @property
+    def company_logo_url(self):
+        if self.company_logo and hasattr(self.company_logo, 'url'):
+            return self.company_logo.url
+        return ''

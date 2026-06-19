@@ -1,0 +1,171 @@
+{% extends "admin/base.html" %}
+{% load static i18n %}
+
+{# ── Dynamic page title from SiteConfiguration ─────────────────── #}
+{% block title %}
+  {% if site_config_global and site_config_global.site_title %}
+    {{ site_config_global.site_title }}
+  {% else %}
+    {{ block.super }}
+  {% endif %}
+{% endblock %}
+
+{# ── Modular CSS already loaded via Jazzmin custom_css (admin_custom.css → all modules) ── #}
+{% block extrahead %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/htmx-utils.css' %}">
+{# Google Fonts: Playfair Display + Plus Jakarta Sans + JetBrains Mono #}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  /* ── Dynamic topbar CSS (SiteConfiguration) ── */
+  {% if site_config_global and site_config_global.custom_topbar_css %}
+  {{ site_config_global.custom_topbar_css|safe }}
+  {% endif %}
+</style>
+{% endblock %}
+
+{# ── JS: avatar pill + dropdown rebuild + dynamic logo + brand ── #}
+{% block extrajs %}
+{{ block.super }}
+<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+<script src="{% static 'js/htmx-toast.js' %}"></script>
+<script src="{% static 'js/theme-toggle.js' %}"></script>
+<script>
+(function () {
+  var AV       = "{{ user_avatar_url|escapejs }}";
+  var INIT     = "{{ user_initials|escapejs }}";
+  var NAME     = "{{ user_display_name|escapejs }}";
+  var EMAIL    = "{{ request.user.email|escapejs }}";
+  var LOGO     = "{{ site_config_global.company_logo_url|default:''|escapejs }}";
+  var BRAND    = "{{ site_config_global.site_brand|default:''|escapejs }}";
+  var NAV_EXP  = {% if site_config_global and site_config_global.navigation_expanded %}true{% else %}false{% endif %};
+  var PROF_URL = "{% url 'profile_settings' %}";
+
+  function ready(fn) {
+    if (document.readyState !== 'loading') { fn(); }
+    else { document.addEventListener('DOMContentLoaded', fn); }
+  }
+
+  function avatarEl(cls) {
+    if (AV) {
+      var img = document.createElement('img');
+      img.src = AV; img.alt = NAME; img.className = cls;
+      img.onerror = function () {
+        var sp = initialsEl(cls === 'jaz-avatar-img' ? 'jaz-avatar-initials' : 'profile-mini-initials');
+        this.parentNode.insertBefore(sp, this); this.remove();
+      };
+      return img;
+    }
+    return initialsEl(cls === 'jaz-avatar-img' ? 'jaz-avatar-initials' : 'profile-mini-initials');
+  }
+
+  function initialsEl(cls) {
+    var sp = document.createElement('span');
+    sp.className = cls; sp.textContent = INIT;
+    sp.setAttribute('aria-hidden', 'true');
+    return sp;
+  }
+
+  ready(function () {
+    /* ── 1. Navbar button → avatar pill ── */
+    var userBtn = (
+      document.querySelector('#jazzy-usermenu')?.closest('.nav-item')?.querySelector(':scope > .nav-link') ||
+      document.querySelector('#jazzy-usermenu')?.closest('.nav-item.dropdown')?.querySelector('.nav-link')
+    );
+    if (userBtn) {
+      userBtn.classList.add('jaz-avatar-btn');
+      userBtn.setAttribute('aria-label', NAME ? 'Usuario: ' + NAME : 'Menu de usuario');
+      userBtn.setAttribute('title', '');
+      userBtn.innerHTML = '';
+      userBtn.appendChild(avatarEl('jaz-avatar-img'));
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'jaz-avatar-name';
+      nameSpan.textContent = NAME;
+      userBtn.appendChild(nameSpan);
+    }
+
+    /* ── 2. Rebuild user dropdown: single profile card, no duplicates ── */
+    var dropMenu = document.querySelector('#jazzy-usermenu');
+    if (dropMenu) {
+      var hdr = dropMenu.querySelector('.dropdown-header');
+      if (hdr) {
+        var nextEl = hdr.nextElementSibling;
+        if (nextEl && nextEl.classList.contains('dropdown-divider')) nextEl.remove();
+        hdr.remove();
+      }
+      var footer = dropMenu.querySelector('.dropdown-footer');
+      if (footer) {
+        var prevEl = footer.previousElementSibling;
+        if (prevEl && prevEl.classList.contains('dropdown-divider')) prevEl.remove();
+        footer.remove();
+      }
+      var logoutBtn = dropMenu.querySelector('#logout-form button[type="submit"]');
+      if (logoutBtn) logoutBtn.classList.add('jaz-logout-btn');
+
+      var card = document.createElement('a');
+      card.href = PROF_URL;
+      card.className = 'jaz-dd-card';
+      card.setAttribute('aria-label', 'Ir a Mi Perfil');
+
+      var avatarWrap = document.createElement('span');
+      avatarWrap.appendChild(avatarEl('profile-mini-avatar'));
+
+      var meta = document.createElement('div');
+      meta.className = 'jaz-dd-meta';
+      meta.innerHTML =
+        '<span class="pname">' + (NAME || 'Usuario') + '</span>' +
+        (EMAIL ? '<span class="pemail">' + EMAIL + '</span>' : '');
+
+      var editBtn = document.createElement('span');
+      editBtn.className = 'jaz-dd-edit-btn';
+      editBtn.setAttribute('aria-hidden', 'true');
+      editBtn.innerHTML = '<i class="fas fa-pencil-alt"></i>';
+
+      card.appendChild(avatarWrap);
+      card.appendChild(meta);
+      card.appendChild(editBtn);
+
+      var divider = document.createElement('div');
+      divider.className = 'dropdown-divider';
+      divider.style.margin = '0';
+
+      dropMenu.insertBefore(divider, dropMenu.firstChild);
+      dropMenu.insertBefore(card, dropMenu.firstChild);
+    }
+
+    /* ── 3. Dynamic company logo ── */
+    if (LOGO) {
+      document.querySelectorAll('.brand-link .brand-image, .brand-link img').forEach(function (img) {
+        img.src = LOGO; img.classList.add('brand-logo-dyn');
+      });
+    }
+
+    /* ── 4. Dynamic brand text ── */
+    if (BRAND) {
+      document.querySelectorAll('.brand-text').forEach(function (el) {
+        el.textContent = BRAND;
+      });
+    }
+
+    /* ── 5. Navigation expanded ── */
+    if (NAV_EXP) {
+      document.querySelectorAll('.nav-sidebar .nav-item .nav-treeview').forEach(function (sub) {
+        sub.style.display = 'block';
+        var parent = sub.closest('.nav-item');
+        if (parent) {
+          parent.classList.add('menu-open');
+          var link = parent.querySelector(':scope > .nav-link');
+          if (link) link.classList.add('active');
+        }
+      });
+    }
+  });
+})();
+</script>
+{% endblock %}

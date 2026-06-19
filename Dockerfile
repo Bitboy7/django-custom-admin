@@ -1,4 +1,19 @@
-# Usar una imagen base oficial de Python 3.12
+# ========== STAGE 1: Build CSS con Node.js 20 Alpine ==========
+FROM node:20-alpine AS node-builder
+
+WORKDIR /build
+
+# Instalar dependencias
+COPY package*.json ./
+RUN npm ci --omit=optional
+
+# Copiar todo lo necesario para Tailwind
+COPY . .
+
+# Compilar CSS
+RUN npm run build:css
+
+# ========== STAGE 2: Python 3.12 + Gunicorn ==========
 FROM python:3.12-slim
 
 # Configurar variables de entorno para Python
@@ -33,17 +48,20 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copiar el resto del código de la aplicación
 COPY . .
 
+# Copiar CSS compilado desde stage anterior (stage 1 usa WORKDIR /build)
+COPY --from=node-builder /build/static/css/output.css ./static/css/output.css
+
 # Crear directorios necesarios
-RUN mkdir -p /app/static/static-only /app/media /app/logs && \
+RUN mkdir -p /app/staticfiles /app/media /app/logs && \
     mkdir -p /app/media/bancos /app/media/catalogo /app/media/clientes /app/media/paises /app/media/productores /app/media/temp_documents /app/media/temp_invoices
 
 # Dar permisos al script de entrada (ya copiado con COPY . .)
 RUN chmod +x /app/entrypoint.sh
 
-# Cambiar permisos
+# Cambiar permisos ANTES de ejecutar collectstatic
 RUN chown -R appuser:appuser /app
 
-# Cambiar al usuario no privilegiado
+# Cambiar al usuario no privilegiado ANTES de ejecutar comandos de Django
 USER appuser
 
 # Exponer el puerto que usará la aplicación

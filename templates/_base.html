@@ -11,8 +11,8 @@
   <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css">
   <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
   <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
-  <!-- Tailwind CSS -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+  <!-- Tailwind CSS v3 (compilado local, mismo que el admin) -->
+  <link rel="stylesheet" href="{% static 'css/output.css' %}">
 
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -20,55 +20,283 @@
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+  <!-- Paleta de marca -->
+  <style>
+    :root {
+      --black: #000000;
+      --charcoal-blue: #2f4550;
+      --blue-slate: #586f7c;
+      --light-blue: #b8dbd9;
+      --ghost-white: #f4f4f9;
+    }
+    body { background-color: var(--ghost-white); }
+
+    /* Navbar */
+    .navbar-brand {
+      background-color: var(--charcoal-blue);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      padding: 1rem;
+      box-shadow: 0 1px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    .navbar-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 0 1rem;
+    }
+
+    .brand-link {
+      display: inline-flex;
+      align-items: center;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--ghost-white);
+      text-decoration: none;
+    }
+
+    .brand-link:hover {
+      color: var(--ghost-white);
+    }
+
+    .nav-icon,
+    .brand-link .nav-icon {
+      margin-right: 0.5rem;
+    }
+
+    .dropdown-arrow {
+      margin-left: 0.35rem;
+      font-size: 0.85rem;
+    }
+
+    .navbar-toggle {
+      display: none;
+      border: none;
+      background: transparent;
+      color: var(--ghost-white);
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+    }
+
+    .navbar-toggle:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(244, 244, 249, 0.35);
+    }
+
+    .navbar-menu {
+      width: 100%;
+    }
+
+    .navbar-menu-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin: 1rem 0 0;
+      padding: 0;
+      list-style: none;
+      font-size: 0.9375rem;
+      font-weight: 500;
+    }
+
+    .navbar-menu-list li {
+      margin: 0;
+    }
+
+    .nav-link {
+      display: inline-flex;
+      align-items: center;
+      color: rgba(244, 244, 249, 0.75);
+      text-decoration: none;
+      padding: 0.5rem 0;
+      transition: color 0.2s ease;
+    }
+
+    .nav-link:hover {
+      color: var(--ghost-white);
+    }
+
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: var(--charcoal-blue);
+      min-width: 220px;
+      box-shadow: 0px 8px 16px 0px rgba(47, 69, 80, 0.2);
+      z-index: 1000;
+      border-radius: 0.375rem;
+      margin-top: 0.5rem;
+    }
+
+    .dropdown-content a {
+      color: rgba(244, 244, 249, 0.8);
+      padding: 12px 16px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      transition: all 0.2s ease;
+      border-bottom: 1px solid rgba(244, 244, 249, 0.08);
+    }
+
+    .dropdown-content a:last-child {
+      border-bottom: none;
+    }
+
+    .dropdown-content a:hover {
+      background-color: var(--blue-slate);
+      color: var(--ghost-white);
+      padding-left: 20px;
+    }
+
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+
+    .dropdown-toggle {
+      cursor: pointer;
+    }
+
+    .dropdown-toggle:hover {
+      color: var(--ghost-white) !important;
+    }
+
+    @media (max-width: 768px) {
+      .navbar-toggle {
+        display: inline-flex;
+      }
+
+      .navbar-menu {
+        display: none;
+      }
+
+      .navbar-menu.show {
+        display: block;
+      }
+
+      .navbar-menu-list {
+        margin-top: 1rem;
+      }
+
+      .dropdown-content {
+        position: static;
+        box-shadow: none;
+        background-color: rgba(47, 69, 80, 0.5);
+        margin-top: 0;
+        padding-left: 1rem;
+      }
+    }
+
+    @media (min-width: 769px) {
+      .navbar-menu {
+        display: block;
+      }
+
+      .navbar-menu-list {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin-top: 0;
+      }
+
+      .navbar-menu-list li {
+        margin: 0;
+      }
+    }
+  </style>
+
+  <!-- HTMX Utilities CSS -->
+  <link rel="stylesheet" href="{% static 'css/htmx-utils.css' %}">
+
   <!-- Bloque para CSS adicional -->
   {% block extra_css %}{% endblock %}
 </head>
 
-<body class="bg-emerald-50">
+<body>
   <!-- Navbar -->
-  <nav class="bg-blue-900 p-4 sticky top-0 shadow z-30">
-    <div class="container mx-auto flex flex-wrap justify-between items-center">
-      <a href="{% url 'admin:index' %}" class="flex items-center text-white text-lg font-semibold">
-        <i class="fas fa-tractor mr-2"></i> Agrícola de la Costa
+  <nav class="navbar-brand">
+    <div class="navbar-container">
+      <a href="{% url 'admin:index' %}" class="brand-link">
+        <i class="fas fa-tractor nav-icon" style="color: var(--light-blue);"></i> Agrícola de la Costa
       </a>
 
       <button data-collapse-toggle="navbar-menu" type="button"
-        class="inline-flex items-center p-2 ml-3 text-sm text-white rounded-lg md:hidden hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-gray-200"
+        class="navbar-toggle"
+        style="color: var(--ghost-white);"
+        onmouseover="this.style.backgroundColor='var(--blue-slate)'"
+        onmouseout="this.style.backgroundColor='transparent'"
         aria-controls="navbar-menu" aria-expanded="false">
         <span class="sr-only">Abrir menú principal</span>
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+        <svg class="navbar-toggle-icon" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" style="width: 1.5rem; height: 1.5rem;">
           <path fill-rule="evenodd"
             d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
             clip-rule="evenodd"></path>
         </svg>
       </button>
 
-      <div class="hidden w-full md:block md:w-auto" id="navbar-menu">
-        <ul class="flex flex-col mt-4 md:flex-row md:space-x-6 md:mt-0 md:text-sm md:font-medium">
+      <div class="navbar-menu" id="navbar-menu">
+        <ul class="navbar-menu-list">
           <li>
-            <a href="{% url 'admin:index' %}" class="text-gray-300 hover:text-white flex items-center py-2">
-              <i class="fas fa-tachometer-alt mr-1"></i> Panel de Control
+            <a href="{% url 'admin:index' %}" class="nav-link">
+              <i class="fas fa-tachometer-alt nav-icon"></i> Panel de Control
             </a>
           </li>
           <li>
-            <a href="{% url 'balances' %}" class="text-gray-300 hover:text-white flex items-center py-2">
-              <i class="fas fa-file-invoice-dollar mr-1"></i> Gastos
+            <a href="{% url 'balances' %}" class="nav-link">
+              <i class="fas fa-file-invoice-dollar nav-icon"></i> Gastos
             </a>
           </li>
           <li>
-            <a href="{% url 'gastos:compras_balances' %}" class="text-gray-300 hover:text-white flex items-center py-2">
-              <i class="fas fa-shopping-cart mr-1"></i> Compras
+            <a href="{% url 'gastos:compras_balances' %}" class="nav-link">
+              <i class="fas fa-shopping-cart nav-icon"></i> Compras
             </a>
           </li>
           <li>
-            <a href="{% url 'gastos:ingresar_gasto_factura' %}" class="text-gray-300 hover:text-white flex items-center py-2">
-              <i class="fas fa-brain mr-1"></i> Documentos IA
+            <a href="{% url 'ventas:ventas_balances' %}" class="nav-link">
+              <i class="fas fa-chart-bar nav-icon"></i> Ventas
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'gastos:ingresar_gasto_factura' %}" class="nav-link">
+              <i class="fas fa-brain nav-icon"></i> Documentos IA
             </a>
           </li>
 
+          <!-- Menú desplegable de Inversiones -->
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle nav-link">
+              <i class="fas fa-chart-line nav-icon"></i> Capital e Inversiones
+              <i class="fas fa-chevron-down nav-icon dropdown-arrow"></i>
+            </a>
+            <div class="dropdown-content">
+              <a href="{% url 'capital_inversiones:dashboard' %}">
+                <i class="fas fa-tachometer-alt nav-icon"></i> Dashboard
+              </a>
+              <a href="{% url 'capital_inversiones:reporte_sucursal' %}">
+                <i class="fas fa-building nav-icon"></i> Reporte por Sucursal
+              </a>
+              <a href="{% url 'capital_inversiones:reporte_categoria' %}">
+                <i class="fas fa-tags nav-icon"></i> Reporte por Categoría
+              </a>
+              <a href="{% url 'capital_inversiones:reporte_rendimientos' %}">
+                <i class="fas fa-percentage nav-icon"></i> Análisis de Rendimientos
+              </a>
+              <a href="{% url 'admin:capital_inversiones_inversion_changelist' %}">
+                <i class="fas fa-cog nav-icon"></i> Administrar Inversiones
+              </a>
+            </div>
+          </li>
+
           <li>
-            <a href="{% url 'export_full_report' %}" class="text-gray-300 hover:text-white flex items-center py-2">
-              <i class="fas fa-file-excel mr-1"></i> Exportar reporte completo
+            <a href="{% url 'export_full_report' %}" class="nav-link">
+              <i class="fas fa-file-excel nav-icon"></i> Exportar reporte completo
             </a>
           </li>
         </ul>
@@ -77,11 +305,14 @@
   </nav>
 
   <!-- Contenido principal -->
-  <div class="container mx-auto">
+  <div class="w-full px-4">
     {% block content %}
       
     {% endblock %}
   </div>
+
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 
   <!-- Flowbite JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script>
@@ -91,10 +322,13 @@
 
 
 
+  <!-- HTMX Toast Notifications -->
+  <script src="{% static 'js/htmx-toast.js' %}"></script>
+
   <!-- Bloque para scripts adicionales -->
   {% block extra_js %}
   {{ block.super }}
-  
+
     <!-- Calculadora de compras -->
     <script src="{% static 'js/compra_calculator.js' %}"></script>
     
@@ -109,6 +343,26 @@
             menu.classList.toggle('hidden');
           });
         }
+
+        // Manejar dropdown en móvil
+        const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+        
+        dropdownToggles.forEach(toggle => {
+          toggle.addEventListener('click', function(e) {
+            // Solo prevenir default en móvil
+            if (window.innerWidth < 768) {
+              e.preventDefault();
+              const dropdown = this.parentElement;
+              const dropdownContent = dropdown.querySelector('.dropdown-content');
+              
+              // Toggle la clase 'show' para móvil
+              if (dropdownContent) {
+                dropdownContent.classList.toggle('mobile-dropdown-content');
+                dropdownContent.classList.toggle('show');
+              }
+            }
+          });
+        });
       });
     </script>
     <!-- jQuery and DataTables JS -->

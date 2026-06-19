@@ -1,0 +1,547 @@
+{% extends "_base.html" %}
+{% load static humanize ventas_tags %}
+
+{% block title %}Reporte Global de Cobranza{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ======================================================
+     REPORTE COBRANZA — estilos internos
+     ====================================================== */
+
+  /* Tabla base */
+  .rc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+  }
+  .rc-table th,
+  .rc-table td {
+    border: 1px solid #b8dbd9;
+    padding: 5px 8px;
+    white-space: nowrap;
+  }
+
+  /* Encabezado de sección (amarillo) */
+  .rc-header-section {
+    background-color: #fef08a;   /* yellow-200 */
+    color: #2f4550;
+    font-weight: 700;
+    text-align: center;
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+  }
+
+  /* Encabezado de columnas */
+  .rc-header-col {
+    background-color: rgba(201,162,39,.15);   /* yellow-100 */
+    color: #2f4550;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  /* Fila normal */
+  .rc-row td {
+    background-color: #fff;
+  }
+
+  /* Fila de totales (cyan) */
+  .rc-total td {
+    background-color: #b8dbd9;   /* cyan-300 */
+    font-weight: 700;
+  }
+
+  /* Fila de maquila TIPO CAMBIO / PESOS MX */
+  .rc-subtotal td {
+    background-color: #a5f3fc;   /* cyan-200 */
+    font-weight: 600;
+  }
+
+  /* Fila ANTICIPOS / SALDO A FAVOR */
+  .rc-anticipo td {
+    background-color: #f0fdf4;
+    color: #5a7d6b;
+    font-style: italic;
+  }
+
+  /* Columna TOTAL X COBRAR */
+  .rc-col-total {
+    background-color: #fef9c3;
+    font-weight: 700;
+  }
+
+  /* Impuestos */
+  .rc-impuesto td {
+    background-color: #fff;
+  }
+  .rc-impuesto-header td {
+    background-color: rgba(201,162,39,.15);
+    font-weight: 700;
+  }
+  .rc-impuesto-total td {
+    background-color: #b8dbd9;
+    font-weight: 700;
+  }
+
+  /* Alineación numérica */
+  .rc-num {
+    text-align: right;
+  }
+
+  /* Cero / sin datos */
+  .rc-zero {
+    color: #b8dbd9;
+  }
+
+  /* Moneda por fila */
+  .rc-row-usd td { background-color: #f0fdf4; }
+  .rc-mon { text-align: center; font-weight: 700; font-size: 0.7rem; padding: 2px 5px; border-radius: 3px; white-space: nowrap; }
+  .rc-mon-usd { color: #3d6b2c; background-color: #bbf7d0; }
+  .rc-mon-mxn { color: #586f7c; background-color: rgba(184,219,217,.3); }
+  /* Footer cartera */
+  .rc-equiv-row td { background-color: rgba(184,219,217,.2); color: #3d6b2c; font-weight: 600; }
+  .rc-grand-total td { background-color: #2f4550; color: #fff; font-weight: 700; font-size: 0.9rem; }
+
+  /* Contenedor scroll horizontal */
+  .rc-scroll {
+    overflow-x: auto;
+  }
+
+  /* Sección card */
+  .rc-card {
+    background: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 2rem;
+    overflow: hidden;
+  }
+
+  /* ======================================================
+     PRINT
+     ====================================================== */
+  @media print {
+    nav, aside, .no-print, .rc-filter-card { display: none !important; }
+    body { background: white; }
+    .rc-card { box-shadow: none; border: none; }
+    .rc-table th, .rc-table td { font-size: 0.7rem; padding: 3px 5px; }
+    a { text-decoration: none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-screen-2xl mx-auto px-4 py-6">
+
+  <!-- ============================================================
+       ENCABEZADO DE PÁGINA
+       ============================================================ -->
+  <div class="flex items-center justify-between mb-4 no-print">
+    <div>
+      <h1 class="text-2xl font-bold text-[#2f4550]">
+        <i class="fas fa-file-invoice-dollar mr-2 text-[#2f4550]"></i>
+        Reporte Global de Cobranza
+      </h1>
+      <p class="text-[#586f7c] text-sm mt-1">
+        Ventas x Cobrar &bull; Maquila x Cobrar &bull; Obligaciones Fiscales
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="window.print()"
+        class="flex items-center gap-2 bg-[#2f4550] hover:bg-[#2f4550] text-[#f4f4f9] text-sm font-medium px-4 py-2 rounded shadow no-print">
+        <i class="fas fa-print"></i> Imprimir
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       FILTROS
+       ============================================================ -->
+  <div class="rc-filter-card bg-[#f4f4f9] rounded-lg shadow p-4 mb-6 no-print">
+    <form method="get" class="flex flex-wrap gap-4 items-end">
+      <div>
+        <label class="block text-xs font-semibold text-[#586f7c] mb-1">Fecha Inicio</label>
+        <input type="date" name="fecha_inicio" value="{{ fecha_inicio_str }}"
+          class="border border-[#d8dce6] rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-[#586f7c] mb-1">Fecha Fin</label>
+        <input type="date" name="fecha_fin" value="{{ fecha_fin_str }}"
+          class="border border-[#d8dce6] rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-[#586f7c] mb-1">
+          Tipo de Cambio USD <span class="font-normal text-[#b8dbd9]">(override)</span>
+        </label>
+        <input type="number" name="tipo_cambio" value="{{ tipo_cambio_input }}"
+          step="0.0001" min="0" placeholder="Ej: 17.5990"
+          class="border border-[#d8dce6] rounded px-3 py-1.5 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-blue-400">
+      </div>
+      <button type="submit"
+        class="bg-[#2f4550] hover:bg-[#2f4550] text-[#f4f4f9] text-sm font-semibold px-5 py-2 rounded shadow">
+        <i class="fas fa-search mr-1"></i> Generar
+      </button>
+      <a href="{% url 'ventas:reporte_cobranza' %}"
+        class="text-sm text-[#586f7c] hover:text-[#2f4550] underline self-center">Limpiar</a>
+    </form>
+  </div>
+
+  {% with periodo_label=fecha_inicio_str|slice:":4" %}
+
+  <!-- ============================================================
+       SECCIÓN 1 — VENTAS X COBRAR
+       ============================================================ -->
+  <div class="rc-card">
+    <div class="rc-scroll">
+      <table class="rc-table">
+        <!-- Título de sección -->
+        <thead>
+          <tr>
+            <th class="rc-header-section" colspan="{{ sucursales|length|add:3 }}">
+              TEMPORADA {{ fecha_inicio_str }} — {{ fecha_fin_str }}<br>
+              MAQUILA Y VENTAS X COBRAR
+            </th>
+            {% if total_anticipos > 0 %}
+            <th class="rc-header-section" style="background-color:rgba(184,219,217,.3);">
+              SALDO<br>FVR CLIENTE
+            </th>
+            {% endif %}
+          </tr>
+          <!-- Columnas -->
+          <tr>
+            <th class="rc-header-col" style="min-width:200px;">CLIENTE / CONCEPTO</th>
+            <th class="rc-header-col" style="min-width:55px;">MON.</th>
+            {% for suc in sucursales %}
+            <th class="rc-header-col" style="min-width:130px;">{{ suc.nombre|upper }}</th>
+            {% endfor %}
+            <th class="rc-header-col" style="min-width:140px;">TOTAL X COBRAR</th>
+            {% if total_anticipos > 0 %}
+            <th class="rc-header-col" style="background-color:rgba(184,219,217,.15); min-width:120px;">SALDO FVR</th>
+            {% endif %}
+          </tr>
+        </thead>
+
+        <tbody>
+          <!-- Fila ANTICIPOS / SALDO A FAVOR (si hay anticipos globales) -->
+          {% if total_anticipos > 0 %}
+          <tr class="rc-anticipo">
+            <td class="font-semibold">ANTICIPOS / SALDO A FAVOR</td>
+            <td></td>
+            {% for suc in sucursales %}<td></td>{% endfor %}
+            <td></td>
+            <td class="rc-num font-bold">$ {{ total_anticipos|floatformat:2|intcomma }}</td>
+          </tr>
+          {% endif %}
+
+          <!-- Filas de clientes: ventas -->
+          {% for fila in ventas_por_cliente %}
+          <tr class="rc-row {% if fila.moneda == 'USD' %}rc-row-usd{% endif %}">
+            <td class="font-medium text-[#2f4550]">{{ fila.cliente.nombre|upper }}</td>
+            <td class="rc-mon">
+              {% if fila.moneda == 'USD' %}<span class="rc-mon-usd">USD</span>{% else %}<span class="rc-mon-mxn">MXN</span>{% endif %}
+            </td>
+            {% for suc in sucursales %}
+              {% with monto=fila.por_sucursal|get_item:suc.id %}
+              <td class="rc-num {% if not monto or monto == 0 %}rc-zero{% endif %}">
+                {% if monto and monto > 0 %}
+                  {% if fila.moneda == 'USD' %}US{% endif %}$ {{ monto|floatformat:2|intcomma }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              {% endwith %}
+            {% endfor %}
+            <!-- Total -->
+            <td class="rc-num rc-col-total">
+              {% if fila.moneda == 'USD' %}US{% endif %}$ {{ fila.total|floatformat:2|intcomma }}
+            </td>
+            <!-- Saldo FVR -->
+            {% if total_anticipos > 0 %}
+            <td class="rc-num" style="background-color:rgba(184,219,217,.15);">
+              {% if fila.anticipo > 0 %}
+                $ {{ fila.anticipo|floatformat:2|intcomma }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            {% endif %}
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="{{ sucursales|length|add:3 }}" class="text-center text-[#b8dbd9] py-4 italic">
+              Sin ventas pendientes en el período seleccionado.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+
+        <!-- TOTAL VENTAS -->
+        <tfoot>
+          {% if total_ventas_usd > 0 %}
+          <!-- SUBTOTAL EXPORTACIÓN USD -->
+          <tr class="rc-total">
+            <td>SUBTOTAL EXPORTACIÓN (USD)</td>
+            <td class="rc-mon"><span class="rc-mon-usd">USD</span></td>
+            {% for suc in sucursales %}
+              {% with monto=totales_ventas_usd.por_sucursal|get_item:suc.id %}
+              <td class="rc-num">{% if monto and monto > 0 %}US$ {{ monto|floatformat:2|intcomma }}{% else %}-{% endif %}</td>
+              {% endwith %}
+            {% endfor %}
+            <td class="rc-num">US$ {{ total_ventas_usd|floatformat:2|intcomma }}</td>
+            {% if total_anticipos > 0 %}<td></td>{% endif %}
+          </tr>
+          <!-- TIPO DE CAMBIO -->
+          <tr class="rc-subtotal">
+            <td>TIPO DE CAMBIO {{ hoy|date:"d-m-Y" }} USD → MXN</td>
+            <td class="rc-num">{{ tipo_cambio_ventas|floatformat:4 }}</td>
+            {% for suc in sucursales %}<td></td>{% endfor %}
+            <td></td>
+            {% if total_anticipos > 0 %}<td></td>{% endif %}
+          </tr>
+          <!-- EQUIVALENTE MXN -->
+          <tr class="rc-equiv-row">
+            <td>EQUIVALENTE EN PESOS MEXICANOS</td>
+            <td class="rc-mon"><span class="rc-mon-mxn">MXN</span></td>
+            {% for suc in sucursales %}<td></td>{% endfor %}
+            <td class="rc-num">$ {{ total_ventas_equiv_mxn|floatformat:2|intcomma }}</td>
+            {% if total_anticipos > 0 %}<td></td>{% endif %}
+          </tr>
+          {% endif %}
+          {% if total_ventas_mxn_nat > 0 %}
+          <!-- SUBTOTAL NACIONALES MXN -->
+          <tr class="rc-subtotal">
+            <td>SUBTOTAL VENTAS NACIONALES</td>
+            <td class="rc-mon"><span class="rc-mon-mxn">MXN</span></td>
+            {% for suc in sucursales %}
+              {% with monto=totales_ventas_mxn_obj.por_sucursal|get_item:suc.id %}
+              <td class="rc-num">{% if monto and monto > 0 %}$ {{ monto|floatformat:2|intcomma }}{% else %}-{% endif %}</td>
+              {% endwith %}
+            {% endfor %}
+            <td class="rc-num">$ {{ total_ventas_mxn_nat|floatformat:2|intcomma }}</td>
+            {% if total_anticipos > 0 %}
+            <td class="rc-num" style="background-color:#93c5fd;">SALDO TOTAL FVR</td>
+            {% endif %}
+          </tr>
+          {% endif %}
+          <!-- TOTAL CARTERA MXN -->
+          <tr class="rc-grand-total">
+            <td colspan="2">TOTAL CARTERA A COBRAR (EQUIVALENTE MXN)</td>
+            {% for suc in sucursales %}<td></td>{% endfor %}
+            <td class="rc-num" style="font-size:1rem; letter-spacing:0.02em;">$ {{ total_cartera_ventas_mxn|floatformat:2|intcomma }}</td>
+            {% if total_anticipos > 0 %}<td></td>{% endif %}
+          </tr>
+          {% if total_anticipos > 0 %}
+          <tr style="background-color:#586f7c; color:#fff; font-weight:700;">
+            <td colspan="2">(-) SALDO A FAVOR ANTICIPOS</td>
+            {% for suc in sucursales %}<td></td>{% endfor %}
+            <td class="rc-num" style="font-size:0.9rem; color:rgba(184,219,217,.3);">
+              ($ {{ total_anticipos|floatformat:2|intcomma }})
+            </td>
+            <td></td>
+          </tr>
+          <tr style="background-color:#2f4550; color:#fff; font-weight:700;">
+            <td colspan="2">DEUDA NETA A COBRAR (MXN)</td>
+            {% for suc in sucursales %}<td></td>{% endfor %}
+            <td class="rc-num" style="font-size:1rem; color:rgba(201,162,39,.15); letter-spacing:0.02em;">
+              $ {{ deuda_neta_mxn|floatformat:2|intcomma }}
+            </td>
+            <td></td>
+          </tr>
+          {% endif %}
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SECCIÓN 2 — MAQUILA X COBRAR
+       ============================================================ -->
+  <div class="rc-card">
+    <div class="rc-scroll">
+      <table class="rc-table">
+        <thead>
+          <tr>
+            <th class="rc-header-section" colspan="{{ sucursales|length|add:2 }}">
+              TEMPORADA {{ fecha_inicio_str }} — {{ fecha_fin_str }}<br>
+              MAQUILA X COBRAR
+            </th>
+          </tr>
+          <tr>
+            <th class="rc-header-col" style="min-width:200px;">CLIENTE / CONCEPTO</th>
+            <th class="rc-header-col" style="font-size:0.7rem;">MONEDA USD</th>
+            {% for suc in sucursales %}
+            <th class="rc-header-col" style="min-width:130px;">{{ suc.nombre|upper }}</th>
+            {% endfor %}
+            <th class="rc-header-col" style="min-width:140px;">TOTAL X COBRAR</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for fila in maquila_por_cliente %}
+          <tr class="rc-row">
+            <td class="font-medium text-[#2f4550]">{{ fila.cliente.nombre|upper }}</td>
+            <td></td>
+            {% for suc in sucursales %}
+              {% with monto=fila.por_sucursal|get_item:suc.id %}
+              <td class="rc-num {% if not monto or monto == 0 %}rc-zero{% endif %}">
+                {% if monto and monto > 0 %}
+                  $ {{ monto|floatformat:2|intcomma }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              {% endwith %}
+            {% endfor %}
+            <td class="rc-num rc-col-total">
+              $ {{ fila.total|floatformat:2|intcomma }}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="{{ sucursales|length|add:2 }}" class="text-center text-[#b8dbd9] py-4 italic">
+              Sin maquila pendiente en el período seleccionado.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+
+        <tfoot>
+          <!-- Total maquila USD -->
+          <tr class="rc-total">
+            <td>TOTAL MAQUILA X COBRAR</td>
+            <td class="rc-num">$</td>
+            {% for suc in sucursales %}
+              {% with monto=totales_maquila.por_sucursal|get_item:suc.id %}
+              <td class="rc-num">
+                {% if monto and monto > 0 %}$ {{ monto|floatformat:2|intcomma }}{% else %}-{% endif %}
+              </td>
+              {% endwith %}
+            {% endfor %}
+            <td class="rc-num">$ {{ totales_maquila.total|floatformat:2|intcomma }}</td>
+          </tr>
+          <!-- Tipo de cambio -->
+          <tr class="rc-subtotal">
+            <td>TIPO CAMBIO HOY {{ hoy|date:"d-m-Y" }} PARA PAGOS</td>
+            <td class="rc-num">{{ tipo_cambio|floatformat:4 }}</td>
+            {% for suc in sucursales %}<td></td>{% endfor %}
+            <td></td>
+          </tr>
+          <!-- Total en pesos -->
+          <tr class="rc-subtotal" style="background-color:#34d399; color:#3d6b2c;">
+            <td class="font-bold">PESOS MEXICANOS</td>
+            <td class="rc-num font-bold">$</td>
+            {% for suc in sucursales %}<td></td>{% endfor %}
+            <td class="rc-num font-bold">
+              $ {{ totales_maquila.total_mxn|floatformat:2|intcomma }}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  {% endwith %}
+
+  <!-- ============================================================
+       SECCIÓN 3 — SALDO A FAVOR (ANTICIPOS PENDIENTES)
+       ============================================================ -->
+  {% if anticipos_saldo_favor %}
+  <div class="rc-card" style="max-width:680px;">
+    <div class="rc-scroll">
+      <table class="rc-table">
+        <thead>
+          <tr>
+            <th class="rc-header-section" colspan="2" style="background-color:#586f7c; font-size:0.85rem;">
+              SALDO A FAVOR — ANTICIPOS PENDIENTES DE APLICAR
+            </th>
+          </tr>
+          <tr>
+            <th class="rc-header-col" style="min-width:260px; text-align:left;">CLIENTE</th>
+            <th class="rc-header-col" style="min-width:160px;">SALDO DISPONIBLE (MXN)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in anticipos_saldo_favor %}
+          <tr class="rc-row">
+            <td class="font-medium text-[#2f4550]">{{ row.cliente.nombre|upper }}</td>
+            <td class="rc-num" style="color:#586f7c; font-weight:600;">
+              $ {{ row.saldo|floatformat:2|intcomma }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr style="background-color:#2f4550; color:#fff; font-weight:700;">
+            <td style="padding:8px 12px;">TOTAL SALDO A FAVOR</td>
+            <td class="rc-num" style="font-size:1rem;">
+              $ {{ total_anticipos|floatformat:2|intcomma }}
+            </td>
+          </tr>
+          <tr style="background-color:#2f4550; color:#fff; font-weight:700;">
+            <td style="padding:8px 12px;">DEUDA NETA (CARTERA − SALDO A FAVOR)</td>
+            <td class="rc-num" style="font-size:1rem; color:rgba(201,162,39,.15);">
+              $ {{ deuda_neta_mxn|floatformat:2|intcomma }}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ============================================================
+       SECCIÓN 4 — IMPUESTOS A PAGAR
+       ============================================================ -->
+  {% if obligacion_fiscal %}
+  <div class="rc-card" style="max-width:520px;">
+    <div class="rc-scroll">
+      <table class="rc-table">
+        <thead>
+          <tr>
+            <th class="rc-header-section" colspan="2" style="font-size:0.82rem;">
+              IMPUESTOS A PAGAR
+              {% if obligacion_fiscal.periodo %} — {{ obligacion_fiscal.periodo|upper }}{% endif %}
+            </th>
+          </tr>
+          <tr>
+            <th class="rc-header-col" style="min-width:280px; text-align:left;">CONCEPTO</th>
+            <th class="rc-header-col" style="min-width:140px;">IMPORTE</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="rc-impuesto">
+            <td>ISR INGRESOS PROPIOS</td>
+            <td class="rc-num">$ {{ obligacion_fiscal.isr_ingresos_propios.amount|floatformat:2|intcomma }}</td>
+          </tr>
+          <tr class="rc-impuesto">
+            <td>ISR RESICO SERVICIOS PROFESIONALES</td>
+            <td class="rc-num">$ {{ obligacion_fiscal.isr_resico.amount|floatformat:2|intcomma }}</td>
+          </tr>
+          <tr class="rc-impuesto">
+            <td>ISR RETENCIONES POR SALARIOS</td>
+            <td class="rc-num">$ {{ obligacion_fiscal.isr_retenciones_salarios.amount|floatformat:2|intcomma }}</td>
+          </tr>
+          <tr class="rc-impuesto">
+            <td>IVA RETENCIONES SERVICIOS PROFESIONALES</td>
+            <td class="rc-num">$ {{ obligacion_fiscal.iva_retenciones_profesionales.amount|floatformat:2|intcomma }}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="rc-impuesto-total">
+            <td>TOTAL IMPUESTOS A PAGAR</td>
+            <td class="rc-num">$ {{ obligacion_fiscal.total_impuestos|floatformat:2|intcomma }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-lg text-sm text-yellow-800">
+    <i class="fas fa-info-circle mr-2"></i>
+    No hay ninguna <strong>Obligación Fiscal</strong> registrada aún.
+    Puedes agregarla desde el
+    <a href="/admin/ventas/obligacionfiscal/add/" class="underline font-semibold">panel administrativo</a>.
+  </div>
+  {% endif %}
+
+</div><!-- end max-w container -->
+{% endblock %}

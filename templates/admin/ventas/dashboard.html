@@ -1,0 +1,192 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Dashboard de Ventas{% endblock %}
+
+{% block extrahead %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+.dashboard-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-left: 4px solid #007cba;
+}
+
+.metric-value {
+    font-size: 2em;
+    font-weight: bold;
+    color: #007cba;
+}
+
+.metric-label {
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 5px;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.alert-danger { background: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 4px; }
+.alert-warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 4px; }
+.alert-success { background: #d4edda; border: 1px solid #c3e6cb; padding: 10px; border-radius: 4px; }
+.alert-info { background: #d1ecf1; border: 1px solid #bee5eb; padding: 10px; border-radius: 4px; }
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin: 20px 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>📊 Dashboard de Ventas y Cuentas por Cobrar</h1>
+    
+    <!-- Métricas principales -->
+    <div class="dashboard-grid">
+        <!-- DSO (Days Sales Outstanding) -->
+        <div class="dashboard-card">
+            <div class="metric-label">DSO (Días de Cobranza)</div>
+            <div class="metric-value">{{ dso_metrics.dso_dias }} días</div>
+            <div class="alert-{% if dso_metrics.benchmark == 'Excelente' %}success{% elif dso_metrics.benchmark == 'Bueno' %}info{% elif dso_metrics.benchmark == 'Regular' %}warning{% else %}danger{% endif %}">
+                Evaluación: {{ dso_metrics.benchmark }}
+            </div>
+        </div>
+        
+        <!-- Ventas del mes -->
+        <div class="dashboard-card">
+            <div class="metric-label">Ventas Este Mes</div>
+            <div class="metric-value">${{ ventas_mes.total|default:0|floatformat:0|intcomma }}</div>
+            <small>{{ ventas_mes.count|default:0 }} transacciones</small>
+        </div>
+        
+        <!-- Cuentas vencidas -->
+        <div class="dashboard-card">
+            <div class="metric-label">Cuentas Vencidas</div>
+            <div class="metric-value" style="color: #dc3545;">${{ vencidas.total|default:0|floatformat:0|intcomma }}</div>
+            <small>{{ vencidas.count|default:0 }} cuentas</small>
+        </div>
+        
+        <!-- Total cuentas por cobrar -->
+        <div class="dashboard-card">
+            <div class="metric-label">Total por Cobrar</div>
+            <div class="metric-value" style="color: #fd7e14;">${{ dso_metrics.total_cxc|floatformat:0|intcomma }}</div>
+            <small>Saldo pendiente total</small>
+        </div>
+    </div>
+    
+    <!-- Top Clientes -->
+    <div class="dashboard-card">
+        <h3>🏆 Top 5 Clientes por Volumen (Este Año)</h3>
+        {% if top_clientes %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Total Ventas</th>
+                        <th>Número de Ventas</th>
+                        <th>Promedio por Venta</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cliente in top_clientes %}
+                    <tr>
+                        <td><strong>{{ cliente.cliente__nombre }}</strong></td>
+                        <td>${{ cliente.total_ventas|floatformat:0|intcomma }}</td>
+                        <td>{{ cliente.num_ventas }}</td>
+                        <td>${{ cliente.total_ventas|div:cliente.num_ventas|floatformat:0|intcomma }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No hay datos de clientes disponibles.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Gráficos -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <!-- Gráfico DSO Tendencia -->
+        <div class="dashboard-card">
+            <h3>📈 Tendencia DSO (6 meses)</h3>
+            <div class="chart-container">
+                <canvas id="dsoChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfico Estados de Cobranza -->
+        <div class="dashboard-card">
+            <h3>🎯 Estados de Cobranza</h3>
+            <div class="chart-container">
+                <canvas id="estadosChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alertas y acciones rápidas -->
+    <div class="dashboard-card">
+        <h3>⚡ Acciones Rápidas</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+            <a href="{% url 'admin:ventas_ventas_changelist' %}?vencimiento=vencido" class="button">Ver Cuentas Vencidas</a>
+            <a href="{% url 'admin:ventas_ventas_changelist' %}?vencimiento=vence_hoy" class="button">Ver Vencimientos Hoy</a>
+            <a href="{% url 'admin:ventas_cliente_changelist' %}?tipo_cliente=Credito" class="button">Clientes a Crédito</a>
+            <a href="{% url 'admin:ventas_ventas_changelist' %}?modalidad_pago=Credito&estado_cobranza=Pendiente" class="button">Créditos Pendientes</a>
+        </div>
+    </div>
+</div>
+
+<script>
+// Gráfico DSO (simplificado - en producción, obtener datos reales via AJAX)
+const dsoCtx = document.getElementById('dsoChart').getContext('2d');
+new Chart(dsoCtx, {
+    type: 'line',
+    data: {
+        labels: ['Hace 5 meses', 'Hace 4 meses', 'Hace 3 meses', 'Hace 2 meses', 'Mes pasado', 'Este mes'],
+        datasets: [{
+            label: 'DSO (días)',
+            data: [45, 42, 38, 35, 33, {{ dso_metrics.dso_dias }}],
+            borderColor: '#007cba',
+            backgroundColor: 'rgba(0, 124, 186, 0.1)',
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                suggestedMax: 60
+            }
+        }
+    }
+});
+
+// Gráfico Estados de Cobranza
+const estadosCtx = document.getElementById('estadosChart').getContext('2d');
+new Chart(estadosCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Pagado', 'Pendiente', 'Parcial', 'Vencido'],
+        datasets: [{
+            data: [70, 15, 10, 5], // En producción, obtener datos reales
+            backgroundColor: ['#28a745', '#ffc107', '#17a2b8', '#dc3545']
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+</script>
+{% endblock %}

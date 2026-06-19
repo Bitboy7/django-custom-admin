@@ -21,14 +21,21 @@ def us_currency(value, decimal_places=2):
     Formatea un número como moneda en formato estadounidense
     Ejemplo: 1234.56 -> 1,234.56
     """
-    if value is None or value == '':
-        return '0.00'
+    if value is None or value == '' or value == 'None':
+        return '0.00' if decimal_places > 0 else '0'
     
     try:
         # Convertir a Decimal para mayor precisión
         if isinstance(value, str):
+            # Limpiar la cadena de espacios y caracteres no numéricos
+            value = value.strip()
+            if not value or value == '-':
+                return '0.00' if decimal_places > 0 else '0'
             value = Decimal(value)
+        elif isinstance(value, (int, float)):
+            value = Decimal(str(value))
         elif not isinstance(value, Decimal):
+            # Intentar convertir otros tipos
             value = Decimal(str(value))
         
         # Formatear con la cantidad específica de decimales
@@ -49,8 +56,8 @@ def us_currency(value, decimal_places=2):
         else:
             return integer_with_commas
             
-    except (ValueError, TypeError, AttributeError):
-        return '0.00'
+    except (ValueError, TypeError, AttributeError, Exception):
+        return '0.00' if decimal_places > 0 else '0'
 
 @register.filter
 def us_number(value, decimal_places=2):

@@ -1,0 +1,831 @@
+{% extends "admin/base_site.html" %}
+{% load i18n l10n static humanize gastos_tags ventas_tags %}
+
+{% block title %}Análisis de Ventas | {{ site_title }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% trans "Inicio" %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label='ventas' %}">Ventas</a>
+  &rsaquo; Análisis de Ventas
+</div>
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css">
+<link rel="stylesheet" href="//cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="//cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+<link rel="stylesheet" href="//cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
+<link rel="stylesheet" href="{% static 'css/datatables-buttons.css' %}">
+{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  /* ── Page base ── */
+  #content-main { padding: 0; }
+  #content { padding: 1.25rem; background-color: #f4f4f9; min-height: 100vh; }
+
+  /* ── AdminLTE/Jazzmin compat ── */
+  .main-header .navbar-brand, .main-header .nav-link,
+  .main-sidebar .nav-link, .main-sidebar .brand-link, .main-sidebar .nav-header {
+    font-size: revert; font-weight: revert; line-height: revert;
+  }
+  .main-header img, .main-sidebar img, .brand-image { display: inline !important; }
+
+  /* ── KPI Cards ── */
+  .kpi-card {
+    background: #fff;
+    border-radius: .5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 0 0 1px rgba(0,0,0,.04);
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .875rem;
+    border-left: 3px solid transparent;
+    transition: box-shadow .15s, transform .15s;
+    overflow: hidden;
+  }
+  .kpi-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.11); transform: translateY(-2px); }
+  .kpi-icon-wrap {
+    flex-shrink: 0;
+    width: 2.75rem; height: 2.75rem;
+    border-radius: .5rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; color: #fff;
+  }
+  .kpi-body { flex: 1; min-width: 0; }
+  .kpi-label {
+    font-size: .6rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; color: #586f7c; margin-bottom: .15rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .kpi-value {
+    font-size: 1.15rem; font-weight: 800; color: #2f4550; line-height: 1.15;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .kpi-sub {
+    font-size: .65rem; color: #586f7c; margin-top: .2rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* ── Section Cards ── */
+  .s-card {
+    background: #fff;
+    border-radius: .5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 0 0 1px rgba(0,0,0,.04);
+    overflow: hidden;
+  }
+  .s-card-head {
+    display: flex; align-items: center; gap: .5rem;
+    padding: .625rem 1rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #d8dce6;
+  }
+  .s-card-ico {
+    width: 1.75rem; height: 1.75rem;
+    border-radius: .375rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .75rem;
+  }
+  .s-card-title { font-size: .8rem; font-weight: 700; color: #2f4550; }
+  .s-card-body { padding: 1rem; }
+
+  /* ── Filter Card ── */
+  .filter-card {
+    background: #fff;
+    border-radius: .5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 0 0 1px rgba(0,0,0,.04);
+    overflow: visible;
+    margin-bottom: 1.25rem;
+    position: relative;
+  }
+  .filter-stripe {
+    height: 3px;
+    background: linear-gradient(90deg, #2f4550, #b8dbd9);
+    border-radius: .5rem .5rem 0 0;
+  }
+  .filter-head {
+    padding: .625rem 1rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #d8dce6;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .filter-select {
+    width: 100%; background: #fff; border: 1px solid #d8dce6;
+    border-radius: .375rem; padding: .375rem .625rem;
+    font-size: .8rem; color: #586f7c;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .filter-select:focus { outline: none; border-color: #b8dbd9; box-shadow: 0 0 0 3px rgba(26,173,188,.15); }
+  .filter-label { display: block; font-size: .7rem; font-weight: 700; color: #586f7c; margin-bottom: .25rem; }
+
+  /* ── DataTable overrides ── */
+  table.dataTable thead th {
+    background: linear-gradient(135deg, #2f4550 0%, #586f7c 100%) !important;
+    color: #fff !important;
+    border: none !important;
+    font-size: .7rem !important; font-weight: 700 !important;
+    letter-spacing: .05em !important; text-transform: uppercase !important;
+    padding: .75rem 1rem !important;
+  }
+  table.dataTable tfoot th {
+    background: rgba(184,219,217,.1) !important;
+    color: #586f7c !important;
+    font-weight: 700 !important;
+    font-size: .75rem !important;
+  }
+  table.dataTable.stripe tbody tr.odd { background-color: #f8fafc; }
+  table.dataTable.hover tbody tr:hover > * { background-color: rgba(184,219,217,.1) !important; box-shadow: none; }
+  table.dataTable tbody td { font-size: .8rem; }
+  div.dataTables_wrapper div.dataTables_filter input,
+  div.dataTables_wrapper div.dataTables_length select {
+    border: 1px solid #d8dce6; border-radius: .375rem; font-size: .78rem;
+    padding: .25rem .5rem;
+  }
+  .dt-buttons .dt-button {
+    border-radius: .375rem !important; font-size: .7rem !important;
+    padding: .3rem .65rem !important; font-weight: 600 !important;
+  }
+  /* ── Scroll bar thin ── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: #f1f5f9; }
+  ::-webkit-scrollbar-thumb { background: #b8dbd9; border-radius: 3px; }
+
+  /* ── Export PDF button ── */
+  .btn-export-pdf {
+    display: inline-flex; align-items: center; gap: .375rem;
+    font-size: .75rem; font-weight: 700; color: #fff;
+    background: linear-gradient(135deg, #b85450, #b85450);
+    border: none; border-radius: .375rem;
+    padding: .35rem .8rem; cursor: pointer;
+    box-shadow: 0 1px 3px rgba(220,38,38,.3);
+    transition: opacity .15s, box-shadow .15s;
+  }
+  .btn-export-pdf:hover  { opacity: .9; box-shadow: 0 3px 8px rgba(220,38,38,.35); }
+  .btn-export-pdf:active { opacity: .8; }
+  .btn-export-pdf:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ── Estado badges ── */
+  .estado-pagado     { color: #5a7d6b; background-color: rgba(184,219,217,.1); padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
+  .estado-pendiente  { color: #c9a227; background-color: rgba(201,162,39,.08); padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
+  .estado-parcial    { color: #586f7c; background-color: rgba(184,219,217,.15); padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
+  .estado-vencido    { color: #b85450; background-color: #e8b4b0; padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
+  .estado-incobrable { color: #586f7c; background-color: #f4f4f9; padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="text-[#2f4550]">
+
+  {# ── Toast de notificación ── #}
+  <div id="toast-notification" class="fixed top-4 right-4 z-50 transform translate-x-full transition-all duration-300 opacity-0">
+    <div class="bg-[#f4f4f9] border-l-4 border-[#2f4550] shadow-xl rounded-md p-4 flex items-start gap-3 max-w-xs">
+      <div class="w-8 h-8 rounded bg-[rgba(184,219,217,.2)] flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-filter text-[#2f4550] text-sm"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-bold text-[#2f4550]" id="toast-title">¡Filtros aplicados!</p>
+        <p class="text-xs text-[#586f7c] mt-0.5" id="toast-message">La información ha sido filtrada según los criterios seleccionados.</p>
+      </div>
+      <button type="button" class="text-[#b8dbd9] hover:text-[#586f7c] transition-colors ml-1" onclick="hideToast()">
+        <i class="fas fa-times text-xs"></i>
+      </button>
+    </div>
+  </div>
+
+  {# ── Aviso inicial ── #}
+  <div id="warning-message" class="bg-[rgba(184,219,217,.15)] border-l-4 border-blue-400 rounded-r-md p-3 mb-4 flex items-center gap-3" role="alert">
+    <div class="w-7 h-7 rounded bg-[rgba(184,219,217,.2)] flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-info-circle text-[#586f7c] text-xs"></i>
+    </div>
+    <div>
+      <p class="text-xs font-bold text-[#2f4550]">Información</p>
+      <p class="text-xs text-[#2f4550]">El filtro por defecto es mensual. Seleccione el período y filtros deseados para el análisis.</p>
+    </div>
+  </div>
+
+  {# ── Filtros ── #}
+  <div class="filter-card">
+    <div class="filter-stripe"></div>
+    <div class="filter-head">
+      <i class="fas fa-sliders-h text-[#2f4550] text-sm"></i>
+      <span class="text-sm font-bold text-[#586f7c]">Filtros de análisis de ventas</span>
+      <span class="relative group ml-1">
+        <i class="fas fa-question-circle text-blue-400 cursor-pointer text-xs"></i>
+        <div class="absolute left-0 mt-2 w-80 bg-[#f4f4f9] border border-[#d8dce6] rounded-lg shadow-xl p-4 text-xs text-[#586f7c] opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 pointer-events-none" style="top:100%">
+          <strong class="text-[#2f4550] block mb-2">¿Cómo usar el análisis de ventas?</strong>
+          <ul class="space-y-1.5">
+            <li><span class="font-semibold text-[#586f7c]">Cliente:</span> Filtra ventas por cliente específico.</li>
+            <li><span class="font-semibold text-[#586f7c]">Cuenta:</span> Análisis por cuenta bancaria de cobro.</li>
+            <li><span class="font-semibold text-[#586f7c]">Sucursal:</span> Ventas por sucursal de la empresa.</li>
+            <li><span class="font-semibold text-[#586f7c]">Mercado:</span> Filtro por mercado de destino.</li>
+            <li><span class="font-semibold text-[#586f7c]">Modalidad:</span> Ventas al contado vs crédito.</li>
+            <li><span class="font-semibold text-[#586f7c]">Estado:</span> Estado de cobranza (Pagado, Pendiente, Vencido, etc.).</li>
+            <li><span class="font-semibold text-[#586f7c]">Período:</span> <span class="text-[#2f4550] font-semibold">Diario</span>, <span class="text-[#2f4550] font-semibold">Semanal</span> o <span class="text-[#2f4550] font-semibold">Mensual</span>.</li>
+          </ul>
+        </div>
+      </span>
+    </div>
+    <div class="p-4">
+      <form method="get" action="{% url 'admin:ventas_ventas_balances' %}" class="space-y-3">
+
+        {# Fila 1: Cliente, Cuenta, Sucursal, Mercado #}
+        <div class="flex flex-wrap gap-3 mb-2">
+
+          <div class="flex-1 min-w-[140px]">
+            <label for="cliente_id" class="filter-label">Cliente:</label>
+            <select name="cliente_id" id="cliente_id" class="filter-select">
+              <option value="">Todos los clientes</option>
+              {% for cliente in clientes %}
+              <option value="{{ cliente.id }}" {% if cliente.id|stringformat:"s" == selected_cliente_id %}selected{% endif %}>{{ cliente.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="flex-1 min-w-[140px]">
+            <label for="cuenta_id" class="filter-label">Cuenta:</label>
+            <select name="cuenta_id" id="cuenta_id" class="filter-select">
+              <option value="">Todas las cuentas</option>
+              {% for cuenta in cuentas %}
+              <option value="{{ cuenta.id }}" {% if cuenta.id|stringformat:"s" == selected_cuenta_id %}selected{% endif %}>{{ cuenta.numero_cuenta }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="flex-1 min-w-[140px]">
+            <label for="sucursal_id" class="filter-label">Sucursal:</label>
+            <select name="sucursal_id" id="sucursal_id" class="filter-select">
+              <option value="">Todas las sucursales</option>
+              {% for sucursal in sucursales %}
+              <option value="{{ sucursal.id }}" {% if sucursal.id|stringformat:"s" == selected_sucursal_id %}selected{% endif %}>{{ sucursal.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="flex-1 min-w-[140px]">
+            <label for="mercado_id" class="filter-label">Mercado:</label>
+            <select name="mercado_id" id="mercado_id" class="filter-select">
+              <option value="">Todos los mercados</option>
+              {% for mercado in mercados %}
+              <option value="{{ mercado.id }}" {% if mercado.id|stringformat:"s" == selected_mercado_id %}selected{% endif %}>{{ mercado.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        {# Fila 2: Modalidad, Estado, Año, Meses, Período #}
+        <div class="flex flex-wrap gap-3 mb-2">
+
+          <div class="flex-1 min-w-[140px]">
+            <label for="modalidad_pago" class="filter-label">Modalidad de Pago:</label>
+            <select name="modalidad_pago" id="modalidad_pago" class="filter-select">
+              <option value="">Todas</option>
+              {% for value, display in modalidad_choices %}
+              <option value="{{ value }}" {% if value == selected_modalidad %}selected{% endif %}>{{ display }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="flex-1 min-w-[140px]">
+            <label for="estado_cobranza" class="filter-label">Estado de Cobranza:</label>
+            <select name="estado_cobranza" id="estado_cobranza" class="filter-select">
+              <option value="">Todos</option>
+              {% for value, display in estado_choices %}
+              <option value="{{ value }}" {% if value == selected_estado %}selected{% endif %}>{{ display }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="flex-1 min-w-[110px]">
+            <label for="year" class="filter-label">Año:</label>
+            <select name="year" id="year" class="filter-select">
+              {% for year in available_years %}
+              <option value="{{ year.year|safe }}" {% if year.year|stringformat:"s" == selected_year or not selected_year and year.year == current_year %}selected{% endif %}>{{ year.year|safe }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="flex-1 min-w-[150px]">
+            <label class="filter-label">Meses:</label>
+            <div class="relative">
+              <input type="hidden" name="months" id="months" value="{{ selected_months|join:',' }}">
+              <button type="button" id="month-selector-btn" class="filter-select text-left w-full">
+                <span id="month-selector-text">Todos los meses</span>
+              </button>
+              <div id="month-dropdown" class="absolute z-50 w-full mt-1 bg-[#f4f4f9] border border-[#d8dce6] rounded-md shadow-lg hidden">
+                <div class="p-2 max-h-64 overflow-y-auto">
+                  <label class="flex items-center gap-2 p-2 hover:bg-[rgba(184,219,217,.15)] rounded cursor-pointer">
+                    <input type="checkbox" id="month-all" class="text-[#2f4550] focus:ring-[#b8dbd9] rounded">
+                    <span class="text-xs font-semibold text-[#586f7c]">Todos los meses</span>
+                  </label>
+                  <hr class="my-1 border-gray-100">
+                  {% for month in months %}
+                  <label class="flex items-center gap-2 p-2 hover:bg-[rgba(184,219,217,.15)] rounded cursor-pointer">
+                    <input type="checkbox" class="month-checkbox text-[#2f4550] focus:ring-[#b8dbd9] rounded" value="{{ forloop.counter }}" data-name="{{ month }}">
+                    <span class="text-xs text-[#586f7c]">{{ month }}</span>
+                  </label>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex-1 min-w-[130px]">
+            <label for="periodo" class="filter-label">Período:</label>
+            <select name="periodo" id="periodo" class="filter-select">
+              <option value="diario"  {% if selected_periodo == 'diario'  %}selected{% endif %}>Diario</option>
+              <option value="semanal" {% if selected_periodo == 'semanal' %}selected{% endif %}>Semanal</option>
+              <option value="mensual" {% if selected_periodo == 'mensual' %}selected{% endif %}>Mensual</option>
+            </select>
+          </div>
+        </div>
+
+        {# Opciones de filtro diario #}
+        <div id="filtro-diario-opciones" {% if selected_periodo != 'diario' %}style="display:none"{% endif %}>
+          <div class="bg-[#f4f4f9] border border-[#d8dce6] rounded-lg p-3">
+            <p class="text-xs font-bold text-[#586f7c] mb-2 flex items-center gap-1.5">
+              <i class="fas fa-calendar-day text-[#586f7c]"></i> Tipo de consulta diaria
+            </p>
+            <div class="flex flex-wrap gap-4 mb-3">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="tipo_fecha" value="dia" id="radio-dia"
+                  class="w-4 h-4 text-[#2f4550] focus:ring-[#b8dbd9]"
+                  {% if selected_dia or not selected_fecha_inicio %}checked{% endif %}>
+                <span class="text-xs font-medium text-[#586f7c]"><i class="fas fa-calendar-day text-[#586f7c] mr-1"></i> Día específico</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="tipo_fecha" value="rango" id="radio-rango"
+                  class="w-4 h-4 text-[#2f4550] focus:ring-[#b8dbd9]"
+                  {% if selected_fecha_inicio %}checked{% endif %}>
+                <span class="text-xs font-medium text-[#586f7c]"><i class="fas fa-calendar-alt text-[#586f7c] mr-1"></i> Rango de fechas</span>
+              </label>
+            </div>
+
+            <div id="campo-dia-especifico" {% if selected_fecha_inicio %}style="display:none"{% endif %}>
+              <label class="filter-label">Seleccione el día:</label>
+              <input type="date" name="dia" id="dia" value="{{ selected_dia }}" class="filter-select w-auto">
+            </div>
+
+            <div id="campos-rango-fechas" {% if not selected_fecha_inicio %}style="display:none"{% endif %}>
+              <div class="flex flex-wrap gap-3">
+                <div class="flex-1 min-w-[160px]">
+                  <label class="filter-label">Fecha inicial:</label>
+                  <input type="date" name="fecha_inicio" id="fecha_inicio" value="{{ selected_fecha_inicio }}" class="filter-select">
+                </div>
+                <div class="flex-1 min-w-[160px]">
+                  <label class="filter-label">Fecha fin:</label>
+                  <input type="date" name="fecha_fin" id="fecha_fin" value="{{ selected_fecha_fin }}" class="filter-select">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# Botón aplicar #}
+        <div class="flex items-center gap-2 pt-1">
+          <button type="submit"
+            class="inline-flex items-center gap-1.5 text-xs font-bold text-[#f4f4f9] bg-[#2f4550] hover:bg-[#2f4550] px-5 py-2 rounded shadow-sm transition-colors">
+            <i class="fas fa-search"></i> Aplicar Filtros
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# ── KPI Cards — 6 métricas ── #}
+  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-5">
+
+    <div class="kpi-card" style="border-left-color:#2f4550" title="${{ total_ventas|us_currency:2 }}">
+      <div class="kpi-icon-wrap" style="background:#2f4550"><i class="fas fa-dollar-sign"></i></div>
+      <div class="kpi-body">
+        <p class="kpi-label">Total Ventas</p>
+        <p class="kpi-value" id="kpi-total-ventas">${{ total_ventas|us_currency:2 }}</p>
+      </div>
+    </div>
+
+    <div class="kpi-card" style="border-left-color:#0369a1" title="${{ total_pagado|us_currency:2 }}">
+      <div class="kpi-icon-wrap" style="background:#0369a1"><i class="fas fa-money-check-alt"></i></div>
+      <div class="kpi-body">
+        <p class="kpi-label">Total Pagado</p>
+        <p class="kpi-value" id="kpi-total-pagado">${{ total_pagado|us_currency:2 }}</p>
+      </div>
+    </div>
+
+    <div class="kpi-card" style="border-left-color:#586f7c" title="${{ saldo_pendiente_total|us_currency:2 }}">
+      <div class="kpi-icon-wrap" style="background:#586f7c"><i class="fas fa-exclamation-triangle"></i></div>
+      <div class="kpi-body">
+        <p class="kpi-label">Pendiente</p>
+        <p class="kpi-value" id="kpi-saldo-pendiente">${{ saldo_pendiente_total|us_currency:2 }}</p>
+      </div>
+    </div>
+
+    <div class="kpi-card" style="border-left-color:#586f7c">
+      <div class="kpi-icon-wrap" style="background:#586f7c"><i class="fas fa-receipt"></i></div>
+      <div class="kpi-body">
+        <p class="kpi-label">Transacciones</p>
+        <p class="kpi-value" id="kpi-transacciones">{{ numero_transacciones }}</p>
+      </div>
+    </div>
+
+    <div class="kpi-card" style="border-left-color:#b8dbd9" title="${{ venta_maxima|us_currency:2 }}">
+      <div class="kpi-icon-wrap" style="background:#b8dbd9"><i class="fas fa-arrow-up"></i></div>
+      <div class="kpi-body">
+        <p class="kpi-label">Venta Máxima</p>
+        <p class="kpi-value" id="kpi-venta-maxima">${{ venta_maxima|us_currency:2 }}</p>
+      </div>
+    </div>
+
+    <div class="kpi-card" style="border-left-color:#586f7c" title="${{ promedio_ventas|us_currency:2 }}">
+      <div class="kpi-icon-wrap" style="background:#586f7c"><i class="fas fa-calculator"></i></div>
+      <div class="kpi-body">
+        <p class="kpi-label">Promedio</p>
+        <p class="kpi-value" id="kpi-promedio">${{ promedio_ventas|us_currency:2 }}</p>
+      </div>
+    </div>
+
+  </div>
+
+  {# ── Botón exportar PDF ── #}
+  <div class="flex items-center justify-between mb-3">
+    <span class="text-xs font-bold text-[#586f7c] uppercase tracking-wider flex items-center gap-1.5">
+      <i class="fas fa-chart-line text-blue-400"></i> Análisis visual
+    </span>
+    <button type="button" id="btn-export-pdf" onclick="exportVentasPDF()" class="btn-export-pdf">
+      <i class="fas fa-file-pdf"></i> Exportar PDF
+    </button>
+  </div>
+
+  {# ── Gráficos: Modalidad + Estados ── #}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+
+    <div class="s-card">
+      <div class="s-card-head">
+        <div class="s-card-ico" style="background:rgba(184,219,217,.15)"><i class="fas fa-chart-pie text-[#2f4550]"></i></div>
+        <span class="s-card-title">Distribución por Modalidad</span>
+      </div>
+      <div class="s-card-body">
+        <div style="height:240px;"><canvas id="modalidadChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="s-card">
+      <div class="s-card-head">
+        <div class="s-card-ico" style="background:rgba(201,162,39,.08)"><i class="fas fa-chart-pie text-[#c9a227]"></i></div>
+        <span class="s-card-title">Estados de Cobranza</span>
+      </div>
+      <div class="s-card-body">
+        <div style="height:240px;"><canvas id="estadosChart"></canvas></div>
+      </div>
+    </div>
+
+  </div>
+
+  {# ── Gráfico: Top 10 clientes ── #}
+  <div class="s-card mb-5">
+    <div class="s-card-head">
+      <div class="s-card-ico" style="background:rgba(184,219,217,.15)"><i class="fas fa-users text-[#2f4550]"></i></div>
+      <span class="s-card-title">Top 10 Clientes por Monto de Ventas</span>
+    </div>
+    <div class="s-card-body">
+      <div style="height:300px;"><canvas id="clientesChart"></canvas></div>
+    </div>
+  </div>
+
+  {# ── Tabla de detalle ── #}
+  <div class="s-card mb-5">
+    <div class="s-card-head">
+      <div class="s-card-ico" style="background:rgba(184,219,217,.15)"><i class="fas fa-table text-[#2f4550]"></i></div>
+      <span class="s-card-title">Detalle de Ventas</span>
+    </div>
+    <div class="s-card-body" id="ventas-table-container">
+      {% if balances %}
+      <table id="ventasTable" class="display responsive nowrap min-w-full hover stripe" style="width:100%">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Cliente</th>
+            <th>N° Cuenta</th>
+            <th>Banco</th>
+            <th>Sucursal</th>
+            <th>Fecha</th>
+            <th>Total Ventas</th>
+            <th>Total Pagado</th>
+            <th>Saldo Pendiente</th>
+            <th>Estado</th>
+            <th>Acumulado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for balance in balances %}
+          <tr>
+            <td class="font-mono text-xs text-[#586f7c]">{{ balance.numero_secuencial }}</td>
+
+            <td><span class="font-medium text-[#2f4550]">{{ balance.cliente_nombre }}</span></td>
+
+            <td>
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-[rgba(184,219,217,.2)] text-[#2f4550]">{{ balance.cuenta_numero }}</span>
+            </td>
+
+            <td class="text-sm text-[#586f7c]">{{ balance.banco_nombre }}</td>
+
+            <td class="text-sm text-[#586f7c]">{{ balance.sucursal_nombre }}</td>
+
+            <td class="text-sm text-[#586f7c]">{{ balance.fecha|date:"d/m/Y" }}</td>
+
+            <td class="text-right font-semibold text-[#5a7d6b]" data-order="{{ balance.total_ventas|unlocalize }}">
+              ${{ balance.total_ventas|us_currency:2 }}
+            </td>
+
+            <td class="text-right font-semibold text-[#2f4550]" data-order="{{ balance.total_pagado|unlocalize }}">
+              ${{ balance.total_pagado|us_currency:2 }}
+            </td>
+
+            <td class="text-right font-semibold text-[#b85450]" data-order="{{ balance.saldo_pendiente|unlocalize }}">
+              ${{ balance.saldo_pendiente|us_currency:2 }}
+            </td>
+
+            <td class="text-center" data-order="{{ balance.estado_cobranza }}">
+              <div class="flex flex-col items-center space-y-1">
+                <span class="{{ balance.estado_cobranza|estado_badge_class }}">{{ balance.estado_cobranza }}</span>
+                {% if balance.fecha_vencimiento %}
+                  <small class="text-xs text-[#b8dbd9]">{{ balance.fecha_vencimiento|date:"d/m/Y" }}</small>
+                {% endif %}
+              </div>
+            </td>
+
+            <td class="text-right font-semibold text-purple-700" data-order="{{ balance.acumulado|unlocalize }}">
+              ${{ balance.acumulado|us_currency:2 }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th colspan="6" class="text-right">Totales:</th>
+            <th class="text-right">${{ total_ventas|us_currency:2 }}</th>
+            <th class="text-right">${{ total_pagado|us_currency:2 }}</th>
+            <th class="text-right">${{ saldo_pendiente_total|us_currency:2 }}</th>
+            <th class="text-center">{{ numero_transacciones }}</th>
+            <th></th>
+          </tr>
+        </tfoot>
+      </table>
+      {% else %}
+      <div class="text-center py-12">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-[#f4f4f9] rounded-full mb-4">
+          <i class="fas fa-inbox text-[#b8dbd9] text-2xl"></i>
+        </div>
+        <p class="text-[#586f7c] font-semibold">No hay datos de ventas disponibles</p>
+        <p class="text-[#b8dbd9] text-sm mt-1">Intente modificar los filtros para ver resultados.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>{# /wrapper #}
+{% endblock %}
+
+{% block extrajs %}
+{{ block.super }}
+{# Restaurar $ desde django.jQuery #}
+<script>
+  window.$ = window.jQuery = django.jQuery;
+</script>
+{# Chart.js #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+{# DataTables con extensiones #}
+<script src="//cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="//cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="//cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="//cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+<script src="//cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.70/pdfmake.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.70/vfs_fonts.js"></script>
+
+<script src="{% static 'js/balances-general.js' %}"></script>
+
+<script>
+  // Datos para gráficos desde el backend
+  window.ventasModalidadData = JSON.parse('{{ ventas_por_modalidad|escapejs }}');
+  window.ventasEstadosData    = JSON.parse('{{ ventas_por_estado|escapejs }}');
+  window.ventasClientesData   = JSON.parse('{{ ventas_por_cliente|escapejs }}');
+
+  // Alternar opciones de período diario
+  $(document).ready(function () {
+    $('#periodo').on('change', function () {
+      if ($(this).val() === 'diario') {
+        $('#filtro-diario-opciones').slideDown(300);
+      } else {
+        $('#filtro-diario-opciones').slideUp(300);
+      }
+    });
+
+    $('input[name="tipo_fecha"]').on('change', function () {
+      if ($(this).val() === 'dia') {
+        $('#campo-dia-especifico').slideDown(300);
+        $('#campos-rango-fechas').slideUp(300);
+        $('#fecha_inicio').val('');
+        $('#fecha_fin').val('');
+      } else {
+        $('#campo-dia-especifico').slideUp(300);
+        $('#campos-rango-fechas').slideDown(300);
+        $('#dia').val('');
+      }
+    });
+
+    if ($('#periodo').val() !== 'diario') {
+      $('#filtro-diario-opciones').hide();
+    }
+
+    // Mostrar toast si hay filtros aplicados
+    var urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.toString()) {
+      if (typeof showToast === 'function') {
+        showToast('¡Filtros aplicados!', 'Los datos han sido filtrados según sus criterios.');
+      }
+    }
+  });
+
+  // Exportar página a PDF usando DataTables button
+  function exportVentasPDF() {
+    var btn = document.getElementById('btn-export-pdf');
+    if (btn) { btn.disabled = true; }
+    try {
+      var table = $('#ventasTable').DataTable();
+      if (table) {
+        table.button('.buttons-pdf').trigger();
+      }
+    } catch(e) {}
+    setTimeout(function () { if (btn) btn.disabled = false; }, 2000);
+  }
+</script>
+
+<script src="{% static 'js/datatables-utils.js' %}"></script>
+<script src="{% static 'js/ventas-balances.js' %}"></script>
+<script src="{% static 'js/multi-month-selector.js' %}"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  var ajaxUrl = "{% url 'admin:ventas_ventas_balances' %}";
+
+  function formatCurrencyAjax(value) {
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2, maximumFractionDigits: 2
+    }).format(parseFloat(value) || 0);
+  }
+
+  function updateKpis(kpis) {
+    var el;
+    el = document.getElementById('kpi-total-ventas');
+    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.total_ventas);
+    el = document.getElementById('kpi-total-pagado');
+    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.total_pagado);
+    el = document.getElementById('kpi-saldo-pendiente');
+    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.saldo_pendiente_total);
+    el = document.getElementById('kpi-transacciones');
+    if (el) el.textContent = kpis.numero_transacciones;
+    el = document.getElementById('kpi-venta-maxima');
+    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.venta_maxima);
+    el = document.getElementById('kpi-promedio');
+    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.promedio_ventas);
+  }
+
+  function destroyVentasCharts() {
+    ['modalidadChart', 'estadosChart', 'clientesChart'].forEach(function (id) {
+      var canvas = document.getElementById(id);
+      if (canvas) {
+        var existing = Chart.getChart(canvas);
+        if (existing) existing.destroy();
+      }
+    });
+  }
+
+  function reinitVentasDataTable() {
+    if ($.fn.DataTable.isDataTable('#ventasTable')) {
+      $('#ventasTable').DataTable().destroy();
+    }
+    if ($('#ventasTable').length) {
+      $('#ventasTable').DataTable({
+        responsive: true,
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos']],
+        order: [[0, 'asc']],
+        columnDefs: [
+          { targets: [6, 7, 8, 10], type: 'num-fmt', className: 'text-right' },
+          { targets: [9], className: 'text-center' }
+        ],
+        dom: 'Bfrtip',
+        language: { url: '/static/js/datatables-spanish.json' },
+        buttons: [
+          {
+            extend: 'excel', title: 'Análisis de Ventas',
+            text: '<i class="fas fa-file-excel"></i> Excel',
+            className: 'btn btn-success btn-sm',
+            exportOptions: { columns: ':visible' }
+          },
+          {
+            extend: 'pdf', title: 'Análisis de Ventas',
+            text: '<i class="fas fa-file-pdf"></i> PDF',
+            className: 'btn btn-danger btn-sm',
+            orientation: 'landscape', pageSize: 'A4',
+            exportOptions: { columns: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] }
+          },
+          {
+            extend: 'print', title: 'Análisis de Ventas',
+            text: '<i class="fas fa-print"></i> Imprimir',
+            className: 'btn btn-info btn-sm',
+            exportOptions: { columns: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] }
+          }
+        ]
+      });
+    }
+  }
+
+  function doAjaxFilter(form) {
+    var params = new URLSearchParams(new FormData(form));
+    var container = document.getElementById('ventas-table-container');
+    var submitBtn = form.querySelector('button[type="submit"]');
+    var originalBtnHtml = submitBtn ? submitBtn.innerHTML : null;
+
+    if (container) {
+      container.style.opacity = '0.5';
+      container.style.pointerEvents = 'none';
+    }
+
+    function restoreBtn() {
+      if (submitBtn && originalBtnHtml !== null) {
+        submitBtn.innerHTML = originalBtnHtml;
+        submitBtn.disabled = false;
+      }
+    }
+
+    fetch(ajaxUrl + '?' + params.toString(), {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+      .then(function (response) {
+        if (!response.ok) throw new Error('Error ' + response.status);
+        return response.json();
+      })
+      .then(function (data) {
+        updateKpis(data.kpis);
+
+        // Update chart data globals and reinit
+        window.ventasModalidadData = data.chart_data.modalidad;
+        window.ventasEstadosData = data.chart_data.estados;
+        window.ventasClientesData = data.chart_data.clientes;
+        destroyVentasCharts();
+        setTimeout(function () { initializeVentasCharts(); }, 50);
+
+        // Replace table HTML and reinitialise DataTable
+        if (container) {
+          container.innerHTML = data.table_html;
+          container.style.opacity = '';
+          container.style.pointerEvents = '';
+          reinitVentasDataTable();
+        }
+
+        restoreBtn();
+
+        // Show toast
+        if (typeof showToast === 'function') {
+          showToast('¡Filtros aplicados!', 'Los datos han sido actualizados.');
+        }
+
+        // Update URL without page reload
+        history.replaceState(null, '', '?' + params.toString());
+      })
+      .catch(function (err) {
+        if (container) {
+          container.style.opacity = '';
+          container.style.pointerEvents = '';
+        }
+        restoreBtn();
+        console.error('AJAX error:', err);
+      });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var form = document.querySelector('form[action*="ventas/balances"]');
+    if (!form) return;
+
+    // Intercept real submit events (from the submit button)
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      doAjaxFilter(form);
+    });
+
+    // Override programmatic form.submit() used by multi-month-selector
+    form.submit = function () {
+      doAjaxFilter(form);
+    };
+  });
+})();
+</script>
+{% endblock %}

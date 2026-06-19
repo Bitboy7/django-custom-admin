@@ -1,10 +1,11 @@
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.contrib.auth.models import User
 from django.db.models import Sum, Count
 from django.utils import timezone
 from django.http import JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib import admin, messages
 from datetime import datetime, timedelta
 import json
 import os
@@ -16,10 +17,66 @@ from .services.excel_service import ExcelReportService
 from .services.balance_service import BalanceAnalysisService
 from .services.utils import UtilService
 from gastos.models import Gastos, Compra
-from ventas.models import Ventas
-from auditoria.models import LogActividad
+from ventas.models import Ventas, Cliente
+from auditoria.models import LogActividad, UserProfile
 
 logger = logging.getLogger(__name__)
+
+
+@staff_member_required
+def profile_settings_view(request):
+    """Vista para que el usuario edite su propio perfil (foto, nombre, email)."""
+    user = request.user
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    errors = {}
+
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name  = request.POST.get('last_name', '').strip()
+        email      = request.POST.get('email', '').strip()
+
+        # Validar unicidad de email
+        if email and User.objects.filter(email=email).exclude(pk=user.pk).exists():
+            errors['email'] = 'Este correo ya está en uso por otro usuario.'
+
+        # Validar avatar
+        if 'avatar' in request.FILES:
+            avatar_file = request.FILES['avatar']
+            if avatar_file.size > 5 * 1024 * 1024:
+                errors['avatar'] = 'La imagen no debe superar 5 MB.'
+            elif not avatar_file.content_type.startswith('image/'):
+                errors['avatar'] = 'El archivo debe ser una imagen válida.'
+
+        remove_avatar = request.POST.get('remove_avatar') == '1'
+
+        if not errors:
+            user.first_name = first_name
+            user.last_name  = last_name
+            if email:
+                user.email = email
+            user.save()
+
+            if remove_avatar and profile.avatar:
+                profile.avatar.delete(save=False)
+                profile.avatar = None
+            elif 'avatar' in request.FILES:
+                if profile.avatar:
+                    profile.avatar.delete(save=False)
+                profile.avatar = request.FILES['avatar']
+
+            profile.save()
+            messages.success(request, 'Perfil actualizado correctamente.')
+            return redirect('profile_settings')
+
+    context = {
+        **admin.site.each_context(request),
+        'title': 'Mi Perfil',
+        'subtitle': 'Configuración de tu cuenta',
+        'profile': profile,
+        'errors': errors,
+        'has_permission': True,
+    }
+    return render(request, 'admin/profile_settings.html', context)
 
 
 @user_passes_test(UtilService.is_admin)
@@ -34,17 +91,6 @@ def export_full_report_to_excel(request):
         workbook, 
         filename_prefix="reporte_financiero"
     )
-
-
-@login_required
-def balances_view(request):
-    """
-    Vista principal para el análisis de balances y gastos
-    """
-    balance_service = BalanceAnalysisService()
-    context = balance_service.get_full_context(request)
-    
-    return render(request, 'gastos/balances.html', context)
 
 
 @login_required
@@ -163,34 +209,137 @@ def dashboard_callback(request, context):
             ventas_mensuales.insert(0, float(ventas_mes))
         
         # Actividad reciente
+        _ACCION_META = {
+            'login':  ('fa-right-to-bracket', '#5a7d6b', 'success'),
+            'logout': ('fa-right-from-bracket', '#586f7c', 'info'),
+            'create': ('fa-plus',               '#5a7d6b', 'success'),
+            'update': ('fa-pen',                '#c9a227', 'warning'),
+            'delete': ('fa-trash',              '#b85450', 'error'),
+            'view':   ('fa-eye',                '#586f7c', 'info'),
+            'other':  ('fa-circle-info',        '#586f7c', 'info'),
+        }
         recent_activities = []
         try:
-            activities = LogActividad.objects.order_by('-fecha_evento')[:5]
+            activities = LogActividad.objects.order_by('-fecha_hora')[:8]
             for activity in activities:
+                icon, color, status = _ACCION_META.get(
+                    activity.tipo_accion, ('fa-circle-info', '#586f7c', 'info')
+                )
                 recent_activities.append({
-                    'description': activity.descripcion_evento,
-                    'user': activity.usuario.username if activity.usuario else 'Sistema',
-                    'timestamp': activity.fecha_evento,
-                    'status': 'success',
-                    'icon': 'edit',
-                    'color': 'blue'
+                    'description': activity.descripcion,
+                    'user': activity.nombre_usuario or (
+                        activity.usuario.username if activity.usuario else 'Sistema'
+                    ),
+                    'timestamp': activity.fecha_hora,
+                    'status': status,
+                    'icon': icon,
+                    'color': color,
                 })
-        except:
-            # Si no hay modelo de auditoría o hay errores, crear actividades dummy
-            recent_activities = [
-                {
-                    'description': 'Sistema iniciado correctamente',
-                    'user': 'Sistema',
-                    'timestamp': now,
-                    'status': 'success',
-                    'icon': 'check',
-                    'color': 'green'
+        except Exception:
+            recent_activities = []
+
+        # Fallback: complementar con Django admin LogEntry si hay menos de 3 entradas
+        if len(recent_activities) < 3:
+            try:
+                from django.contrib.admin.models import LogEntry
+                _LE_META = {
+                    1: ('fa-plus',  '#5a7d6b', 'success'),
+                    2: ('fa-pen',   '#c9a227', 'warning'),
+                    3: ('fa-trash', '#b85450', 'error'),
                 }
-            ]
+                _ACTION_LABELS = {1: 'Agregó', 2: 'Modificó', 3: 'Eliminó'}
+                for entry in LogEntry.objects.select_related(
+                    'user', 'content_type'
+                ).order_by('-action_time')[:8]:
+                    icon, color, status = _LE_META.get(
+                        entry.action_flag, ('fa-circle-info', '#586f7c', 'info')
+                    )
+                    label = _ACTION_LABELS.get(entry.action_flag, 'Acción en')
+                    ct = entry.content_type.name if entry.content_type else ''
+                    recent_activities.append({
+                        'description': f"{label} {ct}: {entry.object_repr}",
+                        'user': (
+                            entry.user.get_full_name() or entry.user.username
+                            if entry.user else 'Admin'
+                        ),
+                        'timestamp': entry.action_time,
+                        'status': status,
+                        'icon': icon,
+                        'color': color,
+                    })
+                recent_activities.sort(key=lambda x: x['timestamp'], reverse=True)
+                recent_activities = recent_activities[:8]
+            except Exception:
+                pass
+
+        if not recent_activities:
+            recent_activities = [{
+                'description': 'Sistema iniciado correctamente',
+                'user': 'Sistema',
+                'timestamp': now,
+                'status': 'success',
+                'icon': 'fa-check',
+                'color': '#5a7d6b',
+            }]
         
+        # Conteos del mes
+        gastos_count = Gastos.objects.filter(
+            fecha__month=current_month, fecha__year=current_year
+        ).count()
+        ventas_count = Ventas.objects.filter(
+            fecha_salida_manifiesto__month=current_month,
+            fecha_salida_manifiesto__year=current_year
+        ).count()
+        compras_count = Compra.objects.filter(
+            fecha_compra__month=current_month, fecha_compra__year=current_year
+        ).count()
+
+        # Cuentas por cobrar: ventas pendientes / vencidas
+        ventas_vigentes = Ventas.objects.filter(
+            estado_cobranza__in=['Pendiente', 'Parcial']
+        ).aggregate(total=Sum('monto'))['total'] or 0
+        ventas_vigentes_count = Ventas.objects.filter(
+            estado_cobranza__in=['Pendiente', 'Parcial']
+        ).count()
+        ventas_vencidas = Ventas.objects.filter(
+            estado_cobranza='Vencido'
+        ).aggregate(total=Sum('monto'))['total'] or 0
+        ventas_vencidas_count = Ventas.objects.filter(
+            estado_cobranza='Vencido'
+        ).count()
+
+        # Clientes nuevos este mes vs mes anterior
+        clientes_nuevos = Cliente.objects.filter(
+            fecha_registro__month=current_month, fecha_registro__year=current_year
+        ).count()
+        clientes_mes_anterior = Cliente.objects.filter(
+            fecha_registro__month=last_month, fecha_registro__year=last_month_year
+        ).count()
+        clientes_trend = 0
+        if clientes_mes_anterior > 0:
+            clientes_trend = ((clientes_nuevos - clientes_mes_anterior) / clientes_mes_anterior) * 100
+
+        # Productos comprados (toneladas/unidades) este mes
+        productos_mes = Compra.objects.filter(
+            fecha_compra__month=current_month, fecha_compra__year=current_year
+        ).aggregate(total=Sum('cantidad'))['total'] or 0
+        productos_mes_anterior = Compra.objects.filter(
+            fecha_compra__month=last_month, fecha_compra__year=last_month_year
+        ).aggregate(total=Sum('cantidad'))['total'] or 0
+        productos_trend = 0
+        if productos_mes_anterior > 0:
+            productos_trend = ((productos_mes - productos_mes_anterior) / productos_mes_anterior) * 100
+
+        # Tendencia del balance neto
+        balance_mes_anterior = ventas_mes_anterior - gastos_mes_anterior - compras_mes_anterior
+        balance_trend = 0
+        if balance_mes_anterior != 0:
+            balance_trend = ((balance_neto - balance_mes_anterior) / abs(balance_mes_anterior)) * 100
+
         # Total de usuarios
         total_users = User.objects.count()
-        
+        total_clientes = Cliente.objects.filter(activo=True).count()
+
     except Exception as e:
         # En caso de error, usar valores por defecto
         total_gastos = 0
@@ -200,6 +349,19 @@ def dashboard_callback(request, context):
         ventas_trend = 0
         compras_trend = 0
         balance_neto = 0
+        balance_trend = 0
+        gastos_count = 0
+        ventas_count = 0
+        compras_count = 0
+        ventas_vigentes = 0
+        ventas_vigentes_count = 0
+        ventas_vencidas = 0
+        ventas_vencidas_count = 0
+        clientes_nuevos = 0
+        clientes_trend = 0
+        productos_mes = 0
+        productos_trend = 0
+        total_clientes = 0
         gastos_categorias_labels = []
         gastos_categorias_data = []
         meses_labels = ['01/2025', '02/2025', '03/2025', '04/2025', '05/2025', '06/2025']
@@ -207,7 +369,7 @@ def dashboard_callback(request, context):
         ventas_mensuales = [0, 0, 0, 0, 0, 0]
         recent_activities = []
         total_users = User.objects.count()
-    
+
     # Actualizar el contexto con los datos del dashboard
     context.update({
         'total_gastos': total_gastos,
@@ -217,6 +379,19 @@ def dashboard_callback(request, context):
         'ventas_trend': ventas_trend,
         'compras_trend': compras_trend,
         'balance_neto': balance_neto,
+        'balance_trend': balance_trend,
+        'gastos_count': gastos_count,
+        'ventas_count': ventas_count,
+        'compras_count': compras_count,
+        'ventas_vigentes': ventas_vigentes,
+        'ventas_vigentes_count': ventas_vigentes_count,
+        'ventas_vencidas': ventas_vencidas,
+        'ventas_vencidas_count': ventas_vencidas_count,
+        'clientes_nuevos': clientes_nuevos,
+        'clientes_trend': clientes_trend,
+        'productos_vendidos': productos_mes,
+        'productos_trend': productos_trend,
+        'total_clientes': total_clientes,
         'gastos_categorias_labels': json.dumps(gastos_categorias_labels),
         'gastos_categorias_data': json.dumps(gastos_categorias_data),
         'meses_labels': json.dumps(meses_labels),
@@ -226,8 +401,8 @@ def dashboard_callback(request, context):
         'total_users': total_users,
         'last_login': request.user.last_login,
         'last_update': now.date(),
-        'current_year': current_year,
-        'current_month_name': calendar.month_name[current_month],
+        'current_year': str(current_year),
+        'current_month_name': now.strftime('%B'),
         'total_categorias': len(gastos_categorias_labels)
     })
     

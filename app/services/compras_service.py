@@ -3,10 +3,16 @@ Servicio para análisis de compras de fruta
 
 Este servicio utiliza la arquitectura base modular para proporcionar
 funcionalidad completa de reportes con código mínimo.
+OPTIMIZADO: Implementa cache Redis para mejorar rendimiento.
 """
 from datetime import datetime
 from django.db.models import Sum
+import logging
+
 from .base_report_service import BaseReportService
+from .cache_service import cache_service, cache_result
+
+logger = logging.getLogger(__name__)
 
 
 class ComprasAnalysisService(BaseReportService):
@@ -225,27 +231,70 @@ class ComprasAnalysisService(BaseReportService):
     def get_balances_by_period(self, filters, periodo='mensual'):
         """
         Override para añadir cantidad_total y precio_promedio a los balances
+        Con cache Redis para mejorar rendimiento
         
         Args:
             filters: Diccionario de filtros
             periodo: Tipo de periodo ('diario', 'semanal', 'mensual')
             
         Returns:
-            QuerySet con periodo, group_fields, total_compras, cantidad_total, 
+            Lista con periodo, group_fields, total_compras, cantidad_total, 
             precio_promedio y acumulado
         """
         from django.db.models import Sum, Avg
+        from django.db.models.functions import TruncMonth, TruncDay, TruncWeek
         
-        # Obtener balances base del padre
-        balances = super().get_balances_by_period(filters, periodo)
-        
-        # Añadir anotaciones adicionales específicas de compras
-        balances = balances.annotate(
-            cantidad_total=Sum('cantidad'),
-            precio_promedio=Avg('precio_unitario')
+        # Generar clave de cache
+        cache_key = cache_service._generate_cache_key(
+            'balances_compras', periodo, **filters
         )
         
-        return balances
+        # Intentar obtener del cache
+        cached_data = cache_service.get(cache_key)
+        if cached_data is not None:
+            logger.debug(f"Cache hit para balances compras: {cache_key}")
+            return cached_data
+        
+        # Ejecutar consulta
+        logger.debug(f"Cache miss para balances compras: {cache_key}")
+        
+        # Hacer agregación manual completa
+        model = self.get_model()
+        queryset = model.objects.filter(**filters)
+        group_fields = self.get_group_fields(periodo)
+        date_field = self.get_date_field()
+        
+        # Mapeo de períodos a funciones de truncamiento
+        truncators = {
+            'diario': TruncDay,
+            'semanal': TruncWeek,
+            'mensual': TruncMonth
+        }
+        truncator = truncators.get(periodo.lower(), TruncMonth)
+        
+        # Anotar con período truncado
+        queryset = queryset.annotate(
+            periodo=truncator(date_field)
+        )
+        
+        # Campos para values() - periodo + campos de agrupación
+        value_fields = ['periodo'] + group_fields
+        
+        # Agrupar y agregar todos los campos necesarios
+        balances = queryset.values(*value_fields).annotate(
+            total_compras=Sum('monto_total'),
+            cantidad_total=Sum('cantidad'),
+            precio_promedio=Avg('precio_unitario')
+        ).order_by('periodo', *group_fields)
+        
+        # Convertir a lista para cache
+        balances_list = list(balances)
+        
+        # Cachear resultado
+        timeout = cache_service.timeouts.get('compras', 900)
+        cache_service.set(cache_key, balances_list, timeout)
+        
+        return balances_list
     
     def get_compras_por_productor(self, filters):
         """
@@ -280,9 +329,11 @@ class ComprasAnalysisService(BaseReportService):
             group_field='tipo_pago'
         )
     
+    @cache_result('compras', 900, 'estadisticas_compras')
     def calculate_statistics(self, filters):
         """
         Override para añadir estadísticas específicas de compras
+        Con cache para mejorar rendimiento
         
         Añade información sobre productor y producto con compra máxima/mínima
         """

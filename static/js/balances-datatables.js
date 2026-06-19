@@ -14,7 +14,7 @@
 // ============================================================================
 
 var reportConfig = {
-  moduleName: "Reporte de Gastos",
+  moduleName: "Reporte de gastos",
   filterFields: ["cuenta_id", "sucursal_id", "year", "month", "periodo"],
 };
 
@@ -178,8 +178,9 @@ document.addEventListener("DOMContentLoaded", function () {
           className: "dt-button btn-copy",
           text: '<i class="fas fa-copy mr-1"></i> Copiar',
           exportOptions: {
-            columns: ":visible",
+            columns: [5, 0, 1, 2, 3, 4, 6, 7],
             orthogonal: "export",
+            footer: true,
           },
         },
         {
@@ -189,8 +190,9 @@ document.addEventListener("DOMContentLoaded", function () {
           charset: "utf-8",
           bom: true,
           exportOptions: {
-            columns: ":visible",
+            columns: [5, 0, 1, 2, 3, 4, 6, 7],
             orthogonal: "export",
+            footer: true,
           },
         },
         {
@@ -204,77 +206,187 @@ document.addEventListener("DOMContentLoaded", function () {
             return "gastos-detalle-" + getCurrentDateFormatted("filename");
           },
           exportOptions: {
-            columns: ":visible",
+            columns: [5, 0, 1, 2, 3, 4, 6, 7],
             orthogonal: "export",
+            footer: true,
+          },
+          customize: function (xlsx) {
+            // Footer con total se incluye via exportOptions.footer:true
           },
         },
         {
           text: '<i class="fas fa-chart-pie mr-1"></i> Resumen Excel',
           className: "dt-button btn-summary-excel",
           action: function (e, dt, button, config) {
-            var categoryTotals = {};
             var table = $("#gastosTable").DataTable();
             var data = table.rows({ search: "applied" }).data();
+            var totalFiltrado = 0;
 
-            // Procesar cada fila para agrupar por categoría
+            // Extraer cada fila con: fecha, sucursal, cuenta, categoria, total
+            var rows = [];
             for (var i = 0; i < data.length; i++) {
               var rowData = data[i];
-              // Extraer texto limpio de la categoría (columna 1)
-              var categoryHtml = rowData[1];
               var tempDiv = document.createElement("div");
-              tempDiv.innerHTML = categoryHtml;
-              var category =
-                tempDiv.textContent || tempDiv.innerText || categoryHtml;
-              category = category.trim();
 
-              // Obtener el total de la fila (columna 6)
-              var totalValue = 0;
+              tempDiv.innerHTML = rowData[5];
+              var fecha = (tempDiv.textContent || tempDiv.innerText || rowData[5]).trim();
+
+              tempDiv.innerHTML = rowData[4];
+              var sucursal = (tempDiv.textContent || tempDiv.innerText || rowData[4]).trim();
+
+              tempDiv.innerHTML = rowData[2];
+              var cuenta = (tempDiv.textContent || tempDiv.innerText || rowData[2]).trim();
+
+              tempDiv.innerHTML = rowData[1];
+              var categoria = (tempDiv.textContent || tempDiv.innerText || rowData[1]).trim();
+
               var totalCell = table.cell(i, 6).node();
-              if (totalCell) {
-                totalValue = getNumericValueFromNode(totalCell);
-                if (isNaN(totalValue)) totalValue = 0;
-              }
+              var cellText = (totalCell.textContent || totalCell.innerText || "").trim();
+              var totalValue = parseFloat(cellText.replace(/[$\s]/g, ""));
+              if (isNaN(totalValue)) totalValue = 0;
 
-              // Sumar al total de la categoría
-              if (categoryTotals[category]) {
-                categoryTotals[category] += totalValue;
-              } else {
-                categoryTotals[category] = totalValue;
-              }
+              rows.push({
+                fecha: fecha,
+                sucursal: sucursal,
+                cuenta: cuenta,
+                categoria: categoria,
+                total: totalValue,
+              });
+              totalFiltrado += totalValue;
             }
 
-            // Convertir a array y ordenar por total descendente
-            var sortedCategories = Object.keys(categoryTotals)
-              .map(function (category) {
-                return [category, categoryTotals[category]];
-              })
-              .sort(function (a, b) {
-                return b[1] - a[1];
-              });
-
-            // Calcular gran total
-            var grandTotal = sortedCategories.reduce(function (sum, item) {
-              return sum + item[1];
-            }, 0);
-
-            // Preparar datos para exportación
-            var headers = ["Categoría", "Total acumulado"];
-            var data = [];
-
-            sortedCategories.forEach(function (item) {
-              data.push([item[0], item[1]]);
+            // Ordenar: sucursal → cuenta → fecha descendente
+            rows.sort(function (a, b) {
+              if (a.sucursal !== b.sucursal) return a.sucursal.localeCompare(b.sucursal);
+              if (a.cuenta !== b.cuenta) return a.cuenta.localeCompare(b.cuenta);
+              return (b.fecha || "").localeCompare(a.fecha || "");
             });
 
-            // Agregar fila de total
-            data.push(["TOTAL GENERAL", grandTotal]);
+            // Agrupar por sucursal → cuenta con subtotales
+            var htmlData = [];
+            var grandTotal = 0;
+            var lastSucursal = null;
+            var lastCuenta = null;
+            var sucTotal = 0;
+            var ctaTotal = 0;
 
-            // Exportar usando la utilidad
-            exportToCSV({
-              filename: "gastos-resumen-categorias",
-              headers: headers,
-              data: data,
-              separator: ",",
+            for (var r = 0; r < rows.length; r++) {
+              var row = rows[r];
+
+              // Nueva sucursal? Cerrar cuenta y sucursal anterior
+              if (lastSucursal && row.sucursal !== lastSucursal) {
+                if (lastCuenta) {
+                  htmlData.push({ fecha: "", sucursal: "", cuenta: lastCuenta + " - SUBTOTAL", categoria: "", total: ctaTotal, isSubtotal: true });
+                  lastCuenta = null;
+                }
+                htmlData.push({ fecha: "", sucursal: lastSucursal + " - SUBTOTAL", cuenta: "", categoria: "", total: sucTotal, isSubtotal: true });
+                htmlData.push({ fecha: "", sucursal: "", cuenta: "", categoria: "", total: "", isSubtotal: false });
+                grandTotal += sucTotal;
+                sucTotal = 0;
+              }
+
+              // Nueva cuenta dentro de la misma sucursal?
+              if (lastCuenta && row.cuenta !== lastCuenta && row.sucursal === lastSucursal) {
+                htmlData.push({ fecha: "", sucursal: "", cuenta: lastCuenta + " - SUBTOTAL", categoria: "", total: ctaTotal, isSubtotal: true });
+                ctaTotal = 0;
+              }
+
+              htmlData.push({ fecha: row.fecha, sucursal: row.sucursal, cuenta: row.cuenta, categoria: row.categoria, total: row.total, isSubtotal: false });
+              ctaTotal += row.total;
+              sucTotal += row.total;
+              lastSucursal = row.sucursal;
+              lastCuenta = row.cuenta;
+            }
+
+            // Cerrar ultimo grupo
+            if (lastCuenta) {
+              htmlData.push({ fecha: "", sucursal: "", cuenta: lastCuenta + " - SUBTOTAL", categoria: "", total: ctaTotal, isSubtotal: true });
+            }
+            if (lastSucursal) {
+              htmlData.push({ fecha: "", sucursal: lastSucursal + " - SUBTOTAL", cuenta: "", categoria: "", total: sucTotal, isSubtotal: true });
+              grandTotal += sucTotal;
+            }
+
+            htmlData.push({ fecha: "", sucursal: "TOTAL GENERAL", cuenta: "", categoria: "", total: grandTotal, isSubtotal: true });
+
+            // --- Tabla de categorias (reemplaza los graficos que Excel no puede renderizar) ---
+            var categoriasTable = "";
+            try {
+              if (window.balancesCategoriasLabels && window.balancesCategoriasLabels.length > 0) {
+                categoriasTable += '<h2 style="color:#2f4550;font-family:Arial,sans-serif;margin-top:20px;">Gastos por Categor&iacute;a</h2>';
+                categoriasTable += '<table><thead><tr><th>#</th><th>Categor&iacute;a</th><th>Total</th><th>%</th></tr></thead><tbody>';
+                var catData = window.balancesCategoriasData || [];
+                var catTotal = catData.reduce(function(a,b){return a+b;}, 0);
+                for (var ci = 0; ci < window.balancesCategoriasLabels.length; ci++) {
+                  var pct = catTotal > 0 ? ((catData[ci] / catTotal) * 100).toFixed(1) + "%" : "0.0%";
+                  categoriasTable += '<tr><td>' + (ci+1) + '</td><td>' + window.balancesCategoriasLabels[ci] + '</td><td class="num-col">$' + catData[ci].toLocaleString("en-US", {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td><td class="num-col">' + pct + '</td></tr>';
+                }
+                categoriasTable += '<tr class="subtotal"><td colspan="2"><strong>TOTAL</strong></td><td class="num-col">$' + catTotal.toLocaleString("en-US", {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td><td class="num-col">100.0%</td></tr>';
+                categoriasTable += '</tbody></table>';
+              }
+            } catch(err) {
+              categoriasTable = "";
+            }
+
+            // --- Sumatoria de gastos filtrados ---
+            var sumatoriaHTML = "";
+            if (totalFiltrado > 0) {
+              var formattedSum = "$" + totalFiltrado.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              sumatoriaHTML = '<div style="background:#2f4550;color:#fff;padding:10px 16px;border-radius:6px;margin-bottom:16px;font-family:Arial,sans-serif;"><strong>Sumatoria total de gastos filtrados:</strong> ' + formattedSum + '</div>';
+            }
+
+            var html = '<html><head><meta charset="UTF-8"><style>' +
+              "body{font-family:Arial,sans-serif;margin:20px;color:#2f4550;}" +
+              "h1{color:#2f4550;border-bottom:2px solid #b8dbd9;padding-bottom:6px;}" +
+              "h2{color:#2f4550;margin-top:24px;}" +
+              "table{border-collapse:collapse;width:100%;margin-bottom:20px;}" +
+              "th{background:#2f4550;color:#fff;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;}" +
+              "td{padding:6px 10px;border:1px solid #d8dce6;font-size:11px;}" +
+              "tr:nth-child(even){background:#f8fafc;}" +
+              ".subtotal td{background:#E6F3FF;font-weight:bold;}" +
+              ".total-general td{background:#2f4550;color:#fff;font-weight:bold;}" +
+              ".fecha-col{white-space:nowrap;}" +
+              ".num-col{text-align:right;white-space:nowrap;}" +
+              "</style></head><body>";
+
+            html += "<h1>" + (getReportTitle ? getReportTitle() : "Resumen de Gastos") + "</h1>";
+            html += sumatoriaHTML;
+
+            html += "<table><thead><tr>" +
+              "<th>Fecha</th><th>Sucursal</th><th>Cuenta</th><th>Categor&iacute;a</th><th>Total</th>" +
+              "</tr></thead><tbody>";
+
+            htmlData.forEach(function (row) {
+              var cssClass = "";
+              if (row.sucursal === "TOTAL GENERAL") {
+                cssClass = ' class="total-general"';
+              } else if (row.isSubtotal) {
+                cssClass = ' class="subtotal"';
+              }
+              html += "<tr" + cssClass + ">";
+              html += '<td class="fecha-col">' + row.fecha + "</td>";
+              html += "<td>" + row.sucursal + "</td>";
+              html += "<td>" + row.cuenta + "</td>";
+              html += "<td>" + row.categoria + "</td>";
+              html += '<td class="num-col">' +
+                (row.total !== "" ? "$" + row.total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "") +
+                "</td>";
+              html += "</tr>";
             });
+
+            html += "</tbody></table>";
+
+            if (categoriasTable) { html += categoriasTable; }
+
+            html += "</body></html>";
+
+            var BOM = "\uFEFF";
+            var blob = new Blob([BOM + html], { type: "application/vnd.ms-excel;charset=utf-8" });
+            var link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            var now = new Date();
+            link.download = "gastos-resumen-" + now.toISOString().slice(0, 10) + ".xls";
+            link.click();
           },
         },
         {
@@ -283,23 +395,21 @@ document.addEventListener("DOMContentLoaded", function () {
           text: '<i class="fas fa-file-pdf mr-1"></i> PDF',
           title: "",
           customize: function (doc) {
-            // Obtener título dinámico basado en filtros
             var reportTitle = getReportTitle();
 
-            // Configurar documento usando utilidades
             configurePdfDocument(doc, {
               reportTitle: reportTitle,
-              systemName: "2025 - Agricola de la Costa San Luis S.P.R de R.L.",
+              systemName: "2026 - Agricola de la Costa San Luis S.P.R de R.L.",
               orientation: "landscape",
               pageMargins: [40, 80, 40, 60],
             });
 
-            // Personalización adicional específica de gastos
             if (doc.content[0].table) {
+              // Widths reordenados para export: Fecha, #, Categoria, Cuenta, Banco, Sucursal, Total, Acumulado
               doc.content[0].table.widths = [
                 "auto",
-                "*",
                 "auto",
+                "*",
                 "auto",
                 "auto",
                 "auto",
@@ -308,14 +418,13 @@ document.addEventListener("DOMContentLoaded", function () {
               ];
               doc.content[0].table.headerRows = 1;
 
-              // Alternar colores de las filas
               doc.content[0].layout = {
-                fillColor: function (rowIndex) {
-                  return rowIndex === 0
-                    ? "#34495e"
-                    : rowIndex % 2 === 0
-                    ? "#ecf0f1"
-                    : null;
+                fillColor: function (rowIndex, node, columnIndex) {
+                  if (rowIndex === 0) return "#34495e";
+                  // Footer row (data rows + 1 = footer index)
+                  var dataRows = doc.content[0].table.body.length - 2;
+                  if (rowIndex === dataRows + 1) return "#2f4550";
+                  return rowIndex % 2 === 0 ? "#ecf0f1" : null;
                 },
                 hLineWidth: function (i, node) {
                   return i === 0 || i === 1 || i === node.table.body.length
@@ -335,8 +444,9 @@ document.addEventListener("DOMContentLoaded", function () {
             }
           },
           exportOptions: {
-            columns: ":visible",
+            columns: [5, 0, 1, 2, 3, 4, 6, 7],
             orthogonal: "export",
+            footer: true,
           },
         },
         {
@@ -344,8 +454,9 @@ document.addEventListener("DOMContentLoaded", function () {
           className: "dt-button btn-print",
           text: '<i class="fas fa-print mr-1"></i> Imprimir',
           exportOptions: {
-            columns: ":visible",
+            columns: [5, 0, 1, 2, 3, 4, 6, 7],
             orthogonal: "export",
+            footer: true,
           },
         },
       ],
@@ -403,25 +514,25 @@ document.addEventListener("DOMContentLoaded", function () {
       var lengthSelect = document.querySelector(".dataTables_length select");
       if (lengthSelect) {
         lengthSelect.style.backgroundColor = "white";
-        lengthSelect.style.border = "1px solid #d1d5db";
+        lengthSelect.style.border = "1px solid #d8dce6";
         lengthSelect.style.borderRadius = "6px";
         lengthSelect.style.padding = "6px 12px";
         lengthSelect.style.fontSize = "14px";
-        lengthSelect.style.color = "#374151";
+        lengthSelect.style.color = "#586f7c";
         lengthSelect.style.marginLeft = "8px";
         lengthSelect.style.marginRight = "8px";
       }
       var lengthLabel = document.querySelector(".dataTables_length");
       if (lengthLabel) {
         lengthLabel.style.fontSize = "14px";
-        lengthLabel.style.color = "#6b7280";
+        lengthLabel.style.color = "#586f7c";
         lengthLabel.style.fontWeight = "500";
       }
     }
     setTimeout(function () {
       var copyBtn = document.querySelector(".dt-button.btn-copy");
       if (copyBtn) {
-        copyBtn.style.backgroundColor = "#3B82F6";
+        copyBtn.style.backgroundColor = "#586f7c";
         copyBtn.style.color = "white";
         copyBtn.style.border = "none";
         copyBtn.style.padding = "6px 12px";
@@ -431,7 +542,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       var csvBtn = document.querySelector(".dt-button.btn-csv");
       if (csvBtn) {
-        csvBtn.style.backgroundColor = "#10B981";
+        csvBtn.style.backgroundColor = "#5a7d6b";
         csvBtn.style.color = "white";
         csvBtn.style.border = "none";
         csvBtn.style.padding = "6px 12px";
@@ -441,7 +552,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       var excelBtn = document.querySelector(".dt-button.btn-excel");
       if (excelBtn) {
-        excelBtn.style.backgroundColor = "#059669";
+        excelBtn.style.backgroundColor = "#5a7d6b";
         excelBtn.style.color = "white";
         excelBtn.style.border = "none";
         excelBtn.style.padding = "6px 12px";
@@ -451,7 +562,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       var pdfBtn = document.querySelector(".dt-button.btn-pdf");
       if (pdfBtn) {
-        pdfBtn.style.backgroundColor = "#EF4444";
+        pdfBtn.style.backgroundColor = "#b85450";
         pdfBtn.style.color = "white";
         pdfBtn.style.border = "none";
         pdfBtn.style.padding = "6px 12px";
@@ -461,13 +572,23 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       var printBtn = document.querySelector(".dt-button.btn-print");
       if (printBtn) {
-        printBtn.style.backgroundColor = "#8B5CF6";
+        printBtn.style.backgroundColor = "#1f1e20";
         printBtn.style.color = "white";
         printBtn.style.border = "none";
         printBtn.style.padding = "6px 12px";
         printBtn.style.borderRadius = "6px";
         printBtn.style.marginRight = "8px";
         printBtn.style.fontWeight = "500";
+      }
+      var summaryBtn = document.querySelector(".dt-button.btn-summary-excel");
+      if (summaryBtn) {
+        summaryBtn.style.backgroundColor = "#1f1e20";
+        summaryBtn.style.color = "white";
+        summaryBtn.style.border = "none";
+        summaryBtn.style.padding = "6px 12px";
+        summaryBtn.style.borderRadius = "6px";
+        summaryBtn.style.marginRight = "8px";
+        summaryBtn.style.fontWeight = "500";
       }
     }, 100);
   } catch (error) {

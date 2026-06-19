@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resumen Ejecutivo Financiero — {{ reporte.titulo }}</title>
+<style>
+  /* Reset y base */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #222; background: #f5f6fa; }
+
+  /* Contenedor principal */
+  .wrapper { max-width: 680px; margin: 0 auto; background: #ffffff; }
+
+  /* Header */
+  .header { background: #1a3a5c; color: #ffffff; padding: 32px 40px; text-align: center; }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
+  .header p { margin-top: 6px; font-size: 13px; opacity: 0.85; }
+
+  /* Semáforo */
+  .semaforo-verde  { background: #198754; }
+  .semaforo-amarillo { background: #e6a817; }
+  .semaforo-rojo   { background: #dc3545; }
+  .semaforo-bar    { color: #fff; text-align: center; padding: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+
+  /* Sección */
+  .section { padding: 28px 40px; }
+  .section + .section { border-top: 1px solid #eee; }
+  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #1a3a5c; margin-bottom: 14px; }
+
+  /* KPI cards */
+  .kpi-grid { display: table; width: 100%; border-collapse: collapse; }
+  .kpi-cell { display: table-cell; width: 25%; text-align: center; padding: 14px 8px; border: 1px solid #e0e4ed; }
+  .kpi-label { font-size: 10px; text-transform: uppercase; color: #888; letter-spacing: 0.8px; }
+  .kpi-value { font-size: 19px; font-weight: 700; color: #1a3a5c; margin-top: 4px; }
+  .kpi-value.negativo { color: #dc3545; }
+  .kpi-value.positivo { color: #198754; }
+  .kpi-trend { font-size: 11px; margin-top: 3px; }
+  .kpi-trend.up   { color: #198754; }
+  .kpi-trend.down { color: #dc3545; }
+
+  /* Texto del resumen */
+  .resumen-text { line-height: 1.7; color: #333; font-size: 14px; }
+
+  /* Listas */
+  .item-list { list-style: none; margin-top: 8px; }
+  .item-list li { padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; line-height: 1.5; }
+  .item-list li:last-child { border-bottom: none; }
+  .badge-alerta  { display: inline-block; background: #fff3cd; color: #856404; border-radius: 3px; padding: 1px 6px; font-size: 11px; margin-right: 6px; }
+  .badge-rec     { display: inline-block; background: #d1e7dd; color: #0f5132; border-radius: 3px; padding: 1px 6px; font-size: 11px; margin-right: 6px; }
+
+  /* Cuentas por cobrar */
+  .cobrar-grid { display: table; width: 100%; border-collapse: collapse; }
+  .cobrar-cell { display: table-cell; width: 50%; padding: 12px; text-align: center; }
+  .cobrar-cell.vigente { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .cobrar-cell.vencido { background: #fef2f2; border: 1px solid #e8b4b0; }
+  .cobrar-label { font-size: 11px; color: #666; text-transform: uppercase; }
+  .cobrar-val   { font-size: 18px; font-weight: 700; margin-top: 4px; }
+  .cobrar-val.verde { color: #3d6b2c; }
+  .cobrar-val.rojo  { color: #b85450; }
+
+  /* Footer */
+  .footer { background: #f0f4fa; padding: 20px 40px; text-align: center; font-size: 11px; color: #888; border-top: 1px solid #dde2ef; }
+
+  /* Divider */
+  .divider { height: 3px; background: linear-gradient(90deg, #1a3a5c, #586f7c); }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>Resumen Ejecutivo Financiero</h1>
+    <p>{{ reporte.titulo }}</p>
+    <p>Período: {{ reporte.periodo_inicio|date:"d/m/Y" }} — {{ reporte.periodo_fin|date:"d/m/Y" }}</p>
+  </div>
+
+  <!-- Semáforo financiero -->
+  {% with kpis=resumen_data.kpis %}
+  {% if kpis.semaforo_financiero %}
+  <div class="semaforo-bar semaforo-{{ kpis.semaforo_financiero }}">
+    Estado financiero: {{ kpis.semaforo_financiero|upper }}
+    {% if kpis.prioridad %} — {{ kpis.prioridad }}{% endif %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <div class="divider"></div>
+
+  <!-- KPI Cards -->
+  <div class="section">
+    <div class="section-title">Estado de resultados</div>
+    <div class="kpi-grid">
+      <div class="kpi-cell">
+        <div class="kpi-label">Ventas</div>
+        <div class="kpi-value">${{ reporte.total_ventas|floatformat:0 }}</div>
+        {% with d=resumen_data.datos_financieros %}
+        {% if d.tendencia_ventas_pct %}
+        <div class="kpi-trend {% if d.tendencia_ventas_pct >= 0 %}up{% else %}down{% endif %}">
+          {% if d.tendencia_ventas_pct >= 0 %}▲{% else %}▼{% endif %} {{ d.tendencia_ventas_pct|floatformat:1 }}%
+        </div>
+        {% endif %}
+        {% endwith %}
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-label">Gastos</div>
+        <div class="kpi-value">${{ reporte.total_gastos|floatformat:0 }}</div>
+        {% with d=resumen_data.datos_financieros %}
+        {% if d.tendencia_gastos_pct %}
+        <div class="kpi-trend {% if d.tendencia_gastos_pct <= 0 %}up{% else %}down{% endif %}">
+          {% if d.tendencia_gastos_pct >= 0 %}▲{% else %}▼{% endif %} {{ d.tendencia_gastos_pct|floatformat:1 }}%
+        </div>
+        {% endif %}
+        {% endwith %}
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-label">Compras</div>
+        <div class="kpi-value">${{ reporte.total_compras|floatformat:0 }}</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-label">Balance neto</div>
+        <div class="kpi-value {% if reporte.margen_bruto >= 0 %}positivo{% else %}negativo{% endif %}">
+          ${{ reporte.margen_bruto|floatformat:0 }}
+        </div>
+        <div class="kpi-trend {% if reporte.margen_porcentaje >= 0 %}up{% else %}down{% endif %}">
+          {{ reporte.margen_porcentaje|floatformat:1 }}% margen
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resumen ejecutivo IA -->
+  {% if resumen_data.resumen_ejecutivo %}
+  <div class="section">
+    <div class="section-title">Análisis del período</div>
+    <p class="resumen-text">{{ resumen_data.resumen_ejecutivo }}</p>
+  </div>
+  {% endif %}
+
+  <!-- Alertas -->
+  {% if resumen_data.alertas %}
+  <div class="section">
+    <div class="section-title">⚠ Alertas</div>
+    <ul class="item-list">
+      {% for alerta in resumen_data.alertas %}
+      <li><span class="badge-alerta">ALERTA</span>{{ alerta }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <!-- Recomendaciones -->
+  {% if resumen_data.recomendaciones %}
+  <div class="section">
+    <div class="section-title">Recomendaciones</div>
+    <ul class="item-list">
+      {% for rec in resumen_data.recomendaciones %}
+      <li><span class="badge-rec">ACCIÓN</span>{{ rec }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <!-- Cuentas por cobrar -->
+  {% with d=resumen_data.datos_financieros %}
+  {% if d.cuentas_por_cobrar is not None %}
+  <div class="section">
+    <div class="section-title">Cuentas por cobrar</div>
+    <div class="cobrar-grid">
+      <div class="cobrar-cell vigente">
+        <div class="cobrar-label">Vigente + Parcial</div>
+        <div class="cobrar-val verde">${{ d.cuentas_por_cobrar|floatformat:0 }}</div>
+        <div style="font-size:11px;color:#3d6b2c">{{ d.ventas_pendientes_count }} ventas</div>
+      </div>
+      <div class="cobrar-cell vencido">
+        <div class="cobrar-label">Vencido</div>
+        <div class="cobrar-val rojo">${{ d.ventas_vencidas|floatformat:0 }}</div>
+        <div style="font-size:11px;color:#b85450">{{ d.ventas_vencidas_count }} ventas</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>Reporte generado automáticamente por <strong>{{ site_name }}</strong></p>
+    <p>Modelo IA: {{ reporte.modelo_ia_usado }} — {{ reporte.fecha_generacion|date:"d/m/Y H:i" }}</p>
+    <p style="margin-top:8px;font-size:10px;color:#aaa">
+      Este reporte es confidencial. No reenviar sin autorización.
+    </p>
+  </div>
+
+</div><!-- .wrapper -->
+</body>
+</html>

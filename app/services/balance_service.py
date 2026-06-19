@@ -3,14 +3,19 @@ Servicio para análisis de balances y gastos
 
 REFACTORIZADO: Ahora usa la arquitectura modular de servicios base.
 La mayoría de la lógica común está en BaseReportServiceWithCategories.
+OPTIMIZADO: Implementa cache Redis para mejorar rendimiento.
 """
 from datetime import datetime
 from django.db.models import Count
 from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
 from django.db.models import Sum
+import logging
 
 from gastos.models import Gastos, Cuenta
 from .base_report_service import BaseReportServiceWithCategories
+from .cache_service import cache_service, cache_result
+
+logger = logging.getLogger(__name__)
 
 
 class BalanceAnalysisService(BaseReportServiceWithCategories):
@@ -77,16 +82,34 @@ class BalanceAnalysisService(BaseReportServiceWithCategories):
     def get_balances_by_period(self, filters, periodo='mensual'):
         """
         Override del método base para añadir lógica específica de Gastos
+        Con cache Redis para mejorar rendimiento
         
         Añade:
         - Campo 'mes' para período mensual
         - Información adicional (número secuencial, cuenta_info)
         """
+        # Generar clave de cache
+        cache_key = cache_service._generate_cache_key(
+            'balances_gastos', periodo, **filters
+        )
+        
+        # Intentar obtener del cache
+        cached_data = cache_service.get(cache_key)
+        if cached_data is not None:
+            logger.debug(f"Cache hit para balances gastos: {cache_key}")
+            return cached_data
+        
+        # Ejecutar consulta
+        logger.debug(f"Cache miss para balances gastos: {cache_key}")
         balances = self._get_balances_queryset(filters, periodo)
         balances_list = list(balances)
         
         # Añadir información adicional específica de Gastos
         self._enrich_balance_data(balances_list, filters)
+        
+        # Cachear resultado
+        timeout = cache_service.timeouts.get('balances', 900)
+        cache_service.set(cache_key, balances_list, timeout)
         
         return balances_list
     
@@ -132,9 +155,11 @@ class BalanceAnalysisService(BaseReportServiceWithCategories):
                 else:
                     balance['cuenta_info'] = "Única cuenta para esta categoría"
     
+    @cache_result('balances', 900, 'estadisticas_gastos')
     def calculate_statistics(self, filters):
         """
         Override para añadir estadísticas específicas de Gastos
+        Con cache para mejorar rendimiento
         
         Añade información sobre categorías con gasto máximo y mínimo
         """

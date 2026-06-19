@@ -17,32 +17,41 @@ class MediaServeMiddleware(MiddlewareMixin):
     def process_request(self, request):
         # Solo actuar si DEBUG=False y la URL es para archivos media
         if not settings.DEBUG and request.path.startswith(settings.MEDIA_URL):
-            # Obtener la ruta del archivo
+            # Rechazar rutas con componentes peligrosos antes de cualquier operación de FS
             relative_path = request.path[len(settings.MEDIA_URL):]
+            if '..' in relative_path.split('/') or '..' in relative_path.split('\\'):
+                raise Http404("Ruta no permitida")
+
             file_path = os.path.join(settings.MEDIA_ROOT, relative_path)
-            
-            # Verificar que el archivo existe y está dentro de MEDIA_ROOT
-            if os.path.exists(file_path) and os.path.commonpath([settings.MEDIA_ROOT, file_path]) == settings.MEDIA_ROOT:
+
+            # Resolver symlinks antes de comparar para prevenir path traversal
+            real_media_root = os.path.realpath(settings.MEDIA_ROOT)
+            real_file_path = os.path.realpath(file_path)
+
+            # Verificar que el archivo resuelto permanece dentro de MEDIA_ROOT
+            if not real_file_path.startswith(real_media_root + os.sep):
+                raise Http404("Acceso denegado")
+
+            if os.path.exists(real_file_path) and os.path.isfile(real_file_path):
                 try:
                     # Determinar el tipo de contenido
-                    content_type, encoding = mimetypes.guess_type(file_path)
+                    content_type, _ = mimetypes.guess_type(real_file_path)
                     if content_type is None:
                         content_type = 'application/octet-stream'
-                    
+
                     # Leer y devolver el archivo
-                    with open(file_path, 'rb') as f:
+                    with open(real_file_path, 'rb') as f:
                         response = HttpResponse(f.read(), content_type=content_type)
-                        
-                    # Agregar headers de cache para mejorar performance
-                    response['Cache-Control'] = 'public, max-age=3600'  # Cache por 1 hora
+
+                    # Cabeceras de seguridad: sin caché público, sin sniffing de tipo
+                    response['Cache-Control'] = 'private, no-cache'
+                    response['X-Content-Type-Options'] = 'nosniff'
                     return response
-                    
+
                 except (IOError, OSError):
-                    # Error al leer el archivo
                     raise Http404("Archivo no encontrado")
             else:
-                # Archivo no existe
                 raise Http404("Archivo no encontrado")
-        
+
         # No es una petición de media o DEBUG=True, continuar normalmente
         return None

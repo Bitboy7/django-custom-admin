@@ -16,7 +16,7 @@ class CustomMoneyWidget(MoneyWidget):
     def __init__(self, attrs=None, **kwargs):
         default_attrs = {
             'class': 'money-field form-control',
-            'style': 'border-radius: 6px; border: 1px solid #d1d5db; padding: 8px 12px;'
+            'style': 'border-radius: 6px; border: 1px solid #d8dce6; padding: 8px 12px;'
         }
         if attrs:
             default_attrs.update(attrs)

@@ -117,26 +117,26 @@ class GastoForm(forms.ModelForm):
 
         widgets = {
             'id_sucursal': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white transition-colors duration-200 appearance-none'
+                'class': 'w-full px-3 py-2 pr-10 border border-[#d8dce6] rounded-lg shadow-sm focus:ring-2 focus:ring-[#b8dbd9] focus:border-[#b8dbd9] bg-[#f4f4f9] transition-colors duration-200 appearance-none'
             }),
             'id_cat_gastos': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white transition-colors duration-200 appearance-none'
+                'class': 'w-full px-3 py-2 pr-10 border border-[#d8dce6] rounded-lg shadow-sm focus:ring-2 focus:ring-[#b8dbd9] focus:border-[#b8dbd9] bg-[#f4f4f9] transition-colors duration-200 appearance-none'
             }),
             'monto': forms.NumberInput(attrs={
-                'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200',
+                'class': 'w-full px-3 py-2 border border-[#d8dce6] rounded-lg shadow-sm focus:ring-2 focus:ring-[#b8dbd9] focus:border-[#b8dbd9] transition-colors duration-200',
                 'step': '0.01',
                 'placeholder': 'Ingrese el monto'
             }),
             'descripcion': forms.Textarea(attrs={
-                'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200',
+                'class': 'w-full px-3 py-2 border border-[#d8dce6] rounded-lg shadow-sm focus:ring-2 focus:ring-[#b8dbd9] focus:border-[#b8dbd9] transition-colors duration-200',
                 'rows': 3,
                 'placeholder': 'Descripción del gasto...'
             }),
             'id_cuenta_banco': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white transition-colors duration-200 appearance-none'
+                'class': 'w-full px-3 py-2 pr-10 border border-[#d8dce6] rounded-lg shadow-sm focus:ring-2 focus:ring-[#b8dbd9] focus:border-[#b8dbd9] bg-[#f4f4f9] transition-colors duration-200 appearance-none'
             }),
             'fecha': forms.DateInput(attrs={
-                'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200',
+                'class': 'w-full px-3 py-2 border border-[#d8dce6] rounded-lg shadow-sm focus:ring-2 focus:ring-[#b8dbd9] focus:border-[#b8dbd9] transition-colors duration-200',
                 'type': 'date'
             }),
         }
@@ -163,6 +163,46 @@ class SaldoMensualForm(forms.ModelForm):
             'saldo_inicial': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
+def get_modelo_ia_choices():
+    """
+    Obtiene dinámicamente las opciones de modelos de IA desde las variables de entorno.
+    
+    Returns:
+        list: Lista de tuplas (id_modelo, nombre_modelo) para usar en el formulario
+    """
+    from gastos.services.invoice_recognition_service import get_available_models
+    
+    modelos = get_available_models()
+    
+    if not modelos:
+        # Si no hay modelos configurados, retornar un mensaje de error
+        return [('', 'No hay modelos de IA configurados - Verifica las variables de entorno')]
+    
+    # Agrupar modelos por proveedor
+    google_models = []
+    openrouter_models = []
+    
+    for model_id, model_name, provider in modelos:
+        if provider == "google":
+            google_models.append((model_id, model_name))
+        elif provider == "openrouter":
+            openrouter_models.append((model_id, model_name))
+    
+    # Crear estructura de choices agrupada
+    choices = []
+    
+    if google_models:
+        choices.append(('Google Gemini', google_models))
+    
+    if openrouter_models:
+        choices.append(('OpenRouter (gratis)', openrouter_models))
+    
+    # Si solo hay modelos planos sin agrupar, retornarlos directamente
+    if not choices and modelos:
+        choices = [(model_id, model_name) for model_id, model_name, _ in modelos]
+    
+    return choices
+
 class FacturaUploadForm(forms.Form):
     documento_pdf = forms.FileField(
         label="Subir Documento PDF",
@@ -182,6 +222,11 @@ class FacturaUploadForm(forms.Form):
         initial='auto',
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+    modelo_ia = forms.ChoiceField(
+        label="Modelo de IA",
+        choices=[],  # Se establecerá dinámicamente en __init__
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_modelo_ia'})
+    )
     asignar_categorias = forms.BooleanField(
         label="Asignar categorías automáticamente",
         help_text="⚠️ ATENCIÓN: Esta opción utiliza IA para sugerir categorías. Puede ser lenta y exceder límites de API para estados de cuenta con muchos movimientos.",
@@ -191,3 +236,19 @@ class FacturaUploadForm(forms.Form):
             'class': 'form-check-input'
         })
     )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Establecer las opciones de modelo de IA dinámicamente desde variables de entorno
+        modelo_choices = get_modelo_ia_choices()
+        self.fields['modelo_ia'].choices = modelo_choices
+        
+        # Establecer el valor inicial como el primer modelo disponible
+        if modelo_choices:
+            if isinstance(modelo_choices[0], tuple) and isinstance(modelo_choices[0][1], list):
+                # Si está agrupado, tomar el primer modelo del primer grupo
+                self.fields['modelo_ia'].initial = modelo_choices[0][1][0][0]
+            else:
+                # Si no está agrupado, tomar el primer modelo
+                self.fields['modelo_ia'].initial = modelo_choices[0][0]

@@ -93,7 +93,11 @@ function initializeMultiMonthSelector() {
       monthInput.value = "";
       const form = monthInput.closest("form");
       if (form) {
-        form.submit();
+        if (typeof htmx !== 'undefined') {
+          htmx.trigger(form, 'submit');
+        } else {
+          form.submit();
+        }
       } else {
         console.error("No se encontró el formulario para enviar");
       }
@@ -110,7 +114,11 @@ function initializeMultiMonthSelector() {
       // Enviar el formulario automáticamente
       const form = monthInput.closest("form");
       if (form) {
-        form.submit();
+        if (typeof htmx !== 'undefined') {
+          htmx.trigger(form, 'submit');
+        } else {
+          form.submit();
+        }
       } else {
         console.error("No se encontró el formulario para enviar");
       }

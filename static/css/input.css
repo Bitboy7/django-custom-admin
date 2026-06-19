@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═════════════════════════════════════════════════════════════════
+   Custom CSS Imports — Design Tokens, Components, Layout
+   Ejecutar: npm run build:css para compilar a output.css
+   ═════════════════════════════════════════════════════════════════ */
+
+/* Design Tokens */
+@import url("tokens.css");
+
+/* Base Reset & Typography */
+@import url("base.css");
+
+/* Layout (navbar, sidebar, breadcrumbs) */
+@import url("layout.css");
+
+/* Components (buttons, cards, badges, toasts, tooltips) */
+@import url("components.css");
+
+/* Forms (inputs, selects, fieldsets, validación) */
+@import url("forms.css");
+
+/* Tables (admin tables, DataTables, paginación) */
+@import url("tables.css");
+
+/* Dashboard (KPI cards, charts, activity) */
+@import url("dashboard.css");
+
+/* Login (editorial agricultural brutalism) */
+@import url("login.css");
+
+/* Money Widget Compatibility */
+@import url("money_widget.css");
+
+/* DataTables Buttons */
+@import url("datatables-buttons.css");

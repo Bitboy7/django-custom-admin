@@ -1,7 +1,43 @@
 """
 Servicio para gestionar los logs de actividad en el sistema.
 """
+import ipaddress
 from .models import LogActividad
+
+# Rangos de red privada — solo desde estas IPs se confía en X-Forwarded-For
+_TRUSTED_PROXY_NETWORKS = [
+    ipaddress.ip_network('10.0.0.0/8'),
+    ipaddress.ip_network('172.16.0.0/12'),
+    ipaddress.ip_network('192.168.0.0/16'),
+    ipaddress.ip_network('127.0.0.0/8'),  # Loopback (docker interno)
+]
+
+
+def _get_real_ip(request):
+    """
+    Obtiene la IP real del cliente de forma segura.
+    Solo confía en X-Forwarded-For cuando REMOTE_ADDR pertenece a
+    un proxy interno conocido, previniendo IP spoofing desde clientes externos.
+    """
+    remote_addr = request.META.get('REMOTE_ADDR', '')
+    try:
+        remote_ip = ipaddress.ip_address(remote_addr)
+        is_trusted_proxy = any(remote_ip in net for net in _TRUSTED_PROXY_NETWORKS)
+    except ValueError:
+        return remote_addr
+
+    if is_trusted_proxy:
+        forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR', '')
+        if forwarded_for:
+            # Primera IP en la cadena = cliente original
+            client_ip = forwarded_for.split(',')[0].strip()
+            try:
+                ipaddress.ip_address(client_ip)  # Validar formato
+                return client_ip
+            except ValueError:
+                pass  # IP malformada — usar REMOTE_ADDR
+
+    return remote_addr
 
 
 def registrar_log(
@@ -14,7 +50,7 @@ def registrar_log(
 ):
     """
     Registra un log de actividad en el sistema.
-    
+
     Args:
         request: La solicitud HTTP
         tipo_accion: Tipo de acción (login, logout, create, update, delete, view, other)
@@ -22,24 +58,19 @@ def registrar_log(
         modelo_afectado: Nombre del modelo afectado (opcional)
         objeto_id: ID del objeto afectado (opcional)
         campos_modificados: Diccionario con los campos modificados (opcional)
-    
+
     Returns:
         LogActividad: El registro creado
     """
     # Obtener datos del usuario
     usuario = request.user if request.user.is_authenticated else None
     nombre_usuario = usuario.username if usuario else 'Anónimo'
-    
-    # Obtener dirección IP
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        # Obtener la primera IP si hay múltiples (proxies)
-        ip = x_forwarded_for.split(',')[0].strip()
-    else:
-        ip = request.META.get('REMOTE_ADDR')
-    
-    # Obtener user agent
-    navegador = request.META.get('HTTP_USER_AGENT', '')
+
+    # Obtener IP real validando proxies confiables (CRIT-02)
+    ip = _get_real_ip(request)
+
+    # Obtener user agent — limitar longitud para prevenir log injection (LOW-02)
+    navegador = request.META.get('HTTP_USER_AGENT', '')[:500]
     
     # Crear el log
     log = LogActividad.objects.create(

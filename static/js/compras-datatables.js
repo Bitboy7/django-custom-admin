@@ -202,7 +202,7 @@ document.addEventListener("DOMContentLoaded", function () {
           extend: "copy",
           text: '<i class="fas fa-copy"></i> Copiar',
           className:
-            "bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
+            "bg-[#586f7c] hover:bg-[#2f4550] text-[#f4f4f9] px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
           exportOptions: {
             columns: ":visible",
             orthogonal: "export",
@@ -212,7 +212,7 @@ document.addEventListener("DOMContentLoaded", function () {
           extend: "excel",
           text: '<i class="fas fa-file-excel"></i> Excel',
           className:
-            "bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
+            "bg-[#5a7d6b] hover:bg-[#586f7c] text-[#f4f4f9] px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
           title: function () {
             return getReportTitle();
           },
@@ -225,10 +225,200 @@ document.addEventListener("DOMContentLoaded", function () {
           },
         },
         {
+          text: '<i class="fas fa-chart-pie mr-1"></i> Resumen Excel',
+          className: "dt-button btn-summary-excel",
+          action: function (e, dt, button, config) {
+            // Procesar datos para el resumen
+            var sucursalData = {};
+            var table = $("#comprasTable").DataTable();
+            var data = table.rows({ search: "applied" }).data();
+
+            // Agrupar por sucursal → cuenta → productor
+            for (var i = 0; i < data.length; i++) {
+              var rowData = data[i];
+              var tempDiv = document.createElement("div");
+
+              tempDiv.innerHTML = rowData[3];
+              var sucursal = (
+                tempDiv.textContent ||
+                tempDiv.innerText ||
+                rowData[3]
+              ).trim();
+
+              tempDiv.innerHTML = rowData[4];
+              var cuenta = (
+                tempDiv.textContent ||
+                tempDiv.innerText ||
+                rowData[4]
+              ).trim();
+
+              tempDiv.innerHTML = rowData[1];
+              var productor = (
+                tempDiv.textContent ||
+                tempDiv.innerText ||
+                rowData[1]
+              ).trim();
+
+              var totalCell = table.cell(i, 7).node();
+              var cellText = (
+                totalCell.textContent ||
+                totalCell.innerText ||
+                ""
+              ).trim();
+              var totalValue = parseFloat(cellText.replace(/[$\s]/g, ""));
+              if (isNaN(totalValue)) totalValue = 0;
+
+              if (!sucursalData[sucursal]) {
+                sucursalData[sucursal] = { cuentas: {}, total: 0 };
+              }
+              if (!sucursalData[sucursal].cuentas[cuenta]) {
+                sucursalData[sucursal].cuentas[cuenta] = {
+                  productores: {},
+                  total: 0,
+                };
+              }
+              if (
+                !sucursalData[sucursal].cuentas[cuenta].productores[productor]
+              ) {
+                sucursalData[sucursal].cuentas[cuenta].productores[
+                  productor
+                ] = 0;
+              }
+
+              sucursalData[sucursal].cuentas[cuenta].productores[productor] +=
+                totalValue;
+              sucursalData[sucursal].cuentas[cuenta].total += totalValue;
+              sucursalData[sucursal].total += totalValue;
+            }
+
+            // Preparar datos para exportación HTML
+            var htmlData = [];
+            var grandTotal = 0;
+
+            // Ordenar sucursales por total descendente
+            var sortedSucursales = Object.keys(sucursalData).sort(function (
+              a,
+              b
+            ) {
+              return sucursalData[b].total - sucursalData[a].total;
+            });
+
+            // Construir HTML para cada fila
+            sortedSucursales.forEach(function (sucursal) {
+              var sucData = sucursalData[sucursal];
+              var sortedCuentas = Object.keys(sucData.cuentas).sort(function (
+                a,
+                b
+              ) {
+                return sucData.cuentas[b].total - sucData.cuentas[a].total;
+              });
+
+              sortedCuentas.forEach(function (cuenta) {
+                var cuentaData = sucData.cuentas[cuenta];
+                var sortedProductores = Object.keys(
+                  cuentaData.productores
+                ).sort(function (a, b) {
+                  return cuentaData.productores[b] - cuentaData.productores[a];
+                });
+
+                // Agregar productores
+                sortedProductores.forEach(function (productor) {
+                  htmlData.push({
+                    sucursal: sucursal,
+                    cuenta: cuenta,
+                    productor: productor,
+                    total: cuentaData.productores[productor],
+                    isSubtotal: false,
+                  });
+                });
+
+                // Subtotal de cuenta
+                htmlData.push({
+                  sucursal: sucursal,
+                  cuenta: cuenta + " - SUBTOTAL",
+                  productor: "",
+                  total: cuentaData.total,
+                  isSubtotal: true,
+                });
+              });
+
+              // Subtotal de sucursal
+              htmlData.push({
+                sucursal: sucursal + " - SUBTOTAL",
+                cuenta: "",
+                productor: "",
+                total: sucData.total,
+                isSubtotal: true,
+              });
+
+              // Línea en blanco
+              htmlData.push({
+                sucursal: "",
+                cuenta: "",
+                productor: "",
+                total: "",
+                isSubtotal: false,
+              });
+
+              grandTotal += sucData.total;
+            });
+
+            // Total general
+            htmlData.push({
+              sucursal: "TOTAL GENERAL",
+              cuenta: "",
+              productor: "",
+              total: grandTotal,
+              isSubtotal: true,
+            });
+
+            // Crear tabla HTML con encoding UTF-8
+            var html = '<html><head><meta charset="UTF-8"></head><body>';
+            html += "<table>";
+            html += "<thead><tr>";
+            html +=
+              "<th>Sucursal</th><th>Cuenta</th><th>Productor</th><th>Total</th>";
+            html += "</tr></thead><tbody>";
+
+            htmlData.forEach(function (row) {
+              var style = row.isSubtotal
+                ? ' style="background-color: #E6F3FF; font-weight: bold;"'
+                : "";
+              html += "<tr" + style + ">";
+              html += "<td>" + row.sucursal + "</td>";
+              html += "<td>" + row.cuenta + "</td>";
+              html += "<td>" + row.productor + "</td>";
+              html +=
+                "<td>" +
+                (row.total !== ""
+                  ? "$" +
+                    row.total.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })
+                  : "") +
+                "</td>";
+              html += "</tr>";
+            });
+
+            html += "</tbody></table></body></html>";
+
+            // Crear blob con BOM para UTF-8 y descargar
+            var BOM = "\uFEFF";
+            var blob = new Blob([BOM + html], {
+              type: "application/vnd.ms-excel;charset=utf-8",
+            });
+            var link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "compras-resumen-detallado.xls";
+            link.click();
+          },
+        },
+        {
           extend: "pdf",
           text: '<i class="fas fa-file-pdf"></i> PDF',
           className:
-            "bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
+            "bg-[#b85450] hover:bg-[#8b4545] text-[#f4f4f9] px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
           title: "",
           filename: function () {
             return "compras_" + getCurrentDateFormatted("filename");
@@ -276,9 +466,9 @@ document.addEventListener("DOMContentLoaded", function () {
               doc.content[0].layout = {
                 fillColor: function (rowIndex) {
                   return rowIndex === 0
-                    ? "#3b82f6"
+                    ? "#586f7c"
                     : rowIndex % 2 === 0
-                    ? "#f3f4f6"
+                    ? "#f4f4f9"
                     : null;
                 },
                 hLineWidth: function (i, node) {
@@ -290,10 +480,10 @@ document.addEventListener("DOMContentLoaded", function () {
                   return 0.5;
                 },
                 hLineColor: function () {
-                  return "#d1d5db";
+                  return "#d8dce6";
                 },
                 vLineColor: function () {
-                  return "#d1d5db";
+                  return "#d8dce6";
                 },
               };
             }
@@ -303,7 +493,7 @@ document.addEventListener("DOMContentLoaded", function () {
           extend: "print",
           text: '<i class="fas fa-print"></i> Imprimir',
           className:
-            "bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
+            "bg-purple-600 hover:bg-purple-700 text-[#f4f4f9] px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
           title: function () {
             return getReportTitle();
           },

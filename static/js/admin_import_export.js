@@ -1,3 +1,28 @@
+// ── Forzar tema claro de Jazzmin ──────────────────────────────────────────────
+// El UI Builder de Jazzmin guarda el tema en localStorage bajo la clave "jazzmin".
+// Si alguien eligió un tema oscuro en producción, persiste aunque settings.py diga
+// "theme: default". Esta función lo resetea a valores claros en cada carga de página.
+(function enforceJazzminLightTheme() {
+  try {
+    var stored = localStorage.getItem("jazzmin");
+    if (stored) {
+      var tweaks = JSON.parse(stored);
+      var DARK_THEMES = ["darkly", "cyborg", "slate", "solar", "superhero"];
+      var wasDark = DARK_THEMES.indexOf(tweaks.theme) !== -1;
+      // Siempre forzar tema claro, independientemente de lo guardado
+      tweaks.theme = "default";
+      tweaks.dark_mode_theme = null;
+      localStorage.setItem("jazzmin", JSON.stringify(tweaks));
+      // Recargar solo si se estaba mostrando un tema oscuro (aplica el cambio visualmente)
+      if (wasDark) {
+        location.reload();
+      }
+    }
+  } catch (e) {
+    /* localStorage no disponible — ignorar */
+  }
+})();
+
 // Script para reposicionar los botones de import/export en Django Jazzmin
 document.addEventListener("DOMContentLoaded", function () {
   function repositionImportExportButtons() {
@@ -44,7 +69,7 @@ document.addEventListener("DOMContentLoaded", function () {
           (node) =>
             node.nodeType === 1 &&
             (node.classList?.contains("import_export_menu") ||
-              node.querySelector?.(".import_export_menu"))
+              node.querySelector?.(".import_export_menu")),
         );
 
         if (hasImportExportMenu) {
@@ -100,7 +125,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Agregar animaciones sutiles a los botones
     const buttons = document.querySelectorAll(
-      '.button, .submit-row input[type="submit"]'
+      '.button, .submit-row input[type="submit"]',
     );
     buttons.forEach(function (button) {
       button.addEventListener("mouseenter", function () {
@@ -136,11 +161,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Mejorar la navegación por teclado
     const focusableElements = document.querySelectorAll(
-      "a, button, input, select, textarea"
+      "a, button, input, select, textarea",
     );
     focusableElements.forEach(function (element) {
       element.addEventListener("focus", function () {
-        this.style.outline = "2px solid #4f46e5";
+        this.style.outline = "2px solid #837896";
         this.style.outlineOffset = "2px";
       });
 
@@ -178,7 +203,7 @@ function initLoginEnhancements() {
  */
 function initPasswordToggle() {
   const passwordInput = document.querySelector(
-    'input[type="password"][name="password"]'
+    'input[type="password"][name="password"]',
   );
 
   if (!passwordInput) {
@@ -261,7 +286,7 @@ function togglePasswordVisibility(input, button) {
  */
 function initLoginFormValidation() {
   const inputs = document.querySelectorAll(
-    '.jazzmin-login-page input[type="text"], .jazzmin-login-page input[type="password"], .jazzmin-login-page input[type="email"]'
+    '.jazzmin-login-page input[type="text"], .jazzmin-login-page input[type="password"], .jazzmin-login-page input[type="email"]',
   );
 
   inputs.forEach(function (input) {

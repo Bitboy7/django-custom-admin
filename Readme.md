@@ -109,7 +109,6 @@ Este sistema proporciona una plataforma completa para la gestión administrativa
 ## ⚙️ Configuración
 
 1. **Configurar variables de entorno**:
-
    - Copia `.env.example` a `.env`
    - Actualiza las variables según tu entorno:
 

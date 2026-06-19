@@ -1,0 +1,286 @@
+{% extends '_base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Reporte por Categoría - Capital e Inversiones{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css">
+<style>
+    .categoria-card {
+        transition: all 0.3s ease;
+    }
+    .categoria-card:hover {
+        transform: scale(1.02);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Encabezado -->
+    <div class="mb-8">
+        <h1 class="text-4xl font-bold text-[#2f4550] mb-2">
+            <i class="fas fa-tags text-purple-600 mr-3"></i>
+            Reporte Acumulado por Categoría
+        </h1>
+        <p class="text-[#586f7c]">Análisis de inversiones agrupadas por categoría</p>
+        <div class="mt-4">
+            <a href="{% url 'capital_inversiones:dashboard' %}" class="text-[#2f4550] hover:text-[#2f4550]">
+                <i class="fas fa-arrow-left mr-2"></i>Volver al Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-[#f4f4f9] rounded-lg shadow-md p-6 mb-8">
+        <h3 class="text-lg font-semibold text-[#2f4550] mb-4">
+            <i class="fas fa-filter mr-2"></i>Filtros de Búsqueda
+        </h3>
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-[#586f7c] mb-2">Fecha Inicio</label>
+                <input type="date" name="fecha_inicio" value="{{ fecha_inicio|default:'' }}" 
+                       class="w-full px-4 py-2 border border-[#d8dce6] rounded-lg focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-[#586f7c] mb-2">Fecha Fin</label>
+                <input type="date" name="fecha_fin" value="{{ fecha_fin|default:'' }}" 
+                       class="w-full px-4 py-2 border border-[#d8dce6] rounded-lg focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-[#586f7c] mb-2">Categoría</label>
+                <select name="categoria" class="w-full px-4 py-2 border border-[#d8dce6] rounded-lg focus:ring-2 focus:ring-purple-500">
+                    <option value="">Todas las categorías</option>
+                    {% for cat in categorias %}
+                    <option value="{{ cat.id }}" {% if categoria_seleccionada == cat.id|stringformat:"s" %}selected{% endif %}>
+                        {{ cat.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-[#586f7c] mb-2">Período</label>
+                <select name="periodo" class="w-full px-4 py-2 border border-[#d8dce6] rounded-lg focus:ring-2 focus:ring-purple-500">
+                    <option value="diario" {% if periodo == 'diario' %}selected{% endif %}>Diario</option>
+                    <option value="semanal" {% if periodo == 'semanal' %}selected{% endif %}>Semanal</option>
+                    <option value="mensual" {% if periodo == 'mensual' %}selected{% endif %}>Mensual</option>
+                    <option value="anual" {% if periodo == 'anual' %}selected{% endif %}>Anual</option>
+                </select>
+            </div>
+            <div class="flex items-end gap-2">
+                <button type="submit" class="flex-1 px-4 py-2 bg-purple-600 text-[#f4f4f9] rounded-lg hover:bg-purple-700 transition">
+                    <i class="fas fa-search mr-2"></i>Filtrar
+                </button>
+                <a href="{% url 'capital_inversiones:reporte_categoria' %}" 
+                   class="px-4 py-2 bg-[#586f7c] text-[#f4f4f9] rounded-lg hover:bg-[#586f7c] transition">
+                    <i class="fas fa-redo"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Cards de Categorías -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {% for item in balance_categorias %}
+        <div class="categoria-card bg-[#f4f4f9] rounded-lg shadow-lg overflow-hidden">
+            <div class="bg-gradient-to-r from-purple-500 to-purple-600 p-4">
+                <h3 class="text-[#f4f4f9] font-bold text-lg">{{ item.id_cat_inversion__nombre }}</h3>
+                <p class="text-purple-100 text-sm">{{ item.cantidad_movimientos }} movimientos</p>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-[#586f7c]">Entradas</span>
+                        <span class="text-lg font-bold text-[#5a7d6b]">
+                            {% if item.total_entradas %}
+                                ${{ item.total_entradas.amount|floatformat:2|intcomma }}
+                            {% else %}
+                                $0.00
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-[#586f7c]">Salidas</span>
+                        <span class="text-lg font-bold text-[#b85450]">
+                            {% if item.total_salidas %}
+                                ${{ item.total_salidas.amount|floatformat:2|intcomma }}
+                            {% else %}
+                                $0.00
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="border-t pt-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-semibold text-[#586f7c]">Balance</span>
+                            <span class="text-xl font-bold {% if item.balance >= 0 %}text-[#2f4550]{% else %}text-[#b85450]{% endif %}">
+                                ${{ item.balance|floatformat:2|intcomma|default:"0.00" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-12">
+            <i class="fas fa-inbox text-6xl text-[#b8dbd9] mb-4"></i>
+            <p class="text-xl text-[#586f7c]">No hay datos disponibles</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Tabla Detallada -->
+    <div class="bg-[#f4f4f9] rounded-lg shadow-lg p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold text-[#2f4550]">
+                <i class="fas fa-table text-purple-600 mr-2"></i>
+                Detalle de Movimientos por Categoría
+            </h3>
+            <button onclick="exportTable()" class="px-4 py-2 bg-[#5a7d6b] text-[#f4f4f9] rounded-lg hover:bg-[#5a7d6b] transition">
+                <i class="fas fa-file-excel mr-2"></i>Exportar
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table id="categoriaTable" class="min-w-full divide-y divide-gray-200 display">
+                <thead class="bg-[#f4f4f9]">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-[#586f7c] uppercase">Categoría</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-[#586f7c] uppercase">Fecha</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-[#586f7c] uppercase">Sucursal</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-[#586f7c] uppercase">Tipo</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-[#586f7c] uppercase">Monto</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-[#586f7c] uppercase">Descripción</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-[#f4f4f9] divide-y divide-gray-200">
+                    {% for inversion in inversiones %}
+                    <tr class="hover:bg-[#f4f4f9]">
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                                {{ inversion.id_cat_inversion.nombre }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">{{ inversion.fecha|date:"d/m/Y" }}</td>
+                        <td class="px-6 py-4 text-sm">{{ inversion.id_sucursal.nombre }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if inversion.tipo_movimiento == 'ENTRADA' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-[rgba(184,219,217,.15)] text-[#5a7d6b]">
+                                <i class="fas fa-arrow-down"></i> Entrada
+                            </span>
+                            {% else %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-[rgba(184,84,80,.15)] text-[#b85450]">
+                                <i class="fas fa-arrow-up"></i> Salida
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                            <span class="text-sm font-semibold {% if inversion.tipo_movimiento == 'ENTRADA' %}text-[#5a7d6b]{% else %}text-[#b85450]{% endif %}">
+                                {% if inversion.monto %}
+                                    ${{ inversion.monto.amount|floatformat:2|intcomma }}
+                                {% else %}
+                                    $0.00
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-[#586f7c]">{{ inversion.descripcion|truncatewords:8 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center text-[#586f7c]">
+                            No hay movimientos para mostrar
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Gráfico de Distribución -->
+    <div class="bg-[#f4f4f9] rounded-lg shadow-lg p-6 mt-8">
+        <h3 class="text-xl font-bold text-[#2f4550] mb-6">
+            <i class="fas fa-chart-pie text-purple-600 mr-2"></i>
+            Distribución por Categoría
+        </h3>
+        <div style="height: 400px;">
+            <canvas id="distribucionChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Navegación -->
+    <div class="mt-8 flex flex-wrap gap-4">
+        <a href="{% url 'capital_inversiones:dashboard' %}" 
+           class="inline-flex items-center px-6 py-3 bg-[#2f4550] text-[#f4f4f9] font-semibold rounded-lg hover:bg-[#2f4550] transition shadow-md">
+            <i class="fas fa-chart-line mr-2"></i> Dashboard
+        </a>
+        <a href="{% url 'capital_inversiones:reporte_sucursal' %}" 
+           class="inline-flex items-center px-6 py-3 bg-[#5a7d6b] text-[#f4f4f9] font-semibold rounded-lg hover:bg-[#5a7d6b] transition shadow-md">
+            <i class="fas fa-building mr-2"></i> Reporte por Sucursal
+        </a>
+        <a href="{% url 'capital_inversiones:reporte_rendimientos' %}" 
+           class="inline-flex items-center px-6 py-3 bg-yellow-600 text-[#f4f4f9] font-semibold rounded-lg hover:bg-yellow-700 transition shadow-md">
+            <i class="fas fa-percentage mr-2"></i> Rendimientos
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    $('#categoriaTable').DataTable({
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-MX.json'
+        },
+        order: [[1, 'desc']],
+        pageLength: 25
+    });
+
+    // Gráfico de distribución
+    const ctx = document.getElementById('distribucionChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [{% for item in balance_categorias %}'{{ item.id_cat_inversion__nombre|escapejs }}',{% endfor %}],
+            datasets: [{
+                label: 'Balance',
+                data: [{% for item in balance_categorias %}{{ item.balance|default:0 }},{% endfor %}],
+                backgroundColor: 'rgba(139, 92, 246, 0.6)',
+                borderColor: 'rgb(139, 92, 246)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString('es-MX');
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+
+function exportTable() {
+    // Implementación de exportación
+    window.print();
+}
+</script>
+{% endblock %}

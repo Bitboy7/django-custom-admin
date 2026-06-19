@@ -1,6 +1,20 @@
 {
+  "scripts": {
+    "test": "jest",
+    "build:css": "tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify",
+    "watch:css": "tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/static/js/__tests__/**/*.test.js"
+    ]
+  },
   "devDependencies": {
-    "tailwindcss": "^3.4.16"
+    "jest": "^30.3.0",
+    "tailwindcss": "^3.4.16",
+    "postcss": "^8.4.39",
+    "autoprefixer": "^10.4.19"
   },
   "dependencies": {
     "flowbite": "^2.5.2"

@@ -1,0 +1,339 @@
+/*
+ * ═══════════════════════════════════════════════════════════════
+ *  LAYOUT — Navbar, Sidebar, Breadcrumbs, Content
+ *
+ *  Compatible con Jazzmin admin theme.
+ *  Skills: ui-ux-pro-max (nav patterns, touch, a11y)
+ * ═══════════════════════════════════════════════════════════════
+ */
+
+/* ── Navbar (top) ──────────────────────────────────────────────── */
+body .main-header.navbar,
+body .navbar.navbar-expand-md {
+  background: var(--brand-navy-dark) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.25) !important;
+  min-height: var(--navbar-height) !important;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-navbar);
+  font-family: var(--font-body);
+}
+
+/* Nav links */
+body .navbar-nav .nav-link,
+body .nav-item .nav-link {
+  color: var(--text-on-dark-muted) !important;
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  padding: var(--space-2) var(--space-4) !important;
+  border-radius: var(--radius-md);
+  transition: all var(--duration-fast) var(--ease-default);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+body .navbar-nav .nav-link:hover,
+body .nav-item .nav-link:hover {
+  color: #fff !important;
+  background: rgba(13, 148, 136, 0.18) !important;
+}
+body .navbar-nav .nav-link.active {
+  color: var(--brand-teal-light) !important;
+  background: rgba(13, 148, 136, 0.14) !important;
+}
+
+/* Brand */
+body .brand-link {
+  background: linear-gradient(
+    135deg,
+    var(--brand-navy) 0%,
+    var(--brand-navy-dark) 100%
+  ) !important;
+  border-bottom: 2px solid var(--brand-teal) !important;
+  padding: var(--space-3) var(--space-6) !important;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--font-size-md);
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.94) !important;
+}
+body .brand-text {
+  font-size: var(--font-size-sm) !important;
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: none !important;
+}
+
+/* Hide navbar logo and images */
+body .brand-link .brand-image,
+body .brand-link img {
+  display: none !important;
+}
+
+/* Navbar search */
+body .form-control-navbar {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+  border-radius: var(--radius-md) !important;
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  padding: var(--space-2) var(--space-4);
+  transition: all var(--duration-fast) var(--ease-default);
+}
+body .form-control-navbar::placeholder {
+  color: rgba(255, 255, 255, 0.35) !important;
+}
+body .form-control-navbar:focus {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: var(--brand-teal) !important;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.25) !important;
+}
+
+/* ── Avatar pill in navbar ────────────────────────────────────── */
+body .jaz-avatar-btn {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--space-2) !important;
+  padding: 3px 12px 3px 3px !important;
+  border-radius: var(--radius-full) !important;
+  cursor: pointer !important;
+  transition:
+    background var(--duration-fast) var(--ease-default),
+    box-shadow var(--duration-fast) var(--ease-default);
+  min-height: 44px;
+}
+body .jaz-avatar-btn:hover,
+body .jaz-avatar-btn:focus-visible {
+  background: rgba(13, 148, 136, 0.18) !important;
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.4) !important;
+  outline: none;
+}
+body .jaz-avatar-img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(13, 148, 136, 0.7);
+  flex-shrink: 0;
+}
+body .jaz-avatar-initials {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--brand-teal) 0%,
+    var(--brand-teal-dark) 100%
+  );
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
+}
+body .jaz-avatar-name {
+  color: var(--text-on-dark);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  max-width: 130px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 767px) {
+  body .jaz-avatar-name {
+    display: none !important;
+  }
+}
+
+/* ── Sidebar ───────────────────────────────────────────────────── */
+body .main-sidebar,
+body .os-viewport,
+body .sidebar {
+  background: var(--sidebar-bg) !important;
+  font-family: var(--font-body);
+  scrollbar-width: thin;
+  scrollbar-color: var(--sidebar-text-header) transparent;
+}
+body .sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+body .sidebar::-webkit-scrollbar-thumb {
+  background: var(--sidebar-text-header);
+  border-radius: var(--radius-full);
+}
+
+/* Section headers */
+body .nav-sidebar .nav-header {
+  color: var(--sidebar-text-header) !important;
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: var(--space-4) var(--space-5) var(--space-2) !important;
+}
+
+/* Parent items */
+body .nav-sidebar .nav-item > .nav-link {
+  color: var(--sidebar-text) !important;
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  border-radius: var(--radius-md) !important;
+  margin: 1px var(--space-2) !important;
+  padding: var(--space-2) var(--space-4) !important;
+  min-height: 44px;
+  border-left: 3px solid transparent !important;
+  transition: all var(--duration-fast) var(--ease-default);
+  display: flex;
+  align-items: center;
+}
+body .nav-sidebar .nav-item > .nav-link:hover {
+  background: var(--sidebar-hover-bg) !important;
+  color: var(--sidebar-active-text) !important;
+  border-left-color: var(--brand-teal) !important;
+}
+body .nav-sidebar .nav-item > .nav-link.active,
+body .nav-sidebar .nav-item.menu-open > .nav-link {
+  background: var(--sidebar-active-bg) !important;
+  color: var(--sidebar-active-text) !important;
+  border-left-color: var(--brand-teal) !important;
+}
+
+/* Child items */
+body .nav-treeview .nav-item > .nav-link {
+  color: var(--sidebar-child-text) !important;
+  font-size: var(--font-size-xs);
+  padding-left: 2.25rem !important;
+  border-left: 2px solid transparent !important;
+  margin: 0 var(--space-2) !important;
+  border-radius: var(--radius-sm) !important;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
+body .nav-treeview .nav-item > .nav-link:hover {
+  background: var(--sidebar-hover-bg) !important;
+  color: var(--sidebar-active-text) !important;
+  border-left-color: var(--brand-teal) !important;
+}
+body .nav-treeview .nav-item > .nav-link.active {
+  background: var(--brand-teal) !important;
+  color: var(--sidebar-active-text) !important;
+  border-left-color: rgba(255, 255, 255, 0.6) !important;
+  font-weight: 600 !important;
+}
+
+/* User panel — hidden */
+body .user-panel {
+  display: none !important;
+}
+
+/* ── Breadcrumbs ───────────────────────────────────────────────── */
+body .breadcrumbs {
+  background: var(--surface-card) !important;
+  border-bottom: 1px solid var(--border-default) !important;
+  padding: var(--space-3) var(--space-6) !important;
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs) !important;
+  color: var(--text-muted) !important;
+  border-radius: 0;
+}
+body .breadcrumbs a {
+  color: var(--accent-blue) !important;
+  font-weight: 500;
+}
+body .breadcrumbs a:hover {
+  color: var(--brand-teal-dark) !important;
+}
+
+body .breadcrumb {
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+body .breadcrumb-item a {
+  color: var(--accent-blue) !important;
+  font-size: var(--font-size-xs);
+}
+body .breadcrumb-item.active {
+  color: var(--text-secondary) !important;
+  font-size: var(--font-size-xs);
+}
+body .breadcrumb-item + .breadcrumb-item::before {
+  color: var(--text-muted) !important;
+}
+
+body .content-header {
+  padding: var(--space-3) var(--space-6) var(--space-1) !important;
+  font-family: var(--font-display);
+}
+
+/* ── Content wrapper ───────────────────────────────────────────── */
+body .content-wrapper {
+  background: var(--surface-bg) !important;
+}
+
+/* ── Full-width fixes for all admin pages ─────────────────────── */
+html {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+body .wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+body .content-wrapper > .content {
+  width: 100%;
+  max-width: 100%;
+  padding: var(--space-6) !important;
+}
+body .content-wrapper .container-fluid {
+  width: 100%;
+  max-width: 100%;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+body #content,
+body #content-main {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+}
+body .content-header {
+  width: 100%;
+  max-width: 100%;
+}
+@media (max-width: 768px) {
+  body .content-wrapper > .content {
+    padding: var(--space-4) !important;
+  }
+}
+
+/* ── Footer ────────────────────────────────────────────────────── */
+body .main-footer {
+  background: var(--surface-card) !important;
+  border-top: 1px solid var(--border-default) !important;
+  padding: var(--space-3) var(--space-6) !important;
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted) !important;
+}

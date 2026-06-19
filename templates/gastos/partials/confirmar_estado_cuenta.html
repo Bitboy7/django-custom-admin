@@ -1,0 +1,256 @@
+{# Partial: confirmar_estado_cuenta — usado por HTMX y por template completo #}
+<div class="max-w-7xl mx-auto px-6">
+    <!-- Header Section -->
+    <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-[#2f4550] rounded-xl mb-4 shadow-lg">
+            <svg class="w-8 h-8 text-[#f4f4f9]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+            </svg>
+        </div>
+        <h1 class="text-3xl font-bold text-[#2f4550] mb-2">Estado de Cuenta Procesado</h1>
+        <p class="text-[#586f7c] text-lg">Selecciona los movimientos que deseas registrar como gastos</p>
+    </div>
+
+    <!-- Account Info Card -->
+    <div class="bg-[#f4f4f9] rounded-2xl shadow-xl border border-[#d8dce6] overflow-hidden mb-8">
+        <div class="px-6 py-4 bg-gradient-to-r from-[#2f4550] to-[#2f4550]">
+            <h2 class="text-lg font-semibold text-[#f4f4f9] flex items-center">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                Informaci&oacute;n de la Cuenta
+            </h2>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <p class="text-sm font-medium text-[#586f7c]">Banco</p>
+                    <p class="text-lg font-semibold text-[#2f4550]">{{ estado_cuenta.banco|default:"No detectado" }}</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm font-medium text-[#586f7c]">Cuenta</p>
+                    <p class="text-lg font-semibold text-[#2f4550]">****{{ estado_cuenta.numero_cuenta|default:"****" }}</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm font-medium text-[#586f7c]">Periodo</p>
+                    <p class="text-lg font-semibold text-[#2f4550]">{{ estado_cuenta.periodo_inicio|default:"" }} - {{ estado_cuenta.periodo_fin|default:"" }}</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm font-medium text-[#586f7c]">Saldo Final</p>
+                    <p class="text-lg font-semibold text-[#5a7d6b]">${{ estado_cuenta.saldo_final|default:"0.00"|us_currency:2 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Movements Table -->
+    <div class="bg-[#f4f4f9] rounded-2xl shadow-xl border border-[#d8dce6] overflow-hidden">
+        <div class="px-6 py-4 bg-gradient-to-r from-grey-600 to-grey-700">
+            <h2 class="text-lg font-semibold text-black flex items-center">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                Movimientos Detectados ({{ movimientos|length }})
+            </h2>
+        </div>
+        <form method="post" action="{% url 'gastos:guardar_gastos_estado_cuenta' %}" class="p-6"
+              hx-post="{% url 'gastos:guardar_gastos_estado_cuenta' %}"
+              hx-target="#estado-cuenta-result"
+              hx-swap="innerHTML"
+              hx-indicator="#guardar-estado-indicator">
+            {% csrf_token %}
+            <div class="mb-6 flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="select-all" class="rounded border-[#d8dce6] text-[#2f4550] focus:ring-[#b8dbd9]">
+                        <span class="ml-2 text-sm font-medium text-[#586f7c]">Seleccionar todos</span>
+                    </label>
+                    <span class="text-sm text-[#586f7c]">Solo se registrar&aacute;n los gastos (cargos negativos)</span>
+                </div>
+                <div class="text-sm text-[#586f7c]">
+                    <span id="selected-count">0</span> movimientos seleccionados
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-[#f4f4f9]">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-[#586f7c] uppercase tracking-wider">Seleccionar</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-[#586f7c] uppercase tracking-wider">Fecha</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-[#586f7c] uppercase tracking-wider">Descripci&oacute;n</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-[#586f7c] uppercase tracking-wider">Tipo</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-[#586f7c] uppercase tracking-wider">Monto</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-[#586f7c] uppercase tracking-wider">Categor&iacute;a</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-[#586f7c] uppercase tracking-wider">Cuenta</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-[#f4f4f9] divide-y divide-slate-200">
+                        {% for movimiento in movimientos %}
+                        <tr class="transition-colors duration-150 hover:bg-[#f4f4f9] {% if movimiento.monto < 0 %}bg-[rgba(184,84,80,.1)] border-l-4 border-[rgba(184,84,80,.3)]{% else %}bg-[rgba(184,219,217,.1)] border-l-4 border-[rgba(184,219,217,.3)]{% endif %}">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if movimiento.monto < 0 %}
+                                <div class="flex items-center">
+                                    <input type="checkbox" name="movimientos_seleccionados" value="{{ forloop.counter0 }}" class="movimiento-checkbox h-4 w-4 rounded border-[#d8dce6] text-[#2f4550] focus:ring-[#b8dbd9] focus:ring-offset-0">
+                                    <span class="ml-2 text-xs text-[#b85450] font-medium">Gasto</span>
+                                </div>
+                                {% else %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[rgba(184,219,217,.15)] text-[#5a7d6b]">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                                    Ingreso
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-[#2f4550]">
+                                <div class="flex items-center">
+                                    <svg class="w-4 h-4 mr-2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    <span class="font-medium">{{ movimiento.fecha }}</span>
+                                </div>
+                                <input type="hidden" name="movimiento_{{ forloop.counter0 }}_fecha" value="{{ movimiento.fecha }}">
+                            </td>
+                            <td class="px-6 py-4 text-sm text-[#2f4550]">
+                                <div class="max-w-xs">
+                                    <div class="font-medium text-[#2f4550] truncate">{{ movimiento.descripcion }}</div>
+                                    {% if movimiento.descripcion|length > 50 %}
+                                    <div class="text-xs text-[#586f7c] mt-1" title="{{ movimiento.descripcion }}">Ver completo...</div>
+                                    {% endif %}
+                                </div>
+                                <input type="hidden" name="movimiento_{{ forloop.counter0 }}_descripcion" value="{{ movimiento.descripcion }}">
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {% if movimiento.monto < 0 %}bg-[rgba(184,84,80,.15)] text-[#b85450] border border-[rgba(184,84,80,.3)]{% else %}bg-[rgba(184,219,217,.15)] text-[#5a7d6b] border border-[rgba(184,219,217,.3)]{% endif %}">
+                                    {% if movimiento.monto < 0 %}<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                                    {% else %}<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>{% endif %}
+                                    {{ movimiento.tipo }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    {% if movimiento.monto < 0 %}<svg class="w-4 h-4 mr-2 text-[#b85450]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+                                    {% else %}<svg class="w-4 h-4 mr-2 text-[#5a7d6b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>{% endif %}
+                                    <span class="text-lg font-bold {% if movimiento.monto < 0 %}text-[#b85450]{% else %}text-[#5a7d6b]{% endif %}">${{ movimiento.monto|us_currency:2 }}</span>
+                                </div>
+                                <input type="hidden" name="movimiento_{{ forloop.counter0 }}_monto" value="{{ movimiento.monto }}">
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if movimiento.monto < 0 %}
+                                <div class="relative">
+                                    <select name="movimiento_{{ forloop.counter0 }}_categoria" class="appearance-none w-full pl-10 pr-10 py-2 text-sm border border-[#d8dce6] rounded-lg shadow-sm focus:ring-2 focus:ring-[#b8dbd9] focus:border-[#586f7c] bg-[#f4f4f9] transition-colors duration-200 {% if movimiento.categoria_sugerida %}bg-[rgba(184,219,217,.1)] border-[#b8dbd9] ring-1 ring-green-200{% endif %}">
+                                        <option value="">Seleccionar categor&iacute;a...</option>
+                                        {% get_cat_gastos as categorias %}
+                                        {% for categoria in categorias %}
+                                        <option value="{{ categoria.id }}" {% if movimiento.categoria_sugerida and categoria.id == movimiento.categoria_sugerida.id %}selected{% endif %}>{{ categoria.nombre }}{% if movimiento.categoria_sugerida and categoria.id == movimiento.categoria_sugerida.id %} &ndash; (Sugerida por IA){% endif %}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </div>
+                                    {% if movimiento.categoria_sugerida %}
+                                    <div class="absolute -top-2 -right-2 z-10">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-green-500 to-emerald-500 text-[#f4f4f9] shadow-lg animate-pulse">
+                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path></svg> IA
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% if movimiento.categoria_sugerida %}
+                                <div class="mt-2 p-2 bg-[rgba(184,219,217,.1)] border border-[rgba(184,219,217,.3)] rounded-md">
+                                    <div class="flex items-center text-xs text-[#5a7d6b] font-medium">
+                                        <svg class="w-3 h-3 mr-1 text-[#5a7d6b]" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                                        Sugerencia IA: {{ movimiento.categoria_sugerida.nombre }}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% else %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#f4f4f9] text-[#586f7c]">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Ingreso
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if movimiento.monto < 0 %}
+                                <div class="relative">
+                                    <select name="movimiento_{{ forloop.counter0 }}_cuenta" class="appearance-none w-full pl-10 pr-10 py-2 text-sm border border-[#d8dce6] rounded-lg shadow-sm focus:ring-2 focus:ring-[#b8dbd9] focus:border-[#586f7c] bg-[#f4f4f9] transition-colors duration-200 hover:border-slate-400">
+                                        <option value="">Seleccionar cuenta...</option>
+                                        {% get_cuentas as cuentas %}
+                                        {% for cuenta in cuentas %}
+                                        <option value="{{ cuenta.id }}">{{ cuenta.numero_cuenta }} - {{ cuenta.id_banco.nombre }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#f4f4f9] text-[#586f7c]">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> N/A
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="px-6 py-4 text-center text-[#586f7c]">No se encontraron movimientos en el estado de cuenta</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <!-- Action Buttons -->
+            <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-end bg-[#f4f4f9] p-6 rounded-lg border border-[#d8dce6]">
+                <div class="flex items-center text-sm text-[#586f7c] mb-4 sm:mb-0 sm:mr-auto">
+                    <svg class="w-4 h-4 mr-2 text-[#586f7c]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span id="selected-count-bottom">0</span> movimientos seleccionados para registrar
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <a href="{% url 'gastos:ingresar_gasto_factura' %}" class="inline-flex items-center justify-center px-6 py-3 border border-[#d8dce6] rounded-lg text-sm font-medium text-[#586f7c] bg-[#f4f4f9] hover:bg-[#f4f4f9] focus:ring-2 focus:ring-[#b8dbd9] focus:ring-offset-2 transition-all duration-200 shadow-sm">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        Cancelar
+                    </a>
+                    <button type="submit" id="submit-btn" disabled class="inline-flex items-center justify-center px-8 py-3 border border-transparent rounded-lg text-sm font-medium text-[#f4f4f9] bg-gradient-to-r from-[#2f4550] to-[#2f4550] hover:from-[#2f4550] hover:to-[#586f7c] focus:ring-2 focus:ring-[#b8dbd9] focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg">
+                        <span class="htmx-indicator mr-2" id="guardar-estado-indicator"><span class="htmx-spinner"></span></span>
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Registrar Movimientos Seleccionados
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tips Section -->
+    <div class="mt-8 bg-[rgba(201,162,39,.08)] rounded-lg p-6 border border-[rgba(201,162,39,.3)]">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-[#c9a227]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"></path></svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-[#c9a227]">Informaci&oacute;n importante</h3>
+                <div class="mt-2 text-sm text-[#c9a227]">
+                    <p>&bull; Solo se pueden registrar como gastos los movimientos con monto negativo (cargos)</p>
+                    <p>&bull; Aseg&uacute;rate de asignar la categor&iacute;a y cuenta correcta para cada movimiento</p>
+                    <p>&bull; Los ingresos (abonos) se muestran solo como referencia y no se pueden registrar</p>
+                    <p>&bull; Revisa cada movimiento antes de confirmar el registro</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const selectAllCheckbox = document.getElementById('select-all');
+    const movimientoCheckboxes = document.querySelectorAll('.movimiento-checkbox');
+    const selectedCountSpans = document.querySelectorAll('#selected-count, #selected-count-bottom');
+    const submitBtn = document.getElementById('submit-btn');
+
+    function updateSelectedCount() {
+        const checked = document.querySelectorAll('.movimiento-checkbox:checked').length;
+        selectedCountSpans.forEach(span => { span.textContent = checked; });
+        if (submitBtn) submitBtn.disabled = checked === 0;
+    }
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            movimientoCheckboxes.forEach(cb => { cb.checked = this.checked; });
+            updateSelectedCount();
+        });
+    }
+    movimientoCheckboxes.forEach(cb => { cb.addEventListener('change', updateSelectedCount); });
+    updateSelectedCount();
+})();
+</script>

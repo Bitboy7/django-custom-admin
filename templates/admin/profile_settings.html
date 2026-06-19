@@ -1,0 +1,476 @@
+{% extends "admin/base_site.html" %}
+{% load static i18n %}
+
+{% block content_title %}{{ title }}{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+/* ─── Profile Settings Page ──────────────────────────────────────── */
+.ps-wrap {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+  max-width: 960px;
+  padding: 20px 0 40px;
+}
+@media (max-width: 860px) {
+  .ps-wrap { grid-template-columns: 1fr; }
+  .ps-preview { order: -1; }
+}
+
+.ps-card {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #d8dce6;
+  box-shadow: 0 1px 4px rgba(30, 58, 95, 0.07);
+  overflow: hidden;
+}
+.ps-card-head {
+  background: linear-gradient(135deg, #2f4550 0%, #2e5c8a 100%);
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ps-card-head i { color: rgba(255,255,255,0.8); font-size: 1.1rem; }
+.ps-card-head h2 { margin: 0; font-size: 0.95rem; font-weight: 700; color: #fff; letter-spacing: 0.02em; }
+.ps-card-body { padding: 24px; }
+
+/* Form fields */
+.ps-field { margin-bottom: 18px; }
+.ps-field label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #586f7c;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+.ps-field input[type="text"],
+.ps-field input[type="email"] {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #b8dbd9;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #2f4550;
+  background: #fff;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  box-sizing: border-box;
+}
+.ps-field input:focus {
+  border-color: #b8dbd9;
+  box-shadow: 0 0 0 3px rgba(26,173,188,0.18);
+  outline: none;
+}
+.ps-field .field-readonly {
+  padding: 9px 12px;
+  background: #f8fafc;
+  border: 1px solid #d8dce6;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #586f7c;
+}
+.ps-error {
+  margin-top: 5px;
+  font-size: 0.78rem;
+  color: #b85450;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Avatar upload area */
+.ps-avatar-zone {
+  border: 2px dashed #b8dbd9;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s;
+  position: relative;
+}
+.ps-avatar-zone:hover, .ps-avatar-zone.dragging {
+  border-color: #b8dbd9;
+  background: #f0fdfe;
+}
+.ps-avatar-zone input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.ps-avatar-zone-icon { font-size: 1.8rem; color: #586f7c; margin-bottom: 8px; }
+.ps-avatar-zone p { margin: 0; font-size: 0.82rem; color: #586f7c; }
+.ps-avatar-zone strong { color: #b8dbd9; }
+.ps-avatar-zone .ps-file-name {
+  margin-top: 8px; font-size: 0.8rem; color: #b8dbd9; font-weight: 600;
+  display: none;
+}
+
+/* Remove button */
+.ps-remove-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 10px; font-size: 0.78rem; color: #b85450;
+  cursor: pointer; background: none; border: none; padding: 4px 8px;
+  border-radius: 4px; transition: background 0.15s;
+}
+.ps-remove-btn:hover { background: #fef2f2; }
+
+/* Submit row */
+.ps-submit {
+  display: flex;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #d8dce6;
+  margin-top: 8px;
+}
+.ps-btn-save {
+  background: linear-gradient(135deg, #b8dbd9 0%, #b8dbd9 100%);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 24px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.18s, transform 0.18s;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.ps-btn-save:hover { opacity: 0.9; transform: translateY(-1px); }
+.ps-btn-cancel {
+  background: #f1f5f9;
+  color: #586f7c;
+  border: 1px solid #b8dbd9;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: inline-flex; align-items: center;
+}
+.ps-btn-cancel:hover { background: #d8dce6; color: #2f4550; }
+
+/* ─── Preview card (right column) ─────────────────────────────── */
+.ps-preview { }
+.ps-preview .ps-card-head { background: linear-gradient(135deg, #b8dbd9 0%, #b8dbd9 100%); }
+.ps-preview-body { padding: 28px 24px; text-align: center; }
+
+.ps-prev-nav {
+  background: #152d4a;
+  border-radius: 8px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  justify-content: flex-end;
+}
+.ps-prev-pill {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(26,173,188,0.18);
+  border-radius: 20px;
+  padding: 4px 12px 4px 4px;
+}
+.ps-prev-av {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg,#b8dbd9,#b8dbd9);
+  color: #fff; font-size: 0.7rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  border: 2px solid rgba(26,173,188,0.6);
+  flex-shrink: 0;
+}
+.ps-prev-av img { width: 100%; height: 100%; object-fit: cover; }
+.ps-prev-uname { font-size: 0.78rem; font-weight: 500; color: rgba(255,255,255,0.88); }
+
+/* Large avatar circle */
+.ps-av-circle-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.ps-av-circle {
+  width: 96px; height: 96px;
+  border-radius: 50%;
+  background: linear-gradient(135deg,#b8dbd9,#b8dbd9);
+  color: #fff;
+  font-size: 1.5rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  border: 3px solid #b8dbd9;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(26,173,188,0.35);
+}
+.ps-av-circle img { width: 100%; height: 100%; object-fit: cover; }
+.ps-av-fullname { font-size: 1rem; font-weight: 700; color: #2f4550; }
+.ps-av-role { font-size: 0.78rem; color: #586f7c; margin-top: 2px; }
+
+.ps-info-list {
+  margin-top: 20px;
+  text-align: left;
+  border-top: 1px solid #d8dce6;
+  padding-top: 16px;
+}
+.ps-info-row {
+  display: flex; justify-content: space-between;
+  padding: 6px 0;
+  font-size: 0.82rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.ps-info-row .lbl { color: #586f7c; font-weight: 600; }
+.ps-info-row .val { color: #2f4550; font-weight: 500; text-align: right; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" id="profile-form" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="remove_avatar" id="remove-avatar-flag" value="0">
+
+  <div class="ps-wrap">
+
+    {# ── LEFT: Edit form ────────────────────────────────────── #}
+    <div>
+      <div class="ps-card">
+        <div class="ps-card-head">
+          <i class="fas fa-user-edit" aria-hidden="true"></i>
+          <h2>Información de la cuenta</h2>
+        </div>
+        <div class="ps-card-body">
+
+          {# Name row #}
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="ps-field">
+              <label for="id_first_name">Nombre</label>
+              <input type="text" id="id_first_name" name="first_name"
+                value="{{ request.user.first_name }}"
+                placeholder="Nombre" autocomplete="given-name">
+            </div>
+            <div class="ps-field">
+              <label for="id_last_name">Apellido</label>
+              <input type="text" id="id_last_name" name="last_name"
+                value="{{ request.user.last_name }}"
+                placeholder="Apellido" autocomplete="family-name">
+            </div>
+          </div>
+
+          <div class="ps-field">
+            <label for="id_email">Correo electrónico</label>
+            <input type="email" id="id_email" name="email"
+              value="{{ request.user.email }}"
+              placeholder="correo@empresa.com" autocomplete="email">
+            {% if errors.email %}
+              <p class="ps-error"><i class="fas fa-exclamation-circle" aria-hidden="true"></i> {{ errors.email }}</p>
+            {% endif %}
+          </div>
+
+          <div class="ps-field">
+            <label>Nombre de usuario</label>
+            <div class="field-readonly">{{ request.user.username }}</div>
+            <p style="font-size:0.75rem;color:#586f7c;margin:4px 0 0;">El nombre de usuario no puede cambiarse aquí.</p>
+          </div>
+
+        </div>
+      </div>
+
+      {# Avatar upload card #}
+      <div class="ps-card" style="margin-top:20px;">
+        <div class="ps-card-head">
+          <i class="fas fa-camera" aria-hidden="true"></i>
+          <h2>Foto de perfil</h2>
+        </div>
+        <div class="ps-card-body">
+
+          <div class="ps-avatar-zone" id="avatar-drop-zone" role="button"
+               aria-label="Subir foto de perfil. Haz clic o arrastra una imagen aquí.">
+            <input type="file" name="avatar" id="id_avatar"
+                   accept="image/png, image/jpeg, image/webp, image/gif"
+                   aria-label="Seleccionar foto de perfil">
+            <div class="ps-avatar-zone-icon"><i class="fas fa-cloud-upload-alt" aria-hidden="true"></i></div>
+            <p><strong>Haz clic</strong> o arrastra una imagen aquí</p>
+            <p style="margin-top:4px;">PNG, JPG, WEBP · Máx. 5 MB · Cuadrada recomendada</p>
+            <p class="ps-file-name" id="file-chosen-name"></p>
+          </div>
+
+          {% if errors.avatar %}
+            <p class="ps-error" style="margin-top:8px;"><i class="fas fa-exclamation-circle" aria-hidden="true"></i> {{ errors.avatar }}</p>
+          {% endif %}
+
+          {% if profile.avatar %}
+            <div style="margin-top:12px; display:flex; align-items:center; gap:10px;">
+              <img src="{{ profile.avatar.url }}" alt="Avatar actual"
+                style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:2px solid #b8dbd9;">
+              <div>
+                <p style="margin:0;font-size:0.82rem;font-weight:600;color:#2f4550;">Foto actual</p>
+                <button type="button" class="ps-remove-btn" id="remove-avatar-btn" aria-label="Eliminar foto de perfil">
+                  <i class="fas fa-trash-alt" aria-hidden="true"></i> Eliminar foto
+                </button>
+              </div>
+            </div>
+          {% endif %}
+
+        </div>
+      </div>
+
+      <div class="ps-submit" style="margin-top:20px;">
+        <button type="submit" class="ps-btn-save">
+          <i class="fas fa-save" aria-hidden="true"></i> Guardar cambios
+        </button>
+        <a href="{% url 'admin:index' %}" class="ps-btn-cancel">Cancelar</a>
+      </div>
+
+    </div>{# end left #}
+
+    {# ── RIGHT: Live preview ────────────────────────────────── #}
+    <div class="ps-preview">
+      <div class="ps-card">
+        <div class="ps-card-head">
+          <i class="fas fa-eye" aria-hidden="true"></i>
+          <h2>Vista previa</h2>
+        </div>
+        <div class="ps-preview-body">
+
+          {# Mini navbar preview #}
+          <p style="font-size:0.72rem;color:#586f7c;text-align:left;margin:0 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">En la barra de navegación</p>
+          <div class="ps-prev-nav" aria-hidden="true">
+            <div class="ps-prev-pill">
+              <div class="ps-prev-av" id="prev-nav-av">
+                {% if profile.avatar %}
+                  <img src="{{ profile.avatar.url }}" alt="">
+                {% else %}
+                  {{ user_initials }}
+                {% endif %}
+              </div>
+              <span class="ps-prev-uname" id="prev-nav-name">{{ user_display_name|default:request.user.username }}</span>
+            </div>
+          </div>
+
+          {# Large avatar #}
+          <p style="font-size:0.72rem;color:#586f7c;text-align:left;margin:16px 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Tu foto de perfil</p>
+          <div class="ps-av-circle-wrap">
+            <div class="ps-av-circle" id="prev-av-circle">
+              {% if profile.avatar %}
+                <img src="{{ profile.avatar.url }}" alt="Avatar" id="prev-av-img">
+              {% else %}
+                <span id="prev-av-initials">{{ user_initials }}</span>
+              {% endif %}
+            </div>
+            <div>
+              <p class="ps-av-fullname" id="prev-fullname">
+                {{ request.user.get_full_name|default:request.user.username }}
+              </p>
+              <p class="ps-av-role">{{ request.user.email }}</p>
+            </div>
+          </div>
+
+          {# Account info summary #}
+          <div class="ps-info-list">
+            <div class="ps-info-row">
+              <span class="lbl">Usuario</span>
+              <span class="val">{{ request.user.username }}</span>
+            </div>
+            <div class="ps-info-row">
+              <span class="lbl">Último acceso</span>
+              <span class="val">{% if request.user.last_login %}{{ request.user.last_login|date:"d M Y, H:i" }}{% else %}—{% endif %}</span>
+            </div>
+            <div class="ps-info-row">
+              <span class="lbl">Cuenta creada</span>
+              <span class="val">{{ request.user.date_joined|date:"d M Y" }}</span>
+            </div>
+            <div class="ps-info-row">
+              <span class="lbl">Rol</span>
+              <span class="val">{% if request.user.is_superuser %}Superusuario{% elif request.user.is_staff %}Staff{% else %}Usuario{% endif %}</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>{# end right #}
+
+  </div>{# end .ps-wrap #}
+</form>
+{% endblock %}
+
+{% block extrajs %}
+{{ block.super }}
+<script>
+(function () {
+  /* Live preview: update names */
+  function sync() {
+    var fn  = document.getElementById('id_first_name').value.trim();
+    var ln  = document.getElementById('id_last_name').value.trim();
+    var full = [fn, ln].filter(Boolean).join(' ');
+    var uname = '{{ request.user.username|escapejs }}';
+    var display = full || uname;
+
+    var initials = full
+      ? (fn && ln ? fn[0] + ln[0] : display.slice(0,2)).toUpperCase()
+      : uname.slice(0,2).toUpperCase();
+
+    var nameEl  = document.getElementById('prev-nav-name');
+    var fullEl  = document.getElementById('prev-fullname');
+    if (nameEl)  nameEl.textContent  = display;
+    if (fullEl)  fullEl.textContent  = display;
+
+    /* Update initials in preview if no image is shown */
+    if (!document.getElementById('prev-av-img')) {
+      var sp = document.getElementById('prev-av-initials');
+      if (sp) sp.textContent = initials;
+    }
+    var navAv = document.getElementById('prev-nav-av');
+    if (navAv && !navAv.querySelector('img')) navAv.textContent = initials;
+  }
+
+  ['id_first_name','id_last_name'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', sync);
+  });
+
+  /* Live preview: avatar image from file input */
+  document.getElementById('id_avatar').addEventListener('change', function () {
+    var file = this.files && this.files[0];
+    if (!file) return;
+
+    /* Show file name */
+    var nameEl = document.getElementById('file-chosen-name');
+    nameEl.textContent = file.name;
+    nameEl.style.display = 'block';
+
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      /* Update large circle */
+      var circle = document.getElementById('prev-av-circle');
+      circle.innerHTML = '<img src="' + e.target.result + '" alt="Vista previa" id="prev-av-img" style="width:100%;height:100%;object-fit:cover;">';
+
+      /* Update mini navbar */
+      var navAv = document.getElementById('prev-nav-av');
+      navAv.innerHTML = '<img src="' + e.target.result + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  /* Drag & drop highlight */
+  var zone = document.getElementById('avatar-drop-zone');
+  ['dragover','dragenter'].forEach(function(ev) {
+    zone.addEventListener(ev, function(e) { e.preventDefault(); zone.classList.add('dragging'); });
+  });
+  ['dragleave','dragend','drop'].forEach(function(ev) {
+    zone.addEventListener(ev, function() { zone.classList.remove('dragging'); });
+  });
+
+  /* Remove avatar button */
+  var removeBtn = document.getElementById('remove-avatar-btn');
+  if (removeBtn) {
+    removeBtn.addEventListener('click', function () {
+      document.getElementById('remove-avatar-flag').value = '1';
+      /* Update preview to initials */
+      var initials = '{{ user_initials|escapejs }}';
+      var circle   = document.getElementById('prev-av-circle');
+      circle.innerHTML = '<span id="prev-av-initials">' + initials + '</span>';
+      var navAv    = document.getElementById('prev-nav-av');
+      navAv.innerHTML  = initials;
+      removeBtn.closest('div').style.display = 'none';
+    });
+  }
+})();
+</script>
+{% endblock %}

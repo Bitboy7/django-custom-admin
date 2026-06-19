@@ -240,7 +240,7 @@ function checkStoredFiltersStatus() {
     if (!clearBtn.querySelector(".saved-indicator")) {
       const indicator = document.createElement("span");
       indicator.className =
-        "saved-indicator absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse";
+        "saved-indicator absolute -top-1 -right-1 h-3 w-3 bg-[#b85450] rounded-full animate-pulse";
       clearBtn.style.position = "relative";
       clearBtn.appendChild(indicator);
     }
