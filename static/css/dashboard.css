@@ -239,3 +239,241 @@
   font-size: 1.5rem;
   color: var(--brand-teal);
 }
+
+/* Main Jazzmin dashboard -------------------------------------------------- */
+#tw-dashboard {
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+#tw-dashboard .dash-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)) top/100% 42px no-repeat,
+    var(--surface-card);
+  border: 1px solid var(--border-default);
+  border: 1px solid color-mix(in srgb, var(--border-default) 86%, var(--surface-card));
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 2px rgba(47, 69, 80, 0.06), 0 12px 28px rgba(47, 69, 80, 0.05);
+}
+
+#tw-dashboard .dash-text {
+  color: var(--text-primary) !important;
+}
+
+#tw-dashboard .dash-muted {
+  color: var(--text-muted) !important;
+}
+
+#tw-dashboard .dash-border {
+  border-color: var(--border-default) !important;
+}
+
+#tw-dashboard .dash-btn {
+  background: var(--surface-card);
+  background: color-mix(in srgb, var(--surface-card) 88%, var(--light-blue));
+  border: 1px solid transparent;
+  color: var(--text-primary);
+  min-height: 42px;
+  transition:
+    background var(--duration-fast) var(--ease-default),
+    border-color var(--duration-fast) var(--ease-default),
+    box-shadow var(--duration-fast) var(--ease-default),
+    transform var(--duration-fast) var(--ease-default);
+}
+
+#tw-dashboard .dash-btn:hover,
+#tw-dashboard .dash-btn:focus-visible {
+  background: var(--surface-hover);
+  background: color-mix(in srgb, var(--surface-card) 76%, var(--light-blue));
+  border-color: var(--light-blue);
+  border-color: color-mix(in srgb, var(--light-blue) 70%, var(--blue-slate));
+  box-shadow: 0 8px 18px rgba(47, 69, 80, 0.08);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+#tw-dashboard .dash-status-success {
+  background: var(--accent-green-bg);
+  background: color-mix(in srgb, var(--accent-green-bg) 78%, var(--surface-card));
+  color: var(--accent-green);
+}
+
+#tw-dashboard .dash-status-danger {
+  background: var(--accent-red-bg);
+  background: color-mix(in srgb, var(--accent-red-bg) 78%, var(--surface-card));
+  color: var(--accent-red);
+}
+
+#tw-dashboard .dash-status-warning {
+  background: var(--accent-amber-bg);
+  background: color-mix(in srgb, var(--accent-amber-bg) 78%, var(--surface-card));
+  color: var(--accent-amber);
+}
+
+#tw-dashboard .dash-status-slate {
+  background: var(--surface-hover);
+  color: var(--text-muted);
+}
+
+#tw-dashboard .dashboard-quick-access {
+  gap: 0.6rem;
+  padding: 0.8rem 0.9rem;
+}
+
+#tw-dashboard .dashboard-quick-access a {
+  min-width: 154px;
+}
+
+#tw-dashboard .dashboard-kpi-strip {
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+}
+
+#tw-dashboard .dashboard-kpi-item {
+  min-height: 132px;
+  padding: 1.15rem 1.25rem;
+  border-right: 1px solid var(--border-default);
+  overflow: hidden;
+  transition:
+    background var(--duration-fast) var(--ease-default),
+    box-shadow var(--duration-fast) var(--ease-default);
+}
+
+#tw-dashboard .dashboard-kpi-item:hover {
+  background: var(--surface-hover);
+  background: color-mix(in srgb, var(--surface-card) 88%, var(--light-blue));
+}
+
+#tw-dashboard .dashboard-kpi-item > .absolute.top-0.left-0.w-1.h-full {
+  width: 100% !important;
+  height: 3px !important;
+  border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
+}
+
+#tw-dashboard .dashboard-kpi-item .text-xl,
+#tw-dashboard .dashboard-kpi-item [class*="text-xl"] {
+  font-family: var(--font-mono);
+  font-size: clamp(1.05rem, 1.2vw, 1.32rem) !important;
+  letter-spacing: 0;
+  line-height: 1.15;
+}
+
+#tw-dashboard .dashboard-chart-card {
+  min-height: 336px;
+}
+
+#tw-dashboard .dashboard-chart-grid {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+#tw-dashboard .dashboard-chart-grid--three,
+#tw-dashboard .dashboard-chart-grid--two {
+  grid-template-columns: 1fr;
+}
+
+#tw-dashboard .dashboard-chart-header {
+  padding: 1rem 1.15rem 0.8rem;
+  border-bottom: 1px solid var(--border-default);
+}
+
+#tw-dashboard .dashboard-chart-body {
+  min-height: 240px;
+  padding: 1rem 1.15rem;
+}
+
+#tw-dashboard .dashboard-chart-footer {
+  border-top: 1px solid var(--border-default);
+  padding: 0.75rem 1.15rem;
+}
+
+#tw-dashboard canvas {
+  max-width: 100%;
+}
+
+#tw-dashboard .dashboard-chart-grid--three .dashboard-chart-card {
+  min-height: 286px;
+}
+
+#tw-dashboard .dashboard-chart-grid--three .dashboard-chart-body {
+  min-height: 178px;
+}
+
+#tw-dashboard .dashboard-chart-grid--three .dashboard-chart-body canvas {
+  max-height: 210px;
+}
+
+#tw-dashboard .dashboard-donut-canvas,
+#tw-dashboard #carteraDonut {
+  max-height: 170px !important;
+}
+
+#tw-dashboard .dash-activity-item {
+  border-bottom: 1px solid var(--border-default);
+}
+
+[data-theme="dark"] #tw-dashboard .dash-card {
+  background: var(--surface-card);
+  border-color: var(--border-default);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
+}
+
+[data-theme="dark"] #tw-dashboard .dash-btn {
+  background: var(--surface-card);
+  background: color-mix(in srgb, var(--surface-card) 84%, var(--blue-slate));
+}
+
+@media (max-width: 1279px) {
+  #tw-dashboard .dashboard-kpi-item {
+    border-top: 1px solid var(--border-default);
+  }
+}
+
+@media (min-width: 768px) {
+  #tw-dashboard .dashboard-chart-grid--two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  #tw-dashboard .dashboard-chart-grid--three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1099px) {
+  #tw-dashboard .dashboard-chart-grid--three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #tw-dashboard .dashboard-chart-grid--three .dashboard-chart-card:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 767px) {
+  #tw-dashboard .dashboard-quick-access a {
+    min-width: 148px;
+  }
+
+  #tw-dashboard .dashboard-kpi-item {
+    min-height: 116px;
+    padding: 1rem;
+  }
+
+  #tw-dashboard .dashboard-chart-grid--three .dashboard-chart-card {
+    min-height: 300px;
+  }
+
+  #tw-dashboard .grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  #tw-dashboard .grid-cols-4 {
+    grid-template-columns: 1fr;
+  }
+}

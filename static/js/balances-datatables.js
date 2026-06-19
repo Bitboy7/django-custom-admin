@@ -62,7 +62,16 @@ function formatNumericValue(node, includeSymbol) {
   return includeSymbol ? "$" + formatted : formatted;
 }
 
-document.addEventListener("DOMContentLoaded", function () {
+function initBalancesDataTable() {
+  if (!document.getElementById("gastosTable")) {
+    return;
+  }
+
+  if (!window.jQuery || !jQuery.fn || !jQuery.fn.DataTable) {
+    console.warn("DataTables no esta disponible todavia para #gastosTable");
+    return;
+  }
+
   try {
     // Verificar si ya está inicializado y destruirlo
     if ($.fn.DataTable.isDataTable("#gastosTable")) {
@@ -460,7 +469,7 @@ document.addEventListener("DOMContentLoaded", function () {
           },
         },
       ],
-      dom: '<"flex justify-between items-center mb-4"<"flex-1"B><"flex items-center gap-4"l f>>rt<"flex justify-between items-center mt-4"<"flex-1"i><"flex-1 text-center"p>>',
+      dom: '<"gastos-dt-toolbar"<"gastos-dt-actions"B><"gastos-dt-controls"lf>>rt<"gastos-dt-footer"ip>',
       responsive: true,
       order: [[7, "asc"]], // Ordenar por Total Gastos (ahora columna 6) ascendente
       paging: true,
@@ -475,23 +484,16 @@ document.addEventListener("DOMContentLoaded", function () {
       info: true,
       pagingInfo: true,
       initComplete: function () {
-        var buttonsContainer = document.querySelector(".dt-buttons");
-        if (buttonsContainer) {
-          buttonsContainer.style.display = "flex";
-          buttonsContainer.style.flexWrap = "wrap";
-          buttonsContainer.style.gap = "8px";
-        }
         setTimeout(function () {
-          document.querySelectorAll(".dt-button").forEach(function (btn) {
-            btn.style.fontFamily = "inherit";
-            btn.style.fontSize = "14px";
-            btn.style.lineHeight = "1.5";
-            btn.style.transition = "all 0.2s ease";
-            btn.style.cursor = "pointer";
-          });
           stylePaginationControls();
           styleLengthMenu();
         }, 100);
+        setTimeout(function () {
+          if (typeof window.updateChartsData === "function") {
+            window.updateChartsData();
+            window.dispatchEvent(new Event("chartsDataUpdated"));
+          }
+        }, 150);
       },
       drawCallback: function () {
         setTimeout(function () {
@@ -502,8 +504,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function stylePaginationControls() {
       var paginateContainer = document.querySelector(".dataTables_paginate");
       if (paginateContainer) {
-        paginateContainer.style.display = "block";
-        paginateContainer.style.textAlign = "center";
+        paginateContainer.style.visibility = "visible";
       }
       document.querySelectorAll(".paginate_button").forEach(function (button) {
         button.style.display = "inline-block";
@@ -513,85 +514,35 @@ document.addEventListener("DOMContentLoaded", function () {
     function styleLengthMenu() {
       var lengthSelect = document.querySelector(".dataTables_length select");
       if (lengthSelect) {
-        lengthSelect.style.backgroundColor = "white";
-        lengthSelect.style.border = "1px solid #d8dce6";
-        lengthSelect.style.borderRadius = "6px";
-        lengthSelect.style.padding = "6px 12px";
-        lengthSelect.style.fontSize = "14px";
-        lengthSelect.style.color = "#586f7c";
-        lengthSelect.style.marginLeft = "8px";
-        lengthSelect.style.marginRight = "8px";
+        lengthSelect.style.visibility = "visible";
       }
       var lengthLabel = document.querySelector(".dataTables_length");
       if (lengthLabel) {
-        lengthLabel.style.fontSize = "14px";
-        lengthLabel.style.color = "#586f7c";
-        lengthLabel.style.fontWeight = "500";
+        lengthLabel.style.visibility = "visible";
       }
     }
-    setTimeout(function () {
-      var copyBtn = document.querySelector(".dt-button.btn-copy");
-      if (copyBtn) {
-        copyBtn.style.backgroundColor = "#586f7c";
-        copyBtn.style.color = "white";
-        copyBtn.style.border = "none";
-        copyBtn.style.padding = "6px 12px";
-        copyBtn.style.borderRadius = "6px";
-        copyBtn.style.marginRight = "8px";
-        copyBtn.style.fontWeight = "500";
-      }
-      var csvBtn = document.querySelector(".dt-button.btn-csv");
-      if (csvBtn) {
-        csvBtn.style.backgroundColor = "#5a7d6b";
-        csvBtn.style.color = "white";
-        csvBtn.style.border = "none";
-        csvBtn.style.padding = "6px 12px";
-        csvBtn.style.borderRadius = "6px";
-        csvBtn.style.marginRight = "8px";
-        csvBtn.style.fontWeight = "500";
-      }
-      var excelBtn = document.querySelector(".dt-button.btn-excel");
-      if (excelBtn) {
-        excelBtn.style.backgroundColor = "#5a7d6b";
-        excelBtn.style.color = "white";
-        excelBtn.style.border = "none";
-        excelBtn.style.padding = "6px 12px";
-        excelBtn.style.borderRadius = "6px";
-        excelBtn.style.marginRight = "8px";
-        excelBtn.style.fontWeight = "500";
-      }
-      var pdfBtn = document.querySelector(".dt-button.btn-pdf");
-      if (pdfBtn) {
-        pdfBtn.style.backgroundColor = "#b85450";
-        pdfBtn.style.color = "white";
-        pdfBtn.style.border = "none";
-        pdfBtn.style.padding = "6px 12px";
-        pdfBtn.style.borderRadius = "6px";
-        pdfBtn.style.marginRight = "8px";
-        pdfBtn.style.fontWeight = "500";
-      }
-      var printBtn = document.querySelector(".dt-button.btn-print");
-      if (printBtn) {
-        printBtn.style.backgroundColor = "#1f1e20";
-        printBtn.style.color = "white";
-        printBtn.style.border = "none";
-        printBtn.style.padding = "6px 12px";
-        printBtn.style.borderRadius = "6px";
-        printBtn.style.marginRight = "8px";
-        printBtn.style.fontWeight = "500";
-      }
-      var summaryBtn = document.querySelector(".dt-button.btn-summary-excel");
-      if (summaryBtn) {
-        summaryBtn.style.backgroundColor = "#1f1e20";
-        summaryBtn.style.color = "white";
-        summaryBtn.style.border = "none";
-        summaryBtn.style.padding = "6px 12px";
-        summaryBtn.style.borderRadius = "6px";
-        summaryBtn.style.marginRight = "8px";
-        summaryBtn.style.fontWeight = "500";
-      }
-    }, 100);
   } catch (error) {
     console.error("Error al inicializar DataTable:", error);
   }
+}
+
+window.initBalancesDataTable = initBalancesDataTable;
+
+function initBalancesDataTableWithRetry(retries) {
+  if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
+    initBalancesDataTable();
+    return;
+  }
+
+  if (retries > 0) {
+    setTimeout(function () {
+      initBalancesDataTableWithRetry(retries - 1);
+    }, 250);
+  } else {
+    console.error("DataTables no se pudo cargar. Revise la conexion CDN o los archivos estaticos.");
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  initBalancesDataTableWithRetry(12);
 });

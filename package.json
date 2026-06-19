@@ -11,12 +11,21 @@
     ]
   },
   "devDependencies": {
+    "autoprefixer": "^10.4.19",
     "jest": "^30.3.0",
-    "tailwindcss": "^3.4.16",
     "postcss": "^8.4.39",
-    "autoprefixer": "^10.4.19"
+    "tailwindcss": "^3.4.16"
   },
   "dependencies": {
-    "flowbite": "^2.5.2"
+    "chart.js": "^3.9.1",
+    "datatables.net": "^1.13.6",
+    "datatables.net-buttons": "^2.3.6",
+    "datatables.net-buttons-dt": "^2.3.6",
+    "datatables.net-dt": "^1.13.6",
+    "datatables.net-responsive": "^2.4.1",
+    "datatables.net-responsive-dt": "^2.4.1",
+    "flowbite": "^2.5.2",
+    "jszip": "^3.10.1",
+    "pdfmake": "^0.1.70"
   }
 }
