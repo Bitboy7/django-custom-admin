@@ -58,14 +58,14 @@
     <i class="fas fa-file-pdf"></i> Exportar PDF
   </button>
 </div>
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5 balances-chart-grid">
   <div class="s-card">
     <div class="s-card-head">
       <div class="s-card-ico" style="background:rgba(201,162,39,.08)"><i class="fas fa-chart-bar text-[#c9a227]"></i></div>
       <span class="s-card-title">Gastos por categor&iacute;a</span>
     </div>
-    <div class="s-card-body" style="overflow-y:auto;">
-      <div id="barChartContainer" style="height:300px"><canvas id="gastosCategoriasChart"></canvas></div>
+    <div class="s-card-body balances-chart-body">
+      <div id="barChartContainer" class="balances-bar-chart"><canvas id="gastosCategoriasChart"></canvas></div>
     </div>
   </div>
   <div class="s-card">
@@ -73,10 +73,10 @@
       <div class="s-card-ico" style="background:rgba(47,69,80,.05)"><i class="fas fa-chart-pie text-violet-500"></i></div>
       <span class="s-card-title">Distribuci&oacute;n de gastos</span>
     </div>
-    <div class="s-card-body">
-      <div style="display:flex; gap:14px; height:300px; align-items:stretch;">
-        <div style="position:relative; flex:0 0 210px;"><canvas id="distribucionGastosChart"></canvas></div>
-        <div id="donut-legend" style="flex:1; overflow-y:auto; min-height:0; padding-top:2px;"></div>
+    <div class="s-card-body balances-chart-body">
+      <div class="balances-donut-layout">
+        <div class="balances-donut-canvas"><canvas id="distribucionGastosChart"></canvas></div>
+        <div id="donut-legend" class="balances-donut-legend"></div>
       </div>
     </div>
   </div>

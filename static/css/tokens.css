@@ -135,12 +135,12 @@
   --navbar-height: 56px;
   --sidebar-bg: var(--charcoal-blue);
   --sidebar-text: rgb(244, 244, 249);
-  --sidebar-text-muted: rgba(244, 244, 249, 0.72);
-  --sidebar-text-header: rgba(244, 244, 249, 0.5);
-  --sidebar-hover-bg: rgba(88, 111, 124, 0.25);
-  --sidebar-active-bg: rgba(184, 219, 217, 0.15);
+  --sidebar-text-muted: rgba(244, 244, 249, 0.82);
+  --sidebar-text-header: rgba(244, 244, 249, 0.68);
+  --sidebar-hover-bg: rgba(184, 219, 217, 0.16);
+  --sidebar-active-bg: rgba(184, 219, 217, 0.24);
   --sidebar-active-text: #fff;
-  --sidebar-child-text: rgba(244, 244, 249, 0.78);
+  --sidebar-child-text: rgba(244, 244, 249, 0.86);
 
   /* Z-index */
   --z-sidebar: 1030;
