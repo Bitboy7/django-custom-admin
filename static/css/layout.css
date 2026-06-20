@@ -187,6 +187,38 @@ body .main-sidebar {
 html[data-theme="dark"] body .content-wrapper {
   background: var(--surface-bg, #1a1f24) !important;
 }
+
+/* ── Dark mode sidebar overrides (neutraliza sidebar-light-primary de AdminLTE) ── */
+html[data-theme="dark"] body .main-sidebar,
+html[data-theme="dark"] body .os-viewport,
+html[data-theme="dark"] body .sidebar {
+  background: var(--sidebar-bg) !important;
+  background-color: var(--sidebar-bg) !important;
+}
+html[data-theme="dark"] body .main-sidebar {
+  border-right-color: var(--sidebar-border) !important;
+}
+html[data-theme="dark"] body .nav-sidebar .nav-header {
+  color: var(--sidebar-text-header) !important;
+}
+html[data-theme="dark"] body .nav-sidebar .nav-item > .nav-link,
+html[data-theme="dark"] body .nav-sidebar .nav-item > .nav-link p,
+html[data-theme="dark"] body .nav-sidebar .nav-item > .nav-link i,
+html[data-theme="dark"] body .nav-sidebar .nav-item > .nav-link .right,
+html[data-theme="dark"] body .nav-sidebar .nav-item > .nav-link .nav-icon {
+  color: var(--sidebar-text) !important;
+}
+html[data-theme="dark"] body .nav-treeview .nav-item > .nav-link,
+html[data-theme="dark"] body .nav-treeview .nav-item > .nav-link p,
+html[data-theme="dark"] body .nav-treeview .nav-item > .nav-link i,
+html[data-theme="dark"] body .nav-treeview .nav-item > .nav-link .nav-icon {
+  color: var(--sidebar-child-text) !important;
+}
+html[data-theme="dark"] body .brand-link {
+  background: var(--sidebar-brand-bg) !important;
+  color: var(--sidebar-brand-text) !important;
+  border-bottom-color: var(--sidebar-brand-border) !important;
+}
 body .sidebar::-webkit-scrollbar {
   width: 4px;
 }
