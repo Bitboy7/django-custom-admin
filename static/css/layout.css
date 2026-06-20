@@ -8,11 +8,16 @@
  */
 
 /* ── Navbar (top) ──────────────────────────────────────────────── */
-body .main-header.navbar,
-body .navbar.navbar-expand-md {
-  background: var(--brand-navy-dark) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.25) !important;
+html body #jazzy-navbar.main-header.navbar,
+html body .main-header.navbar,
+html body .navbar.navbar-expand,
+html body .navbar.navbar-expand-md,
+html body .navbar-white,
+html body .navbar-light {
+  background: var(--navbar-bg, #1f2f38) !important;
+  background-color: var(--navbar-bg, #1f2f38) !important;
+  border-bottom: 1px solid var(--navbar-border, rgba(255, 255, 255, 0.08)) !important;
+  box-shadow: var(--navbar-shadow, 0 1px 8px rgba(0, 0, 0, 0.25)) !important;
   min-height: var(--navbar-height) !important;
   position: sticky;
   top: 0;
@@ -21,9 +26,12 @@ body .navbar.navbar-expand-md {
 }
 
 /* Nav links */
-body .navbar-nav .nav-link,
-body .nav-item .nav-link {
-  color: var(--text-on-dark-muted) !important;
+html body #jazzy-navbar .navbar-nav .nav-link,
+html body #jazzy-navbar .navbar-nav .nav-link.btn,
+html body #jazzy-navbar.navbar-light .navbar-nav .nav-link,
+html body #jazzy-navbar.navbar-white .navbar-nav .nav-link,
+html body .main-header.navbar .navbar-nav .nav-link {
+  color: var(--navbar-text-muted, rgba(244, 244, 249, 0.68)) !important;
   font-family: var(--font-body);
   font-size: var(--font-size-sm);
   font-weight: 500;
@@ -34,14 +42,23 @@ body .nav-item .nav-link {
   display: flex;
   align-items: center;
 }
-body .navbar-nav .nav-link:hover,
-body .nav-item .nav-link:hover {
-  color: #fff !important;
-  background: rgba(13, 148, 136, 0.18) !important;
+html body #jazzy-navbar .navbar-nav .nav-link:hover,
+html body #jazzy-navbar .navbar-nav .nav-link:focus,
+html body .main-header.navbar .navbar-nav .nav-link:hover,
+html body .main-header.navbar .navbar-nav .nav-link:focus {
+  color: var(--navbar-text-active, #fff) !important;
+  background: var(--navbar-bg-hover, rgba(184, 219, 217, 0.16)) !important;
 }
-body .navbar-nav .nav-link.active {
-  color: var(--brand-teal-light) !important;
-  background: rgba(13, 148, 136, 0.14) !important;
+html body #jazzy-navbar .navbar-nav .nav-link.active,
+html body .main-header.navbar .navbar-nav .nav-link.active {
+  color: var(--navbar-text-active, #fff) !important;
+  background: var(--navbar-bg-hover, rgba(184, 219, 217, 0.16)) !important;
+}
+html body #jazzy-navbar .navbar-nav .nav-link i,
+html body #jazzy-navbar .navbar-nav .nav-link svg,
+html body #jazzy-navbar .btn-navbar,
+html body #jazzy-navbar .btn-navbar i {
+  color: var(--navbar-text, rgba(244, 244, 249, 0.9)) !important;
 }
 
 /* Brand */
@@ -76,9 +93,9 @@ body .brand-link img {
 
 /* Navbar search */
 body .form-control-navbar {
-  background: rgba(255, 255, 255, 0.07) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  color: #fff !important;
+  background: var(--navbar-control-bg, rgba(255, 255, 255, 0.07)) !important;
+  border: 1px solid var(--navbar-control-border, rgba(255, 255, 255, 0.14)) !important;
+  color: var(--navbar-text-active, #fff) !important;
   border-radius: var(--radius-md) !important;
   font-family: var(--font-body);
   font-size: var(--font-size-sm);

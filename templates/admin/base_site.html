@@ -54,6 +54,39 @@
   {% if site_config_global and site_config_global.custom_topbar_css %}
   {{ site_config_global.custom_topbar_css|safe }}
   {% endif %}
+
+  /* ── Critical navbar guard ───────────────────────────────────────
+     Produccion sirve /static/ como immutable; esta regla evita que una
+     copia cacheada de Jazzmin/AdminLTE deje la barra blanca con texto blanco. */
+  html body #jazzy-navbar.main-header.navbar,
+  html body #jazzy-navbar.main-header.navbar.navbar-white,
+  html body #jazzy-navbar.main-header.navbar.navbar-light,
+  html body #jazzy-navbar.main-header.navbar.navbar-dark {
+    background: var(--navbar-bg, #1f2f38) !important;
+    background-color: var(--navbar-bg, #1f2f38) !important;
+    border-bottom-color: var(--navbar-border, rgba(255,255,255,.08)) !important;
+    box-shadow: var(--navbar-shadow, 0 1px 8px rgba(0,0,0,.25)) !important;
+  }
+  html body #jazzy-navbar .navbar-nav > .nav-item > .nav-link,
+  html body #jazzy-navbar.navbar-light .navbar-nav > .nav-item > .nav-link,
+  html body #jazzy-navbar.navbar-white .navbar-nav > .nav-item > .nav-link,
+  html body #jazzy-navbar .btn-navbar,
+  html body #jazzy-navbar .btn-navbar i {
+    color: var(--navbar-text, rgba(244,244,249,.9)) !important;
+  }
+  html body #jazzy-navbar .navbar-nav > .nav-item > .nav-link:hover,
+  html body #jazzy-navbar .navbar-nav > .nav-item > .nav-link:focus {
+    color: var(--navbar-text-active, #fff) !important;
+    background: var(--navbar-bg-hover, rgba(184,219,217,.16)) !important;
+  }
+  html body #jazzy-navbar .form-control-navbar {
+    background: var(--navbar-control-bg, rgba(255,255,255,.07)) !important;
+    border-color: var(--navbar-control-border, rgba(255,255,255,.14)) !important;
+    color: var(--navbar-text-active, #fff) !important;
+  }
+  html body #jazzy-navbar .form-control-navbar::placeholder {
+    color: rgba(244,244,249,.5) !important;
+  }
 </style>
 {% endblock %}
 

@@ -1,6 +1,7 @@
 // Inicialización de gráficos para balances
 var gastosChart = null;
 var distribucionChart = null;
+var MAX_CATEGORIAS_GRAFICO = 12;
 
 /**
  * Genera un color único para cada índice usando el ángulo áureo (137.5°).
@@ -501,6 +502,8 @@ function createGastosCategoriasChart() {
   combinado.sort(function (a, b) {
     return b.data - a.data;
   });
+
+  combinado = combinado.slice(0, MAX_CATEGORIAS_GRAFICO);
 
   labels = combinado.map(function (item) {
     return item.label;
