@@ -88,59 +88,96 @@
     color: rgba(244,244,249,.5) !important;
   }
 
-  /* Sidebar follows the resolved app theme, not Jazzmin's fixed sidebar-dark class. */
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar.main-sidebar,
-  html[data-theme="light"] body aside#jazzy-sidebar.main-sidebar,
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .sidebar,
-  html[data-theme="light"] body aside#jazzy-sidebar .sidebar,
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .os-viewport,
-  html[data-theme="light"] body aside#jazzy-sidebar .os-viewport {
-    background: var(--sidebar-bg, #f8fafb) !important;
+  /* Sidebar — light by default; dark overrides via [data-theme="dark"].
+     Jazzmin always adds sidebar-dark-primary; our tokens + !important beat it. */
+  body aside#jazzy-sidebar.main-sidebar,
+  body aside#jazzy-sidebar .sidebar,
+  body aside#jazzy-sidebar .os-viewport {
+    background: var(--sidebar-bg, #f0f3f7) !important;
   }
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .brand-link,
-  html[data-theme="light"] body aside#jazzy-sidebar .brand-link {
-    background: var(--sidebar-brand-bg, #f8fafb) !important;
-    border-bottom-color: var(--sidebar-brand-border, #d8dce6) !important;
+  body aside#jazzy-sidebar .brand-link {
+    background: var(--sidebar-brand-bg, #f0f3f7) !important;
+    border-bottom-color: var(--sidebar-brand-border, #d0d6e0) !important;
     color: var(--sidebar-brand-text, #2f4550) !important;
   }
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link,
-  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link,
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link p,
-  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link p,
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link i,
-  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link i,
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link .right,
-  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link .right {
-    color: var(--sidebar-text, #2f4550) !important;
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link p,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link i,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link .right,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link .nav-icon {
+    color: var(--sidebar-text, #1a2530) !important;
   }
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link,
-  html[data-theme="light"] body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link,
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link p,
-  html[data-theme="light"] body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link p,
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link i,
-  html[data-theme="light"] body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link i {
-    color: var(--sidebar-child-text, #2f4550) !important;
+  body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link,
+  body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link p,
+  body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link i {
+    color: var(--sidebar-child-text, #1a2530) !important;
   }
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link,
-  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link,
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active,
-  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active {
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active {
     background: var(--sidebar-active-bg, #586f7c) !important;
     color: var(--sidebar-active-text, #fff) !important;
   }
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link p,
-  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link p,
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link i,
-  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link i,
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link .right,
-  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link .right,
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active p,
-  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active p,
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active i,
-  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active i,
-  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active .right,
-  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active .right {
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link p,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link i,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link .right,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active p,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active i,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active .right {
     color: var(--sidebar-active-text, #fff) !important;
+  }
+  body aside#jazzy-sidebar .nav-sidebar .nav-header {
+    color: var(--sidebar-text-header, #3d5a66) !important;
+  }
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link:hover {
+    background: var(--sidebar-hover-bg, rgba(184,219,217,.36)) !important;
+    border-left-color: var(--brand-teal-light, #b8dbd9) !important;
+  }
+  body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link:hover {
+    background: var(--sidebar-hover-bg, rgba(184,219,217,.36)) !important;
+  }
+  body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link.active {
+    background: var(--sidebar-active-bg, #586f7c) !important;
+    color: var(--sidebar-active-text, #fff) !important;
+  }
+  body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link.active p,
+  body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link.active i {
+    color: var(--sidebar-active-text, #fff) !important;
+  }
+
+  /* Dark mode — sidebar goes dark, content area also darkens */
+  html[data-theme="dark"] body aside#jazzy-sidebar.main-sidebar,
+  html[data-theme="dark"] body aside#jazzy-sidebar .sidebar,
+  html[data-theme="dark"] body aside#jazzy-sidebar .os-viewport {
+    background: var(--sidebar-bg, #1f2f38) !important;
+  }
+  html[data-theme="dark"] body aside#jazzy-sidebar .brand-link {
+    background: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-navy-dark) 100%) !important;
+    border-bottom-color: var(--brand-teal, #586f7c) !important;
+    color: rgba(255,255,255,.94) !important;
+  }
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link,
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link p,
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link i {
+    color: var(--sidebar-text, rgba(244,244,249,.88)) !important;
+  }
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link,
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link p,
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link i {
+    color: var(--sidebar-child-text, rgba(244,244,249,.6)) !important;
+  }
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link,
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active {
+    background: var(--sidebar-active-bg, rgba(184,219,217,.12)) !important;
+    color: var(--sidebar-active-text, #fff) !important;
+  }
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-sidebar .nav-header {
+    color: var(--sidebar-text-header, rgba(244,244,249,.45)) !important;
+  }
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link:hover {
+    background: var(--sidebar-hover-bg, rgba(88,111,124,.2)) !important;
+  }
+  html[data-theme="dark"] body .content-wrapper {
+    background: var(--surface-bg, #1a1f24) !important;
   }
 </style>
 {% endblock %}

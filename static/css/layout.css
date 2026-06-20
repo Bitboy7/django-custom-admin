@@ -174,12 +174,18 @@ body .main-sidebar,
 body .os-viewport,
 body .sidebar {
   background: var(--sidebar-bg) !important;
+  background-color: var(--sidebar-bg, #f0f3f7) !important;
   font-family: var(--font-body);
   scrollbar-width: thin;
   scrollbar-color: var(--sidebar-text-header) transparent;
 }
 body .main-sidebar {
-  border-right: 1px solid var(--sidebar-border, transparent) !important;
+  border-right: 1px solid var(--sidebar-border, #d0d6e0) !important;
+}
+
+/* Content wrapper — uses theme tokens */
+html[data-theme="dark"] body .content-wrapper {
+  background: var(--surface-bg, #1a1f24) !important;
 }
 body .sidebar::-webkit-scrollbar {
   width: 4px;
