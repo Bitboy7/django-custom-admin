@@ -1,5 +1,5 @@
 upstream django_app {
-    server agricola-django-custom-admin-j5fmfr:8000;
+    server ${DJANGO_UPSTREAM};
 }
 
 map $http_x_forwarded_proto $forwarded_proto {

@@ -22,12 +22,8 @@ urlpatterns = [
     path('', include(tf_urls)),
 ]
 
-# Agregar archivos media solo en desarrollo (en producción los sirve MediaServeMiddleware)
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-# En producción, también agregamos archivos estáticos por si acaso
-if not settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 # URLs con prefijo de idioma

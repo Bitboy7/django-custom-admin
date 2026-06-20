@@ -567,12 +567,12 @@ LOCALE_PATHS = [
 
 STATIC_URL = "/static/"
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-STATIC_ROOT = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'staticfiles')
+MEDIA_ROOT = BASE_DIR / 'media'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-STATICFILES_DIRS = (
-    os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static'),
-)
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 
 TEMPLATE_DIRS = (
     os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'templates'),
@@ -614,17 +614,16 @@ STATICFILES_FINDERS = [
     'compressor.finders.CompressorFinder',
 ]
 
-# Configuración para servir archivos estáticos en producción
 if not DEBUG:
-    # Cambiado a CompressedStaticFilesStorage para evitar hashing de nombres
-    # que causa conflictos con custom_css de Jazzmin
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
-    # Servir estáticos directamente desde STATIC_ROOT (más eficiente en producción)
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+        },
+    }
     WHITENOISE_USE_FINDERS = False
-    # Configuración para servir archivos media con WhiteNoise en producción
-    WHITENOISE_ROOT = MEDIA_ROOT
-    # Añadir configuración para servir archivos media
-    WHITENOISE_MEDIA_PREFIX = '/media/'
 
 # Configuración de logging
 LOGGING = {
