@@ -87,6 +87,61 @@
   html body #jazzy-navbar .form-control-navbar::placeholder {
     color: rgba(244,244,249,.5) !important;
   }
+
+  /* Sidebar follows the resolved app theme, not Jazzmin's fixed sidebar-dark class. */
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar.main-sidebar,
+  html[data-theme="light"] body aside#jazzy-sidebar.main-sidebar,
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .sidebar,
+  html[data-theme="light"] body aside#jazzy-sidebar .sidebar,
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .os-viewport,
+  html[data-theme="light"] body aside#jazzy-sidebar .os-viewport {
+    background: var(--sidebar-bg, #f8fafb) !important;
+  }
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .brand-link,
+  html[data-theme="light"] body aside#jazzy-sidebar .brand-link {
+    background: var(--sidebar-brand-bg, #f8fafb) !important;
+    border-bottom-color: var(--sidebar-brand-border, #d8dce6) !important;
+    color: var(--sidebar-brand-text, #2f4550) !important;
+  }
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link,
+  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link,
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link p,
+  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link p,
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link i,
+  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link i,
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link .right,
+  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link .right {
+    color: var(--sidebar-text, #2f4550) !important;
+  }
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link,
+  html[data-theme="light"] body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link,
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link p,
+  html[data-theme="light"] body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link p,
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link i,
+  html[data-theme="light"] body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link i {
+    color: var(--sidebar-child-text, #2f4550) !important;
+  }
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link,
+  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link,
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active,
+  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active {
+    background: var(--sidebar-active-bg, #586f7c) !important;
+    color: var(--sidebar-active-text, #fff) !important;
+  }
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link p,
+  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link p,
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link i,
+  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link i,
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link .right,
+  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link .right,
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active p,
+  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active p,
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active i,
+  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active i,
+  html:not([data-theme="dark"]) body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active .right,
+  html[data-theme="light"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active .right {
+    color: var(--sidebar-active-text, #fff) !important;
+  }
 </style>
 {% endblock %}
 

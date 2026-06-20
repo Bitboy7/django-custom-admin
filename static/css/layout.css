@@ -63,18 +63,14 @@ html body #jazzy-navbar .btn-navbar i {
 
 /* Brand */
 body .brand-link {
-  background: linear-gradient(
-    135deg,
-    var(--brand-navy) 0%,
-    var(--brand-navy-dark) 100%
-  ) !important;
-  border-bottom: 2px solid var(--brand-teal) !important;
+  background: var(--sidebar-brand-bg) !important;
+  border-bottom: 1px solid var(--sidebar-brand-border, var(--sidebar-border)) !important;
   padding: var(--space-3) var(--space-6) !important;
   font-family: var(--font-display);
   font-weight: 600;
   font-size: var(--font-size-md);
   letter-spacing: -0.01em;
-  color: rgba(255, 255, 255, 0.94) !important;
+  color: var(--sidebar-brand-text) !important;
 }
 body .brand-text {
   font-size: var(--font-size-sm) !important;
@@ -181,6 +177,9 @@ body .sidebar {
   font-family: var(--font-body);
   scrollbar-width: thin;
   scrollbar-color: var(--sidebar-text-header) transparent;
+}
+body .main-sidebar {
+  border-right: 1px solid var(--sidebar-border, transparent) !important;
 }
 body .sidebar::-webkit-scrollbar {
   width: 4px;

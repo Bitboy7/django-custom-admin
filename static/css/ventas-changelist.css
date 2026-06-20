@@ -1,0 +1,136 @@
+/* Ventas changelist — semantic colours aligned with design tokens. */
+
+body #changelist #result_list {
+  border: 1px solid var(--border-default) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-sm) !important;
+  overflow: hidden;
+}
+
+body #changelist #result_list thead th {
+  background: var(--sales-table-head-bg, var(--brand-navy)) !important;
+  color: var(--sales-table-head-text, #fff) !important;
+  border-bottom: 1px solid rgba(184, 219, 217, 0.22) !important;
+}
+
+body #changelist #result_list tbody tr td {
+  background: var(--surface-card) !important;
+  border-bottom: 1px solid var(--border-default) !important;
+}
+
+body #changelist #result_list tbody tr:nth-child(even) td {
+  background: rgba(184, 219, 217, 0.07) !important;
+}
+
+body #changelist #result_list tbody tr:hover td {
+  background: rgba(184, 219, 217, 0.16) !important;
+}
+
+body #changelist #result_list td.field-fecha_salida_manifiesto {
+  background: var(--sales-table-key-bg, rgba(184, 219, 217, 0.22)) !important;
+  color: var(--sales-table-key-text, var(--brand-navy)) !important;
+  font-weight: 750 !important;
+}
+
+body #changelist #result_list tbody tr:hover td.field-fecha_salida_manifiesto {
+  background: rgba(184, 219, 217, 0.28) !important;
+}
+
+.sales-money,
+.sales-balance {
+  color: var(--sales-money, var(--brand-navy-light)) !important;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.sales-money--cash,
+.sales-balance--paid {
+  color: var(--sales-paid, #5a7d6b) !important;
+}
+
+.sales-money--credit,
+.sales-balance--open {
+  color: var(--sales-money-strong, var(--brand-navy)) !important;
+}
+
+.sales-balance--overdue {
+  color: var(--sales-overdue, #b85450) !important;
+}
+
+.sales-muted {
+  color: var(--text-muted) !important;
+  font-size: 0.72rem;
+}
+
+.sales-badge {
+  align-items: center;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 750;
+  gap: 0.3rem;
+  line-height: 1;
+  padding: 0.28rem 0.58rem;
+  white-space: nowrap;
+}
+
+.sales-badge--paid {
+  background: var(--sales-paid-bg, rgba(90, 125, 107, 0.08));
+  color: var(--sales-paid, #5a7d6b) !important;
+}
+
+.sales-badge--pending {
+  background: var(--sales-pending-bg, rgba(201, 162, 39, 0.14));
+  color: var(--sales-pending, #9a7a15) !important;
+}
+
+.sales-badge--partial {
+  background: var(--sales-partial-bg, rgba(88, 111, 124, 0.12));
+  color: var(--sales-partial, #586f7c) !important;
+}
+
+.sales-badge--overdue,
+.sales-badge--bad {
+  background: var(--sales-overdue-bg, rgba(184, 84, 80, 0.08));
+  color: var(--sales-overdue, #b85450) !important;
+}
+
+.sales-badge--neutral {
+  background: var(--sales-neutral-bg, var(--surface-hover));
+  color: var(--sales-neutral, var(--text-muted)) !important;
+}
+
+.sales-risk {
+  color: var(--text-muted) !important;
+  font-size: 0.72rem;
+}
+
+.sales-risk--a-plus,
+.sales-risk--a {
+  color: var(--sales-paid, #5a7d6b) !important;
+}
+
+.sales-risk--b {
+  color: var(--sales-pending, #9a7a15) !important;
+}
+
+.sales-risk--c {
+  color: var(--sales-overdue, #b85450) !important;
+}
+
+.sales-due {
+  font-weight: 700;
+}
+
+.sales-due--ok {
+  color: var(--sales-paid, #5a7d6b) !important;
+}
+
+.sales-due--today,
+.sales-due--open {
+  color: var(--sales-pending, #9a7a15) !important;
+}
+
+.sales-due--overdue {
+  color: var(--sales-overdue, #b85450) !important;
+}

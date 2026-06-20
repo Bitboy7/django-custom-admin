@@ -741,19 +741,19 @@ class VentasAdmin(ModelAdmin):
     def get_cliente_info(self, obj):
         """Información del cliente con indicador de riesgo"""
         cliente = obj.cliente
-        color = {
-            'A+': '#28a745',  # Verde
-            'A': '#6c757d',   # Gris
-            'B': '#fd7e14',   # Naranja
-            'C': '#dc3545'    # Rojo
-        }.get(cliente.calificacion_credito, '#6c757d')
+        risk_class = {
+            'A+': 'sales-risk--a-plus',
+            'A': 'sales-risk--a',
+            'B': 'sales-risk--b',
+            'C': 'sales-risk--c',
+        }.get(cliente.calificacion_credito, '')
         
         return format_html(
             '<strong>{}</strong><br>'
-            '<small style="color: {};">📊 {}</small><br>'
-            '<small>🌍 {}</small>',
+            '<small class="sales-risk {}">📊 {}</small><br>'
+            '<small class="sales-muted">🌍 {}</small>',
             cliente.nombre,
-            color,
+            risk_class,
             cliente.get_calificacion_credito_display(),
             cliente.pais.nombre
         )
@@ -761,12 +761,12 @@ class VentasAdmin(ModelAdmin):
     
     def get_monto_formateado(self, obj):
         """Monto con formato mejorado"""
-        color = '#28a745' if obj.modalidad_pago == 'Contado' else '#fd7e14'
+        money_class = 'sales-money--cash' if obj.modalidad_pago == 'Contado' else 'sales-money--credit'
         monto_str = f"{float(obj.monto.amount):,.2f}"
         return format_html(
-            '<span style="color: {}; font-weight: bold;">${}</span><br>'
-            '<small>{}</small>',
-            color,
+            '<span class="sales-money {}">${}</span><br>'
+            '<small class="sales-muted">{}</small>',
+            money_class,
             monto_str,
             obj.moneda_venta
         )
@@ -775,32 +775,32 @@ class VentasAdmin(ModelAdmin):
     def get_saldo_pendiente(self, obj):
         """Saldo pendiente con formato visual"""
         if obj.modalidad_pago == 'Contado':
-            return mark_safe('<span style="color: green;">✓ Pagado</span>')
+            return mark_safe('<span class="sales-badge sales-badge--paid">✓ Pagado</span>')
         
         saldo = obj.saldo_pendiente()
         if saldo <= 0:
-            return mark_safe('<span style="color: green;">✓ $0.00</span>')
+            return mark_safe('<span class="sales-badge sales-badge--paid">✓ $0.00</span>')
         
-        color = '#dc3545' if obj.esta_vencida() else '#fd7e14'
+        balance_class = 'sales-balance--overdue' if obj.esta_vencida() else 'sales-balance--open'
         return format_html(
-            '<span style="color: {}; font-weight: bold;">${}</span>',
-            color, f"{float(saldo):,.2f}"
+            '<span class="sales-balance {}">${}</span>',
+            balance_class, f"{float(saldo):,.2f}"
         )
     get_saldo_pendiente.short_description = 'Saldo Pendiente'
     
     # Métodos originales del admin
     def get_estado_cobranza(self, obj):
         colors = {
-            'Pagado': 'green',
-            'Pendiente': 'orange', 
-            'Parcial': 'blue',
-            'Vencido': 'red',
-            'Incobrable': 'darkred'
+            'Pagado': 'sales-badge--paid',
+            'Pendiente': 'sales-badge--pending',
+            'Parcial': 'sales-badge--partial',
+            'Vencido': 'sales-badge--overdue',
+            'Incobrable': 'sales-badge--bad',
         }
-        color = colors.get(obj.estado_cobranza, 'black')
+        badge_class = colors.get(obj.estado_cobranza, 'sales-badge--neutral')
         return format_html(
-            '<span style="color: {}; font-weight: bold;">{}</span>',
-            color, obj.get_estado_cobranza_display()
+            '<span class="sales-badge {}">{}</span>',
+            badge_class, obj.get_estado_cobranza_display()
         )
     get_estado_cobranza.short_description = 'Estado Cobranza'
     
@@ -809,11 +809,11 @@ class VentasAdmin(ModelAdmin):
             return '-'
         dias = obj.dias_vencido()
         if dias > 0:
-            return format_html('<span style="color: red;">+{} días</span>', dias)
+            return format_html('<span class="sales-due sales-due--overdue">+{} días</span>', dias)
         elif dias < 0:
-            return format_html('<span style="color: green;">{} días</span>', abs(dias))
+            return format_html('<span class="sales-due sales-due--ok">{} días</span>', abs(dias))
         else:
-            return 'Vence hoy'
+            return mark_safe('<span class="sales-due sales-due--today">Vence hoy</span>')
     get_dias_vencimiento.short_description = 'Vencimiento'
     
     def get_mercado_destino(self, obj):
