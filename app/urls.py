@@ -6,6 +6,7 @@ from .views import export_full_report_to_excel, currency_conversion_api, currenc
 from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import redirect
+from django.views.generic import RedirectView
 from two_factor.urls import urlpatterns as tf_urls
 
 # Función para redireccionar a admin
@@ -14,6 +15,7 @@ def redirect_to_admin(request):
 
 # URLs que no necesitan prefijo de idioma
 urlpatterns = [
+    path('favicon.ico', RedirectView.as_view(url=f'{settings.STATIC_URL}favicon.ico', permanent=True)),
     # URL para cambiar idioma (debe estar fuera de i18n_patterns)
     path("i18n/", include("django.conf.urls.i18n")),
     # API de conversión de moneda (sin prefijo de idioma)

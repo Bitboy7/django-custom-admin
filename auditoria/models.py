@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
+from app.media_utils import safe_file_url
 
 
 class LogActividad(models.Model):
@@ -131,14 +132,7 @@ class UserProfile(models.Model):
     @property
     def avatar_url(self):
         """Devuelve la URL del avatar o vacío si no tiene."""
-        if self.avatar and getattr(self.avatar, 'name', '') and hasattr(self.avatar, 'url'):
-            try:
-                if not self.avatar.storage.exists(self.avatar.name):
-                    return ''
-            except Exception:
-                return ''
-            return self.avatar.url
-        return ''
+        return safe_file_url(self.avatar)
 
 
 class SiteConfiguration(models.Model):
@@ -209,6 +203,4 @@ class SiteConfiguration(models.Model):
 
     @property
     def company_logo_url(self):
-        if self.company_logo and hasattr(self.company_logo, 'url'):
-            return self.company_logo.url
-        return ''
+        return safe_file_url(self.company_logo)

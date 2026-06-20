@@ -7,6 +7,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from datetime import datetime, timedelta
 from decimal import Decimal
 from django.utils import timezone
+from app.media_utils import safe_file_url
 
 class TerminoCredito(models.Model):
     """Modelo para manejar diferentes términos de crédito"""
@@ -88,9 +89,10 @@ class Cliente(models.Model):
         return f"{self.nombre} - {self.pais}"
 
     def mostrar_logotipo(self):
-        if self.imagen:
-            return format_html('<img src="{}" style="width: 70px; height: 70px;" />', self.imagen.url)
-        return "No Image"
+        url = safe_file_url(self.imagen)
+        if url:
+            return format_html('<img src="{}" style="width: 70px; height: 70px;" />', url)
+        return "Sin imagen"
     mostrar_logotipo.short_description = "Logotipo"
     
     def credito_disponible(self):

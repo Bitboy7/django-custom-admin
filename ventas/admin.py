@@ -26,6 +26,7 @@ from import_export.widgets import ForeignKeyWidget
 from import_export.forms import ExportForm, ImportForm
 from app.widgets import MoneyWidget
 from django.utils.html import format_html
+from app.media_utils import safe_file_url
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import path, reverse
@@ -2131,7 +2132,8 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
     
     def get_comprobante(self, obj):
         """Muestra ícono de comprobante si existe con link para preview"""
-        if obj.comprobante_pago:
+        comprobante_url = safe_file_url(obj.comprobante_pago)
+        if comprobante_url:
             file_ext = obj.comprobante_pago.name.split('.')[-1].lower()
             if file_ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
                 icon = '🖼️'
@@ -2151,9 +2153,9 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
                 'title="Click para ver comprobante">'
                 '{} <span style="color:#586f7c; text-decoration:underline;">{}</span>'
                 '</a>',
-                obj.comprobante_pago.url,
+                comprobante_url,
                 file_type.lower(),
-                obj.comprobante_pago.url,
+                comprobante_url,
                 icon,
                 file_type
             )
@@ -2162,7 +2164,8 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
     
     def preview_comprobante(self, obj):
         """Muestra preview del comprobante en el formulario de detalle"""
-        if not obj.comprobante_pago:
+        comprobante_url = safe_file_url(obj.comprobante_pago)
+        if not comprobante_url:
             return mark_safe('<p style="color:#b8dbd9;">No hay comprobante adjunto</p>')
         
         file_ext = obj.comprobante_pago.name.split('.')[-1].lower()
@@ -2179,8 +2182,8 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
                 'Click en la imagen para verla en tamaño completo'
                 '</p>'
                 '</div>',
-                obj.comprobante_pago.url,
-                obj.comprobante_pago.url
+                comprobante_url,
+                comprobante_url
             )
         elif file_ext == 'pdf':
             return format_html(
@@ -2195,7 +2198,7 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
                 'Archivo: {}'
                 '</p>'
                 '</div>',
-                obj.comprobante_pago.url,
+                comprobante_url,
                 obj.comprobante_pago.name.split('/')[-1]
             )
         else:
@@ -2211,7 +2214,7 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
                 'Archivo: {}'
                 '</p>'
                 '</div>',
-                obj.comprobante_pago.url,
+                comprobante_url,
                 obj.comprobante_pago.name.split('/')[-1]
             )
     preview_comprobante.short_description = 'Vista Previa'

@@ -4,6 +4,7 @@ from catalogo.models import Sucursal, Productor, Producto
 from django.db.models import Sum
 from django.utils.html import format_html
 from djmoney.models.fields import MoneyField
+from app.media_utils import safe_file_url
 
 class CatGastos(models.Model):
     id = models.AutoField(primary_key=True)
@@ -33,9 +34,10 @@ class Banco(models.Model):
     )
 
     def mostrar_logotipo(self):
-        if self.logotipo:
-            return format_html('<img src="{}" style="width: 50px; height: 50px;" />', self.logotipo.url)
-        return "No Image"
+        url = safe_file_url(self.logotipo)
+        if url:
+            return format_html('<img src="{}" style="width: 50px; height: 50px;" />', url)
+        return "Sin imagen"
     mostrar_logotipo.short_description = 'Logotipo'
 
     def __str__(self):

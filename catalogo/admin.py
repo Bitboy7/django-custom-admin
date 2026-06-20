@@ -6,6 +6,7 @@ from import_export.admin import ImportExportModelAdmin
 from import_export.forms import ExportForm, ImportForm
 from .models import Productor, Estado, Sucursal, Pais, Producto
 from django.utils.html import format_html
+from app.media_utils import safe_file_url
 
 
 class PaisResource(resources.ModelResource):
@@ -71,13 +72,16 @@ class ProductorAdmin(ImportExportModelAdmin, ModelAdmin):
     )
 
     def mostrar_imagen(self, obj):
-        if obj.imagen:
-            return format_html('<img src="{}" style="width: 57px; height: 57px;" />', obj.imagen.url)
-        return "No Image"
+        url = safe_file_url(obj.imagen)
+        if url:
+            return format_html('<img src="{}" style="width: 57px; height: 57px;" />', url)
+        return "Sin imagen"
     mostrar_imagen.short_description = 'Foto'
 
     def mostrar_bandera_nacionalidad(self, obj):
-        return obj.nacionalidad.mostrar_bandera()
+        if obj.nacionalidad_id:
+            return obj.nacionalidad.mostrar_bandera()
+        return "Sin país"
     mostrar_bandera_nacionalidad.short_description = 'Nacionalidad'
     
 
@@ -101,7 +105,9 @@ class EstadoAdmin(ImportExportModelAdmin, ModelAdmin):
     )
 
     def mostrar_bandera_pais(self, obj):
-        return obj.pais.mostrar_bandera()
+        if obj.pais_id:
+            return obj.pais.mostrar_bandera()
+        return "Sin país"
     mostrar_bandera_pais.short_description = 'Bandera del País'
 
 
@@ -146,7 +152,8 @@ class ProductoAdmin(ImportExportModelAdmin, ModelAdmin):
     )
     
     def mostrar_imagen(self, obj):
-        if obj.imagen:
-            return format_html('<img src="{}" style="width: 60px; height: 58px;" />', obj.imagen.url)
-        return "No Image"
+        url = safe_file_url(obj.imagen)
+        if url:
+            return format_html('<img src="{}" style="width: 60px; height: 58px;" />', url)
+        return "Sin imagen"
     mostrar_imagen.short_description = 'Foto'

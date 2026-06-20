@@ -624,7 +624,6 @@ class ComprasAdmin(ImportExportModelAdmin, ModelAdmin):
         class Media:
             js = (
                 'js/compra_calculator.js',
-                'js/scripts.js',
             )
  
 class SaldoMensualResource(resources.ModelResource):
