@@ -291,6 +291,34 @@ body .nav-treeview .nav-item > .nav-link.active .nav-icon {
   color: var(--sidebar-active-text) !important;
 }
 
+/* High-specificity guard against AdminLTE/Tailwind low-contrast sidebar states. */
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link p,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link i,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link .right,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link .nav-icon {
+  color: var(--sidebar-text, rgba(244, 244, 249, 0.9)) !important;
+}
+
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link:hover,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active {
+  background: var(--sidebar-active-bg, rgba(184, 219, 217, 0.18)) !important;
+  border-left-color: var(--brand-teal-light, #b8dbd9) !important;
+  color: var(--sidebar-active-text, #fff) !important;
+}
+
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link:hover p,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link:hover i,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link p,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link i,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link .right,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active p,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active i,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active .right {
+  color: var(--sidebar-active-text, #fff) !important;
+}
+
 /* User panel — hidden */
 body .user-panel {
   display: none !important;
