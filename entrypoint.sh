@@ -62,8 +62,15 @@ import os
 from django.conf import settings
 try:
     media_dirs = [
-        'bancos', 'catalogo', 'clientes', 'paises', 
-        'productores', 'temp_documents', 'temp_invoices'
+        'avatars', 'site',
+        'bancos', 'bancos/logos',
+        'catalogo', 'catalogo/productos',
+        'clientes',
+        'paises', 'paises/banderas',
+        'productores', 'productores/imagenes',
+        'capital_inversiones', 'capital_inversiones/documentos',
+        'comprobantes_pagos', 'estados_cuenta',
+        'temp_documents', 'temp_invoices'
     ]
     for dir_name in media_dirs:
         dir_path = os.path.join(settings.MEDIA_ROOT, dir_name)

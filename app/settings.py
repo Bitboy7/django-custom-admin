@@ -452,9 +452,12 @@ MIDDLEWARE = [
     "axes.middleware.AxesMiddleware",
 ]
 
-# Agregar middleware para servir archivos media en producción
-# if not DEBUG:
-#     MIDDLEWARE.insert(-2, "app.middleware.MediaServeMiddleware")  # Insertar antes de los middlewares de auditoría
+# Permite servir /media/ desde Django cuando el despliegue expone Gunicorn
+# directamente. Si todo el tráfico pasa por Nginx, Nginx seguirá sirviendo
+# /media/ antes de llegar a Django.
+SERVE_MEDIA_WITH_DJANGO = os.getenv("SERVE_MEDIA_WITH_DJANGO", "True").lower() in ["true", "1", "yes"]
+if not DEBUG and SERVE_MEDIA_WITH_DJANGO:
+    MIDDLEWARE.insert(1, "app.middleware.media_serve.MediaServeMiddleware")
 
 ROOT_URLCONF = "app.urls"
 
