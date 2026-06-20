@@ -220,14 +220,6 @@
       }
     }
 
-    /* Log the resolved mode for debugging */
-    var resolved = getResolvedTheme();
-    var stored = getStoredTheme();
-    console.log(
-      '%c\uD83C\uDF3E Tema%c ' + (stored === AUTO ? 'Auto → ' + resolved : resolved === DARK ? 'Oscuro' : 'Claro') +
-      '%c | Agricola de la Costa ERP',
-      'color:#089b7a;font-weight:700;', 'color:inherit;', 'color:#9c9385;'
-    );
   }
 
   if (document.readyState === 'loading') {

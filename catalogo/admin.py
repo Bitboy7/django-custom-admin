@@ -26,7 +26,6 @@ class PaisAdmin(ImportExportModelAdmin, ModelAdmin):
         }),
         ('Bandera', { 
             'fields': ('bandera',),
-            'classes': ('collapse',)
         })
     )
     
@@ -65,11 +64,9 @@ class ProductorAdmin(ImportExportModelAdmin, ModelAdmin):
         }),
         ('Imagen', {
             'fields': ('imagen',),
-            'classes': ('collapse',)
         }),
         ('Metadatos', {
             'fields': ('fecha_creacion', 'nacimiento', 'nacionalidad'),
-            'classes': ('collapse',)
         })
     )
 

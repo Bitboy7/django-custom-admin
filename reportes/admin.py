@@ -174,7 +174,6 @@ class ConfiguracionReporteAdmin(admin.ModelAdmin):
             "Información",
             {
                 "fields": ("fecha_actualizacion",),
-                "classes": ("collapse",),
             },
         ),
     )
@@ -668,7 +667,6 @@ class ReporteEjecutivoAdmin(admin.ModelAdmin):
             "Envío",
             {
                 "fields": ("destinatarios_enviados", "error_detalle"),
-                "classes": ("collapse",),
             },
         ),
     )

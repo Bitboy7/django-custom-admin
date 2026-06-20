@@ -240,7 +240,6 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
         }),
         ('Estado', {
             'fields': ('activo', 'fecha_registro'),
-            'classes': ('collapse',)
         }),
     )
     
@@ -419,7 +418,6 @@ class VentasAdmin(ModelAdmin):
         ('Documentación Fiscal', {
             'fields': ('fecha_emision_cfdi', 'folio_factura', 'cfdi_cancelado',
                        'nota_credito', 'nota_cargo'),
-            'classes': ('collapse',)
         }),
         ('Producto y Cliente', {
             'fields': ('producto', 'cantidad', 'monto', 'cliente',
@@ -433,11 +431,9 @@ class VentasAdmin(ModelAdmin):
         ('Mercado y Exportación', {
             'fields': ('tipo_venta', 'mercado_destino', 'incoterm',
                        'moneda_venta', 'tipo_cambio', 'numero_carga_comprador'),
-            'classes': ('collapse',)
         }),
         ('Contabilidad', {
             'fields': ('cuenta', 'anticipo', 'ajuste'),
-            'classes': ('collapse',)
         }),
         ('Tipo de Registro', {
             'fields': ('tipo_registro',),
@@ -2093,7 +2089,6 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
         }),
         ('Notas y Auditoría', {
             'fields': ('notas', 'fecha_registro'),
-            'classes': ('collapse',),
         }),
     )
     
@@ -2621,11 +2616,9 @@ class SaldoClienteAdmin(ModelAdmin):
         }),
         ('Control de Pagos', {
             'fields': ('get_monto_pagado', 'fecha_ultimo_pago'),
-            'classes': ('collapse',)
         }),
         ('Auditoria', {
             'fields': ('fecha_creacion',),
-            'classes': ('collapse',)
         })
     )
     
@@ -2750,7 +2743,6 @@ class AntigüedadSaldoAdmin(ModelAdmin):
         }),
         ('Auditoria', {
             'fields': ('calculado_por',),
-            'classes': ('collapse',)
         })
     )
     
@@ -2853,7 +2845,6 @@ class EstadoCuentaClienteAdmin(ModelAdmin):
         }),
         ('Archivo', {
             'fields': ('formato_generado', 'archivo_generado', 'notas'),
-            'classes': ('collapse',)
         })
     )
     
@@ -2956,11 +2947,9 @@ class ConfiguracionCuentasPorCobrarAdmin(ModelAdmin):
         }),
         ('Límites de Crédito', {
             'fields': ('permitir_sobregiro_credito', 'porcentaje_sobregiro_permitido'),
-            'classes': ('collapse',)
         }),
         ('Auditoria', {
             'fields': ('fecha_creacion', 'fecha_modificacion'),
-            'classes': ('collapse',)
         })
     )
     

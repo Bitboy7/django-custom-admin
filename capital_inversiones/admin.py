@@ -43,7 +43,6 @@ class CatInversionAdmin(ImportExportModelAdmin, ModelAdmin):
         }),
         ('Metadatos', {
             'fields': ('fecha_registro',),
-            'classes': ('collapse',)
         })
     )
     
@@ -169,11 +168,9 @@ class InversionAdmin(ImportExportModelAdmin, ModelAdmin):
         }),
         ('Documentación', {
             'fields': ('documento_soporte',),
-            'classes': ('collapse',)
         }),
         ('Metadatos', {
             'fields': ('fecha_registro', 'ultima_modificacion'),
-            'classes': ('collapse',)
         })
     )
     
@@ -323,7 +320,6 @@ class RendimientoInversionAdmin(ImportExportModelAdmin, ModelAdmin):
         }),
         ('Metadatos', {
             'fields': ('fecha_registro',),
-            'classes': ('collapse',)
         })
     )
     

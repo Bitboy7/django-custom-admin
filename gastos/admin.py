@@ -127,11 +127,9 @@ class BancoAdmin(ImportExportModelAdmin, ModelAdmin):
         }),
         ('Imagen', {
             'fields': ('logotipo',),
-            'classes': ('collapse',)
         }),
         ('Metadatos', {
             'fields': ('fecha_registro',),
-            'classes': ('collapse',)
         })
     )
 
@@ -156,7 +154,6 @@ class CuentaAdmin(ImportExportModelAdmin, ModelAdmin):
         }),
         ('Metadatos', {
             'fields': ('fecha_registro',),
-            'classes': ('collapse',)
         })
     )
     
