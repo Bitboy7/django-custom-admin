@@ -31,7 +31,14 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ["true", "1", "yes"]
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+def _csv_env(name, default=""):
+    return [value.strip() for value in os.getenv(name, default).split(",") if value.strip()]
+
+
+ALLOWED_HOSTS = _csv_env("ALLOWED_HOSTS", "localhost,127.0.0.1")
+
+if os.getenv("DOKPLOY_ALLOW_SSLIP", "False").lower() in ["true", "1", "yes"]:
+    ALLOWED_HOSTS.append(".sslip.io")
 
 # Configuración de seguridad para producción
 if not DEBUG:
@@ -47,7 +54,7 @@ if not DEBUG:
     SESSION_COOKIE_HTTPONLY = True  # Previene acceso vía JavaScript (XSS)
     X_FRAME_OPTIONS = 'DENY'
 
-CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:8000").split(",")
+CSRF_TRUSTED_ORIGINS = _csv_env("CSRF_TRUSTED_ORIGINS", "http://localhost:8000")
 
 # Application definition
 
