@@ -170,17 +170,24 @@ body .jaz-avatar-name {
 }
 
 /* ── Sidebar ───────────────────────────────────────────────────── */
-body .main-sidebar,
-body .os-viewport,
-body .sidebar {
-  background: var(--sidebar-bg) !important;
+html body .main-sidebar,
+html body .os-viewport,
+html body .sidebar {
+  background: var(--sidebar-bg, #f0f3f7) !important;
   background-color: var(--sidebar-bg, #f0f3f7) !important;
   font-family: var(--font-body);
   scrollbar-width: thin;
-  scrollbar-color: var(--sidebar-text-header) transparent;
+  scrollbar-color: var(--sidebar-text-header, #3d5a66) transparent;
 }
-body .main-sidebar {
+html body .main-sidebar {
   border-right: 1px solid var(--sidebar-border, #d0d6e0) !important;
+}
+
+/* Neutraliza explícitamente sidebar-light-primary de AdminLTE en modo claro */
+html body .sidebar-light-primary .main-sidebar,
+html body .sidebar-light-primary .sidebar {
+  background: var(--sidebar-bg, #f0f3f7) !important;
+  background-color: var(--sidebar-bg, #f0f3f7) !important;
 }
 
 /* Content wrapper — uses theme tokens */
@@ -192,6 +199,11 @@ html[data-theme="dark"] body .content-wrapper {
 html[data-theme="dark"] body .main-sidebar,
 html[data-theme="dark"] body .os-viewport,
 html[data-theme="dark"] body .sidebar {
+  background: var(--sidebar-bg) !important;
+  background-color: var(--sidebar-bg) !important;
+}
+html[data-theme="dark"] body .sidebar-light-primary .main-sidebar,
+html[data-theme="dark"] body .sidebar-light-primary .sidebar {
   background: var(--sidebar-bg) !important;
   background-color: var(--sidebar-bg) !important;
 }
@@ -334,7 +346,7 @@ html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link p,
 html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link i,
 html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link .right,
 html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link .nav-icon {
-  color: var(--sidebar-text, rgba(244, 244, 249, 0.9)) !important;
+  color: var(--sidebar-text, #1a2530) !important;
 }
 
 html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link:hover,
