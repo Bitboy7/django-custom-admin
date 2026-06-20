@@ -169,18 +169,25 @@ body .jaz-avatar-name {
   }
 }
 
-/* ── Sidebar ───────────────────────────────────────────────────── */
+/* ── Sidebar — siempre fondo oscuro, texto claro ──────────────── */
+/* Nuclear: anula bg-body-secondary de Bootstrap y data-bs-theme */
+html body aside#jazzy-sidebar,
+html body aside#jazzy-sidebar.bg-body-secondary,
+html body aside#jazzy-sidebar[data-bs-theme],
 html body .main-sidebar,
 html body .os-viewport,
 html body .sidebar {
   background: var(--sidebar-bg, #1f2f38) !important;
   background-color: var(--sidebar-bg, #1f2f38) !important;
+  background-image: none !important;
   font-family: var(--font-body);
   scrollbar-width: thin;
   scrollbar-color: var(--sidebar-text-header, rgba(244,244,249,0.45)) transparent;
 }
-html body .main-sidebar {
+html body .main-sidebar,
+html body aside#jazzy-sidebar {
   border-right: 1px solid var(--sidebar-border, rgba(255,255,255,0.08)) !important;
+  border-color: var(--sidebar-border, rgba(255,255,255,0.08)) !important;
 }
 body .sidebar::-webkit-scrollbar {
   width: 4px;
@@ -316,6 +323,43 @@ html body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link .ri
 html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active p,
 html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active i,
 html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active .right {
+  color: var(--sidebar-active-text, #fff) !important;
+}
+
+/* ── Nuclear: todo texto dentro de #jazzy-sidebar -> claro ───── */
+html body aside#jazzy-sidebar,
+html body aside#jazzy-sidebar .nav-link,
+html body aside#jazzy-sidebar .nav-link p,
+html body aside#jazzy-sidebar .nav-link i,
+html body aside#jazzy-sidebar .nav-item,
+html body aside#jazzy-sidebar .nav-item > a,
+html body aside#jazzy-sidebar .nav-header,
+html body aside#jazzy-sidebar .brand-link,
+html body aside#jazzy-sidebar .brand-text,
+html body aside#jazzy-sidebar .user-panel,
+html body aside#jazzy-sidebar .user-panel a,
+html body aside#jazzy-sidebar .user-panel .info {
+  color: var(--sidebar-text, rgba(244,244,249,0.88)) !important;
+}
+html body aside#jazzy-sidebar .brand-link {
+  background: var(--sidebar-brand-bg, linear-gradient(135deg, #2f4550 0%, #1f2f38 100%)) !important;
+}
+html body aside#jazzy-sidebar .nav-treeview .nav-link,
+html body aside#jazzy-sidebar .nav-treeview .nav-link p,
+html body aside#jazzy-sidebar .nav-treeview .nav-link i {
+  color: var(--sidebar-child-text, rgba(244,244,249,0.6)) !important;
+}
+html body aside#jazzy-sidebar .nav-link.active,
+html body aside#jazzy-sidebar .nav-link.active p,
+html body aside#jazzy-sidebar .nav-link.active i,
+html body aside#jazzy-sidebar .menu-open > .nav-link,
+html body aside#jazzy-sidebar .menu-open > .nav-link p,
+html body aside#jazzy-sidebar .menu-open > .nav-link i {
+  color: var(--sidebar-active-text, #fff) !important;
+}
+html body aside#jazzy-sidebar .nav-link:hover,
+html body aside#jazzy-sidebar .nav-link:hover p,
+html body aside#jazzy-sidebar .nav-link:hover i {
   color: var(--sidebar-active-text, #fff) !important;
 }
 
