@@ -169,6 +169,127 @@ body .jaz-avatar-name {
   }
 }
 
+/* ── Dropdown profile card ─────────────────────────────────────── */
+body .jaz-dd-card {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--space-3) !important;
+  padding: var(--space-4) var(--space-5) !important;
+  text-decoration: none !important;
+  color: var(--text-primary) !important;
+  transition: background var(--duration-fast) var(--ease-default);
+  border-radius: var(--radius-md);
+}
+body .jaz-dd-card:hover {
+  background: var(--surface-hover) !important;
+}
+body .profile-mini-avatar,
+body .profile-mini-initials {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+body .profile-mini-avatar {
+  border: 2px solid var(--border-default);
+}
+body .profile-mini-initials {
+  background: linear-gradient(135deg, var(--brand-teal) 0%, var(--brand-teal-dark) 100%);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+body .jaz-dd-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+body .jaz-dd-meta .pname {
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body .jaz-dd-meta .pemail {
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body .jaz-dd-edit-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--surface-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  transition: all var(--duration-fast) var(--ease-default);
+}
+body .jaz-dd-card:hover .jaz-dd-edit-btn {
+  background: var(--brand-teal);
+  color: #fff;
+}
+body .jaz-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-4) !important;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--accent-red) !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer;
+  min-height: 40px;
+  transition: background var(--duration-fast) var(--ease-default);
+}
+body .jaz-logout-btn:hover {
+  background: var(--accent-red-bg) !important;
+}
+
+/* Nuclear: force dropdown-menu visibility over Tailwind preflight */
+body .dropdown-menu {
+  display: none;
+  list-style: none !important;
+  padding: var(--space-1) !important;
+  margin: 0 !important;
+}
+body .dropdown-menu.show {
+  display: block !important;
+}
+body .dropdown-menu .dropdown-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--space-2) !important;
+  padding: var(--space-2) var(--space-4) !important;
+  white-space: nowrap !important;
+}
+body .dropdown-menu .dropdown-divider {
+  height: 1px;
+  margin: var(--space-1) 0;
+  background: var(--border-default);
+  border: none;
+}
+
 /* ── Sidebar — siempre fondo oscuro, texto claro ──────────────── */
 /* Nuclear: anula bg-body-secondary de Bootstrap y data-bs-theme */
 html body aside#jazzy-sidebar,
