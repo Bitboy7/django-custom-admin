@@ -170,8 +170,8 @@
     }
 
     /* KPI value shrink */
-    .text-3xl {
-      font-size: 1.5rem !important;
+    .text-xl {
+      font-size: 1.1rem !important;
     }
 
     /* KPI card compact */
@@ -226,8 +226,8 @@
 
   /* Very small phones */
   @media (max-width: 400px) {
-    .text-3xl {
-      font-size: 1.25rem !important;
+    .text-xl {
+      font-size: 1rem !important;
     }
     [style*="height: 300px"] {
       height: 180px !important;
@@ -583,7 +583,7 @@
             <i class="fas fa-dollar-sign text-[#5a7d6b] mr-2 text-3xl"></i>
             <span>Total Ventas</span>
           </h2>
-          <span class="text-3xl font-bold text-green-900">${{ total_ventas|us_currency:2 }}</span>
+          <span class="text-xl font-bold text-green-900">${{ total_ventas|us_currency:2 }}</span>
         </div>
         <div class="mt-4 h-1 w-full bg-[#d8dce6] rounded-full overflow-hidden">
           <div class="bg-green-900 h-1 rounded-full" style="width: 100%"></div>
@@ -598,7 +598,7 @@
             <i class="fas fa-money-check-alt text-[#2f4550] mr-2 text-3xl"></i>
             <span>Total Pagado</span>
           </h2>
-          <span class="text-3xl font-bold text-[#2f4550]">${{ total_pagado|us_currency:2 }}</span>
+          <span class="text-xl font-bold text-[#2f4550]">${{ total_pagado|us_currency:2 }}</span>
         </div>
         <div class="mt-4 h-1 w-full bg-[#d8dce6] rounded-full overflow-hidden">
           <div class="bg-[#586f7c] h-1 rounded-full" style="width: {% widthratio total_pagado total_ventas 100 %}%"></div>
@@ -613,7 +613,7 @@
             <i class="fas fa-exclamation-triangle text-[#b85450] mr-2 text-3xl"></i>
             <span>Pendiente</span>
           </h2>
-          <span class="text-3xl font-bold text-[#b85450]">${{ saldo_pendiente_total|us_currency:2 }}</span>
+          <span class="text-xl font-bold text-[#b85450]">${{ saldo_pendiente_total|us_currency:2 }}</span>
         </div>
         <div class="mt-4 h-1 w-full bg-[#d8dce6] rounded-full overflow-hidden">
           <div class="bg-[#b85450] h-1 rounded-full" style="width: {% widthratio saldo_pendiente_total total_ventas 100 %}%"></div>
@@ -628,7 +628,7 @@
             <i class="fas fa-receipt text-purple-600 mr-2 text-3xl"></i>
             <span>Transacciones</span>
           </h2>
-          <span class="text-3xl font-bold text-purple-900">{{ numero_transacciones }}</span>
+          <span class="text-xl font-bold text-purple-900">{{ numero_transacciones }}</span>
         </div>
         <div class="mt-4 h-1 w-full bg-[#d8dce6] rounded-full overflow-hidden">
           <div class="bg-purple-900 h-1 rounded-full" style="width: 100%"></div>
