@@ -4,72 +4,108 @@
  * Usa los tokens del sistema de diseño definidos en admin_custom.css
  */
 
-/* Base unificado */
-.dt-button {
-  font-family: var(--font, inherit) !important;
-  font-size: .82rem !important;
-  font-weight: 600 !important;
-  line-height: 1.5 !important;
-  padding: .4rem .9rem !important;
-  border-radius: var(--r-md, 6px) !important;
-  border: none !important;
-  cursor: pointer !important;
-  text-decoration: none !important;
-  transition: all var(--t, .18s ease) !important;
-  box-shadow: var(--s-sm, 0 1px 3px rgba(30,58,95,.08)) !important;
-  margin-right: 0 !important;
-  margin-bottom: 0 !important;
-}
-
-.dt-button:hover {
-  transform: translateY(-1px) !important;
-  box-shadow: var(--s-md, 0 4px 12px rgba(30,58,95,.12)) !important;
-}
-
-.dt-button:focus {
-  outline: 2px solid rgba(37,99,235,.45) !important;
-  outline-offset: 2px !important;
-}
-
 /* Contenedor */
 .dt-buttons {
   display: flex !important;
   flex-wrap: wrap !important;
-  gap: 6px !important;
-  margin-bottom: .75rem !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-bottom: 0.9rem !important;
 }
 
-/* Copiar */
-.dt-button.btn-copy {
-  background-color: var(--c-blue, #586f7c) !important;
-  color: #fff !important;
+/* Base unificada para botones DataTables */
+.dt-buttons .dt-button {
+  --export-accent: var(--brand-teal, #18b7a7);
+  min-height: 42px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  padding: 0.62rem 0.95rem !important;
+  border: 1px solid rgba(88, 111, 124, 0.22) !important;
+  border-left: 4px solid var(--export-accent) !important;
+  border-radius: 10px !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faf9 100%) !important;
+  color: var(--brand-navy, #173844) !important;
+  box-shadow: 0 2px 6px rgba(47, 69, 80, 0.08) !important;
+  cursor: pointer !important;
+  font-family: var(--font-body, inherit) !important;
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+  text-decoration: none !important;
+  text-transform: none !important;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease, transform 160ms ease !important;
 }
-.dt-button.btn-copy:hover { background-color: var(--c-blue-hover, #586f7c) !important; }
 
-/* CSV */
-.dt-button.btn-csv {
-  background-color: var(--c-green, #5a7d6b) !important;
-  color: #fff !important;
+.dt-buttons .dt-button i {
+  color: var(--export-accent) !important;
+  font-size: 0.9rem !important;
 }
-.dt-button.btn-csv:hover { background-color: #5a7d6b !important; }
 
-/* Excel */
-.dt-button.btn-excel {
-  background-color: #3d6b2c !important;
-  color: #fff !important;
+.dt-buttons .dt-button:hover:not(.disabled),
+.dt-buttons .dt-button:focus:not(.disabled) {
+  border-color: rgba(88, 111, 124, 0.34) !important;
+  background: #ffffff !important;
+  box-shadow: 0 6px 16px rgba(47, 69, 80, 0.14) !important;
+  color: var(--brand-navy-dark, #071b22) !important;
+  transform: translateY(-1px) !important;
 }
-.dt-button.btn-excel:hover { background-color: #3d6b2c !important; }
 
-/* PDF */
-.dt-button.btn-pdf {
-  background-color: var(--c-red, #b85450) !important;
-  color: #fff !important;
+.dt-buttons .dt-button:focus-visible {
+  outline: 3px solid rgba(24, 183, 167, 0.22) !important;
+  outline-offset: 2px !important;
 }
-.dt-button.btn-pdf:hover { background-color: #b85450 !important; }
 
-/* Imprimir */
-.dt-button.btn-print {
-  background-color: var(--c-text-soft, #586f7c) !important;
-  color: #fff !important;
+.dt-buttons .dt-button:active:not(.disabled) {
+  box-shadow: 0 2px 6px rgba(47, 69, 80, 0.1) !important;
+  transform: translateY(0) !important;
 }
-.dt-button.btn-print:hover { background-color: var(--c-navy-light, #2e5c8a) !important; }
+
+.dt-buttons .dt-button.disabled,
+.dt-buttons .dt-button:disabled {
+  --export-accent: #b8c0cc;
+  border-color: #d8dce6 !important;
+  border-left-color: #b8c0cc !important;
+  background: #f4f4f9 !important;
+  box-shadow: none !important;
+  color: #9aa8b3 !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.dt-buttons .dt-button.disabled i,
+.dt-buttons .dt-button:disabled i {
+  color: #9aa8b3 !important;
+}
+
+/* Variantes: misma estructura, solo cambia el acento */
+.dt-buttons .dt-button.btn-export-excel,
+.dt-buttons .dt-button.btn-excel,
+.dt-buttons .dt-button.buttons-excel {
+  --export-accent: var(--accent-green, #a6b62d);
+}
+
+.dt-buttons .dt-button.btn-export-pdf,
+.dt-buttons .dt-button.btn-pdf,
+.dt-buttons .dt-button.buttons-pdf {
+  --export-accent: var(--accent-red, #b85450);
+}
+
+.dt-buttons .dt-button.btn-export-print,
+.dt-buttons .dt-button.btn-print,
+.dt-buttons .dt-button.buttons-print {
+  --export-accent: var(--brand-teal, #18b7a7);
+}
+
+.dt-buttons .dt-button.btn-copy,
+.dt-buttons .dt-button.buttons-copy {
+  --export-accent: var(--brand-navy-light, #24515e);
+}
+
+.dt-buttons .dt-button.btn-csv,
+.dt-buttons .dt-button.buttons-csv {
+  --export-accent: var(--accent-amber, #f2a51a);
+}

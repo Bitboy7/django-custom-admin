@@ -138,6 +138,12 @@ JAZZMIN_SETTINGS = {
     
     # Accesos rápidos en menú de usuario (avatar top-right)
     "usermenu_links": [
+        {
+            "name": "Configuración del sitio",
+            "url": "admin:auditoria_siteconfiguration_changelist",
+            "icon": "fas fa-sliders-h",
+            "permissions": ["auditoria.change_siteconfiguration"],
+        },
         {"model": "auth.user"}
     ],
     
@@ -164,6 +170,7 @@ JAZZMIN_SETTINGS = {
         "ventas.Agente",
         "ventas.TerminoCredito",
         "ventas.EstadoCuentaCliente",
+        "auditoria.SiteConfiguration",
         "reportes.ConfiguracionReporte",
         "reportes.ReporteEjecutivo",
         "reportes.DestinatarioReporte",
@@ -190,6 +197,7 @@ JAZZMIN_SETTINGS = {
         "ventas.PagoVenta",
         "ventas.Anticipo",
         "ventas.EstadoCuentaCliente",
+        "ventas.MercadoDestino",
         "ventas.ObligacionFiscal",
         # CATÁLOGO: datos de referencia (incluye agente y término crédito reasignados)
         "catalogo",
@@ -247,6 +255,12 @@ JAZZMIN_SETTINGS = {
                 "url": "admin:ventas_reporte_cobranza",
                 "icon": "fas fa-file-invoice-dollar",
                 "permissions": ["ventas.view_ventas"]
+            },
+            {
+                "name": "Estados de cuenta",
+                "url": "admin:ventas_estadocuentacliente_changelist",
+                "icon": "fas fa-file-invoice",
+                "permissions": ["ventas.view_estadocuentacliente"],
             },
         ],
         "reportes": [
@@ -310,12 +324,6 @@ JAZZMIN_SETTINGS = {
                 "icon": "fas fa-exclamation-triangle",
                 "permissions": ["axes.view_accessfailurelog"],
             },
-            {
-                "name": "Estados de Cuenta",
-                "url": "admin:ventas_estadocuentacliente_changelist",
-                "icon": "fas fa-file-invoice",
-                "permissions": ["ventas.view_estadocuentacliente"],
-            },
         ],
     },
     
@@ -339,6 +347,8 @@ JAZZMIN_SETTINGS = {
         "ventas.PagoVenta": "fas fa-money-check-alt",
         "ventas.Anticipo": "fas fa-hand-holding-usd",
         "ventas.EstadoCuentaCliente": "fas fa-file-invoice",
+        "ventas.MercadoDestino": "fas fa-globe-americas",
+        "ventas.mercadodestino": "fas fa-globe-americas",
         "ventas.ObligacionFiscal": "fas fa-balance-scale",
         "ventas.Agente": "fas fa-user-tie",
         "ventas.TerminoCredito": "fas fa-handshake",
@@ -352,6 +362,8 @@ JAZZMIN_SETTINGS = {
         # AUDITORÍA
         "auditoria": "fas fa-shield-alt",
         "auditoria.LogActividad": "fas fa-clipboard-list",
+        "auditoria.SiteConfiguration": "fas fa-sliders-h",
+        "auditoria.siteconfiguration": "fas fa-sliders-h",
         "admin.LogEntry": "fas fa-history",
         "axes.AccessAttempt": "fas fa-user-times",
         "axes.AccessLog": "fas fa-list-alt",

@@ -41,11 +41,26 @@
   --light-blue-light: #d0e8e7;
   --light-blue-dark: #9ac5c3;
 
+  /* ERP vivid palette — acentos vivos sin perder tono administrativo */
+  --erp-ink: #071319;
+  --erp-coast-950: #071b22;
+  --erp-coast-900: #0e2630;
+  --erp-coast-800: #173844;
+  --erp-coast-700: #24515e;
+  --erp-slate: #527181;
+  --erp-teal: #18b7a7;
+  --erp-teal-deep: #0f766e;
+  --erp-mint: #d9f5ef;
+  --erp-agave: #a6b62d;
+  --erp-harvest: #f2a51a;
+  --erp-coral: #dd4017;
+  --erp-paper: #f6f8f7;
+
   /* Accent */
-  --accent-amber: #c9a227;
-  --accent-amber-bg: rgba(201, 162, 39, 0.08);
-  --accent-green: #5a7d6b;
-  --accent-green-bg: rgba(90, 125, 107, 0.08);
+  --accent-amber: var(--erp-harvest);
+  --accent-amber-bg: rgba(242, 165, 26, 0.1);
+  --accent-green: var(--erp-agave);
+  --accent-green-bg: rgba(166, 182, 45, 0.1);
   --accent-red: #b85450;
   --accent-red-bg: rgba(184, 84, 80, 0.08);
   --accent-blue: var(--blue-slate);
@@ -73,14 +88,12 @@
   --ghost-white: #f4f4f9;
 
   /* Brand aliases — mapped to palette tokens (consumed by layout, tables, components) */
-  --brand-navy: var(--charcoal-blue); /* #2f4550 – sidebar / header bg */
-  --brand-navy-dark: var(--charcoal-blue-dark); /* #1f2f38 – navbar bg */
-  --brand-navy-light: var(--blue-slate); /* #586f7c – lighter panel bg */
-  --brand-teal: var(--blue-slate); /* #586f7c – primary accent / buttons */
-  --brand-teal-dark: var(
-    --blue-slate-dark
-  ); /* #425864 – hover / pressed accent */
-  --brand-teal-light: var(--light-blue); /* #b8dbd9 – soft highlight on dark */
+  --brand-navy: var(--erp-coast-800); /* sidebar / header bg */
+  --brand-navy-dark: var(--erp-coast-950); /* navbar bg */
+  --brand-navy-light: var(--erp-coast-700); /* lighter panel bg */
+  --brand-teal: var(--erp-teal); /* primary accent / buttons */
+  --brand-teal-dark: var(--erp-teal-deep); /* hover / pressed accent */
+  --brand-teal-light: var(--erp-mint); /* soft highlight on dark */
 
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(47, 69, 80, 0.06);

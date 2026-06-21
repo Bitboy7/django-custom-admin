@@ -7,528 +7,32 @@
   <title>{% trans "Iniciar sesión" %} — Agrícola de la Costa San Luis</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --black: #000000;
-      --charcoal-blue: #2f4550;
-      --blue-slate: #586f7c;
-      --light-blue: #b8dbd9;
-      --ghost-white: #f4f4f9;
-    }
-
-    body {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--ghost-white);
-      min-height: 100vh;
-      display: flex;
-      align-items: stretch;
-      color: var(--black);
-    }
-
-    /* ── LEFT PANEL ── */
-    .l-brand {
-      width: 46%;
-      background: linear-gradient(165deg, #1a2e38 0%, var(--charcoal-blue) 40%, var(--blue-slate) 100%);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 48px 52px;
-      position: relative;
-      overflow: hidden;
-    }
-    .l-brand::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-      pointer-events: none;
-    }
-    .deco-circle {
-      position: absolute;
-      border-radius: 50%;
-      background: rgba(244,244,249,.04);
-      pointer-events: none;
-    }
-    .deco-circle-1 { top: -100px; right: -100px; width: 380px; height: 380px; }
-    .deco-circle-2 { bottom: -60px; left: -40px; width: 260px; height: 260px; background: rgba(244,244,249,.03); }
-    .deco-circle-3 { top: 40%; right: 10%; width: 120px; height: 120px; background: rgba(184,219,217,.06); }
-
-    .brand-logo {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      position: relative;
-      z-index: 1;
-    }
-    .brand-logo-icon {
-      width: 48px; height: 48px;
-      background: rgba(244,244,249,.12);
-      border: 1px solid rgba(244,244,249,.18);
-      border-radius: 14px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px; color: var(--light-blue);
-      backdrop-filter: blur(8px);
-      transition: transform .3s cubic-bezier(0.25,1,0.5,1), background .3s;
-    }
-    .brand-logo:hover .brand-logo-icon {
-      transform: scale(1.05) rotate(-3deg);
-      background: rgba(244,244,249,.18);
-    }
-    .brand-logo-text {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--ghost-white);
-      letter-spacing: -.2px;
-      line-height: 1.25;
-    }
-    .brand-logo-text span {
-      display: block;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 11px;
-      font-weight: 500;
-      color: rgba(244,244,249,.55);
-      letter-spacing: .4px;
-      text-transform: uppercase;
-    }
-
-    .brand-body {
-      position: relative; z-index: 1;
-      margin-top: auto;
-      margin-bottom: auto;
-      padding: 40px 0;
-    }
-    .brand-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(184,219,217,.15);
-      border: 1px solid rgba(184,219,217,.25);
-      border-radius: 24px;
-      padding: 6px 16px;
-      font-size: 12px;
-      color: var(--light-blue);
-      font-weight: 600;
-      margin-bottom: 28px;
-      letter-spacing: .3px;
-    }
-    .brand-headline {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 38px;
-      font-weight: 700;
-      color: var(--ghost-white);
-      line-height: 1.15;
-      letter-spacing: -.5px;
-      margin-bottom: 18px;
-    }
-    .brand-headline em {
-      font-style: normal;
-      color: var(--light-blue);
-      position: relative;
-    }
-    .brand-headline em::after {
-      content: '';
-      position: absolute;
-      bottom: 2px; left: 0; right: 0;
-      height: 4px;
-      background: rgba(184,219,217,.35);
-      border-radius: 2px;
-      z-index: -1;
-    }
-    .brand-sub {
-      font-size: 15px;
-      color: rgba(244,244,249,.6);
-      line-height: 1.65;
-      max-width: 360px;
-      font-weight: 400;
-    }
-
-    .brand-features {
-      margin-top: 40px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      position: relative; z-index: 1;
-    }
-    .brand-feature {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      font-size: 13px;
-      color: rgba(244,244,249,.75);
-      font-weight: 500;
-      transition: transform .2s, color .2s;
-    }
-    .brand-feature:hover {
-      transform: translateX(4px);
-      color: rgba(244,244,249,.9);
-    }
-    .brand-feature-icon {
-      width: 36px; height: 36px;
-      background: rgba(244,244,249,.08);
-      border: 1px solid rgba(244,244,249,.1);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px; color: var(--light-blue);
-      flex-shrink: 0;
-      transition: background .2s;
-    }
-    .brand-feature:hover .brand-feature-icon {
-      background: rgba(184,219,217,.2);
-    }
-
-    .brand-footer {
-      font-size: 12px;
-      color: rgba(244,244,249,.35);
-      position: relative; z-index: 1;
-      font-weight: 400;
-    }
-
-    /* ── RIGHT PANEL ── */
-    .l-form {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 48px 44px;
-      background: var(--ghost-white);
-      position: relative;
-    }
-
-    .form-wrap {
-      width: 100%;
-      max-width: 400px;
-      animation: formEnter .6s cubic-bezier(0.25,1,0.5,1) forwards;
-      opacity: 0;
-      transform: translateY(16px);
-    }
-
-    @keyframes formEnter {
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .form-wrap { animation: none; opacity: 1; transform: none; }
-    }
-
-    .form-eyebrow {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--charcoal-blue);
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      margin-bottom: 10px;
-    }
-    .form-title {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 30px;
-      font-weight: 700;
-      color: var(--black);
-      letter-spacing: -.5px;
-      margin-bottom: 6px;
-      line-height: 1.2;
-    }
-    .form-subtitle {
-      font-size: 14px;
-      color: var(--blue-slate);
-      margin-bottom: 36px;
-      line-height: 1.5;
-    }
-
-    /* Steps indicator */
-    .steps-indicator {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 28px;
-    }
-    .step-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #d8dce6;
-      transition: all .4s cubic-bezier(0.25,1,0.5,1);
-    }
-    .step-dot.active {
-      width: 28px;
-      border-radius: 4px;
-      background: linear-gradient(90deg, var(--charcoal-blue), var(--blue-slate));
-    }
-
-    /* Error */
-    .form-error {
-      background: #fef5f5;
-      border: 1px solid #e8b4b0;
-      border-radius: 10px;
-      padding: 14px 18px;
-      margin-bottom: 24px;
-      font-size: 13px;
-      color: #b85450;
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      animation: shake .4s ease;
-    }
-    .form-error i { margin-top: 2px; flex-shrink: 0; }
-
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-4px); }
-      75% { transform: translateX(4px); }
-    }
-
-    /* Fields */
-    .field-group {
-      margin-bottom: 20px;
-      animation: fieldEnter .5s cubic-bezier(0.25,1,0.5,1) forwards;
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    .field-group:nth-child(1) { animation-delay: .05s; }
-    .field-group:nth-child(2) { animation-delay: .1s; }
-    .field-group:nth-child(3) { animation-delay: .15s; }
-    .field-group:nth-child(4) { animation-delay: .2s; }
-
-    @keyframes fieldEnter {
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .field-group { animation: none; opacity: 1; transform: none; }
-    }
-
-    .field-label {
-      display: block;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--charcoal-blue);
-      margin-bottom: 8px;
-      letter-spacing: .3px;
-    }
-    .field-wrap {
-      position: relative;
-    }
-    .field-wrap input[type="text"],
-    .field-wrap input[type="password"],
-    .field-wrap input[type="number"],
-    .field-wrap input[type="email"] {
-      width: 100%;
-      border: 1.5px solid #d8dce6;
-      border-radius: 10px;
-      padding: 13px 16px;
-      font-size: 14px;
-      color: var(--black);
-      background: #f8f9fb;
-      outline: none;
-      transition: border-color .2s, box-shadow .2s, background .2s;
-      -webkit-appearance: none;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-    }
-    .field-wrap input:focus {
-      border-color: var(--light-blue);
-      background: var(--ghost-white);
-      box-shadow: 0 0 0 4px rgba(184,219,217,.2);
-    }
-    .field-wrap input::placeholder { color: var(--blue-slate); font-weight: 400; opacity: .7; }
-    .field-wrap input.is-invalid {
-      border-color: #b85450;
-      background: #fef5f5;
-    }
-    .field-wrap input.is-invalid:focus {
-      box-shadow: 0 0 0 4px rgba(184,84,80,.1);
-    }
-
-    /* Password toggle */
-    .password-toggle-btn {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      padding: 6px;
-      cursor: pointer;
-      color: var(--blue-slate);
-      font-size: 14px;
-      line-height: 1;
-      border-radius: 6px;
-      transition: color .2s, background .2s;
-    }
-    .password-toggle-btn:hover {
-      color: var(--charcoal-blue);
-      background: rgba(184,219,217,.15);
-    }
-    .password-toggle-btn.active {
-      color: var(--charcoal-blue);
-    }
-
-    .field-error {
-      font-size: 12px;
-      color: #b85450;
-      margin-top: 6px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-weight: 500;
-    }
-
-    /* OTP info */
-    .otp-hint {
-      background: rgba(184,219,217,.15);
-      border: 1px solid rgba(184,219,217,.35);
-      border-radius: 10px;
-      padding: 16px 18px;
-      font-size: 13px;
-      color: var(--charcoal-blue);
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      margin-bottom: 24px;
-      animation: fieldEnter .5s .1s cubic-bezier(0.25,1,0.5,1) forwards;
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    .otp-hint i { margin-top: 2px; flex-shrink: 0; color: var(--blue-slate); }
-    .otp-hint strong { color: var(--black); }
-
-    @media (prefers-reduced-motion: reduce) {
-      .otp-hint { animation: none; opacity: 1; transform: none; }
-    }
-
-    /* Remember */
-    .remember-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 24px;
-      cursor: pointer;
-      user-select: none;
-      padding: 2px 0;
-    }
-    .remember-row input[type=checkbox] {
-      width: 18px;
-      height: 18px;
-      border: 1.5px solid #d8dce6;
-      border-radius: 5px;
-      background: var(--ghost-white);
-      cursor: pointer;
-      flex-shrink: 0;
-      margin: 0;
-      accent-color: var(--charcoal-blue);
-      transition: border-color .2s, box-shadow .2s;
-    }
-    .remember-row input[type=checkbox]:hover {
-      border-color: var(--light-blue);
-    }
-    .remember-row input[type=checkbox]:focus {
-      border-color: var(--light-blue);
-      box-shadow: 0 0 0 3px rgba(184,219,217,.2);
-      outline: none;
-    }
-    .remember-row span {
-      font-size: 13px;
-      color: var(--charcoal-blue);
-      line-height: 1.4;
-      font-weight: 500;
-    }
-
-    /* Submit */
-    .btn-submit {
-      width: 100%;
-      background: var(--charcoal-blue);
-      color: var(--ghost-white);
-      border: none;
-      border-radius: 10px;
-      padding: 14px 20px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      letter-spacing: .3px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: opacity .2s, transform .15s, box-shadow .2s, background .2s;
-      box-shadow: 0 4px 16px rgba(47,69,80,.25);
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      position: relative;
-      overflow: hidden;
-    }
-    .btn-submit::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, transparent, rgba(244,244,249,.1), transparent);
-      transform: translateX(-100%);
-      transition: transform .5s;
-    }
-    .btn-submit:hover {
-      background: var(--blue-slate);
-      transform: translateY(-1px);
-      box-shadow: 0 6px 24px rgba(47,69,80,.3);
-    }
-    .btn-submit:hover::before {
-      transform: translateX(100%);
-    }
-    .btn-submit:active {
-      transform: translateY(0);
-      box-shadow: 0 2px 8px rgba(47,69,80,.2);
-    }
-    .btn-submit:disabled {
-      opacity: .6;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .form-footer {
-      margin-top: 32px;
-      text-align: center;
-      font-size: 12px;
-      color: var(--blue-slate);
-      font-weight: 500;
-    }
-
-    /* Responsive */
-    @media (max-width: 900px) {
-      .l-brand { width: 42%; padding: 40px 36px; }
-      .brand-headline { font-size: 30px; }
-    }
-    @media (max-width: 768px) {
-      .l-brand { display: none; }
-      .l-form { padding: 36px 24px; }
-    }
-  </style>
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'css/login.css' %}">
 </head>
-<body>
+<body class="auth-login-page">
 
   <!-- LEFT: Brand panel -->
   <div class="l-brand">
-    <div class="deco-circle deco-circle-1"></div>
-    <div class="deco-circle deco-circle-2"></div>
-    <div class="deco-circle deco-circle-3"></div>
-
-    <div class="brand-logo">
-      <div class="brand-logo-icon"><i class="fas fa-seedling"></i></div>
-      <div class="brand-logo-text">
-        Agrícola de la Costa
-        <span>San Luis S.P.R. de R.L.</span>
-      </div>
-    </div>
+    <div class="deco-grid" aria-hidden="true"></div>
+    <div class="deco-orb deco-orb-1" aria-hidden="true"></div>
+    <div class="deco-orb deco-orb-2" aria-hidden="true"></div>
+    <div class="deco-orb deco-orb-3" aria-hidden="true"></div>
 
     <div class="brand-body">
-      <div class="brand-badge">
-        <i class="fas fa-shield-halved"></i>
-        {% trans "Acceso Seguro" %}
-      </div>
-      <div class="brand-headline">
-        {% trans "Gestiona tu" %}<br><em>{% trans "operación" %}</em>
+      <div class="brand-app-lockup">
+        <div class="brand-app-logo">
+          <img src="{% static 'img/logo.svg' %}" alt="Agrícola de la Costa">
+        </div>
+        <div class="brand-app-copy">
+          <span>{% trans "Sistema Administrativo" %}</span>
+          <h1>Costa ERP</h1>
+        </div>
       </div>
       <div class="brand-sub">
-        {% trans "Plataforma centralizada para la gestión financiera, control de gastos, ventas de fruta y operaciones agrícolas de la costa de Sinaloa." %}
+        {% trans "Plataforma centralizada para gestión financiera, control de gastos, ventas y registro de clientes." %}
       </div>
 
       <div class="brand-features">
@@ -541,8 +45,8 @@
           {% trans "Reconocimiento inteligente de facturas con IA" %}
         </div>
         <div class="brand-feature">
-          <div class="brand-feature-icon"><i class="fas fa-user-shield"></i></div>
-          {% trans "Autenticación de dos factores (2FA)" %}
+          <div class="brand-feature-icon"><i class="fas fa-file-code"></i></div>
+          {% trans "Carga y lectura de XML / CFDI" %}
         </div>
       </div>
     </div>
@@ -554,16 +58,27 @@
 
   <!-- RIGHT: Form panel -->
   <div class="l-form">
+    <div class="mobile-brand" aria-label="Agrícola de la Costa San Luis">
+      <div class="brand-logo-icon brand-logo-icon--image"><img src="{% static 'img/logo.svg' %}" alt="Agrícola de la Costa"></div>
+      <div class="brand-logo-text">
+        Costa ERP
+        <span>San Luis S.P.R. de R.L.</span>
+      </div>
+    </div>
+
     <div class="form-wrap">
+      <div class="form-card-status">
+        <span>MX / ERP</span>
+      </div>
 
       {% if wizard.steps.current == 'auth' %}
         <div class="form-eyebrow">{% trans "Bienvenido de vuelta" %}</div>
         <div class="form-title">{% trans "Inicia sesión" %}</div>
         <div class="form-subtitle">{% trans "Ingresa tus credenciales para acceder al sistema" %}</div>
       {% else %}
-        <div class="form-eyebrow">{% trans "Verificación adicional" %}</div>
-        <div class="form-title">{% trans "Dos factores" %}</div>
-        <div class="form-subtitle">{% trans "Introduce el código de 6 dígitos de tu aplicación" %}</div>
+        <div class="form-eyebrow">{% trans "Confirmación de acceso" %}</div>
+        <div class="form-title">{% trans "Código de acceso" %}</div>
+        <div class="form-subtitle">{% trans "Introduce el código temporal para continuar" %}</div>
       {% endif %}
 
       {% if wizard.steps.count > 1 %}
@@ -583,12 +98,12 @@
 
       {% if wizard.steps.current != 'auth' %}
       <div class="otp-hint">
-        <i class="fas fa-mobile-screen"></i>
-        <span>{% trans "Abre tu aplicación de autenticación (Google Authenticator, Authy) e ingresa el código de 6 dígitos actual." %}</span>
+        <i class="fas fa-keyboard"></i>
+        <span>{% trans "Ingresa el código solicitado para continuar al panel administrativo." %}</span>
       </div>
       {% endif %}
 
-      <form method="post" autocomplete="on">
+      <form method="post" autocomplete="on" novalidate>
         {% csrf_token %}
         {{ wizard.management_form }}
 
@@ -599,7 +114,7 @@
           <span>{{ field.label }}</span>
         </label>
         {% if field.errors %}
-        <div class="field-error" style="margin-top:-16px;margin-bottom:16px;">
+        <div class="field-error field-error--checkbox">
           <i class="fas fa-circle-exclamation"></i>{{ field.errors.0 }}
         </div>
         {% endif %}
@@ -619,13 +134,13 @@
         {% endfor %}
 
         {% if wizard.steps.current == 'auth' %}
-        <label class="remember-row" style="animation: fieldEnter .5s .2s cubic-bezier(0.25,1,0.5,1) forwards; opacity:0; transform:translateY(10px);">
-          <input type="checkbox" name="remember">
-          <span>{% trans "Recordar este dispositivo por 30 días" %}</span>
+        <label class="remember-row" for="remember-device">
+          <input type="checkbox" name="remember" id="remember-device">
+          <span>{% trans "Recordar este equipo por 30 días" %}</span>
         </label>
         {% endif %}
 
-        <button type="submit" class="btn-submit" style="animation: fieldEnter .5s .25s cubic-bezier(0.25,1,0.5,1) forwards; opacity:0; transform:translateY(10px);">
+        <button type="submit" class="btn-submit">
           {% if wizard.steps.current == 'auth' %}
             {% trans "Continuar" %} <i class="fas fa-arrow-right"></i>
           {% else %}
@@ -635,7 +150,7 @@
       </form>
 
       <div class="form-footer">
-        <i class="fas fa-lock" style="margin-right:4px; font-size:10px;"></i>{% trans "Acceso restringido. Solo personal autorizado." %}
+        <i class="fas fa-seedling"></i>{% trans "Panel administrativo para la operación agrícola." %}
       </div>
 
     </div>
