@@ -168,12 +168,6 @@ JAZZMIN_SETTINGS = {
         "reportes.ConfiguracionReporte",
         "reportes.ReporteEjecutivo",
         "reportes.DestinatarioReporte",
-        "whatsapp.EvolutionInstance",
-        "whatsapp.ConfiguracionWhatsApp",
-        "whatsapp.DestinatarioWhatsApp",
-        "whatsapp.MensajeWhatsApp",
-        "whatsapp.WebhookLog",
-        "whatsapp.ProgramacionEnvio",
     ],
     
     # Ordenamiento del menú lateral: apps primero, luego modelos por frecuencia de uso.
