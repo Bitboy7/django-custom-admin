@@ -134,3 +134,22 @@ body #changelist #result_list tbody tr:hover td.field-fecha_salida_manifiesto {
 .sales-due--overdue {
   color: var(--sales-overdue, #b85450) !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   DARK MODE — ventas changelist
+   ═══════════════════════════════════════════════════════════════ */
+html[data-theme="dark"] body #changelist #result_list tbody tr td {
+  background: var(--surface-card, #242b32) !important;
+}
+
+html[data-theme="dark"] body #changelist #result_list tbody tr:nth-child(even) td {
+  background: var(--surface-hover, #2f3840) !important;
+}
+
+html[data-theme="dark"] body #changelist #result_list tbody tr:hover td {
+  background: rgba(154, 197, 195, 0.12) !important;
+}
+
+html[data-theme="dark"] body #changelist #result_list tbody tr:hover td.field-fecha_salida_manifiesto {
+  background: rgba(154, 197, 195, 0.2) !important;
+}
