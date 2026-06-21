@@ -686,10 +686,8 @@
 
 {% block extrajs %}
 {{ block.super }}
-{# Restaurar $ desde django.jQuery #}
-<script>
-  window.$ = window.jQuery = django.jQuery;
-</script>
+<script src="{% static 'admin/js/vendor/jquery/jquery.min.js' %}"></script>
+<script src="{% static 'js/django-jquery-bridge.js' %}"></script>
 {# Chart.js #}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 {# DataTables con extensiones #}
