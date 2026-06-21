@@ -1,0 +1,93 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>Enviar prueba — {{ config }}</h1>
+    <hr>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Enviar reporte ejecutivo</h5>
+                </div>
+                <div class="card-body">
+                    <p>Genera y envia el reporte ejecutivo del periodo actual a los destinatarios configurados.</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="reporte">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Generar y enviar reporte
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Enviar mensaje personalizado</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="mensaje_personalizado">
+
+                        <div class="form-group mb-3">
+                            <label for="telefono">Numero de telefono:</label>
+                            <select name="telefono" class="form-select" required>
+                                <option value="">Selecciona un destinatario...</option>
+                                {% for d in destinatarios %}
+                                <option value="{{ d.telefono }}">{{ d.nombre }} ({{ d.telefono }})</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">O ingresa un numero manualmente abajo.</small>
+                            <input type="text" name="telefono" class="form-control mt-1" placeholder="5216671234567 (codigo pais + numero)">
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="mensaje">Mensaje:</label>
+                            <textarea name="mensaje" class="form-control" rows="4" required placeholder="Escribe el mensaje..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-paper-plane"></i> Enviar mensaje
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Informacion de la configuracion</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr><td><strong>Usuario:</strong></td><td>{{ config.usuario|default:"Global" }}</td></tr>
+                        <tr><td><strong>Instancia:</strong></td><td>{{ config.instancia.nombre }}</td></tr>
+                        <tr><td><strong>Frecuencia:</strong></td><td>{{ config.get_frecuencia_envio_display }}</td></tr>
+                        <tr><td><strong>Hora:</strong></td><td>{{ config.hora_envio }}</td></tr>
+                        <tr><td><strong>Destinatarios activos:</strong></td><td>{{ destinatarios.count }}</td></tr>
+                        <tr><td><strong>Estado instancia:</strong></td><td>{{ config.instancia.get_estado_display }}</td></tr>
+                    </table>
+
+                    <h6>Destinatarios:</h6>
+                    <ul>
+                        {% for d in destinatarios %}
+                            <li>{{ d.nombre }} — {{ d.telefono }}</li>
+                        {% empty %}
+                            <li class="text-muted">Sin destinatarios activos</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="{% url 'admin:whatsapp_configuracionwhatsapp_changelist' %}" class="btn btn-secondary mt-3">
+        <i class="fas fa-arrow-left"></i> Volver
+    </a>
+</div>
+{% endblock %}

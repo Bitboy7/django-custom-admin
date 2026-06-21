@@ -22,6 +22,8 @@ urlpatterns = [
     path('api/currency-conversion/', currency_conversion_api, name='currency_conversion_api'),
     # 2FA: login, setup, QR, backup tokens (sin prefijo de idioma para simplificar)
     path('', include(tf_urls)),
+    # Webhooks de WhatsApp (sin prefijo de idioma: Evolution API llama directamente)
+    path('whatsapp/', include('whatsapp.urls')),
 ]
 
 if settings.DEBUG:

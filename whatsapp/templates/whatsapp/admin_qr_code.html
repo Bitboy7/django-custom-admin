@@ -1,0 +1,91 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .qr-container {
+        text-align: center;
+        padding: 20px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .qr-container img {
+        max-width: 300px;
+        border: 1px solid #eee;
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>QR Code — {{ instancia.nombre }}</h1>
+    <hr>
+
+    {% if error %}
+        <div class="alert alert-danger">
+            <strong>Error:</strong> {{ error }}
+        </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Escanea con WhatsApp</h5>
+                    <p>1. Abre WhatsApp en tu telefono</p>
+                    <p>2. Ve a <strong>Ajustes > Dispositivos vinculados</strong></p>
+                    <p>3. Toca <strong>Vincular un dispositivo</strong></p>
+                    <p>4. Escanea el codigo QR</p>
+
+                    {% if qr_base64 %}
+                        <div class="qr-container">
+                            <img src="{{ qr_base64 }}" alt="QR Code para WhatsApp">
+                        </div>
+                        <p class="text-muted mt-2">Este QR expira en 60 segundos. Recarga la pagina si expiro.</p>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            {% if not error %}
+                                No se pudo obtener el QR code. Intenta recargar o verifica la conexion.
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Estado de la instancia</h5>
+                    <table class="table table-sm">
+                        <tr><td><strong>Estado:</strong></td><td>{{ instancia.get_estado_display }}</td></tr>
+                        <tr><td><strong>ID:</strong></td><td><code>{{ instancia.instance_id }}</code></td></tr>
+                        <tr><td><strong>URL:</strong></td><td><code>{{ instancia.api_url }}</code></td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">Acciones</h5>
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-sync"></i> Regenerar QR
+                        </button>
+                    </form>
+                    <a href="{% url 'admin:whatsapp_test_connection' instancia.pk %}" class="btn btn-info ml-2">
+                        <i class="fas fa-plug"></i> Test conexion
+                    </a>
+                    <a href="{% url 'admin:whatsapp_evolutioninstance_changelist' %}" class="btn btn-secondary ml-2">
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

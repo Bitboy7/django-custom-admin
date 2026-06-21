@@ -1,0 +1,51 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>Test de conexion — {{ instancia.nombre }}</h1>
+    <hr>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Informacion de la instancia</h5>
+            <table class="table table-sm">
+                <tr><td><strong>ID:</strong></td><td><code>{{ instancia.instance_id }}</code></td></tr>
+                <tr><td><strong>URL:</strong></td><td><code>{{ instancia.api_url }}</code></td></tr>
+                <tr><td><strong>Estado actual:</strong></td><td>{{ instancia.get_estado_display }}</td></tr>
+                <tr><td><strong>Ultima verificacion:</strong></td><td>{{ instancia.ultima_verificacion|default:"Nunca" }}</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="fas fa-plug"></i> Verificar conexion ahora
+        </button>
+        <a href="{% url 'admin:whatsapp_evolutioninstance_changelist' %}" class="btn btn-secondary btn-lg">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </form>
+
+    <hr>
+
+    <div class="card bg-light">
+        <div class="card-body">
+            <h5 class="card-title">Comandos utiles</h5>
+            <p class="text-muted mb-2">Ejecuta estos comandos directamente en el VPS de Evolution si necesitas depurar.</p>
+            <pre class="bg-dark text-light p-3 rounded">
+# Verificar estado desde el servidor Evolution
+curl -X GET {{ api_url_display }}/instance/connectionState/{{ instancia.instance_id }} \
+  -H "apikey: TU_APIKEY"
+
+# Enviar mensaje de prueba
+curl -X POST {{ api_url_display }}/message/sendText/{{ instancia.instance_id }} \
+  -H "apikey: TU_APIKEY" \
+  -H "Content-Type: application/json" \
+  -d '{"number": "5216671234567", "text": "Test desde Django"}'
+            </pre>
+        </div>
+    </div>
+</div>
+{% endblock %}

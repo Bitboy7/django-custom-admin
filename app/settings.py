@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     'capital_inversiones.apps.CapitalInversionesConfig',  # Módulo de capital e inversiones
     'import_export',
     'reportes.apps.ReportesConfig',  # Módulo de reportes ejecutivos IA
+    'whatsapp.apps.WhatsAppConfig',  # Módulo de WhatsApp / Evolution API
 ]
 
 # Callable para Jazzmin: devuelve la URL del avatar del usuario
@@ -167,6 +168,12 @@ JAZZMIN_SETTINGS = {
         "reportes.ConfiguracionReporte",
         "reportes.ReporteEjecutivo",
         "reportes.DestinatarioReporte",
+        "whatsapp.EvolutionInstance",
+        "whatsapp.ConfiguracionWhatsApp",
+        "whatsapp.DestinatarioWhatsApp",
+        "whatsapp.MensajeWhatsApp",
+        "whatsapp.WebhookLog",
+        "whatsapp.ProgramacionEnvio",
     ],
     
     # Ordenamiento del menú lateral: apps primero, luego modelos por frecuencia de uso.
@@ -200,6 +207,13 @@ JAZZMIN_SETTINGS = {
         "catalogo.Pais",
         "auditoria",
         "reportes",
+        "whatsapp",
+        "whatsapp.EvolutionInstance",
+        "whatsapp.DestinatarioWhatsApp",
+        "whatsapp.ConfiguracionWhatsApp",
+        "whatsapp.MensajeWhatsApp",
+        "whatsapp.WebhookLog",
+        "whatsapp.ProgramacionEnvio",
         "auditoria.LogActividad",
         "admin.LogEntry",
         "capital_inversiones",
@@ -360,6 +374,14 @@ JAZZMIN_SETTINGS = {
         "reportes.ConfiguracionReporte": "fas fa-cog",
         "reportes.DestinatarioReporte": "fas fa-envelope",
         "reportes.ReporteEjecutivo": "fas fa-chart-pie",
+        # WHATSAPP
+        "whatsapp": "fab fa-whatsapp",
+        "whatsapp.EvolutionInstance": "fas fa-server",
+        "whatsapp.DestinatarioWhatsApp": "fas fa-address-book",
+        "whatsapp.ConfiguracionWhatsApp": "fas fa-sliders-h",
+        "whatsapp.MensajeWhatsApp": "fas fa-comment-dots",
+        "whatsapp.WebhookLog": "fas fa-broadcast-tower",
+        "whatsapp.ProgramacionEnvio": "fas fa-clock",
     },
     
     # Icons that are used when one is not manually specified

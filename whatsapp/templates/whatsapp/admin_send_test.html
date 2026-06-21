@@ -1,0 +1,59 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>Enviar mensaje de prueba — {{ instancia.nombre }}</h1>
+    <hr>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Mensaje de prueba</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="form-group mb-3">
+                            <label for="telefono">Numero de telefono:</label>
+                            <select name="telefono" id="telefono" class="form-select mb-2">
+                                <option value="">Selecciona un destinatario...</option>
+                                {% for d in destinatarios %}
+                                <option value="{{ d.telefono }}">{{ d.nombre }} ({{ d.telefono }})</option>
+                                {% endfor %}
+                            </select>
+                            <input type="text" name="telefono" class="form-control" placeholder="O escribe el numero: 5216671234567">
+                            <small class="text-muted">Codigo de pais sin '+'. Mexico: 521, luego 10 digitos.</small>
+                        </div>
+
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-paper-plane"></i> Enviar mensaje de prueba
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Estado de la instancia</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr><td><strong>Estado:</strong></td><td>{{ instancia.get_estado_display }}</td></tr>
+                        <tr><td><strong>ID:</strong></td><td><code>{{ instancia.instance_id }}</code></td></tr>
+                        <tr><td><strong>URL:</strong></td><td><code>{{ instancia.api_url }}</code></td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="{% url 'admin:whatsapp_evolutioninstance_changelist' %}" class="btn btn-secondary mt-3">
+        <i class="fas fa-arrow-left"></i> Volver
+    </a>
+</div>
+{% endblock %}
