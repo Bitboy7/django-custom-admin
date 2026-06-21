@@ -159,6 +159,92 @@
     border-radius: 12px;
     font-size: 0.875rem;
   }
+
+  /* ═══════════════════════════════════════════════════════════
+     MOBILE RESPONSIVE — ventas balances
+     ═══════════════════════════════════════════════════════════ */
+  @media (max-width: 640px) {
+    /* Filter selects stack full-width */
+    .flex.flex-wrap.gap-4.mb-4 > div {
+      min-width: 100% !important;
+    }
+
+    /* KPI value shrink */
+    .text-3xl {
+      font-size: 1.5rem !important;
+    }
+
+    /* KPI card compact */
+    .bg-gradient-to-br.rounded-lg.shadow-lg.p-5 {
+      padding: 0.75rem !important;
+    }
+
+    /* Charts responsive height */
+    [style*="height: 300px"],
+    [style*="height:300px"] {
+      height: 220px !important;
+    }
+    [style*="height: 200px"],
+    [style*="height:200px"] {
+      height: 170px !important;
+    }
+
+    /* Table horizontal scroll */
+    .overflow-x-auto {
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Full-width submit button */
+    button[type="submit"].bg-\[\#5a7d6b\] {
+      width: 100%;
+    }
+
+    /* Filter card padding */
+    .bg-gradient-to-r.from-green-50.to-emerald-50.shadow-lg.rounded-lg.p-6 {
+      padding: 1rem !important;
+    }
+
+    /* H1 shrink */
+    h1.text-2xl {
+      font-size: 1.25rem !important;
+    }
+
+    /* Toast mobile */
+    #toast-notification > div {
+      max-width: calc(100vw - 2rem);
+    }
+
+    /* Month dropdown touch targets */
+    #month-dropdown label {
+      padding: 0.65rem 0.5rem;
+    }
+    #month-dropdown label input[type="checkbox"] {
+      width: 1.15rem;
+      height: 1.15rem;
+    }
+  }
+
+  /* Very small phones */
+  @media (max-width: 400px) {
+    .text-3xl {
+      font-size: 1.25rem !important;
+    }
+    [style*="height: 300px"] {
+      height: 180px !important;
+    }
+  }
+
+  /* Touch: reduce 300ms delay */
+  form {
+    touch-action: manipulation;
+  }
+
+  /* Touch-friendly selects */
+  select.filter-select,
+  .appearance-none.w-full {
+    min-height: 44px;
+    font-size: max(0.875rem, 16px);
+  }
 </style>
 {% endblock %}
 
@@ -230,7 +316,7 @@
       <form method="get" action="{% url 'ventas:ventas_balances' %}" class="space-y-6">
         <div class="flex flex-wrap gap-4 mb-4">
         
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[150px] sm:min-w-[200px] group">
             <label for="cliente_id" class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Cliente:</label>
             <div class="relative">
               <select name="cliente_id" id="cliente_id" 
@@ -246,7 +332,7 @@
             </div>
           </div>
 
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[200px] group">
             <label for="cuenta_id" class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Cuenta:</label>
             <div class="relative">
               <select name="cuenta_id" id="cuenta_id" 
@@ -262,7 +348,7 @@
             </div>
           </div>
 
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[200px] group">
             <label for="sucursal_id" class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Sucursal:</label>
             <div class="relative">
               <select name="sucursal_id" id="sucursal_id" 
@@ -278,7 +364,7 @@
             </div>
           </div>
 
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[200px] group">
             <label for="mercado_id" class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Mercado:</label>
             <div class="relative">
               <select name="mercado_id" id="mercado_id" 
@@ -296,7 +382,7 @@
         </div>
 
         <div class="flex flex-wrap gap-4 mb-4">
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[200px] group">
             <label for="modalidad_pago" class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Modalidad de Pago:</label>
             <div class="relative">
               <select name="modalidad_pago" id="modalidad_pago" 
@@ -312,7 +398,7 @@
             </div>
           </div>
 
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[200px] group">
             <label for="estado_cobranza" class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Estado de Cobranza:</label>
             <div class="relative">
               <select name="estado_cobranza" id="estado_cobranza" 
@@ -328,7 +414,7 @@
             </div>
           </div>
 
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[200px] group">
             <label for="year" class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Año:</label>
             <div class="relative">
               <select name="year" id="year" 
@@ -343,7 +429,7 @@
             </div>
           </div>
 
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[200px] group">
             <label class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Meses:</label>
             <div class="relative">
               <input type="hidden" name="months" id="months" value="{{ selected_months|join:',' }}">
@@ -406,7 +492,7 @@
             </div>
           </div>
 
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[200px] group">
             <label for="periodo" class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Período:</label>
             <div class="relative">
               <select name="periodo" id="periodo" 

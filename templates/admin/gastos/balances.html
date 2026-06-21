@@ -101,7 +101,7 @@
       </span>
     </div>
     <div class="p-4">
-      <form method="get" action="{% url 'admin:gastos_gastos_balances' %}" class="space-y-3"
+      <form method="get" action="{% url 'admin:gastos_gastos_balances' %}" class="space-y-3" style="touch-action:manipulation"
             hx-get="{% url 'admin:gastos_gastos_balances' %}"
             hx-target="#balances-results"
             hx-swap="innerHTML"
@@ -110,7 +110,7 @@
         <div class="flex flex-wrap gap-3 mb-2">
 
           {# Cuenta #}
-          <div class="flex-1 min-w-[140px]">
+          <div class="flex-1 min-w-[120px] sm:min-w-[140px]">
             <label for="cuenta_id" class="filter-label">Seleccione la cuenta:</label>
             <select name="cuenta_id" id="cuenta_id" class="filter-select">
               <option value="">Todas</option>
@@ -121,7 +121,7 @@
           </div>
 
           {# Sucursal #}
-          <div class="flex-1 min-w-[140px]">
+          <div class="flex-1 min-w-[120px] sm:min-w-[140px]">
             <label for="sucursal_id" class="filter-label">Seleccione la sucursal:</label>
             <select name="sucursal_id" id="sucursal_id" class="filter-select">
               <option value="">Todas</option>
@@ -132,7 +132,7 @@
           </div>
 
           {# Año #}
-          <div class="flex-1 min-w-[110px]">
+          <div class="flex-1 min-w-[100px] sm:min-w-[110px]">
             <label for="year" class="filter-label">Seleccione el año:</label>
             <select name="year" id="year" class="filter-select">
               {% for year in available_years %}
@@ -142,7 +142,7 @@
           </div>
 
           {# Meses #}
-          <div class="flex-1 min-w-[150px]">
+          <div class="flex-1 min-w-[130px] sm:min-w-[150px]">
             <label class="filter-label">Seleccione los meses:</label>
             <div class="relative">
               <input type="hidden" name="months" id="months" value="{{ selected_months|join:',' }}">
@@ -168,7 +168,7 @@
           </div>
 
           {# Periodo #}
-          <div class="flex-1 min-w-[130px]">
+          <div class="flex-1 min-w-[110px] sm:min-w-[130px]">
             <label for="periodo" class="filter-label">Seleccione el periodo:</label>
             <select name="periodo" id="periodo" class="filter-select">
               <option value="diario"  {% if selected_periodo == 'diario'  %}selected{% endif %}>Diario</option>
@@ -208,11 +208,11 @@
             {# Rango de fechas #}
             <div id="campos-rango-fechas" {% if not selected_fecha_inicio %}style="display:none"{% endif %}>
               <div class="flex flex-wrap gap-3">
-                <div class="flex-1 min-w-[160px]">
+                <div class="flex-1 min-w-[140px] sm:min-w-[160px]">
                   <label class="filter-label">Fecha inicial:</label>
                   <input type="date" name="fecha_inicio" id="fecha_inicio" value="{{ selected_fecha_inicio }}" class="filter-select">
                 </div>
-                <div class="flex-1 min-w-[160px]">
+                <div class="flex-1 min-w-[140px] sm:min-w-[160px]">
                   <label class="filter-label">Fecha fin:</label>
                   <input type="date" name="fecha_fin" id="fecha_fin" value="{{ selected_fecha_fin }}" class="filter-select">
                 </div>
