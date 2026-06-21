@@ -175,6 +175,101 @@
   .estado-parcial    { color: #586f7c; background-color: rgba(184,219,217,.15); padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
   .estado-vencido    { color: #b85450; background-color: #e8b4b0; padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
   .estado-incobrable { color: #586f7c; background-color: #f4f4f9; padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
+
+  /* ═══════════════════════════════════════════════════════════
+     DARK MODE — ventas balances
+     ═══════════════════════════════════════════════════════════ */
+  html[data-theme="dark"] #content {
+    background-color: var(--surface-bg, #1a1f24);
+  }
+
+  html[data-theme="dark"] .kpi-card {
+    background: var(--surface-card, #242b32);
+    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.45)), 0 0 0 1px var(--border-default, #3d4a52);
+  }
+  html[data-theme="dark"] .kpi-card:hover {
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,.55));
+  }
+  html[data-theme="dark"] .kpi-label { color: var(--text-secondary, #b8c0cc); }
+  html[data-theme="dark"] .kpi-value { color: var(--text-primary, #f4f4f9); }
+  html[data-theme="dark"] .kpi-sub   { color: var(--text-muted, #6f7f8a); }
+
+  html[data-theme="dark"] .s-card {
+    background: var(--surface-card, #242b32);
+    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.45)), 0 0 0 1px var(--border-default, #3d4a52);
+  }
+  html[data-theme="dark"] .s-card-head {
+    background: var(--surface-hover, #2f3840);
+    border-bottom-color: var(--border-default, #3d4a52);
+  }
+  html[data-theme="dark"] .s-card-title { color: var(--text-primary, #f4f4f9); }
+
+  html[data-theme="dark"] .filter-card {
+    background: var(--surface-card, #242b32);
+    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.45)), 0 0 0 1px var(--border-default, #3d4a52);
+  }
+  html[data-theme="dark"] .filter-head {
+    background: var(--surface-hover, #2f3840);
+    border-bottom-color: var(--border-default, #3d4a52);
+  }
+  html[data-theme="dark"] .filter-label { color: var(--text-secondary, #b8c0cc); }
+  html[data-theme="dark"] .filter-select {
+    background: var(--surface-bg, #1a1f24);
+    border-color: var(--border-default, #3d4a52);
+    color: var(--text-primary, #f4f4f9);
+  }
+  html[data-theme="dark"] .filter-select:focus {
+    border-color: var(--light-blue, #9ac5c3);
+    box-shadow: 0 0 0 3px rgba(154,197,195,.2);
+  }
+
+  html[data-theme="dark"] table.dataTable.stripe tbody tr.odd {
+    background-color: var(--surface-hover, #2f3840);
+  }
+  html[data-theme="dark"] table.dataTable.hover tbody tr:hover > * {
+    background-color: var(--surface-hover, #2f3840) !important;
+  }
+  html[data-theme="dark"] table.dataTable tfoot th {
+    background: var(--surface-hover, #2f3840) !important;
+    color: var(--text-secondary, #b8c0cc) !important;
+  }
+  html[data-theme="dark"] div.dataTables_wrapper div.dataTables_filter input,
+  html[data-theme="dark"] div.dataTables_wrapper div.dataTables_length select {
+    background: var(--surface-card, #242b32);
+    border-color: var(--border-default, #3d4a52);
+    color: var(--text-primary, #f4f4f9);
+  }
+
+  html[data-theme="dark"] ::-webkit-scrollbar-track { background: var(--surface-bg, #1a1f24); }
+  html[data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--border-strong, #4a5862); }
+
+  /* Tailwind inline color overrides */
+  html[data-theme="dark"] .bg-\[\#f4f4f9\] { background-color: var(--surface-card, #242b32) !important; }
+  html[data-theme="dark"] .text-\[\#2f4550\] { color: var(--text-primary, #f4f4f9) !important; }
+  html[data-theme="dark"] .text-\[\#586f7c\] { color: var(--text-secondary, #b8c0cc) !important; }
+  html[data-theme="dark"] .text-\[\#b8dbd9\] { color: var(--light-blue, #9ac5c3) !important; }
+  html[data-theme="dark"] .text-\[\#5a7d6b\] { color: var(--accent-green, #6b9a85) !important; }
+  html[data-theme="dark"] .text-\[\#b85450\] { color: var(--accent-red, #c4706c) !important; }
+  html[data-theme="dark"] .border-\[\#d8dce6\] { border-color: var(--border-default, #3d4a52) !important; }
+  html[data-theme="dark"] .border-\[\#1e293b\] { border-color: var(--border-default, #3d4a52) !important; }
+  html[data-theme="dark"] .hover\:bg-\[\#f4f4f9\]:hover { background-color: var(--surface-hover, #2f3840) !important; }
+  html[data-theme="dark"] .hover\:bg-\[rgba\(184\,219\,217\,\.15\)\]:hover { background-color: var(--surface-hover, #2f3840) !important; }
+
+  /* Estado badges dark */
+  html[data-theme="dark"] .estado-pagado    { color: var(--accent-green, #6b9a85); background-color: var(--accent-green-bg, rgba(107,154,133,.12)); }
+  html[data-theme="dark"] .estado-pendiente { color: var(--accent-amber, #d4b43a); background-color: var(--accent-amber-bg, rgba(212,180,58,.12)); }
+  html[data-theme="dark"] .estado-parcial   { color: var(--blue-slate, #6f8793); background-color: var(--surface-hover, #2f3840); }
+  html[data-theme="dark"] .estado-vencido   { color: var(--accent-red, #c4706c); background-color: var(--accent-red-bg, rgba(196,112,108,.12)); }
+  html[data-theme="dark"] .estado-incobrable { color: var(--text-muted, #6f7f8a); background-color: var(--surface-hover, #2f3840); }
+
+  /* Table cell dark overrides for hardcoded colors */
+  html[data-theme="dark"] td.font-mono { color: var(--text-secondary, #b8c0cc) !important; }
+  html[data-theme="dark"] td .font-medium { color: var(--text-primary, #f4f4f9) !important; }
+  html[data-theme="dark"] td .text-xs { color: var(--text-secondary, #b8c0cc) !important; }
+  html[data-theme="dark"] td.text-sm { color: var(--text-secondary, #b8c0cc) !important; }
+  html[data-theme="dark"] td.text-right { color: var(--text-primary, #f4f4f9) !important; }
+  html[data-theme="dark"] td.text-purple-700 { color: #a78bfa !important; }
+  html[data-theme="dark"] .bg-\[rgba\(184\,219\,217\,\.2\)\] { background-color: var(--surface-hover, #2f3840) !important; }
 </style>
 {% endblock %}
 
