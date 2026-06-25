@@ -192,7 +192,7 @@ class ExcelReportService:
             row = [
                 venta.id,
                 self.remove_timezone(venta.fecha_salida_manifiesto),
-                venta.agente_id.nombre if hasattr(venta.agente_id, 'nombre') else str(venta.agente_id),
+                venta.agente_id.nombre if venta.agente_id else '',
                 self.remove_timezone(venta.fecha_deposito),
                 venta.carga,
                 venta.PO,

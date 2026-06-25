@@ -230,6 +230,7 @@ class CFDIConfirmForm(forms.Form):
     )
     agente_id = forms.ModelChoiceField(
         queryset=Agente.objects.all().order_by('nombre'),
+        required=False,
         label='Agente aduanal',
         widget=forms.Select(attrs={'class': 'form-control'}),
     )
@@ -257,6 +258,14 @@ class CFDIConfirmForm(forms.Form):
         label='Tipo de registro',
         widget=forms.Select(attrs={'class': 'form-control'}),
     )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('tipo_venta') == Ventas.TipoVenta.NACIONAL:
+            cleaned_data['agente_id'] = None
+            cleaned_data['PO'] = ''
+            cleaned_data['pedimento'] = ''
+        return cleaned_data
 
 
 class AnticipoCFDIUploadForm(forms.Form):

@@ -354,7 +354,7 @@ class VentasResource(resources.ModelResource):
         import_id_fields = ('id',)
         
     def dehydrate_agente(self, ventas):
-        return ventas.agente_id.nombre
+        return ventas.agente_id.nombre if ventas.agente_id else ''
     
     def dehydrate_producto(self, ventas):
         return ventas.producto.variedad
@@ -603,7 +603,7 @@ class VentasAdmin(ModelAdmin):
                         producto=cd['producto'],
                         fecha_salida_manifiesto=cd['fecha_salida_manifiesto'],
                         fecha_deposito=cd['fecha_deposito'],
-                        agente_id=cd['agente_id'],
+                        agente_id=cd.get('agente_id'),
                         pedimento=cd['pedimento'],
                         carga=cd['carga'],
                         sucursal_id=cd['sucursal_id'],

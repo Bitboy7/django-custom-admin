@@ -345,7 +345,13 @@ class Ventas(models.Model):
     
     # Campos existentes
     fecha_salida_manifiesto = models.DateField()
-    agente_id = models.ForeignKey(Agente, on_delete=models.CASCADE, verbose_name='Agente aduanal')
+    agente_id = models.ForeignKey(
+        Agente,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Agente aduanal'
+    )
     fecha_deposito = models.DateField(default=timezone.now)
     pedimento = models.CharField(max_length=50, blank=True, null=True)
     carga = models.CharField(max_length=50, blank=True, null=True)

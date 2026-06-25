@@ -179,6 +179,7 @@
     color: #713f12;
     margin-bottom: 1rem;
   }
+  .cfdi-hidden { display: none !important; }
 </style>
 {% endblock %}
 
@@ -350,17 +351,17 @@
           {{ form.fecha_deposito }}
           {{ form.fecha_deposito.errors }}
         </div>
-        <div class="field-group">
-          <label>Agente aduanal <span class="badge-manual">MANUAL</span><span class="badge-required">REQUERIDO</span></label>
+        <div class="field-group cfdi-export-only{% if form.tipo_venta.value == 'Nacional' %} cfdi-hidden{% endif %}">
+          <label>Agente aduanal <span class="badge-manual">MANUAL</span><span class="badge-optional">OPCIONAL</span></label>
           {{ form.agente_id }}
           {{ form.agente_id.errors }}
         </div>
-        <div class="field-group">
+        <div class="field-group cfdi-export-only{% if form.tipo_venta.value == 'Nacional' %} cfdi-hidden{% endif %}">
           <label>P.O. <span class="badge-manual">MANUAL</span><span class="badge-optional">OPCIONAL</span></label>
           {{ form.PO }}
           {{ form.PO.errors }}
         </div>
-        <div class="field-group">
+        <div class="field-group cfdi-export-only{% if form.tipo_venta.value == 'Nacional' %} cfdi-hidden{% endif %}">
           <label>Pedimento <span class="badge-manual">MANUAL</span><span class="badge-optional">OPCIONAL</span></label>
           {{ form.pedimento }}
           {{ form.pedimento.errors }}
@@ -422,7 +423,25 @@ document.addEventListener('DOMContentLoaded', function () {
     modalidad.addEventListener('change', toggleTerminoCredito);
     toggleTerminoCredito();
   }
+
+  const tipoVenta = document.getElementById('id_tipo_venta');
+  if (tipoVenta) {
+    tipoVenta.addEventListener('change', toggleExportFields);
+    toggleExportFields();
+  }
 });
+
+function toggleExportFields() {
+  const tipoVenta = document.getElementById('id_tipo_venta');
+  const isNacional = tipoVenta && tipoVenta.value === 'Nacional';
+  document.querySelectorAll('.cfdi-export-only').forEach(group => {
+    group.classList.toggle('cfdi-hidden', isNacional);
+    group.querySelectorAll('input, select, textarea').forEach(field => {
+      field.required = false;
+      if (isNacional) field.value = '';
+    });
+  });
+}
 
 function updateFileName(input) {
   const display = document.getElementById('file-name-display');
