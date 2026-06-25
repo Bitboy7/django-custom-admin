@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="{% static 'vendor/datatables/css/buttons.dataTables.min.css' %}">
 <link rel="stylesheet" href="{% static 'vendor/datatables/css/responsive.dataTables.min.css' %}">
 <link rel="stylesheet" href="{% static 'css/datatables-buttons.css' %}">
+<link rel="stylesheet" href="{% static 'css/bank-account-select.css' %}">
 <link rel="stylesheet" href="{% static 'css/gastos-balances.css' %}">
 {% endblock %}
 
@@ -112,12 +113,57 @@
           {# Cuenta #}
           <div class="flex-1 min-w-[120px] sm:min-w-[140px]">
             <label for="cuenta_id" class="filter-label">Seleccione la cuenta:</label>
-            <select name="cuenta_id" id="cuenta_id" class="filter-select">
-              <option value="">Todas</option>
+            <div class="bank-account-select" data-bank-account-select>
+              <input type="hidden" name="cuenta_id" id="cuenta_id" value="{{ selected_cuenta_id }}">
+              <button type="button" class="bank-account-trigger" data-bank-account-button aria-expanded="false" aria-controls="cuenta_id_menu">
+                <span class="bank-account-current" data-bank-account-current>
+                  {% if selected_cuenta_id %}
+                    {% for cuenta in cuentas %}
+                      {% if cuenta.id|stringformat:"s" == selected_cuenta_id %}
+                        <span class="bank-account-logo">
+                          {% if cuenta.id_banco.logotipo_url %}<img src="{{ cuenta.id_banco.logotipo_url }}" alt="{{ cuenta.id_banco.nombre }}">{% else %}<i class="fas fa-building-columns text-xs"></i>{% endif %}
+                        </span>
+                        <span class="min-w-0">
+                          <span class="bank-account-number">{{ cuenta.numero_cuenta }}</span>
+                          <span class="bank-account-bank">{{ cuenta.id_banco.nombre }}</span>
+                        </span>
+                      {% endif %}
+                    {% endfor %}
+                  {% else %}
+                    <span class="bank-account-placeholder"><i class="fas fa-wallet text-xs"></i></span>
+                    <span class="min-w-0">
+                      <span class="bank-account-number">Todas</span>
+                      <span class="bank-account-bank">Todas las cuentas</span>
+                    </span>
+                  {% endif %}
+                </span>
+                <i class="fas fa-chevron-down bank-account-chevron"></i>
+              </button>
+              <div class="bank-account-menu" id="cuenta_id_menu" role="listbox">
+                <button type="button" class="bank-account-option {% if not selected_cuenta_id %}is-selected{% endif %}" data-bank-account-option data-value="">
+                  <span class="bank-account-option-content" data-bank-account-label>
+                    <span class="bank-account-placeholder"><i class="fas fa-wallet text-xs"></i></span>
+                    <span class="min-w-0">
+                      <span class="bank-account-number">Todas</span>
+                      <span class="bank-account-bank">Todas las cuentas</span>
+                    </span>
+                  </span>
+                </button>
               {% for cuenta in cuentas %}
-              <option value="{{ cuenta.id }}" {% if cuenta.id|stringformat:"s" == selected_cuenta_id %}selected{% endif %}>{{ cuenta.numero_cuenta }}</option>
+                <button type="button" class="bank-account-option {% if cuenta.id|stringformat:"s" == selected_cuenta_id %}is-selected{% endif %}" data-bank-account-option data-value="{{ cuenta.id }}">
+                  <span class="bank-account-option-content" data-bank-account-label>
+                    <span class="bank-account-logo">
+                      {% if cuenta.id_banco.logotipo_url %}<img src="{{ cuenta.id_banco.logotipo_url }}" alt="{{ cuenta.id_banco.nombre }}">{% else %}<i class="fas fa-building-columns text-xs"></i>{% endif %}
+                    </span>
+                    <span class="min-w-0">
+                      <span class="bank-account-number">{{ cuenta.numero_cuenta }}</span>
+                      <span class="bank-account-bank">{{ cuenta.id_banco.nombre }}</span>
+                    </span>
+                  </span>
+                </button>
               {% endfor %}
-            </select>
+              </div>
+            </div>
           </div>
 
           {# Sucursal #}
@@ -265,5 +311,6 @@
 <script src="{% static 'js/balances-datatables.js' %}"></script>
 <script src="{% static 'js/balances-charts.js' %}"></script>
 <script src="{% static 'js/multi-month-selector.js' %}"></script>
+<script src="{% static 'js/bank-account-select.js' %}"></script>
 <script src="{% static 'js/gastos-balances-page.js' %}"></script>
 {% endblock %}

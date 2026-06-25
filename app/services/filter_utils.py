@@ -297,7 +297,7 @@ class FilterOptionsProvider:
         }
         
         if include_cuentas:
-            options['cuentas'] = Cuenta.objects.all()
+            options['cuentas'] = Cuenta.objects.select_related('id_banco').all()
         
         if include_sucursales:
             options['sucursales'] = Sucursal.objects.all()

@@ -61,7 +61,7 @@ def build_ventas_balances_context(request):
     
     # Obtener listas para los filtros
     clientes = Cliente.objects.filter(activo=True).order_by('nombre')
-    cuentas = Cuenta.objects.all().order_by('numero_cuenta')
+    cuentas = Cuenta.objects.select_related('id_banco').order_by('numero_cuenta')
     sucursales = Sucursal.objects.all().order_by('nombre')
     mercados = MercadoDestino.objects.filter(activo=True).order_by('nombre')
     

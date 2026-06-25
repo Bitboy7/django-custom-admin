@@ -40,6 +40,10 @@ class Banco(models.Model):
         return "Sin imagen"
     mostrar_logotipo.short_description = 'Logotipo'
 
+    @property
+    def logotipo_url(self):
+        return safe_file_url(self.logotipo)
+
     def __str__(self):
         return f"{self.nombre}"
     
