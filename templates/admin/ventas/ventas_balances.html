@@ -21,261 +21,15 @@
 <link rel="stylesheet" href="//cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
 <link rel="stylesheet" href="{% static 'css/datatables-buttons.css' %}">
 <link rel="stylesheet" href="{% static 'css/bank-account-select.css' %}">
-{% endblock %}
-
-{% block extrastyle %}
-{{ block.super }}
-<style>
-  /* ── Page base ── */
-  #content-main { padding: 0; }
-  #content { padding: 1.25rem; background-color: #f4f4f9; min-height: 100vh; }
-
-  /* ── AdminLTE/Jazzmin compat ── */
-  .main-header .navbar-brand, .main-header .nav-link,
-  .main-sidebar .nav-link, .main-sidebar .brand-link, .main-sidebar .nav-header {
-    font-size: revert; font-weight: revert; line-height: revert;
-  }
-  .main-header img, .main-sidebar img, .brand-image { display: inline !important; }
-
-  /* ── KPI Cards ── */
-  .kpi-card {
-    background: #fff;
-    border-radius: .5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 0 0 1px rgba(0,0,0,.04);
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-    padding: .3rem .35rem;
-    border-left: 3px solid transparent;
-    transition: box-shadow .15s, transform .15s;
-    overflow: hidden;
-  }
-  .kpi-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.11); transform: translateY(-2px); }
-  .kpi-icon-wrap {
-    flex-shrink: 0;
-    width: 2rem; height: 2rem;
-    border-radius: .5rem;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.25rem; color: #fff;
-  }
-  .kpi-body { flex: 1; min-width: 0; }
-  .kpi-label {
-    font-size: .6rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .08em; color: #586f7c; margin-bottom: .15rem;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .kpi-value {
-    font-size: 0.8rem; font-weight: 800; color: #2f4550; line-height: 1.15;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .kpi-sub {
-    font-size: .65rem; color: #586f7c; margin-top: .2rem;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-
-  /* ── Section Cards ── */
-  .s-card {
-    background: #fff;
-    border-radius: .5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 0 0 1px rgba(0,0,0,.04);
-    overflow: hidden;
-  }
-  .s-card-head {
-    display: flex; align-items: center; gap: .5rem;
-    padding: .625rem 1rem;
-    background: #f8fafc;
-    border-bottom: 1px solid #d8dce6;
-  }
-  .s-card-ico {
-    width: 1.75rem; height: 1.75rem;
-    border-radius: .375rem;
-    display: flex; align-items: center; justify-content: center;
-    font-size: .75rem;
-  }
-  .s-card-title { font-size: .8rem; font-weight: 700; color: #2f4550; }
-  .s-card-body { padding: 1rem; }
-
-  /* ── Filter Card ── */
-  .filter-card {
-    background: #fff;
-    border-radius: .5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 0 0 1px rgba(0,0,0,.04);
-    overflow: visible;
-    margin-bottom: 1.25rem;
-    position: relative;
-  }
-  .filter-stripe {
-    height: 3px;
-    background: linear-gradient(90deg, #2f4550, #b8dbd9);
-    border-radius: .5rem .5rem 0 0;
-  }
-  .filter-head {
-    padding: .625rem 1rem;
-    background: #f8fafc;
-    border-bottom: 1px solid #d8dce6;
-    display: flex; align-items: center; gap: .5rem;
-  }
-  .filter-select {
-    width: 100%; background: #fff; border: 1px solid #d8dce6;
-    border-radius: .375rem; padding: .375rem .625rem;
-    font-size: .8rem; color: #586f7c;
-    transition: border-color .15s, box-shadow .15s;
-  }
-  .filter-select:focus { outline: none; border-color: #b8dbd9; box-shadow: 0 0 0 3px rgba(26,173,188,.15); }
-  .filter-label { display: block; font-size: .7rem; font-weight: 700; color: #586f7c; margin-bottom: .25rem; }
-
-  /* ── DataTable overrides ── */
-  table.dataTable thead th {
-    background: linear-gradient(135deg, #2f4550 0%, #586f7c 100%) !important;
-    color: #fff !important;
-    border: none !important;
-    font-size: .7rem !important; font-weight: 700 !important;
-    letter-spacing: .05em !important; text-transform: uppercase !important;
-    padding: .75rem 1rem !important;
-  }
-  table.dataTable tfoot th {
-    background: rgba(184,219,217,.1) !important;
-    color: #586f7c !important;
-    font-weight: 700 !important;
-    font-size: .75rem !important;
-  }
-  table.dataTable.stripe tbody tr.odd { background-color: #f8fafc; }
-  table.dataTable.hover tbody tr:hover > * { background-color: rgba(184,219,217,.1) !important; box-shadow: none; }
-  table.dataTable tbody td { font-size: .8rem; }
-  div.dataTables_wrapper div.dataTables_filter input,
-  div.dataTables_wrapper div.dataTables_length select {
-    border: 1px solid #d8dce6; border-radius: .375rem; font-size: .78rem;
-    padding: .25rem .5rem;
-  }
-  .dt-buttons .dt-button {
-    border-radius: .375rem !important; font-size: .7rem !important;
-    padding: .3rem .65rem !important; font-weight: 600 !important;
-  }
-  /* ── Scroll bar thin ── */
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-track { background: #f1f5f9; }
-  ::-webkit-scrollbar-thumb { background: #b8dbd9; border-radius: 3px; }
-
-  /* ── Export PDF button ── */
-  .btn-export-pdf {
-    display: inline-flex; align-items: center; gap: .375rem;
-    font-size: .75rem; font-weight: 700; color: #fff;
-    background: linear-gradient(135deg, #b85450, #b85450);
-    border: none; border-radius: .375rem;
-    padding: .35rem .8rem; cursor: pointer;
-    box-shadow: 0 1px 3px rgba(220,38,38,.3);
-    transition: opacity .15s, box-shadow .15s;
-  }
-  .btn-export-pdf:hover  { opacity: .9; box-shadow: 0 3px 8px rgba(220,38,38,.35); }
-  .btn-export-pdf:active { opacity: .8; }
-  .btn-export-pdf:disabled { opacity: .5; cursor: not-allowed; }
-
-  /* ── Estado badges ── */
-  .estado-pagado     { color: #5a7d6b; background-color: rgba(184,219,217,.1); padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
-  .estado-pendiente  { color: #c9a227; background-color: rgba(201,162,39,.08); padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
-  .estado-parcial    { color: #586f7c; background-color: rgba(184,219,217,.15); padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
-  .estado-vencido    { color: #b85450; background-color: #e8b4b0; padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
-  .estado-incobrable { color: #586f7c; background-color: #f4f4f9; padding: 2px 8px; border-radius: 12px; font-size: .75rem; }
-
-  /* ═══════════════════════════════════════════════════════════
-     DARK MODE — ventas balances
-     ═══════════════════════════════════════════════════════════ */
-  html[data-theme="dark"] #content {
-    background-color: var(--surface-bg, #1a1f24);
-  }
-
-  html[data-theme="dark"] .kpi-card {
-    background: var(--surface-card, #242b32);
-    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.45)), 0 0 0 1px var(--border-default, #3d4a52);
-  }
-  html[data-theme="dark"] .kpi-card:hover {
-    box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,.55));
-  }
-  html[data-theme="dark"] .kpi-label { color: var(--text-secondary, #b8c0cc); }
-  html[data-theme="dark"] .kpi-value { color: var(--text-primary, #f4f4f9); }
-  html[data-theme="dark"] .kpi-sub   { color: var(--text-muted, #6f7f8a); }
-
-  html[data-theme="dark"] .s-card {
-    background: var(--surface-card, #242b32);
-    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.45)), 0 0 0 1px var(--border-default, #3d4a52);
-  }
-  html[data-theme="dark"] .s-card-head {
-    background: var(--surface-hover, #2f3840);
-    border-bottom-color: var(--border-default, #3d4a52);
-  }
-  html[data-theme="dark"] .s-card-title { color: var(--text-primary, #f4f4f9); }
-
-  html[data-theme="dark"] .filter-card {
-    background: var(--surface-card, #242b32);
-    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.45)), 0 0 0 1px var(--border-default, #3d4a52);
-  }
-  html[data-theme="dark"] .filter-head {
-    background: var(--surface-hover, #2f3840);
-    border-bottom-color: var(--border-default, #3d4a52);
-  }
-  html[data-theme="dark"] .filter-label { color: var(--text-secondary, #b8c0cc); }
-  html[data-theme="dark"] .filter-select {
-    background: var(--surface-bg, #1a1f24);
-    border-color: var(--border-default, #3d4a52);
-    color: var(--text-primary, #f4f4f9);
-  }
-  html[data-theme="dark"] .filter-select:focus {
-    border-color: var(--light-blue, #9ac5c3);
-    box-shadow: 0 0 0 3px rgba(154,197,195,.2);
-  }
-
-  html[data-theme="dark"] table.dataTable.stripe tbody tr.odd {
-    background-color: var(--surface-hover, #2f3840);
-  }
-  html[data-theme="dark"] table.dataTable.hover tbody tr:hover > * {
-    background-color: var(--surface-hover, #2f3840) !important;
-  }
-  html[data-theme="dark"] table.dataTable tfoot th {
-    background: var(--surface-hover, #2f3840) !important;
-    color: var(--text-secondary, #b8c0cc) !important;
-  }
-  html[data-theme="dark"] div.dataTables_wrapper div.dataTables_filter input,
-  html[data-theme="dark"] div.dataTables_wrapper div.dataTables_length select {
-    background: var(--surface-card, #242b32);
-    border-color: var(--border-default, #3d4a52);
-    color: var(--text-primary, #f4f4f9);
-  }
-
-  html[data-theme="dark"] ::-webkit-scrollbar-track { background: var(--surface-bg, #1a1f24); }
-  html[data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--border-strong, #4a5862); }
-
-  /* Tailwind inline color overrides */
-  html[data-theme="dark"] .bg-\[\#f4f4f9\] { background-color: var(--surface-card, #242b32) !important; }
-  html[data-theme="dark"] .text-\[\#2f4550\] { color: var(--text-primary, #f4f4f9) !important; }
-  html[data-theme="dark"] .text-\[\#586f7c\] { color: var(--text-secondary, #b8c0cc) !important; }
-  html[data-theme="dark"] .text-\[\#b8dbd9\] { color: var(--light-blue, #9ac5c3) !important; }
-  html[data-theme="dark"] .text-\[\#5a7d6b\] { color: var(--accent-green, #6b9a85) !important; }
-  html[data-theme="dark"] .text-\[\#b85450\] { color: var(--accent-red, #c4706c) !important; }
-  html[data-theme="dark"] .border-\[\#d8dce6\] { border-color: var(--border-default, #3d4a52) !important; }
-  html[data-theme="dark"] .border-\[\#1e293b\] { border-color: var(--border-default, #3d4a52) !important; }
-  html[data-theme="dark"] .hover\:bg-\[\#f4f4f9\]:hover { background-color: var(--surface-hover, #2f3840) !important; }
-  html[data-theme="dark"] .hover\:bg-\[rgba\(184\,219\,217\,\.15\)\]:hover { background-color: var(--surface-hover, #2f3840) !important; }
-
-  /* Estado badges dark */
-  html[data-theme="dark"] .estado-pagado    { color: var(--accent-green, #6b9a85); background-color: var(--accent-green-bg, rgba(107,154,133,.12)); }
-  html[data-theme="dark"] .estado-pendiente { color: var(--accent-amber, #d4b43a); background-color: var(--accent-amber-bg, rgba(212,180,58,.12)); }
-  html[data-theme="dark"] .estado-parcial   { color: var(--blue-slate, #6f8793); background-color: var(--surface-hover, #2f3840); }
-  html[data-theme="dark"] .estado-vencido   { color: var(--accent-red, #c4706c); background-color: var(--accent-red-bg, rgba(196,112,108,.12)); }
-  html[data-theme="dark"] .estado-incobrable { color: var(--text-muted, #6f7f8a); background-color: var(--surface-hover, #2f3840); }
-
-  /* Table cell dark overrides for hardcoded colors */
-  html[data-theme="dark"] td.font-mono { color: var(--text-secondary, #b8c0cc) !important; }
-  html[data-theme="dark"] td .font-medium { color: var(--text-primary, #f4f4f9) !important; }
-  html[data-theme="dark"] td .text-xs { color: var(--text-secondary, #b8c0cc) !important; }
-  html[data-theme="dark"] td.text-sm { color: var(--text-secondary, #b8c0cc) !important; }
-  html[data-theme="dark"] td.text-right { color: var(--text-primary, #f4f4f9) !important; }
-  html[data-theme="dark"] td.text-purple-700 { color: #463d61 !important; }
-  html[data-theme="dark"] .bg-\[rgba\(184\,219\,217\,\.2\)\] { background-color: var(--surface-hover, #2f3840) !important; }
-</style>
+<link rel="stylesheet" href="{% static 'css/ventas-balances.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="text-[#2f4550]">
+<div id="ventas-balances-page"
+     class="text-[#2f4550]"
+     data-ventas-modalidad="{{ ventas_por_modalidad|escape }}"
+     data-ventas-estados="{{ ventas_por_estado|escape }}"
+     data-ventas-clientes="{{ ventas_por_cliente|escape }}">
 
   {# ── Toast de notificación ── #}
   <div id="toast-notification" class="fixed top-4 right-4 z-50 transform translate-x-full transition-all duration-300 opacity-0">
@@ -287,7 +41,7 @@
         <p class="text-sm font-bold text-[#2f4550]" id="toast-title">¡Filtros aplicados!</p>
         <p class="text-xs text-[#586f7c] mt-0.5" id="toast-message">La información ha sido filtrada según los criterios seleccionados.</p>
       </div>
-      <button type="button" class="text-[#b8dbd9] hover:text-[#586f7c] transition-colors ml-1" onclick="hideToast()">
+      <button type="button" id="toast-close-button" class="text-[#b8dbd9] hover:text-[#586f7c] transition-colors ml-1" aria-label="Cerrar notificación">
         <i class="fas fa-times text-xs"></i>
       </button>
     </div>
@@ -312,7 +66,7 @@
       <span class="text-sm font-bold text-[#586f7c]">Filtros de análisis de ventas</span>
       <span class="relative group ml-1">
         <i class="fas fa-question-circle text-blue-400 cursor-pointer text-xs"></i>
-        <div class="absolute left-0 mt-2 w-80 bg-[#f4f4f9] border border-[#d8dce6] rounded-lg shadow-xl p-4 text-xs text-[#586f7c] opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 pointer-events-none" style="top:100%">
+        <div class="ventas-help-tooltip absolute left-0 mt-2 w-80 bg-[#f4f4f9] border border-[#d8dce6] rounded-lg shadow-xl p-4 text-xs text-[#586f7c] opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 pointer-events-none">
           <strong class="text-[#2f4550] block mb-2">¿Cómo usar el análisis de ventas?</strong>
           <ul class="space-y-1.5">
             <li><span class="font-semibold text-[#586f7c]">Cliente:</span> Filtra ventas por cliente específico.</li>
@@ -486,7 +240,7 @@
         </div>
 
         {# Opciones de filtro diario #}
-        <div id="filtro-diario-opciones" {% if selected_periodo != 'diario' %}style="display:none"{% endif %}>
+        <div id="filtro-diario-opciones" class="{% if selected_periodo != 'diario' %}is-hidden{% endif %}">
           <div class="bg-[#f4f4f9] border border-[#d8dce6] rounded-lg p-3">
             <p class="text-xs font-bold text-[#586f7c] mb-2 flex items-center gap-1.5">
               <i class="fas fa-calendar-day text-[#586f7c]"></i> Tipo de consulta diaria
@@ -506,12 +260,12 @@
               </label>
             </div>
 
-            <div id="campo-dia-especifico" {% if selected_fecha_inicio %}style="display:none"{% endif %}>
+            <div id="campo-dia-especifico" class="{% if selected_fecha_inicio %}is-hidden{% endif %}">
               <label class="filter-label">Seleccione el día:</label>
               <input type="date" name="dia" id="dia" value="{{ selected_dia }}" class="filter-select w-auto">
             </div>
 
-            <div id="campos-rango-fechas" {% if not selected_fecha_inicio %}style="display:none"{% endif %}>
+            <div id="campos-rango-fechas" class="{% if not selected_fecha_inicio %}is-hidden{% endif %}">
               <div class="flex flex-wrap gap-3">
                 <div class="flex-1 min-w-[160px]">
                   <label class="filter-label">Fecha inicial:</label>
@@ -540,42 +294,42 @@
   {# ── KPI Cards — 6 métricas ── #}
   <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-5">
 
-    <div class="kpi-card" style="border-left-color:#2f4550" title="${{ total_ventas|us_currency:2 }}">
+    <div class="kpi-card kpi-border-total" title="${{ total_ventas|us_currency:2 }}">
       <div class="kpi-body">
         <p class="kpi-label">Total Ventas</p>
         <p class="kpi-value" id="kpi-total-ventas">${{ total_ventas|us_currency:2 }}</p>
       </div>
     </div>
 
-    <div class="kpi-card" style="border-left-color:#0369a1" title="${{ total_pagado|us_currency:2 }}">
+    <div class="kpi-card kpi-border-paid" title="${{ total_pagado|us_currency:2 }}">
       <div class="kpi-body">
         <p class="kpi-label">Total Pagado</p>
         <p class="kpi-value" id="kpi-total-pagado">${{ total_pagado|us_currency:2 }}</p>
       </div>
     </div>
 
-    <div class="kpi-card" style="border-left-color:#586f7c" title="${{ saldo_pendiente_total|us_currency:2 }}">
+    <div class="kpi-card kpi-border-neutral" title="${{ saldo_pendiente_total|us_currency:2 }}">
       <div class="kpi-body">
         <p class="kpi-label">Pendiente</p>
         <p class="kpi-value" id="kpi-saldo-pendiente">${{ saldo_pendiente_total|us_currency:2 }}</p>
       </div>
     </div>
 
-    <div class="kpi-card" style="border-left-color:#586f7c">
+    <div class="kpi-card kpi-border-neutral">
       <div class="kpi-body">
         <p class="kpi-label">Transacciones</p>
         <p class="kpi-value" id="kpi-transacciones">{{ numero_transacciones }}</p>
       </div>
     </div>
 
-    <div class="kpi-card" style="border-left-color:#b8dbd9" title="${{ venta_maxima|us_currency:2 }}">
+    <div class="kpi-card kpi-border-light" title="${{ venta_maxima|us_currency:2 }}">
       <div class="kpi-body">
         <p class="kpi-label">Venta Máxima</p>
         <p class="kpi-value" id="kpi-venta-maxima">${{ venta_maxima|us_currency:2 }}</p>
       </div>
     </div>
 
-    <div class="kpi-card" style="border-left-color:#586f7c" title="${{ promedio_ventas|us_currency:2 }}">
+    <div class="kpi-card kpi-border-neutral" title="${{ promedio_ventas|us_currency:2 }}">
       <div class="kpi-body">
         <p class="kpi-label">Promedio</p>
         <p class="kpi-value" id="kpi-promedio">${{ promedio_ventas|us_currency:2 }}</p>
@@ -589,7 +343,7 @@
     <span class="text-xs font-bold text-[#586f7c] uppercase tracking-wider flex items-center gap-1.5">
       <i class="fas fa-chart-line text-blue-400"></i> Análisis visual
     </span>
-    <button type="button" id="btn-export-pdf" onclick="exportVentasPDF()" class="btn-export-pdf">
+    <button type="button" id="btn-export-pdf" class="btn-export-pdf">
       <i class="fas fa-file-pdf"></i> Exportar PDF
     </button>
   </div>
@@ -599,21 +353,21 @@
 
     <div class="s-card">
       <div class="s-card-head">
-        <div class="s-card-ico" style="background:rgba(184,219,217,.15)"><i class="fas fa-chart-pie text-[#2f4550]"></i></div>
+        <div class="s-card-ico s-card-ico-primary"><i class="fas fa-chart-pie text-[#2f4550]"></i></div>
         <span class="s-card-title">Distribución por Modalidad</span>
       </div>
       <div class="s-card-body">
-        <div style="height:240px;"><canvas id="modalidadChart"></canvas></div>
+        <div class="chart-box-sm"><canvas id="modalidadChart"></canvas></div>
       </div>
     </div>
 
     <div class="s-card">
       <div class="s-card-head">
-        <div class="s-card-ico" style="background:rgba(201,162,39,.08)"><i class="fas fa-chart-pie text-[#c9a227]"></i></div>
+        <div class="s-card-ico s-card-ico-warning"><i class="fas fa-chart-pie text-[#c9a227]"></i></div>
         <span class="s-card-title">Estados de Cobranza</span>
       </div>
       <div class="s-card-body">
-        <div style="height:240px;"><canvas id="estadosChart"></canvas></div>
+        <div class="chart-box-sm"><canvas id="estadosChart"></canvas></div>
       </div>
     </div>
 
@@ -622,23 +376,23 @@
   {# ── Gráfico: Top 10 clientes ── #}
   <div class="s-card mb-5">
     <div class="s-card-head">
-      <div class="s-card-ico" style="background:rgba(184,219,217,.15)"><i class="fas fa-users text-[#2f4550]"></i></div>
+      <div class="s-card-ico s-card-ico-primary"><i class="fas fa-users text-[#2f4550]"></i></div>
       <span class="s-card-title">Top 10 Clientes por Monto de Ventas</span>
     </div>
     <div class="s-card-body">
-      <div style="height:300px;"><canvas id="clientesChart"></canvas></div>
+      <div class="chart-box-md"><canvas id="clientesChart"></canvas></div>
     </div>
   </div>
 
   {# ── Tabla de detalle ── #}
   <div class="s-card mb-5">
     <div class="s-card-head">
-      <div class="s-card-ico" style="background:rgba(184,219,217,.15)"><i class="fas fa-table text-[#2f4550]"></i></div>
+      <div class="s-card-ico s-card-ico-primary"><i class="fas fa-table text-[#2f4550]"></i></div>
       <span class="s-card-title">Detalle de Ventas</span>
     </div>
     <div class="s-card-body" id="ventas-table-container">
       {% if balances %}
-      <table id="ventasTable" class="display responsive nowrap min-w-full hover stripe" style="width:100%">
+      <table id="ventasTable" class="ventas-table display responsive nowrap min-w-full hover stripe">
         <thead>
           <tr>
             <th>#</th>
@@ -742,224 +496,11 @@
 
 <script src="{% static 'js/balances-general.js' %}"></script>
 
-<script>
-  // Datos para gráficos desde el backend
-  window.ventasModalidadData = JSON.parse('{{ ventas_por_modalidad|escapejs }}');
-  window.ventasEstadosData    = JSON.parse('{{ ventas_por_estado|escapejs }}');
-  window.ventasClientesData   = JSON.parse('{{ ventas_por_cliente|escapejs }}');
-
-  // Alternar opciones de período diario
-  $(document).ready(function () {
-    $('#periodo').on('change', function () {
-      if ($(this).val() === 'diario') {
-        $('#filtro-diario-opciones').slideDown(300);
-      } else {
-        $('#filtro-diario-opciones').slideUp(300);
-      }
-    });
-
-    $('input[name="tipo_fecha"]').on('change', function () {
-      if ($(this).val() === 'dia') {
-        $('#campo-dia-especifico').slideDown(300);
-        $('#campos-rango-fechas').slideUp(300);
-        $('#fecha_inicio').val('');
-        $('#fecha_fin').val('');
-      } else {
-        $('#campo-dia-especifico').slideUp(300);
-        $('#campos-rango-fechas').slideDown(300);
-        $('#dia').val('');
-      }
-    });
-
-    if ($('#periodo').val() !== 'diario') {
-      $('#filtro-diario-opciones').hide();
-    }
-
-    // Mostrar toast si hay filtros aplicados
-    var urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.toString()) {
-      if (typeof showToast === 'function') {
-        showToast('¡Filtros aplicados!', 'Los datos han sido filtrados según sus criterios.');
-      }
-    }
-  });
-
-  // Exportar página a PDF usando DataTables button
-  function exportVentasPDF() {
-    var btn = document.getElementById('btn-export-pdf');
-    if (btn) { btn.disabled = true; }
-    try {
-      var table = $('#ventasTable').DataTable();
-      if (table) {
-        table.button('.buttons-pdf').trigger();
-      }
-    } catch(e) {}
-    setTimeout(function () { if (btn) btn.disabled = false; }, 2000);
-  }
-</script>
 
 <script src="{% static 'js/datatables-utils.js' %}"></script>
 <script src="{% static 'js/ventas-balances.js' %}"></script>
 <script src="{% static 'js/multi-month-selector.js' %}"></script>
 <script src="{% static 'js/bank-account-select.js' %}"></script>
 
-<script>
-(function () {
-  'use strict';
-
-  var ajaxUrl = "{% url 'admin:ventas_ventas_balances' %}";
-
-  function formatCurrencyAjax(value) {
-    return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 2, maximumFractionDigits: 2
-    }).format(parseFloat(value) || 0);
-  }
-
-  function updateKpis(kpis) {
-    var el;
-    el = document.getElementById('kpi-total-ventas');
-    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.total_ventas);
-    el = document.getElementById('kpi-total-pagado');
-    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.total_pagado);
-    el = document.getElementById('kpi-saldo-pendiente');
-    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.saldo_pendiente_total);
-    el = document.getElementById('kpi-transacciones');
-    if (el) el.textContent = kpis.numero_transacciones;
-    el = document.getElementById('kpi-venta-maxima');
-    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.venta_maxima);
-    el = document.getElementById('kpi-promedio');
-    if (el) el.textContent = '$' + formatCurrencyAjax(kpis.promedio_ventas);
-  }
-
-  function destroyVentasCharts() {
-    ['modalidadChart', 'estadosChart', 'clientesChart'].forEach(function (id) {
-      var canvas = document.getElementById(id);
-      if (canvas) {
-        var existing = Chart.getChart(canvas);
-        if (existing) existing.destroy();
-      }
-    });
-  }
-
-  function reinitVentasDataTable() {
-    if ($.fn.DataTable.isDataTable('#ventasTable')) {
-      $('#ventasTable').DataTable().destroy();
-    }
-    if ($('#ventasTable').length) {
-      $('#ventasTable').DataTable({
-        responsive: true,
-        pageLength: 25,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos']],
-        order: [[0, 'asc']],
-        columnDefs: [
-          { targets: [6, 7, 8, 10], type: 'num-fmt', className: 'text-right' },
-          { targets: [9], className: 'text-center' }
-        ],
-        dom: 'Bfrtip',
-        language: { url: '/static/js/datatables-spanish.json' },
-        buttons: [
-          {
-            extend: 'excel', title: 'Análisis de Ventas',
-            text: '<i class="fas fa-file-excel"></i> Excel',
-            className: 'btn btn-success btn-sm',
-            exportOptions: { columns: ':visible' }
-          },
-          {
-            extend: 'pdf', title: 'Análisis de Ventas',
-            text: '<i class="fas fa-file-pdf"></i> PDF',
-            className: 'btn btn-danger btn-sm',
-            orientation: 'landscape', pageSize: 'A4',
-            exportOptions: { columns: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] }
-          },
-          {
-            extend: 'print', title: 'Análisis de Ventas',
-            text: '<i class="fas fa-print"></i> Imprimir',
-            className: 'btn btn-info btn-sm',
-            exportOptions: { columns: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] }
-          }
-        ]
-      });
-    }
-  }
-
-  function doAjaxFilter(form) {
-    var params = new URLSearchParams(new FormData(form));
-    var container = document.getElementById('ventas-table-container');
-    var submitBtn = form.querySelector('button[type="submit"]');
-    var originalBtnHtml = submitBtn ? submitBtn.innerHTML : null;
-
-    if (container) {
-      container.style.opacity = '0.5';
-      container.style.pointerEvents = 'none';
-    }
-
-    function restoreBtn() {
-      if (submitBtn && originalBtnHtml !== null) {
-        submitBtn.innerHTML = originalBtnHtml;
-        submitBtn.disabled = false;
-      }
-    }
-
-    fetch(ajaxUrl + '?' + params.toString(), {
-      headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-      .then(function (response) {
-        if (!response.ok) throw new Error('Error ' + response.status);
-        return response.json();
-      })
-      .then(function (data) {
-        updateKpis(data.kpis);
-
-        // Update chart data globals and reinit
-        window.ventasModalidadData = data.chart_data.modalidad;
-        window.ventasEstadosData = data.chart_data.estados;
-        window.ventasClientesData = data.chart_data.clientes;
-        destroyVentasCharts();
-        setTimeout(function () { initializeVentasCharts(); }, 50);
-
-        // Replace table HTML and reinitialise DataTable
-        if (container) {
-          container.innerHTML = data.table_html;
-          container.style.opacity = '';
-          container.style.pointerEvents = '';
-          reinitVentasDataTable();
-        }
-
-        restoreBtn();
-
-        // Show toast
-        if (typeof showToast === 'function') {
-          showToast('¡Filtros aplicados!', 'Los datos han sido actualizados.');
-        }
-
-        // Update URL without page reload
-        history.replaceState(null, '', '?' + params.toString());
-      })
-      .catch(function (err) {
-        if (container) {
-          container.style.opacity = '';
-          container.style.pointerEvents = '';
-        }
-        restoreBtn();
-        console.error('AJAX error:', err);
-      });
-  }
-
-  document.addEventListener('DOMContentLoaded', function () {
-    var form = document.querySelector('form[action*="ventas/balances"]');
-    if (!form) return;
-
-    // Intercept real submit events (from the submit button)
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      doAjaxFilter(form);
-    });
-
-    // Override programmatic form.submit() used by multi-month-selector
-    form.submit = function () {
-      doAjaxFilter(form);
-    };
-  });
-})();
-</script>
+<script src="{% static 'js/ventas-balances-page.js' %}"></script>
 {% endblock %}
