@@ -86,7 +86,7 @@ class Cliente(models.Model):
     activo = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.nombre} - {self.pais}"
+        return f"{self.nombre} - {self.pais.nombre}"
 
     def mostrar_logotipo(self):
         url = safe_file_url(self.imagen)

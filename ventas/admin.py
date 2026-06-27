@@ -697,7 +697,7 @@ class VentasAdmin(ModelAdmin):
                 if not producto_inicial and fraccion:
                     producto_inicial = Producto.objects.filter(nombre__icontains='Mango').first()
 
-                from datetime import date as today_date
+                fecha_cfdi = parsed.get('fecha_emision_cfdi') or timezone.now().date()
                 initial = {
                     'folio_factura': parsed.get('folio_factura', ''),
                     'fecha_emision_cfdi': parsed.get('fecha_emision_cfdi'),
@@ -712,7 +712,8 @@ class VentasAdmin(ModelAdmin):
                     'PO': parsed.get('PO', ''),
                     'cliente': cliente_inicial,
                     'producto': producto_inicial,
-                    'fecha_deposito': today_date.today(),
+                    'fecha_salida_manifiesto': fecha_cfdi,
+                    'fecha_deposito': fecha_cfdi,
                 }
 
                 form = CFDIConfirmForm(initial=initial)

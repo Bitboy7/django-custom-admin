@@ -52,7 +52,7 @@ class Sucursal(models.Model):
     id_estado = models.ForeignKey(Estado, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f'{self.nombre} - {self.id_estado}'
+        return f'{self.nombre} - {self.id_estado.nombre}'
     
     class Meta:
         verbose_name = "Sucursal"
@@ -104,7 +104,7 @@ class Producto(models.Model):
             )
     
     def __str__(self):
-            return f"{self.variedad} - {self.disponible}"    
+            return f"{self.variedad}"    
                 
     class Meta:
             verbose_name = 'Producto'
