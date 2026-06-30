@@ -260,6 +260,14 @@ function checkStoredFiltersStatus() {
 
 // Mostrar toast al cargar la página si hay parámetros de filtro
 function checkAndShowFilterToast() {
+  function getSelectedOptionText(element) {
+    if (!element || element.tagName !== "SELECT" || element.selectedIndex < 0) {
+      return "";
+    }
+
+    return element.options[element.selectedIndex]?.text || "";
+  }
+
   const urlParams = new URLSearchParams(window.location.search);
   const hasFilters =
     urlParams.has("cuenta_id") ||
@@ -273,15 +281,18 @@ function checkAndShowFilterToast() {
   if (hasFilters) {
     const activeFilters = [];
     if (urlParams.get("cuenta_id")) {
-      const cuentaSelect = document.getElementById("cuenta_id");
-      const selectedOption = cuentaSelect.options[cuentaSelect.selectedIndex];
-      activeFilters.push(`Cuenta: ${selectedOption.text}`);
+      const cuentaText =
+        document
+          .querySelector("[data-bank-account-current]")
+          ?.textContent.replace(/\s+/g, " ")
+          .trim() || urlParams.get("cuenta_id");
+      activeFilters.push(`Cuenta: ${cuentaText}`);
     }
     if (urlParams.get("sucursal_id")) {
       const sucursalSelect = document.getElementById("sucursal_id");
-      const selectedOption =
-        sucursalSelect.options[sucursalSelect.selectedIndex];
-      activeFilters.push(`Sucursal: ${selectedOption.text}`);
+      const sucursalText =
+        getSelectedOptionText(sucursalSelect) || urlParams.get("sucursal_id");
+      activeFilters.push(`Sucursal: ${sucursalText}`);
     }
     if (urlParams.get("year")) {
       activeFilters.push(`Año: ${urlParams.get("year")}`);
