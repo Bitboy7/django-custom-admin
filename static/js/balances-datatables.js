@@ -110,7 +110,20 @@ function initBalancesDataTable() {
         { data: 2 }, // N° Cuenta
         { data: 3 }, // Banco
         { data: 4 }, // Sucursal
-        { data: 5 }, // Fecha
+        {
+          // Fecha
+          data: 5,
+          className: "balances-date-cell text-left",
+          render: function (data, type, row, meta) {
+            var dateText = getCleanTextFromHTML(data).trim();
+
+            if (type === "display") {
+              return dateText || "—";
+            }
+
+            return dateText;
+          },
+        },
         {
           // Total
           data: 6,

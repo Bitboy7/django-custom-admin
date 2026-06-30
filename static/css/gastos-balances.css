@@ -459,6 +459,17 @@ table.dataTable thead th {
   color: #2f4550;
 }
 
+#gastos-table-container table#gastosTable.dataTable tbody td.balances-date-cell {
+  color: #2f4550 !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+#gastos-table-container table#gastosTable.dataTable tbody td.balances-date-cell.sorting_1 {
+  background-color: rgba(216, 220, 230, 0.42) !important;
+  box-shadow: none !important;
+}
+
 #gastos-table-container table#gastosTable.dataTable tbody tr:hover td {
   background: rgba(184, 219, 217, 0.12) !important;
 }
@@ -758,6 +769,12 @@ html[data-theme="dark"] .filter-select:focus {
 html[data-theme="dark"] #gastos-table-container table#gastosTable.dataTable tbody td {
   border-top-color: var(--border-default, #3d4a52);
   color: var(--text-primary, #f4f4f9);
+}
+html[data-theme="dark"] #gastos-table-container table#gastosTable.dataTable tbody td.balances-date-cell {
+  color: var(--text-primary, #f4f4f9) !important;
+}
+html[data-theme="dark"] #gastos-table-container table#gastosTable.dataTable tbody td.balances-date-cell.sorting_1 {
+  background-color: var(--surface-hover, #2f3840) !important;
 }
 html[data-theme="dark"] #gastos-table-container table#gastosTable.dataTable tbody tr:hover td {
   background: var(--surface-hover, #2f3840) !important;

@@ -241,13 +241,17 @@ class BalanceAnalysisService(BaseReportServiceWithCategories):
         except (ValueError, TypeError):
             year = datetime.now().year
         
+        periodo = str(request.GET.get('periodo', 'diario') or 'diario').strip().lower()
+        if periodo not in {'diario', 'semanal', 'mensual'}:
+            periodo = 'diario'
+
         # Extraer otros parámetros usando la funcionalidad base
         params = {
             'year': year,
             'month': request.GET.get('month', ''),
             'cuenta_id': request.GET.get('cuenta_id', ''),
             'sucursal_id': request.GET.get('sucursal_id', ''),
-            'periodo': request.GET.get('periodo', 'diario'),
+            'periodo': periodo,
             'dia': request.GET.get('dia', datetime.now().strftime('%Y-%m-%d')),
             'fecha_inicio': request.GET.get('fecha_inicio', ''),
             'fecha_fin': request.GET.get('fecha_fin', '')
