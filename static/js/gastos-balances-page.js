@@ -64,7 +64,7 @@
 
     var data = table.rows({ search: "applied" }).data();
     for (var i = 0; i < data.length; i++) {
-      var categoryHtml = data[i][1];
+      var categoryHtml = data[i][2];
       var tempDiv = document.createElement("div");
       tempDiv.innerHTML = categoryHtml;
       var categoria = (tempDiv.textContent || tempDiv.innerText || categoryHtml).trim();
@@ -106,7 +106,7 @@
     }
 
     Array.prototype.forEach.call(table.tBodies[0].rows, function (row) {
-      var categoryCell = row.cells[1];
+      var categoryCell = row.cells[2];
       var totalCell = row.cells[6];
 
       if (!categoryCell || !totalCell) {

@@ -105,12 +105,25 @@ function initBalancesDataTable() {
         },
       },
       columns: [
-        { data: 0 }, // #
-        { data: 1 }, // Categoría
-        { data: 2 }, // N° Cuenta
-        { data: 3 }, // Banco
-        { data: 4 }, // Sucursal
-        { data: 5 }, // Fecha
+        {
+          // Fecha
+          data: 0,
+          className: "balances-date-cell text-left",
+          render: function (data, type, row, meta) {
+            var dateText = getCleanTextFromHTML(data).trim();
+
+            if (type === "display") {
+              return dateText || "—";
+            }
+
+            return dateText;
+          },
+        },
+        { data: 1 }, // #
+        { data: 2 }, // Categoría
+        { data: 3 }, // N° Cuenta
+        { data: 4 }, // Banco
+        { data: 5 }, // Sucursal
         {
           // Total
           data: 6,
@@ -151,17 +164,7 @@ function initBalancesDataTable() {
           className: "text-right",
         },
         {
-          // Columna #0: Número secuencial - limpiar HTML
-          targets: [0],
-          render: function (data, type, row) {
-            if (type === "export" || type === "copy") {
-              return getCleanTextFromHTML(data);
-            }
-            return data;
-          },
-        },
-        {
-          // Columna #1: Categoría - limpiar HTML de spans y badges
+          // Columna #1: Número secuencial - limpiar HTML
           targets: [1],
           render: function (data, type, row) {
             if (type === "export" || type === "copy") {
@@ -171,8 +174,18 @@ function initBalancesDataTable() {
           },
         },
         {
-          // Columnas #2-4: Cuenta, Banco, Sucursal - limpiar HTML
-          targets: [2, 3, 4],
+          // Columna #2: Categoría - limpiar HTML de spans y badges
+          targets: [2],
+          render: function (data, type, row) {
+            if (type === "export" || type === "copy") {
+              return getCleanTextFromHTML(data);
+            }
+            return data;
+          },
+        },
+        {
+          // Columnas #3-5: Cuenta, Banco, Sucursal - limpiar HTML
+          targets: [3, 4, 5],
           render: function (data, type, row) {
             if (type === "export" || type === "copy") {
               return getCleanTextFromHTML(data);
@@ -187,7 +200,7 @@ function initBalancesDataTable() {
           className: "dt-button btn-copy",
           text: '<i class="fas fa-copy mr-1"></i> Copiar',
           exportOptions: {
-            columns: [5, 0, 1, 2, 3, 4, 6, 7],
+            columns: [0, 1, 2, 3, 4, 5, 6, 7],
             orthogonal: "export",
             footer: true,
           },
@@ -199,7 +212,7 @@ function initBalancesDataTable() {
           charset: "utf-8",
           bom: true,
           exportOptions: {
-            columns: [5, 0, 1, 2, 3, 4, 6, 7],
+            columns: [0, 1, 2, 3, 4, 5, 6, 7],
             orthogonal: "export",
             footer: true,
           },
@@ -215,7 +228,7 @@ function initBalancesDataTable() {
             return "gastos-detalle-" + getCurrentDateFormatted("filename");
           },
           exportOptions: {
-            columns: [5, 0, 1, 2, 3, 4, 6, 7],
+            columns: [0, 1, 2, 3, 4, 5, 6, 7],
             orthogonal: "export",
             footer: true,
           },
@@ -237,17 +250,17 @@ function initBalancesDataTable() {
               var rowData = data[i];
               var tempDiv = document.createElement("div");
 
-              tempDiv.innerHTML = rowData[5];
-              var fecha = (tempDiv.textContent || tempDiv.innerText || rowData[5]).trim();
+              tempDiv.innerHTML = rowData[0];
+              var fecha = (tempDiv.textContent || tempDiv.innerText || rowData[0]).trim();
 
-              tempDiv.innerHTML = rowData[4];
-              var sucursal = (tempDiv.textContent || tempDiv.innerText || rowData[4]).trim();
+              tempDiv.innerHTML = rowData[5];
+              var sucursal = (tempDiv.textContent || tempDiv.innerText || rowData[5]).trim();
+
+              tempDiv.innerHTML = rowData[3];
+              var cuenta = (tempDiv.textContent || tempDiv.innerText || rowData[3]).trim();
 
               tempDiv.innerHTML = rowData[2];
-              var cuenta = (tempDiv.textContent || tempDiv.innerText || rowData[2]).trim();
-
-              tempDiv.innerHTML = rowData[1];
-              var categoria = (tempDiv.textContent || tempDiv.innerText || rowData[1]).trim();
+              var categoria = (tempDiv.textContent || tempDiv.innerText || rowData[2]).trim();
 
               var totalCell = table.cell(i, 6).node();
               var cellText = (totalCell.textContent || totalCell.innerText || "").trim();
@@ -414,7 +427,7 @@ function initBalancesDataTable() {
             });
 
             if (doc.content[0].table) {
-              // Widths reordenados para export: Fecha, #, Categoria, Cuenta, Banco, Sucursal, Total, Acumulado
+              // Widths para export: Fecha, #, Categoria, Cuenta, Banco, Sucursal, Total, Acumulado
               doc.content[0].table.widths = [
                 "auto",
                 "auto",
@@ -453,7 +466,7 @@ function initBalancesDataTable() {
             }
           },
           exportOptions: {
-            columns: [5, 0, 1, 2, 3, 4, 6, 7],
+            columns: [0, 1, 2, 3, 4, 5, 6, 7],
             orthogonal: "export",
             footer: true,
           },
@@ -463,7 +476,7 @@ function initBalancesDataTable() {
           className: "dt-button btn-print",
           text: '<i class="fas fa-print mr-1"></i> Imprimir',
           exportOptions: {
-            columns: [5, 0, 1, 2, 3, 4, 6, 7],
+            columns: [0, 1, 2, 3, 4, 5, 6, 7],
             orthogonal: "export",
             footer: true,
           },
@@ -471,7 +484,7 @@ function initBalancesDataTable() {
       ],
       dom: '<"gastos-dt-toolbar"<"gastos-dt-actions"B><"gastos-dt-controls"lf>>rt<"gastos-dt-footer"ip>',
       responsive: true,
-      order: [[5, "asc"]], // Ordenar por Fecha ascendente
+      order: [[0, "asc"]], // Ordenar por Fecha ascendente
       paging: true,
       pageLength: 25,
       lengthMenu: [
