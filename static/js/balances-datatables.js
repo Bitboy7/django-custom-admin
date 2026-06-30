@@ -471,7 +471,7 @@ function initBalancesDataTable() {
       ],
       dom: '<"gastos-dt-toolbar"<"gastos-dt-actions"B><"gastos-dt-controls"lf>>rt<"gastos-dt-footer"ip>',
       responsive: true,
-      order: [[7, "asc"]], // Ordenar por Total Gastos (ahora columna 6) ascendente
+      order: [[5, "asc"]], // Ordenar por Fecha ascendente
       paging: true,
       pageLength: 25,
       lengthMenu: [
