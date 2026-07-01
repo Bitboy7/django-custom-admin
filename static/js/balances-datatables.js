@@ -241,31 +241,52 @@ function initBalancesDataTable() {
           className: "dt-button btn-summary-excel",
           action: function (e, dt, button, config) {
             var table = $("#gastosTable").DataTable();
-            var data = table.rows({ search: "applied" }).data();
             var totalFiltrado = 0;
+            var tempDiv = document.createElement("div");
+
+            function cleanCellValue(value) {
+              if (value == null) return "";
+              if (typeof value === "object") {
+                value = value.display || value._ || value.sort || value["@data-order"] || value["data-order"] || "";
+              }
+              tempDiv.innerHTML = String(value);
+              return (tempDiv.textContent || tempDiv.innerText || "").trim();
+            }
+
+            function getCellText(rowIndex, columnIndex) {
+              var cell = table.cell(rowIndex, columnIndex);
+              var node = cell.node();
+              if (node) {
+                return (node.textContent || node.innerText || "").trim();
+              }
+              return cleanCellValue(cell.render("display"));
+            }
+
+            function getCellNumber(rowIndex, columnIndex) {
+              var node = table.cell(rowIndex, columnIndex).node();
+              if (node && typeof getNumericValueFromNode === "function") {
+                var nodeValue = getNumericValueFromNode(node);
+                if (!isNaN(nodeValue)) return nodeValue;
+              }
+
+              var text = getCellText(rowIndex, columnIndex);
+              if (typeof parseNumericString === "function") {
+                var parsed = parseNumericString(text);
+                return isNaN(parsed) ? 0 : parsed;
+              }
+              var fallback = parseFloat(text.replace(/[$,\s]/g, ""));
+              return isNaN(fallback) ? 0 : fallback;
+            }
 
             // Extraer cada fila con: fecha, sucursal, cuenta, categoria, total
             var rows = [];
-            for (var i = 0; i < data.length; i++) {
-              var rowData = data[i];
-              var tempDiv = document.createElement("div");
-
-              tempDiv.innerHTML = rowData[0];
-              var fecha = (tempDiv.textContent || tempDiv.innerText || rowData[0]).trim();
-
-              tempDiv.innerHTML = rowData[5];
-              var sucursal = (tempDiv.textContent || tempDiv.innerText || rowData[5]).trim();
-
-              tempDiv.innerHTML = rowData[3];
-              var cuenta = (tempDiv.textContent || tempDiv.innerText || rowData[3]).trim();
-
-              tempDiv.innerHTML = rowData[2];
-              var categoria = (tempDiv.textContent || tempDiv.innerText || rowData[2]).trim();
-
-              var totalCell = table.cell(i, 6).node();
-              var cellText = (totalCell.textContent || totalCell.innerText || "").trim();
-              var totalValue = parseFloat(cellText.replace(/[$\s]/g, ""));
-              if (isNaN(totalValue)) totalValue = 0;
+            table.rows({ search: "applied" }).every(function () {
+              var rowIndex = this.index();
+              var fecha = getCellText(rowIndex, 0);
+              var sucursal = getCellText(rowIndex, 5);
+              var cuenta = getCellText(rowIndex, 3);
+              var categoria = getCellText(rowIndex, 2);
+              var totalValue = getCellNumber(rowIndex, 6);
 
               rows.push({
                 fecha: fecha,
@@ -275,7 +296,7 @@ function initBalancesDataTable() {
                 total: totalValue,
               });
               totalFiltrado += totalValue;
-            }
+            });
 
             // Ordenar: sucursal → cuenta → fecha descendente
             rows.sort(function (a, b) {
@@ -412,63 +433,14 @@ function initBalancesDataTable() {
           },
         },
         {
-          extend: "pdf",
           className: "dt-button btn-pdf",
           text: '<i class="fas fa-file-pdf mr-1"></i> PDF',
-          title: "",
-          customize: function (doc) {
-            var reportTitle = getReportTitle();
-
-            configurePdfDocument(doc, {
-              reportTitle: reportTitle,
-              systemName: "2026 - Agricola de la Costa San Luis S.P.R de R.L.",
-              orientation: "landscape",
-              pageMargins: [40, 80, 40, 60],
-            });
-
-            if (doc.content[0].table) {
-              // Widths para export: Fecha, #, Categoria, Cuenta, Banco, Sucursal, Total, Acumulado
-              doc.content[0].table.widths = [
-                "auto",
-                "auto",
-                "*",
-                "auto",
-                "auto",
-                "auto",
-                "auto",
-                "auto",
-              ];
-              doc.content[0].table.headerRows = 1;
-
-              doc.content[0].layout = {
-                fillColor: function (rowIndex, node, columnIndex) {
-                  if (rowIndex === 0) return "#34495e";
-                  // Footer row (data rows + 1 = footer index)
-                  var dataRows = doc.content[0].table.body.length - 2;
-                  if (rowIndex === dataRows + 1) return "#2f4550";
-                  return rowIndex % 2 === 0 ? "#ecf0f1" : null;
-                },
-                hLineWidth: function (i, node) {
-                  return i === 0 || i === 1 || i === node.table.body.length
-                    ? 1
-                    : 0.5;
-                },
-                vLineWidth: function () {
-                  return 0.5;
-                },
-                hLineColor: function () {
-                  return "#bdc3c7";
-                },
-                vLineColor: function () {
-                  return "#bdc3c7";
-                },
-              };
+          action: function () {
+            if (typeof window.exportBalancesPDF === "function") {
+              window.exportBalancesPDF();
+            } else {
+              console.error("exportBalancesPDF no esta disponible");
             }
-          },
-          exportOptions: {
-            columns: [0, 1, 2, 3, 4, 5, 6, 7],
-            orthogonal: "export",
-            footer: true,
           },
         },
         {

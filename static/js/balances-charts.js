@@ -90,7 +90,16 @@ function paletteHex(index) {
 function getFilterSummary() {
   var parts = [];
   var cuentaEl = document.getElementById("cuenta_id");
-  if (cuentaEl && cuentaEl.selectedIndex >= 0) {
+  var cuentaLabel = document
+    .querySelector("[data-bank-account-current]")
+    ?.textContent.replace(/\s+/g, " ")
+    .trim();
+  if (cuentaEl && cuentaLabel) {
+    parts.push({
+      label: "Cuenta",
+      value: cuentaLabel,
+    });
+  } else if (cuentaEl && cuentaEl.selectedIndex >= 0) {
     parts.push({
       label: "Cuenta",
       value: cuentaEl.options[cuentaEl.selectedIndex].text,
@@ -117,6 +126,14 @@ function getFilterSummary() {
       label: "Periodo",
       value: periodoEl.options[periodoEl.selectedIndex].text,
     });
+  }
+  var fechaInicioEl = document.getElementById("fecha_inicio");
+  var fechaFinEl = document.getElementById("fecha_fin");
+  var diaEl = document.getElementById("dia");
+  if (fechaInicioEl && fechaFinEl && fechaInicioEl.value && fechaFinEl.value) {
+    parts.push({ label: "Rango", value: fechaInicioEl.value + " a " + fechaFinEl.value });
+  } else if (diaEl && diaEl.value) {
+    parts.push({ label: "Dia", value: diaEl.value });
   }
   return parts;
 }
@@ -256,15 +273,162 @@ function buildCategoryRows(labels, data) {
   return rows;
 }
 
+function cleanPdfText(value) {
+  if (value == null) return "";
+  if (typeof value === "object") {
+    value = value.display || value._ || value.sort || value["@data-order"] || value["data-order"] || "";
+  }
+  if (typeof getCleanTextFromHTML === "function") {
+    return getCleanTextFromHTML(value).trim();
+  }
+  var temp = document.createElement("div");
+  temp.innerHTML = String(value || "");
+  return (temp.textContent || temp.innerText || String(value || "")).trim();
+}
+
+function parsePdfMoney(value) {
+  var text = cleanPdfText(value);
+  if (typeof parseNumericString === "function") {
+    var parsed = parseNumericString(text);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  return parseFloat(text.replace(/[$,\s]/g, "")) || 0;
+}
+
+function formatPdfMoney(value) {
+  return "$" + new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value || 0);
+}
+
+function getKpiText(selector) {
+  var element = document.querySelector(selector);
+  return element ? element.textContent.trim() : "";
+}
+
+function readBalancesRowsForPdf() {
+  var rows = [];
+
+  if (window.jQuery && jQuery.fn.DataTable && jQuery.fn.DataTable.isDataTable("#gastosTable")) {
+    var table = jQuery("#gastosTable").DataTable();
+
+    function getPdfCellText(rowIndex, columnIndex) {
+      var cell = table.cell(rowIndex, columnIndex);
+      var node = cell.node();
+      if (node) {
+        return (node.textContent || node.innerText || "").trim();
+      }
+      return cleanPdfText(cell.render("display"));
+    }
+
+    function getPdfCellNumber(rowIndex, columnIndex) {
+      var node = table.cell(rowIndex, columnIndex).node();
+      if (node && typeof getNumericValueFromNode === "function") {
+        var nodeValue = getNumericValueFromNode(node);
+        if (!isNaN(nodeValue)) return nodeValue;
+      }
+      return parsePdfMoney(getPdfCellText(rowIndex, columnIndex));
+    }
+
+    table.rows({ search: "applied" }).every(function () {
+      var rowIndex = this.index();
+      rows.push({
+        fecha: getPdfCellText(rowIndex, 0),
+        numero: getPdfCellText(rowIndex, 1),
+        categoria: getPdfCellText(rowIndex, 2),
+        cuenta: getPdfCellText(rowIndex, 3),
+        banco: getPdfCellText(rowIndex, 4),
+        sucursal: getPdfCellText(rowIndex, 5),
+        total: getPdfCellNumber(rowIndex, 6),
+        acumulado: getPdfCellNumber(rowIndex, 7),
+      });
+    });
+
+    return rows;
+  }
+
+  var tableElement = document.getElementById("gastosTable");
+  if (!tableElement || !tableElement.tBodies.length) return rows;
+
+  Array.prototype.forEach.call(tableElement.tBodies[0].rows, function (row) {
+    rows.push({
+      fecha: cleanPdfText(row.cells[0] ? row.cells[0].innerHTML : ""),
+      numero: cleanPdfText(row.cells[1] ? row.cells[1].innerHTML : ""),
+      categoria: cleanPdfText(row.cells[2] ? row.cells[2].innerHTML : ""),
+      cuenta: cleanPdfText(row.cells[3] ? row.cells[3].innerHTML : ""),
+      banco: cleanPdfText(row.cells[4] ? row.cells[4].innerHTML : ""),
+      sucursal: cleanPdfText(row.cells[5] ? row.cells[5].innerHTML : ""),
+      total: parsePdfMoney(row.cells[6] ? row.cells[6].innerHTML : ""),
+      acumulado: parsePdfMoney(row.cells[7] ? row.cells[7].innerHTML : ""),
+    });
+  });
+
+  return rows;
+}
+
+function aggregatePdfRows(rows, field) {
+  var map = {};
+  rows.forEach(function (row) {
+    var key = row[field] || "Sin especificar";
+    map[key] = (map[key] || 0) + (row.total || 0);
+  });
+  return Object.keys(map)
+    .map(function (key) {
+      return { label: key, value: map[key] };
+    })
+    .sort(function (a, b) {
+      return b.value - a.value;
+    });
+}
+
+function buildPdfSummaryTable(title, items, total, limit) {
+  var body = [[
+    { text: title, bold: true, color: "#f4f4f9", fillColor: "#2f4550", fontSize: 8 },
+    { text: "Total", bold: true, color: "#f4f4f9", fillColor: "#2f4550", fontSize: 8, alignment: "right" },
+    { text: "%", bold: true, color: "#f4f4f9", fillColor: "#2f4550", fontSize: 8, alignment: "right" },
+  ]];
+
+  items.slice(0, limit || 6).forEach(function (item, index) {
+    body.push([
+      { text: String(index + 1) + ". " + item.label, fontSize: 7, color: "#2f4550" },
+      { text: formatPdfMoney(item.value), fontSize: 7, bold: true, alignment: "right", color: "#2f4550" },
+      { text: total > 0 ? ((item.value / total) * 100).toFixed(1) + "%" : "0.0%", fontSize: 7, alignment: "right", color: "#586f7c" },
+    ]);
+  });
+
+  return body;
+}
+
+function buildPdfDetailRows(rows) {
+  var body = [[
+    { text: "Fecha", style: "tableHeader" },
+    { text: "Categoria", style: "tableHeader" },
+    { text: "Sucursal", style: "tableHeader" },
+    { text: "Cuenta", style: "tableHeader" },
+    { text: "Total", style: "tableHeader", alignment: "right" },
+  ]];
+
+  rows.slice(0, 22).forEach(function (row) {
+    body.push([
+      { text: row.fecha || "-", fontSize: 7, color: "#2f4550" },
+      { text: row.categoria || "-", fontSize: 7, color: "#2f4550" },
+      { text: row.sucursal || "-", fontSize: 7, color: "#2f4550" },
+      { text: row.cuenta || "-", fontSize: 7, color: "#2f4550" },
+      { text: formatPdfMoney(row.total), fontSize: 7, bold: true, alignment: "right", color: "#2f4550" },
+    ]);
+  });
+
+  return body;
+}
+
 /**
  * Genera un PDF con las estadísticas KPI, ambos gráficos y la tabla de categorías.
  * Requiere pdfMake cargado en la página.
  */
 function exportBalancesPDF() {
   if (typeof pdfMake === "undefined") {
-    alert(
-      "pdfMake no está disponible. Recarga la página e inténtalo de nuevo.",
-    );
+    alert("pdfMake no esta disponible. Recarga la pagina e intentalo de nuevo.");
     return;
   }
 
@@ -274,199 +438,149 @@ function exportBalancesPDF() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
   }
 
-  // ─ KPI rows
-  var kpiRows = [
-    [
-      {
-        text: "Métrica",
-        bold: true,
-        fillColor: "#2f4550",
-        color: "#fff",
-        fontSize: 8,
-      },
-      {
-        text: "Valor",
-        bold: true,
-        fillColor: "#2f4550",
-        color: "#fff",
-        fontSize: 8,
-      },
-    ],
-  ];
-  document.querySelectorAll(".kpi-card").forEach(function (card) {
-    var label = card.querySelector(".kpi-label")
-      ? card.querySelector(".kpi-label").innerText
-      : "";
-    var value = card.querySelector(".kpi-value")
-      ? card.querySelector(".kpi-value").innerText
-      : "";
-    var sub = card.querySelector(".kpi-sub")
-      ? card.querySelector(".kpi-sub").innerText
-      : "";
-    kpiRows.push([
-      { text: label, fontSize: 8 },
-      { text: value + (sub ? "  (" + sub + ")" : ""), bold: true, fontSize: 8 },
-    ]);
-  });
+  if (!gastosChart && typeof createGastosCategoriasChart === "function") {
+    createGastosCategoriasChart();
+  }
+  if (!distribucionChart && typeof createDistribucionGastosChart === "function") {
+    createDistribucionGastosChart();
+  }
 
-  // ─ Category table rows (swatch | # | Categoría | Total | %)
-  var catRows =
-    window.balancesCategoriasLabels && window.balancesCategoriasData
-      ? buildCategoryRows(
-          window.balancesCategoriasLabels,
-          window.balancesCategoriasData,
-        )
-      : [
-          [
-            { text: "", fillColor: "#2f4550", color: "#fff", fontSize: 7 },
-            {
-              text: "#",
-              bold: true,
-              fillColor: "#2f4550",
-              color: "#fff",
-              fontSize: 7,
-              alignment: "center",
-            },
-            {
-              text: "Categoría",
-              bold: true,
-              fillColor: "#2f4550",
-              color: "#fff",
-              fontSize: 7,
-            },
-            {
-              text: "Total",
-              bold: true,
-              fillColor: "#2f4550",
-              color: "#fff",
-              fontSize: 7,
-              alignment: "right",
-            },
-            {
-              text: "%",
-              bold: true,
-              fillColor: "#2f4550",
-              color: "#fff",
-              fontSize: 7,
-              alignment: "right",
-            },
-          ],
-        ];
-
-  // ─ Build content
   var now = new Date();
-  var dateStr = now.toLocaleDateString("es-MX", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  var rows = readBalancesRowsForPdf();
+  var totalGastos = rows.reduce(function (sum, row) { return sum + row.total; }, 0);
+  var totalKpi = parsePdfMoney(getKpiText("#kpi-total-gastos"));
+  if (totalKpi > 0) totalGastos = totalKpi;
 
-  // ─ Filtros aplicados
+  var categoryTotals = aggregatePdfRows(rows, "categoria");
+  var branchTotals = aggregatePdfRows(rows, "sucursal");
+  var accountTotals = aggregatePdfRows(rows, "cuenta");
+  var topCategory = categoryTotals[0] || { label: "Sin datos", value: 0 };
+  var topBranch = branchTotals[0] || { label: "Sin datos", value: 0 };
+  var concentration = totalGastos > 0 ? (topCategory.value / totalGastos) * 100 : 0;
+  var averageTicket = rows.length > 0 ? totalGastos / rows.length : 0;
+  var maxRow = rows.reduce(function (max, row) {
+    return row.total > (max.total || 0) ? row : max;
+  }, {});
+
+  var dateStr = now.toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" });
   var filterSummary = getFilterSummary();
-  var filterRows = filterSummary.map(function (f) {
-    return [
-      { text: f.label, fontSize: 8, color: "#586f7c", bold: true },
-      { text: f.value, fontSize: 8, color: "#111827" },
-    ];
-  });
+  var filterText = filterSummary.length
+    ? filterSummary.map(function (f) { return f.label + ": " + f.value; }).join("   |   ")
+    : "Sin filtros adicionales";
 
-  // ─ Portada / página 1: título + filtros + KPIs
-  var content = [
-    { text: "Reporte de Gastos", style: "header" },
-    {
-      text: "Generado el " + dateStr,
-      style: "subheader",
-      margin: [0, 2, 0, 12],
-    },
+  var kpiCards = [
+    { label: "Acumulado", value: formatPdfMoney(totalGastos), note: "Gasto total del periodo" },
+    { label: "Promedio", value: getKpiText("#kpi-promedio") || formatPdfMoney(averageTicket), note: "Promedio registrado" },
+    { label: "Transacciones", value: getKpiText("#kpi-transacciones") || String(rows.length), note: "Registros filtrados" },
+    { label: "Categoria lider", value: topCategory.label, note: formatPdfMoney(topCategory.value) },
+    { label: "Sucursal lider", value: topBranch.label, note: formatPdfMoney(topBranch.value) },
+    { label: "Concentracion", value: concentration.toFixed(1) + "%", note: "Peso de la categoria principal" },
   ];
 
-  if (filterRows.length > 0) {
-    content.push({ text: "Filtros aplicados", style: "sectionTitle" });
-    content.push({
-      table: { widths: [70, "*"], body: filterRows },
-      layout: "noBorders",
-      margin: [0, 2, 0, 14],
-    });
+  var kpiBody = [];
+  for (var i = 0; i < kpiCards.length; i += 3) {
+    kpiBody.push(kpiCards.slice(i, i + 3).map(function (card) {
+      return {
+        stack: [
+          { text: card.label.toUpperCase(), fontSize: 6.5, bold: true, color: "#586f7c", margin: [0, 0, 0, 3] },
+          { text: card.value || "-", fontSize: 13, bold: true, color: "#2f4550", margin: [0, 0, 0, 2] },
+          { text: card.note || "", fontSize: 7, color: "#586f7c" },
+        ],
+        fillColor: "#f8fafc",
+        margin: [8, 7, 8, 7],
+      };
+    }));
   }
 
-  content.push({ text: "Estadísticas generales", style: "sectionTitle" });
-  content.push({
-    table: { widths: ["*", "*"], body: kpiRows },
-    layout: "lightHorizontalLines",
-    margin: [0, 4, 0, 0],
-  });
-
-  // ─ Página 2: gráfico de barras
-  if (gastosChart) {
-    content.push({
-      text: "Gastos por Categoría",
-      style: "sectionTitle",
-      pageBreak: "before",
-    });
-    content.push({
-      image: gastosChart.toBase64Image(),
-      width: 490,
-      margin: [0, 8, 0, 0],
-    });
+  var insightBullets = [
+    "La categoria con mayor gasto es " + topCategory.label + " con " + formatPdfMoney(topCategory.value) + ".",
+    "La sucursal con mayor participacion es " + topBranch.label + " con " + formatPdfMoney(topBranch.value) + ".",
+    "El gasto promedio por registro es " + formatPdfMoney(averageTicket) + ".",
+  ];
+  if (maxRow.categoria) {
+    insightBullets.push("El registro individual mas alto corresponde a " + maxRow.categoria + " por " + formatPdfMoney(maxRow.total) + ".");
   }
 
-  // ─ Página 3: donut + tabla de categorías
-  if (distribucionChart) {
-    content.push({
-      text: "Distribución de Gastos",
-      style: "sectionTitle",
-      pageBreak: "before",
-    });
-    content.push({
-      image: distribucionChart.toBase64Image(),
-      width: 300,
-      alignment: "center",
-      margin: [0, 8, 0, 24],
-    });
-  } else if (catRows.length > 1) {
-    // si no hay donut, la tabla igual arranca en página nueva
-    content.push({ text: "", pageBreak: "before" });
-  }
-  if (catRows.length > 1) {
-    content.push({ text: "Detalle por Categoría", style: "sectionTitle" });
-    content.push({
-      table: { widths: [10, 16, "*", 70, 35], body: catRows },
-      layout: "lightHorizontalLines",
-      margin: [0, 4, 0, 8],
-    });
-  }
-
-  var filename = "reporte-gastos-" + now.toISOString().slice(0, 10) + ".pdf";
-
-  pdfMake
-    .createPdf({
-      pageSize: "LETTER",
-      pageMargins: [40, 50, 40, 50],
-      content: content,
-      styles: {
-        header: {
-          fontSize: 20,
-          bold: true,
-          color: "#2f4550",
-          margin: [0, 0, 0, 2],
-        },
-        subheader: { fontSize: 9, color: "#586f7c" },
-        sectionTitle: {
-          fontSize: 11,
-          bold: true,
-          color: "#2f4550",
-          margin: [0, 6, 0, 3],
-        },
+  var content = [
+    {
+      table: {
+        widths: ["*"],
+        body: [[{
+          stack: [
+            { text: "REPORTE EJECUTIVO DE GASTOS", fontSize: 18, bold: true, color: "#f4f4f9" },
+            { text: "Agricola de la Costa San Luis S.P.R de R.L.", fontSize: 9, color: "#b8dbd9", margin: [0, 3, 0, 0] },
+            { text: "Generado el " + dateStr, fontSize: 8, color: "#d8dce6", margin: [0, 8, 0, 0] },
+          ],
+          fillColor: "#2f4550",
+          border: [false, false, false, false],
+          margin: [18, 16, 18, 16],
+        }]],
       },
-      defaultStyle: { fontSize: 9 },
-    })
-    .download(filename, function () {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-file-pdf"></i> Exportar PDF';
-      }
-    });
+      layout: "noBorders",
+      margin: [0, 0, 0, 12],
+    },
+    { text: filterText, fontSize: 7.5, color: "#586f7c", margin: [0, 0, 0, 10] },
+    { table: { widths: ["*", "*", "*"], body: kpiBody }, layout: { hLineColor: function () { return "#d8dce6"; }, vLineColor: function () { return "#d8dce6"; } }, margin: [0, 0, 0, 12] },
+    { text: "Lectura ejecutiva", style: "sectionTitle" },
+    { ul: insightBullets.map(function (text) { return { text: text, fontSize: 8, margin: [0, 1, 0, 1] }; }), margin: [0, 0, 0, 10] },
+  ];
+
+  if (gastosChart || distribucionChart) {
+    var chartColumns = [];
+    if (gastosChart) {
+      chartColumns.push({ stack: [{ text: "Gastos por categoria", style: "miniTitle" }, { image: gastosChart.toBase64Image(), width: 430, margin: [0, 4, 10, 0] }] });
+    }
+    if (distribucionChart) {
+      chartColumns.push({ stack: [{ text: "Distribucion", style: "miniTitle", alignment: "center" }, { image: distribucionChart.toBase64Image(), width: 210, alignment: "center", margin: [0, 4, 0, 0] }] });
+    }
+    content.push({ columns: chartColumns, columnGap: 14, margin: [0, 2, 0, 12] });
+  }
+
+  content.push({ columns: [
+    { stack: [{ text: "Top categorias", style: "sectionTitle" }, { table: { widths: ["*", 70, 35], body: buildPdfSummaryTable("Categoria", categoryTotals, totalGastos, 7) }, layout: "lightHorizontalLines" }] },
+    { stack: [{ text: "Top sucursales", style: "sectionTitle" }, { table: { widths: ["*", 70, 35], body: buildPdfSummaryTable("Sucursal", branchTotals, totalGastos, 7) }, layout: "lightHorizontalLines" }] },
+  ], columnGap: 16, margin: [0, 0, 0, 10] });
+
+  if (accountTotals.length > 0) {
+    content.push({ text: "Cuentas con mayor salida", style: "sectionTitle" });
+    content.push({ table: { widths: ["*", 90, 45], body: buildPdfSummaryTable("Cuenta", accountTotals, totalGastos, 5) }, layout: "lightHorizontalLines", margin: [0, 0, 0, 10] });
+  }
+
+  if (rows.length > 0) {
+    content.push({ text: "Detalle operativo filtrado", style: "sectionTitle", pageBreak: "before" });
+    content.push({ text: "Se muestran los primeros 22 registros del resultado filtrado. Para detalle completo use Excel o CSV.", fontSize: 7, color: "#586f7c", margin: [0, 0, 0, 6] });
+    content.push({ table: { headerRows: 1, widths: [50, "*", 85, 80, 70], body: buildPdfDetailRows(rows) }, layout: "lightHorizontalLines" });
+  }
+
+  var filename = "reporte-ejecutivo-gastos-" + now.toISOString().slice(0, 10) + ".pdf";
+  pdfMake.createPdf({
+    pageSize: "LETTER",
+    pageOrientation: "landscape",
+    pageMargins: [34, 36, 34, 34],
+    content: content,
+    footer: function (currentPage, pageCount) {
+      return {
+        columns: [
+          { text: "Agricola de la Costa San Luis S.P.R de R.L.", color: "#8a9aa5", fontSize: 7, margin: [34, 0, 0, 0] },
+          { text: "Pagina " + currentPage + " de " + pageCount, color: "#8a9aa5", fontSize: 7, alignment: "right", margin: [0, 0, 34, 0] },
+        ],
+      };
+    },
+    styles: {
+      sectionTitle: { fontSize: 10, bold: true, color: "#2f4550", margin: [0, 4, 0, 5] },
+      miniTitle: { fontSize: 8, bold: true, color: "#2f4550", margin: [0, 0, 0, 3] },
+      tableHeader: { bold: true, color: "#f4f4f9", fillColor: "#2f4550", fontSize: 7 },
+    },
+    defaultStyle: { fontSize: 8, color: "#2f4550" },
+  }).download(filename, function () {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-file-pdf"></i> Exportar PDF';
+    }
+  });
 }
+
+window.exportBalancesPDF = exportBalancesPDF;
 
 function createGastosCategoriasChart() {
   // Verificar que el elemento canvas exista

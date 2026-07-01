@@ -32,6 +32,54 @@ class BancoGastoFilter(SimpleListFilter):
         return queryset
 
 
+class SucursalGastoFilter(SimpleListFilter):
+    title = 'Sucursal'
+    parameter_name = 'sucursal'
+
+    def lookups(self, request, model_admin):
+        return [
+            (str(sucursal.id), sucursal.nombre)
+            for sucursal in Sucursal.objects.order_by('nombre')
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(id_sucursal_id=self.value())
+        return queryset
+
+
+class CategoriaGastoFilter(SimpleListFilter):
+    title = 'Categoría'
+    parameter_name = 'categoria'
+
+    def lookups(self, request, model_admin):
+        return [
+            (str(categoria.id), categoria.nombre)
+            for categoria in CatGastos.objects.order_by('nombre')
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(id_cat_gastos_id=self.value())
+        return queryset
+
+
+class CuentaGastoFilter(SimpleListFilter):
+    title = 'Cuenta bancaria'
+    parameter_name = 'cuenta'
+
+    def lookups(self, request, model_admin):
+        return [
+            (str(cuenta.id), f'{cuenta.numero_cuenta} - {cuenta.id_banco.nombre}')
+            for cuenta in Cuenta.objects.select_related('id_banco').order_by('numero_cuenta')
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(id_cuenta_banco_id=self.value())
+        return queryset
+
+
 class MontoGastoFilter(SimpleListFilter):
     title = 'Rango de monto'
     parameter_name = 'rango_monto'
@@ -184,7 +232,8 @@ class GastosResource(resources.ModelResource):
     
     class Meta:
         model = Gastos
-        fields = ('id', 'sucursal', 'categoria', 'cuenta', 'monto', 'descripcion', 'fecha')
+        fields = ('id', 'sucursal', 'categoria', 'cuenta', 'monto', 'descripcion', 'fecha', 'fecha_registro')
+        export_order = ('id', 'sucursal', 'categoria', 'cuenta', 'monto', 'descripcion', 'fecha', 'fecha_registro')
         import_id_fields = ('id',)
 
     def dehydrate_categoria(self, gasto):
@@ -204,10 +253,15 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
     list_display = ('id', 'id_sucursal', 'id_cat_gastos',
                     'id_cuenta_banco', 'monto', 'descripcion', 'fecha', 'fecha_registro')
     search_fields = ('descripcion', 'id_sucursal__nombre', 'id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta', 'id_cuenta_banco__id_banco__nombre')
-    list_filter = (BancoGastoFilter, 'id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', MontoGastoFilter, PeriodoGastoFilter, 'fecha', 'fecha_registro')
+    list_filter = (BancoGastoFilter, SucursalGastoFilter, CategoriaGastoFilter, CuentaGastoFilter, MontoGastoFilter, PeriodoGastoFilter, 'fecha_registro')
     date_hierarchy = 'fecha'
+    ordering = ('fecha', 'fecha_registro', 'id')
     list_select_related = ('id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', 'id_cuenta_banco__id_banco')
     list_per_page = 20
+    class Media:
+        css = {
+            'all': ('css/admin/gastos_changelist.css',)
+        }
     fieldsets = (
         ('Datos del Registro', {
             'fields': ('id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', 'monto', 'descripcion', 'fecha')
@@ -262,9 +316,16 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
             )
             ws.add_table(tab)
 
+        def _fecha_registro_excel(gasto):
+            if not gasto.fecha_registro:
+                return None
+            if timezone.is_aware(gasto.fecha_registro):
+                return timezone.localtime(gasto.fecha_registro).replace(tzinfo=None)
+            return gasto.fecha_registro
+
         queryset = queryset.select_related(
             'id_sucursal', 'id_cat_gastos', 'id_cuenta_banco'
-        ).order_by('fecha')
+        ).order_by('fecha', 'fecha_registro', 'id')
         data = list(queryset)
 
         wb = openpyxl.Workbook()
@@ -275,6 +336,7 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
 
         COLUMNS = [
             ("Fecha",        lambda g: g.fecha,                          14,  "DD/MM/YYYY"),
+            ("Fecha registro", lambda g: _fecha_registro_excel(g),        20,  "DD/MM/YYYY HH:MM"),
             ("Sucursal",     lambda g: g.id_sucursal.nombre,             22,  "@"),
             ("Categoría",    lambda g: g.id_cat_gastos.nombre,           22,  "@"),
             ("Cuenta",       lambda g: g.id_cuenta_banco.numero_cuenta,  22,  "@"),
@@ -310,7 +372,7 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
 
         # Fila TOTAL fuera de la tabla
         total_r = last_data + 1
-        mc = 5
+        mc = 6
         lbl = ws.cell(row=total_r, column=mc - 1, value="TOTAL")
         lbl.font = Font(bold=True)
         lbl.alignment = Alignment(horizontal="right")
