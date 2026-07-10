@@ -7,56 +7,13 @@
   <title>{% trans "Iniciar sesión" %} — Agrícola de la Costa San Luis</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
   <link rel="stylesheet" href="{% static 'css/login.css' %}">
 </head>
 <body class="auth-login-page">
-
-  <!-- LEFT: Brand panel -->
-  <div class="l-brand">
-    <div class="deco-grid" aria-hidden="true"></div>
-    <div class="deco-orb deco-orb-1" aria-hidden="true"></div>
-    <div class="deco-orb deco-orb-2" aria-hidden="true"></div>
-    <div class="deco-orb deco-orb-3" aria-hidden="true"></div>
-
-    <div class="brand-body">
-      <div class="brand-app-lockup">
-        <div class="brand-app-logo">
-          <img src="{% static 'img/logo.svg' %}" alt="Agrícola de la Costa">
-        </div>
-        <div class="brand-app-copy">
-          <span>{% trans "Sistema Administrativo" %}</span>
-          <h1>Costa ERP</h1>
-        </div>
-      </div>
-      <div class="brand-sub">
-        {% trans "Plataforma centralizada para gestión financiera, control de gastos, ventas y registro de clientes." %}
-      </div>
-
-      <div class="brand-features">
-        <div class="brand-feature">
-          <div class="brand-feature-icon"><i class="fas fa-chart-line"></i></div>
-          {% trans "Balances y análisis en tiempo real" %}
-        </div>
-        <div class="brand-feature">
-          <div class="brand-feature-icon"><i class="fas fa-file-invoice-dollar"></i></div>
-          {% trans "Reconocimiento inteligente de facturas con IA" %}
-        </div>
-        <div class="brand-feature">
-          <div class="brand-feature-icon"><i class="fas fa-file-code"></i></div>
-          {% trans "Carga y lectura de XML / CFDI" %}
-        </div>
-      </div>
-    </div>
-
-    <div class="brand-footer">
-      &copy; {% now "Y" %} Agrícola de la Costa San Luis
-    </div>
-  </div>
-
-  <!-- RIGHT: Form panel -->
+  <!-- Single access surface -->
   <div class="l-form">
     <div class="mobile-brand" aria-label="Agrícola de la Costa San Luis">
       <div class="brand-logo-icon brand-logo-icon--image"><img src="{% static 'img/logo.svg' %}" alt="Agrícola de la Costa"></div>
