@@ -246,11 +246,8 @@ class GastosResource(resources.ModelResource):
         return gasto.id_cuenta_banco.numero_cuenta
 
 @admin.register(Gastos)
-class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
+class GastosAdmin(ModelAdmin):
     change_list_template = 'admin/gastos/gastos/change_list.html'
-    resource_class = GastosResource
-    import_form_class = ImportForm
-    export_form_class = ExportForm
     list_display = ('id', 'id_sucursal', 'id_cat_gastos',
                     'id_cuenta_banco', 'monto', 'descripcion', 'fecha', 'fecha_registro')
     search_fields = ('descripcion', 'id_sucursal__nombre', 'id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta', 'id_cuenta_banco__id_banco__nombre')
@@ -566,12 +563,23 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
         urls = super().get_urls()
         custom_urls = [
             path(
+                'exportar-excel/',
+                self.admin_site.admin_view(self.exportar_excel_admin_view),
+                name='gastos_gastos_export_excel',
+            ),
+            path(
                 'balances/',
                 self.admin_site.admin_view(self.balances_admin_view),
                 name='gastos_gastos_balances',
             ),
         ]
         return custom_urls + urls
+
+    def exportar_excel_admin_view(self, request):
+        if not self.has_view_permission(request):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return self.export_to_excel(request, self.get_queryset(request))
 
     def balances_admin_view(self, request):
         from app.services.balance_service import BalanceAnalysisService

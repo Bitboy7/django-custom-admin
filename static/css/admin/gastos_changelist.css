@@ -243,3 +243,58 @@ html[data-theme="dark"] body.app-gastos.model-gastos.change-list #toolbar input[
   border-color: var(--border-default, #3d4a52) !important;
   color: var(--text-primary, #f4f4f9) !important;
 }
+
+/* Acciones principales de Gastos: captura OCR y exportación. */
+body.app-gastos.model-gastos.change-list .object-tools {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-quick-action {
+  align-items: center;
+  border: 1px solid #d8dce6;
+  border-radius: 10px;
+  color: #2f4550 !important;
+  display: inline-flex;
+  font-size: 0.82rem;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 15px;
+  text-decoration: none !important;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-quick-action:hover {
+  box-shadow: 0 8px 18px rgba(15, 31, 53, .12);
+  transform: translateY(-1px);
+}
+
+body.app-gastos.model-gastos.change-list .gastos-quick-action--ocr {
+  background: #18b7a7;
+  border-color: #18b7a7;
+  color: #fff !important;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-quick-action--ocr:hover {
+  background: #109b8d;
+  border-color: #109b8d;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-quick-action--export {
+  background: #fff;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-quick-action--export:hover {
+  background: #f4f7fa;
+  border-color: #b9c6d3;
+}
+
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list .gastos-quick-action--export {
+  background: var(--surface-card, #242b32);
+  border-color: var(--border-default, #3d4a52);
+  color: var(--text-primary, #f4f4f9) !important;
+}
