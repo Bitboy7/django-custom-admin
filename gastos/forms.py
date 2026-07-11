@@ -1,4 +1,6 @@
 from django import forms
+from django.conf import settings
+from PIL import Image, UnidentifiedImageError
 from .models import Gastos, CatGastos, SaldoMensual, Compra, Cuenta
 from catalogo.models import Productor, Sucursal
 
@@ -236,8 +238,8 @@ class FacturaUploadForm(forms.Form):
             'class': 'form-check-input'
         })
     )
-    
-    def __init__(self, *args, **kwargs):
+
+def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
         # Establecer las opciones de modelo de IA dinámicamente desde variables de entorno
@@ -252,3 +254,20 @@ class FacturaUploadForm(forms.Form):
             else:
                 # Si no está agrupado, tomar el primer modelo
                 self.fields['modelo_ia'].initial = modelo_choices[0][0]
+
+
+class ComprobanteUploadForm(forms.Form):
+    comprobante = forms.FileField(label='Foto del comprobante', widget=forms.ClearableFileInput(attrs={'accept': 'image/jpeg,image/png,image/webp', 'capture': 'environment'}))
+    def clean_comprobante(self):
+        upload = self.cleaned_data['comprobante']
+        if upload.size > getattr(settings, 'COMPROBANTE_MAX_UPLOAD_BYTES', 10 * 1024 * 1024):
+            raise forms.ValidationError('El comprobante no puede superar 10 MB.')
+        if upload.content_type not in {'image/jpeg', 'image/png', 'image/webp'}:
+            raise forms.ValidationError('Solo se permiten im?genes JPG, PNG o WEBP.')
+        try:
+            image = Image.open(upload); image.verify()
+        except (UnidentifiedImageError, OSError, ValueError) as exc:
+            raise forms.ValidationError('El archivo no es una imagen v?lida.') from exc
+        finally:
+            upload.seek(0)
+        return upload

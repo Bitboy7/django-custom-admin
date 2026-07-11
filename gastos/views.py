@@ -1,8 +1,6 @@
 import json
 import logging
 import os
-from datetime import date, datetime, timedelta
-
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Avg, Count, Max, Min
@@ -245,3 +243,72 @@ def guardar_gastos_estado_cuenta(request):
 
     return redirect('gastos:ingresar_gasto_factura')
 
+
+
+from django.db import transaction
+from django.http import FileResponse, Http404
+from .forms import ComprobanteUploadForm
+from .models import ComprobanteGasto
+from .services.receipt_service import create_receipt
+
+
+def _comprobante_para_usuario(request, pk):
+    comprobante = get_object_or_404(ComprobanteGasto, pk=pk)
+    if not request.user.is_staff and comprobante.creado_por_id != request.user.id:
+        raise Http404('Comprobante no encontrado.')
+    return comprobante
+
+
+@login_required
+def capturar_comprobante(request):
+    if request.method == 'POST':
+        form = ComprobanteUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            comprobante = create_receipt(form.cleaned_data['comprobante'], request.user)
+            return redirect('gastos:revisar_comprobante', pk=comprobante.pk)
+    else:
+        form = ComprobanteUploadForm()
+    return render(request, 'gastos/capturar_comprobante.html', {'form': form})
+
+
+@login_required
+def revisar_comprobante(request, pk):
+    comprobante = _comprobante_para_usuario(request, pk)
+    if request.method == 'POST':
+        with transaction.atomic():
+            comprobante = ComprobanteGasto.objects.select_for_update().get(pk=comprobante.pk)
+            if comprobante.estado != ComprobanteGasto.Estado.REVISION:
+                raise Http404('El comprobante a?n no est? listo para revisi?n.')
+            form = GastoForm(request.POST)
+            if form.is_valid():
+                gasto = form.save()
+                comprobante.gasto = gasto
+                comprobante.estado = ComprobanteGasto.Estado.REGISTRADO
+                comprobante.save(update_fields=['gasto', 'estado'])
+                return redirect('gastos:revisar_comprobante', pk=comprobante.pk)
+    else:
+        extracted = comprobante.datos_extraidos or {}
+        form = GastoForm(initial={'monto': extracted.get('total'), 'fecha': extracted.get('fecha'), 'descripcion': extracted.get('descripcion')})
+    return render(request, 'gastos/revisar_comprobante.html', {'comprobante': comprobante, 'gasto_form': form})
+
+
+@login_required
+def estado_comprobante(request, pk):
+    comprobante = _comprobante_para_usuario(request, pk)
+    return JsonResponse({'estado': comprobante.estado, 'detalle_url': reverse('gastos:revisar_comprobante', kwargs={'pk': comprobante.pk})})
+
+
+@login_required
+@require_POST
+def reintentar_comprobante(request, pk):
+    comprobante = _comprobante_para_usuario(request, pk)
+    if comprobante.estado == ComprobanteGasto.Estado.ERROR:
+        comprobante.estado, comprobante.error_procesamiento = ComprobanteGasto.Estado.PENDIENTE, ''
+        comprobante.save(update_fields=['estado', 'error_procesamiento'])
+    return redirect('gastos:revisar_comprobante', pk=comprobante.pk)
+
+
+@login_required
+def archivo_comprobante(request, pk):
+    comprobante = _comprobante_para_usuario(request, pk)
+    return FileResponse(comprobante.archivo.open('rb'), content_type=comprobante.content_type, filename=comprobante.nombre_original)
