@@ -1,0 +1,16 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto py-8">
+ <div class="flex justify-between items-center mb-5"><div><h1 class="text-2xl font-bold">Comprobante #{{ comprobante.pk }}</h1><p class="text-slate-600">{{ comprobante.nombre_original }}</p></div><a class="text-emerald-700" href="{% url 'gastos:capturar_comprobante' %}">Capturar otro</a></div>
+ {% if comprobante.estado == 'pending' or comprobante.estado == 'processing' %}
+ <section class="bg-blue-50 border border-blue-200 rounded-xl p-6" id="processing"><h2 class="font-semibold text-blue-900">Procesando comprobante?</h2><p class="mt-1 text-blue-800">Puedes dejar esta pantalla abierta; se actualizar? autom?ticamente.</p></section>
+ <script>setInterval(async()=>{const r=await fetch('{% url "gastos:estado_comprobante" comprobante.pk %}');const d=await r.json();if(!['pending','processing'].includes(d.estado))location.href=d.detalle_url},3000)</script>
+ {% elif comprobante.estado == 'error' %}
+ <section class="bg-red-50 border border-red-200 rounded-xl p-6"><h2 class="font-semibold text-red-900">No fue posible leer el comprobante</h2><p class="mt-2 text-red-800">{{ comprobante.error_procesamiento }}</p><form method="post" action="{% url 'gastos:reintentar_comprobante' comprobante.pk %}" class="mt-4">{% csrf_token %}<button class="px-4 py-2 bg-red-700 text-white rounded-lg">Reintentar</button></form></section>
+ {% elif comprobante.estado == 'recorded' %}
+ <section class="bg-emerald-50 border border-emerald-200 rounded-xl p-6"><h2 class="font-semibold text-emerald-900">Gasto registrado correctamente</h2><p class="mt-1">El comprobante qued? vinculado al gasto #{{ comprobante.gasto_id }}.</p></section>
+ {% else %}
+ <div class="grid md:grid-cols-3 gap-6"><aside class="bg-white border rounded-xl p-5"><h2 class="font-semibold">Resultado OCR</h2><dl class="mt-3 text-sm space-y-2"><dt class="text-slate-500">Proveedor</dt><dd>{{ comprobante.datos_extraidos.proveedor|default:'No detectado' }}</dd><dt class="text-slate-500">RFC</dt><dd>{{ comprobante.datos_extraidos.rfc|default:'No detectado' }}</dd><dt class="text-slate-500">Confianza</dt><dd>{{ comprobante.confianza|default:'0' }}%</dd></dl><a class="mt-5 inline-block text-emerald-700" href="{% url 'gastos:archivo_comprobante' comprobante.pk %}" target="_blank">Ver original</a></aside><section class="md:col-span-2 bg-white border rounded-xl p-6"><h2 class="font-semibold text-lg">Confirma el gasto</h2><p class="text-sm text-slate-600 mb-5">Revisa los datos antes de guardar.</p><form method="post" class="space-y-4">{% csrf_token %}{% for field in gasto_form %}<div><label class="block font-medium text-sm mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.errors %}<p class="text-red-700 text-sm">{{ field.errors.0 }}</p>{% endif %}</div>{% endfor %}<button class="px-5 py-2 bg-emerald-700 text-white rounded-lg font-semibold">Registrar gasto</button></form></section></div>
+ {% endif %}
+</div>
+{% endblock %}

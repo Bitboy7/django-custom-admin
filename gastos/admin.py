@@ -200,6 +200,7 @@ class GastosResource(resources.ModelResource):
 
 @admin.register(Gastos)
 class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
+    change_list_template = 'admin/gastos/gastos/change_list.html'
     resource_class = GastosResource
     import_form_class = ImportForm
     export_form_class = ExportForm

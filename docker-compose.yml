@@ -100,6 +100,34 @@
     networks:
       - app-network
 
+
+  ocr:
+    build:
+      context: .
+      dockerfile: Dockerfile.ocr
+    restart: unless-stopped
+    command: python manage.py process_receipt_ocr --loop --sleep 2
+    volumes:
+      - media_volume:/app/media
+      - logs_volume:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379/1"
+      DB_HOST: db
+      DB_PORT: "3306"
+      OCR_WORKER: "true"
+    mem_limit: 2g
+    cpus: "1.0"
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - app-network
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped
