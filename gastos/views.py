@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from django.conf import settings
+import threading
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Avg, Count, Max, Min
 from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
@@ -249,7 +250,7 @@ from django.db import transaction
 from django.http import FileResponse, Http404
 from .forms import ComprobanteUploadForm
 from .models import ComprobanteGasto
-from .services.receipt_service import create_receipt
+from .services.receipt_service import create_receipt, process_next_receipt
 
 
 def _comprobante_para_usuario(request, pk):
@@ -265,6 +266,10 @@ def capturar_comprobante(request):
         form = ComprobanteUploadForm(request.POST, request.FILES)
         if form.is_valid():
             comprobante = create_receipt(form.cleaned_data['comprobante'], request.user)
+            # Docker runs a dedicated worker. Local DEBUG starts a daemon worker so
+            # runserver remains usable without a second terminal.
+            if settings.DEBUG:
+                threading.Thread(target=process_next_receipt, daemon=True, name='receipt-ocr').start()
             return redirect('gastos:revisar_comprobante', pk=comprobante.pk)
     else:
         form = ComprobanteUploadForm()

@@ -8,7 +8,7 @@ from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from import_export.admin import ImportExportModelAdmin
 from import_export.forms import ExportForm, ImportForm
-from .models import CatGastos, Banco, Cuenta, Gastos, Compra, SaldoMensual
+from .models import CatGastos, Banco, Cuenta, Gastos, Compra, SaldoMensual, ComprobanteGasto
 from django.utils.html import format_html
 from django.utils import timezone
 from catalogo.models import Sucursal, Productor, Producto
@@ -734,5 +734,80 @@ class SaldoMensualAdmin(ImportExportModelAdmin, ModelAdmin):
         ('Datos del Registro', {
             'fields': ('cuenta', 'año', 'mes', 'saldo_inicial', 'saldo_final')
         }),
-    )     
-     
+    )
+@admin.register(ComprobanteGasto)
+class ComprobanteGastoAdmin(ModelAdmin):
+    """Consulta y auditoria de comprobantes cargados por el flujo OCR."""
+
+    list_display = (
+        'id', 'vista_previa', 'nombre_original', 'estado_visual', 'confianza',
+        'gasto', 'creado_por', 'creado_en',
+    )
+    list_filter = ('estado', 'content_type', 'creado_en')
+    search_fields = ('id', 'nombre_original', 'sha256', 'texto_ocr', 'creado_por__username')
+    list_select_related = ('gasto', 'creado_por')
+    readonly_fields = (
+        'storage_key', 'archivo_enlace', 'vista_previa_grande', 'nombre_original',
+        'content_type', 'tamano_bytes', 'sha256', 'estado', 'datos_extraidos',
+        'texto_ocr', 'confianza', 'error_procesamiento', 'creado_por', 'gasto',
+        'creado_en', 'procesado_en',
+    )
+    ordering = ('-creado_en',)
+    list_per_page = 25
+    date_hierarchy = 'creado_en'
+    fieldsets = (
+        ('Archivo', {'fields': ('vista_previa_grande', 'archivo_enlace', 'nombre_original', 'content_type', 'tamano_bytes', 'sha256')}),
+        ('Procesamiento OCR', {'fields': ('estado', 'confianza', 'datos_extraidos', 'texto_ocr', 'error_procesamiento')}),
+        ('Relacion', {'fields': ('gasto', 'creado_por')}),
+        ('Metadatos', {'fields': ('storage_key', 'creado_en', 'procesado_en')}),
+    )
+
+    @admin.display(description='Archivo')
+    def vista_previa(self, obj):
+        if not obj.archivo:
+            return '-'
+        try:
+            url = obj.archivo.url
+        except (ValueError, OSError):
+            return '-'
+        if obj.content_type.startswith('image/'):
+            return format_html(
+                '<a href="{}" target="_blank" title="Abrir imagen"><img src="{}" alt="" style="width:64px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #cbd5d1" /></a>',
+                url, url,
+            )
+        return format_html('<a href="{}" target="_blank">Abrir archivo</a>', url)
+
+    @admin.display(description='Estado', ordering='estado')
+    def estado_visual(self, obj):
+        colors = {
+            ComprobanteGasto.Estado.PENDIENTE: '#8a6d1d',
+            ComprobanteGasto.Estado.PROCESANDO: '#1d6fa5',
+            ComprobanteGasto.Estado.REVISION: '#16834f',
+            ComprobanteGasto.Estado.ERROR: '#b83232',
+            ComprobanteGasto.Estado.REGISTRADO: '#246b48',
+        }
+        return format_html('<strong style="color:{}">{}</strong>', colors.get(obj.estado, '#374151'), obj.get_estado_display())
+
+    @admin.display(description='Archivo vinculado')
+    def archivo_enlace(self, obj):
+        if not obj.archivo:
+            return '-'
+        try:
+            return format_html('<a href="{}" target="_blank">{} <span aria-hidden="true">↗</span></a>', obj.archivo.url, obj.nombre_original)
+        except (ValueError, OSError):
+            return 'Archivo no disponible'
+
+    @admin.display(description='Vista previa')
+    def vista_previa_grande(self, obj):
+        if not obj.archivo or not obj.content_type.startswith('image/'):
+            return 'La vista previa esta disponible para imagenes.'
+        try:
+            return format_html('<a href="{}" target="_blank"><img src="{}" alt="{}" style="max-width:560px;max-height:420px;border-radius:8px;border:1px solid #d1d5db" /></a>', obj.archivo.url, obj.archivo.url, obj.nombre_original)
+        except (ValueError, OSError):
+            return 'Imagen no disponible'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.has_perm('gastos.view_comprobantegasto')

@@ -88,6 +88,14 @@ class CompraForm(forms.ModelForm):
     
 
 class GastoForm(forms.ModelForm):
+    # El modelo asigna MXN por defecto; el formulario recibe solo el importe.
+    monto = forms.DecimalField(
+        label='Monto', max_digits=14, decimal_places=2, min_value=0,
+        widget=forms.NumberInput(attrs={
+            'class': 'w-full px-3 py-2 border border-[#d8dce6] rounded-lg shadow-sm focus:ring-2 focus:ring-[#b8dbd9] focus:border-[#b8dbd9] transition-colors duration-200',
+            'step': '0.01', 'placeholder': 'Ingrese el monto'
+        })
+    )
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Configurar opciones para los campos select

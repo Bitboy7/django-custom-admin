@@ -80,6 +80,9 @@ except Exception as e:
     print(f'Error al crear directorios: {e}')
 " || echo "Error al crear directorios de media"
 
+echo "Configuración Workers"
+python manage.py process_receipt_ocr --loop --sleep 2
+
 echo "Configuración completada"
 echo "Iniciando servidor..."
 

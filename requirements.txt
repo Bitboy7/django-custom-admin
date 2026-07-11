@@ -39,3 +39,6 @@ qrcode[pil]==8.2
 django-formtools==2.5.1
 # Predicciones y forecasting
 scikit-learn>=1.5.0
+# Pinned CPU combination: avoids the Paddle oneDNN/PIR crash on Python 3.12.
+paddlepaddle==3.2.2
+paddleocr==3.4.1
