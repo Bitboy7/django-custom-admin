@@ -1,8 +1,6 @@
 from django.urls import path
-
 from django.conf.urls.static import static
 from django.conf import settings
-
 from .views import (archivo_comprobante, capturar_comprobante, estado_comprobante, guardar_gasto_factura, guardar_gastos_estado_cuenta, ingresar_gasto_factura, reintentar_comprobante, revisar_comprobante)
 
 app_name = 'gastos'
