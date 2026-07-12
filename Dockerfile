@@ -28,6 +28,8 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     curl \
     gettext \
+    libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Crear usuario no privilegiado

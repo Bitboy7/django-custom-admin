@@ -80,17 +80,49 @@ except Exception as e:
     print(f'Error al crear directorios: {e}')
 " || echo "Error al crear directorios de media"
 
-echo "Configuración Workers"
-python manage.py process_receipt_ocr --loop --sleep 2
-
 echo "Configuración completada"
+
+# El OCR se ejecuta en el mismo contenedor por defecto, por lo que la imagen se
+# puede desplegar sin Docker Compose. En Compose se puede desactivar en `web`
+# cuando se use un contenedor OCR dedicado.
+OCR_WORKER_ENABLED=${OCR_WORKER:-true}
+OCR_WORKER_SLEEP=${OCR_WORKER_SLEEP:-2}
+OCR_WORKER_PID=""
+
+case "${OCR_WORKER_ENABLED,,}" in
+    1|true|yes|on)
+        echo "Iniciando worker OCR (intervalo: ${OCR_WORKER_SLEEP}s)..."
+        python manage.py process_receipt_ocr --loop --sleep "$OCR_WORKER_SLEEP" &
+        OCR_WORKER_PID=$!
+        ;;
+    *)
+        echo "Worker OCR desactivado (OCR_WORKER=${OCR_WORKER_ENABLED})."
+        ;;
+esac
+
+stop_children() {
+    trap - TERM INT
+    echo "Deteniendo procesos hijos..."
+    if [ -n "$OCR_WORKER_PID" ]; then
+        kill -TERM "$OCR_WORKER_PID" 2>/dev/null || true
+    fi
+    if [ -n "${GUNICORN_PID:-}" ]; then
+        kill -TERM "$GUNICORN_PID" 2>/dev/null || true
+    fi
+    wait 2>/dev/null || true
+    exit 0
+}
+
+trap stop_children TERM INT
+
 echo "Iniciando servidor..."
 
 # Obtener el puerto de Railway o usar 8000 por defecto
 PORT=${PORT:-8000}
 
-# Ejecutar Gunicorn con configuración optimizada para Railway
-exec gunicorn app.wsgi:application \
+# Ejecutar Gunicorn y mantener el entrypoint como PID 1 para reenviar señales
+# tanto al servidor como al worker OCR.
+gunicorn app.wsgi:application \
     --bind 0.0.0.0:$PORT \
     --workers 2 \
     --timeout 120 \
@@ -99,4 +131,18 @@ exec gunicorn app.wsgi:application \
     --max-requests-jitter 100 \
     --access-logfile - \
     --error-logfile - \
-    --log-level info
+    --log-level info &
+GUNICORN_PID=$!
+
+if wait "$GUNICORN_PID"; then
+    GUNICORN_STATUS=0
+else
+    GUNICORN_STATUS=$?
+fi
+
+if [ -n "$OCR_WORKER_PID" ]; then
+    kill -TERM "$OCR_WORKER_PID" 2>/dev/null || true
+    wait "$OCR_WORKER_PID" 2>/dev/null || true
+fi
+
+exit "$GUNICORN_STATUS"
