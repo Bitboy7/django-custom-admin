@@ -22,11 +22,15 @@
 <link rel="stylesheet" href="{% static 'css/datatables-buttons.css' %}">
 <link rel="stylesheet" href="{% static 'css/bank-account-select.css' %}">
 <link rel="stylesheet" href="{% static 'css/ventas-balances.css' %}">
+<link rel="stylesheet" href="{% static 'vendor/driverjs/driver.css' %}">
+<link rel="stylesheet" href="{% static 'css/balance-tours.css' %}">
 {% endblock %}
 
 {% block content %}
 <div id="ventas-balances-page"
      class="text-[#2f4550]"
+     data-balance-tour="ventas"
+     data-manual-url="{% url 'user_manual' %}#balances-y-reportes"
      data-ventas-modalidad="{{ ventas_por_modalidad|escape }}"
      data-ventas-estados="{{ ventas_por_estado|escape }}"
      data-ventas-clientes="{{ ventas_por_cliente|escape }}">
@@ -47,6 +51,18 @@
     </div>
   </div>
 
+  <div class="balance-help-actions" data-tour="help">
+    <button type="button" class="balance-tour-help" data-balance-tour-start
+            aria-label="{% trans 'Iniciar guía interactiva del balance de ventas' %}">
+      <i class="fas fa-route" aria-hidden="true"></i>
+      {% trans "¿Cómo usar esta pantalla?" %}
+    </button>
+    <a class="balance-manual-link" href="{% url 'user_manual' %}#balances-y-reportes">
+      <i class="fas fa-book-open" aria-hidden="true"></i>
+      {% trans "Abrir manual" %}
+    </a>
+  </div>
+
   {# ── Aviso inicial ── #}
   <div id="warning-message" class="bg-[rgba(184,219,217,.15)] border-l-4 border-blue-400 rounded-r-md p-3 mb-4 flex items-center gap-3" role="alert">
     <div class="w-7 h-7 rounded bg-[rgba(184,219,217,.2)] flex items-center justify-center flex-shrink-0">
@@ -59,7 +75,7 @@
   </div>
 
   {# ── Filtros ── #}
-  <div class="filter-card">
+  <div class="filter-card" data-tour="filters">
     <div class="filter-stripe"></div>
     <div class="filter-head">
       <i class="fas fa-sliders-h text-[#2f4550] text-sm"></i>
@@ -173,7 +189,7 @@
         </div>
 
         {# Fila 2: Modalidad, Estado, Año, Meses, Período #}
-        <div class="flex flex-wrap gap-3 mb-2">
+        <div class="flex flex-wrap gap-3 mb-2" data-tour="sales-filters">
 
           <div class="flex-1 min-w-[140px]">
             <label for="modalidad_pago" class="filter-label">Modalidad de Pago:</label>
@@ -229,7 +245,7 @@
             </div>
           </div>
 
-          <div class="flex-1 min-w-[130px]">
+          <div class="flex-1 min-w-[130px]" data-tour="calendar">
             <label for="periodo" class="filter-label">Período:</label>
             <select name="periodo" id="periodo" class="filter-select">
               <option value="diario"  {% if selected_periodo == 'diario'  %}selected{% endif %}>Diario</option>
@@ -281,7 +297,7 @@
         </div>
 
         {# Botón aplicar #}
-        <div class="flex items-center gap-2 pt-1">
+        <div class="flex items-center gap-2 pt-1" data-tour="actions">
           <button type="submit"
             class="inline-flex items-center gap-1.5 text-xs font-bold text-[#f4f4f9] bg-[#2f4550] hover:bg-[#2f4550] px-5 py-2 rounded shadow-sm transition-colors">
             <i class="fas fa-search"></i> Aplicar Filtros
@@ -292,7 +308,7 @@
   </div>
 
   {# ── KPI Cards — 6 métricas ── #}
-  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-5">
+  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-5" data-tour="metrics">
 
     <div class="kpi-card kpi-border-total" title="${{ total_ventas|us_currency:2 }}">
       <div class="kpi-body">
@@ -339,7 +355,7 @@
   </div>
 
   {# ── Botón exportar PDF ── #}
-  <div class="flex items-center justify-between mb-3">
+  <div class="flex items-center justify-between mb-3" data-tour="exports">
     <span class="text-xs font-bold text-[#586f7c] uppercase tracking-wider flex items-center gap-1.5">
       <i class="fas fa-chart-line text-blue-400"></i> Análisis visual
     </span>
@@ -349,7 +365,7 @@
   </div>
 
   {# ── Gráficos: Modalidad + Estados ── #}
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5" data-tour="charts">
 
     <div class="s-card">
       <div class="s-card-head">
@@ -385,7 +401,7 @@
   </div>
 
   {# ── Tabla de detalle ── #}
-  <div class="s-card mb-5">
+  <div class="s-card mb-5" data-tour="detail">
     <div class="s-card-head">
       <div class="s-card-ico s-card-ico-primary"><i class="fas fa-table text-[#2f4550]"></i></div>
       <span class="s-card-title">Detalle de Ventas</span>
@@ -503,4 +519,6 @@
 <script src="{% static 'js/bank-account-select.js' %}"></script>
 
 <script src="{% static 'js/ventas-balances-page.js' %}"></script>
+<script src="{% static 'vendor/driverjs/driver.js.iife.js' %}"></script>
+<script src="{% static 'js/balance-tours.js' %}"></script>
 {% endblock %}

@@ -23,11 +23,15 @@
 <link rel="stylesheet" href="{% static 'css/datatables-buttons.css' %}">
 <link rel="stylesheet" href="{% static 'css/bank-account-select.css' %}">
 <link rel="stylesheet" href="{% static 'css/gastos-balances.css' %}">
+<link rel="stylesheet" href="{% static 'vendor/driverjs/driver.css' %}">
+<link rel="stylesheet" href="{% static 'css/balance-tours.css' %}">
 {% endblock %}
 
 
 {% block content %}
-<div class="text-[#2f4550]" data-balances-page data-ajax-url="{% url 'admin:gastos_gastos_balances' %}">
+<div class="text-[#2f4550]" data-balances-page data-balance-tour="gastos"
+     data-manual-url="{% url 'user_manual' %}#balances-y-reportes"
+     data-ajax-url="{% url 'admin:gastos_gastos_balances' %}">
 
   {# ── Toast de notificación ── #}
   <div id="toast-notification" class="fixed top-4 right-4 z-50 transform translate-x-full transition-all duration-300 opacity-0">
@@ -43,6 +47,18 @@
         <i class="fas fa-times text-xs"></i>
       </button>
     </div>
+  </div>
+
+  <div class="balance-help-actions" data-tour="help">
+    <button type="button" class="balance-tour-help" data-balance-tour-start
+            aria-label="{% trans 'Iniciar guía interactiva del balance de gastos' %}">
+      <i class="fas fa-route" aria-hidden="true"></i>
+      {% trans "¿Cómo usar esta pantalla?" %}
+    </button>
+    <a class="balance-manual-link" href="{% url 'user_manual' %}#balances-y-reportes">
+      <i class="fas fa-book-open" aria-hidden="true"></i>
+      {% trans "Abrir manual" %}
+    </a>
   </div>
 
   {# ── Aviso inicial ── #}
@@ -82,7 +98,7 @@
   </div>
 
   {# ── Filtros ── #}
-  <div class="filter-card">
+  <div class="filter-card" data-tour="filters">
     <div class="filter-stripe"></div>
     <div class="filter-head">
       <i class="fas fa-sliders-h text-[#2f4550] text-sm"></i>
@@ -214,7 +230,7 @@
           </div>
 
           {# Periodo #}
-          <div class="flex-1 min-w-[110px] sm:min-w-[130px]">
+          <div class="flex-1 min-w-[110px] sm:min-w-[130px]" data-tour="calendar">
             <label for="periodo" class="filter-label">Seleccione el periodo:</label>
             <select name="periodo" id="periodo" class="filter-select">
               <option value="diario"  {% if selected_periodo == 'diario'  %}selected{% endif %}>Diario</option>
@@ -268,7 +284,7 @@
         </div>
 
         {# Botones #}
-        <div class="flex items-center gap-2 pt-1">
+        <div class="flex items-center gap-2 pt-1" data-tour="actions">
           <button type="button" id="clear-months"
             class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#586f7c] hover:text-[#586f7c] border border-[#d8dce6] px-3 py-1.5 rounded hover:bg-[#f4f4f9] transition-colors">
             <i class="fas fa-times"></i> Limpiar
@@ -313,4 +329,6 @@
 <script src="{% static 'js/multi-month-selector.js' %}"></script>
 <script src="{% static 'js/bank-account-select.js' %}"></script>
 <script src="{% static 'js/gastos-balances-page.js' %}"></script>
+<script src="{% static 'vendor/driverjs/driver.js.iife.js' %}"></script>
+<script src="{% static 'js/balance-tours.js' %}"></script>
 {% endblock %}

@@ -41,6 +41,20 @@ def detalle_venta(request, venta_id):
     monto_final = venta.calcular_monto_final()
     return render(request, 'detalle_venta.html', {'venta': venta, 'monto_final': monto_final})
 
+def _parse_selected_months(query_params):
+    """Normaliza months=1,2 y months=1&months=2 a una lista válida y única."""
+    selected_months = []
+    for raw_value in query_params.getlist('months'):
+        for value in raw_value.split(','):
+            value = value.strip()
+            if not value.isdigit():
+                continue
+            month = int(value)
+            normalized = str(month)
+            if 1 <= month <= 12 and normalized not in selected_months:
+                selected_months.append(normalized)
+    return selected_months
+
 def build_ventas_balances_context(request):
     """Construye y retorna el contexto para la vista de balances de ventas."""    # Obtener parámetros de filtro
     selected_cliente_id = request.GET.get('cliente_id', '')
@@ -50,7 +64,7 @@ def build_ventas_balances_context(request):
     selected_modalidad = request.GET.get('modalidad_pago', '')
     selected_estado = request.GET.get('estado_cobranza', '')
     selected_year = request.GET.get('year', str(timezone.now().year))
-    selected_months = request.GET.getlist('months')
+    selected_months = _parse_selected_months(request.GET)
     selected_periodo = request.GET.get('periodo', 'mensual')
     
     # Filtros de fecha específicos para período diario
