@@ -178,12 +178,120 @@ document.addEventListener("DOMContentLoaded", function () {
   // Ejecutar mejoras adicionales
   improveUIExperience();
   improveAccessibility();
+  initAdminDateTimeShortcutsPositioning();
 
   // ============================================
   // MEJORAS PARA LOGIN - Mostrar/Ocultar Contraseña
   // ============================================
   initLoginEnhancements();
 });
+
+/**
+ * Mantiene los calendarios y relojes de Django junto a su icono.
+ *
+ * DateTimeShortcuts calcula posiciones absolutas recorriendo offsetParent. En
+ * Jazzmin esas coordenadas dejan de coincidir con la ventana cuando hay
+ * contenedores desplazables o cambia el zoom del navegador. Usamos las
+ * coordenadas visibles del icono y position: fixed para evitar ese desfase.
+ */
+function initAdminDateTimeShortcutsPositioning() {
+  if (
+    typeof window.DateTimeShortcuts === 'undefined' ||
+    window.DateTimeShortcuts.positioningPatched
+  ) {
+    return;
+  }
+
+  const shortcuts = window.DateTimeShortcuts;
+  const VIEWPORT_GAP = 8;
+
+  function clamp(value, minimum, maximum) {
+    return Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
+  }
+
+  function positionPopup(popup, anchor) {
+    if (!popup || !anchor || popup.style.display === 'none') {
+      return;
+    }
+
+    popup.style.setProperty('position', 'fixed', 'important');
+    popup.style.setProperty('transform', 'none', 'important');
+    popup.style.setProperty('margin', '0', 'important');
+    popup.style.setProperty('z-index', '2050', 'important');
+
+    const anchorRect = anchor.getBoundingClientRect();
+    const popupRect = popup.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth;
+    const viewportHeight = document.documentElement.clientHeight;
+
+    let left = anchorRect.left;
+    if (left + popupRect.width > viewportWidth - VIEWPORT_GAP) {
+      left = anchorRect.right - popupRect.width;
+    }
+    left = clamp(
+      left,
+      VIEWPORT_GAP,
+      viewportWidth - popupRect.width - VIEWPORT_GAP,
+    );
+
+    const below = anchorRect.bottom + VIEWPORT_GAP;
+    const above = anchorRect.top - popupRect.height - VIEWPORT_GAP;
+    let top = below;
+
+    if (
+      below + popupRect.height > viewportHeight - VIEWPORT_GAP &&
+      above >= VIEWPORT_GAP
+    ) {
+      top = above;
+    }
+    top = clamp(
+      top,
+      VIEWPORT_GAP,
+      viewportHeight - popupRect.height - VIEWPORT_GAP,
+    );
+
+    popup.style.setProperty('left', `${Math.round(left)}px`, 'important');
+    popup.style.setProperty('top', `${Math.round(top)}px`, 'important');
+  }
+
+  function repositionOpenPopups() {
+    document
+      .querySelectorAll('.calendarbox[id^=calendarbox]')
+      .forEach(function (popup) {
+        const number = popup.id.replace('calendarbox', '');
+        positionPopup(popup, document.getElementById(`calendarlink${number}`));
+      });
+
+    document
+      .querySelectorAll('.clockbox[id^=clockbox]')
+      .forEach(function (popup) {
+        const number = popup.id.replace('clockbox', '');
+        positionPopup(popup, document.getElementById(`clocklink${number}`));
+      });
+  }
+
+  function wrapOpenMethod(methodName, popupPrefix, linkPrefix) {
+    const originalMethod = shortcuts[methodName];
+    if (typeof originalMethod !== 'function') {
+      return;
+    }
+
+    shortcuts[methodName] = function (number) {
+      originalMethod.call(shortcuts, number);
+      positionPopup(
+        document.getElementById(`${popupPrefix}${number}`),
+        document.getElementById(`${linkPrefix}${number}`),
+      );
+    };
+  }
+
+  wrapOpenMethod('openCalendar', 'calendarbox', 'calendarlink');
+  wrapOpenMethod('openClock', 'clockbox', 'clocklink');
+
+  window.addEventListener('resize', repositionOpenPopups);
+  window.addEventListener('scroll', repositionOpenPopups, true);
+  shortcuts.positioningPatched = true;
+}
 
 /**
  * Inicializa mejoras para el formulario de login
