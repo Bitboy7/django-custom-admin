@@ -3,32 +3,64 @@ from django.contrib.admin import ModelAdmin
 from django.contrib.admin import SimpleListFilter
 from django.template.response import TemplateResponse
 from django.urls import path
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from import_export.admin import ImportExportModelAdmin
 from import_export.forms import ExportForm, ImportForm
-from .models import CatGastos, Banco, Cuenta, Gastos, Compra, SaldoMensual
+from .models import CatGastos, Banco, Cuenta, Gastos, Compra, SaldoMensual, ComprobanteGasto
 from django.utils.html import format_html
+from django.utils.text import slugify
 from django.utils import timezone
 from catalogo.models import Sucursal, Productor, Producto
 from app.widgets import MoneyWidget
-from datetime import timedelta
 
 
-class BancoGastoFilter(SimpleListFilter):
-    title = 'Banco'
-    parameter_name = 'banco'
+class SucursalGastoFilter(SimpleListFilter):
+    title = 'Sucursal'
+    parameter_name = 'sucursal'
 
     def lookups(self, request, model_admin):
         return [
-            (str(banco.id), banco.nombre)
-            for banco in Banco.objects.order_by('nombre')
+            (str(sucursal.id), sucursal.nombre)
+            for sucursal in Sucursal.objects.order_by('nombre')
         ]
 
     def queryset(self, request, queryset):
         if self.value():
-            return queryset.filter(id_cuenta_banco__id_banco_id=self.value())
+            return queryset.filter(id_sucursal_id=self.value())
+        return queryset
+
+
+class CategoriaGastoFilter(SimpleListFilter):
+    title = 'Categoría'
+    parameter_name = 'categoria'
+
+    def lookups(self, request, model_admin):
+        return [
+            (str(categoria.id), categoria.nombre)
+            for categoria in CatGastos.objects.order_by('nombre')
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(id_cat_gastos_id=self.value())
+        return queryset
+
+
+class CuentaGastoFilter(SimpleListFilter):
+    title = 'Cuenta bancaria'
+    parameter_name = 'cuenta'
+
+    def lookups(self, request, model_admin):
+        return [
+            (str(cuenta.id), f'{cuenta.numero_cuenta} - {cuenta.id_banco.nombre}')
+            for cuenta in Cuenta.objects.select_related('id_banco').order_by('numero_cuenta')
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(id_cuenta_banco_id=self.value())
         return queryset
 
 
@@ -59,32 +91,6 @@ class MontoGastoFilter(SimpleListFilter):
             return queryset.filter(monto__amount__gte=50000)
         return queryset
 
-
-class PeriodoGastoFilter(SimpleListFilter):
-    title = 'Periodo'
-    parameter_name = 'periodo'
-
-    def lookups(self, request, model_admin):
-        return [
-            ('hoy', 'Hoy'),
-            ('semana', 'Ultimos 7 dias'),
-            ('mes', 'Mes actual'),
-            ('anio', 'Año actual'),
-        ]
-
-    def queryset(self, request, queryset):
-        today = timezone.localdate()
-        value = self.value()
-
-        if value == 'hoy':
-            return queryset.filter(fecha=today)
-        if value == 'semana':
-            return queryset.filter(fecha__gte=today - timedelta(days=7), fecha__lte=today)
-        if value == 'mes':
-            return queryset.filter(fecha__year=today.year, fecha__month=today.month)
-        if value == 'anio':
-            return queryset.filter(fecha__year=today.year)
-        return queryset
 
 class CatGastoResource(resources.ModelResource):
     fields = ('id', 'nombre', 'fecha_registro')
@@ -127,11 +133,9 @@ class BancoAdmin(ImportExportModelAdmin, ModelAdmin):
         }),
         ('Imagen', {
             'fields': ('logotipo',),
-            'classes': ('collapse',)
         }),
         ('Metadatos', {
             'fields': ('fecha_registro',),
-            'classes': ('collapse',)
         })
     )
 
@@ -156,7 +160,6 @@ class CuentaAdmin(ImportExportModelAdmin, ModelAdmin):
         }),
         ('Metadatos', {
             'fields': ('fecha_registro',),
-            'classes': ('collapse',)
         })
     )
     
@@ -187,7 +190,8 @@ class GastosResource(resources.ModelResource):
     
     class Meta:
         model = Gastos
-        fields = ('id', 'sucursal', 'categoria', 'cuenta', 'monto', 'descripcion', 'fecha')
+        fields = ('id', 'sucursal', 'categoria', 'cuenta', 'monto', 'descripcion', 'fecha', 'fecha_registro')
+        export_order = ('id', 'sucursal', 'categoria', 'cuenta', 'monto', 'descripcion', 'fecha', 'fecha_registro')
         import_id_fields = ('id',)
 
     def dehydrate_categoria(self, gasto):
@@ -200,27 +204,85 @@ class GastosResource(resources.ModelResource):
         return gasto.id_cuenta_banco.numero_cuenta
 
 @admin.register(Gastos)
-class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
-    resource_class = GastosResource
-    import_form_class = ImportForm
-    export_form_class = ExportForm
+class GastosAdmin(ModelAdmin):
+    change_list_template = 'admin/gastos/gastos/change_list.html'
     list_display = ('id', 'id_sucursal', 'id_cat_gastos',
                     'id_cuenta_banco', 'monto', 'descripcion', 'fecha', 'fecha_registro')
     search_fields = ('descripcion', 'id_sucursal__nombre', 'id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta', 'id_cuenta_banco__id_banco__nombre')
-    list_filter = (BancoGastoFilter, 'id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', MontoGastoFilter, PeriodoGastoFilter, 'fecha', 'fecha_registro')
+    # La cuenta ya identifica el banco; la fecha del gasto se filtra desde
+    # date_hierarchy. Evitamos duplicar controles que confunden al usuario.
+    list_filter = (SucursalGastoFilter, CategoriaGastoFilter, CuentaGastoFilter, MontoGastoFilter)
     date_hierarchy = 'fecha'
+    ordering = ('fecha', 'fecha_registro', 'id')
     list_select_related = ('id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', 'id_cuenta_banco__id_banco')
     list_per_page = 20
+    class Media:
+        css = {
+            'all': ('css/admin/gastos_changelist.css',)
+        }
     fieldsets = (
         ('Datos del Registro', {
             'fields': ('id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', 'monto', 'descripcion', 'fecha')
         }),
     )
-    
-    actions = ['export_to_excel']
+    # La exportacion usa el boton superior y respeta los filtros activos.
+    # Deshabilitamos acciones masivas para evitar una barra vacia y casillas
+    # de seleccion que ya no forman parte de este flujo.
+    actions = None
+
+    def get_export_filename(self, request):
+        """Construye un nombre legible a partir de los filtros activos."""
+        parts = ['gastos']
+
+        year = request.GET.get('fecha__year')
+        month = request.GET.get('fecha__month')
+        day = request.GET.get('fecha__day')
+        if year:
+            date_parts = [year]
+            if month:
+                date_parts.append(month.zfill(2))
+            if day:
+                date_parts.append(day.zfill(2))
+            parts.append(f"fecha-{'-'.join(date_parts)}")
+
+        sucursal_id = request.GET.get('sucursal')
+        if sucursal_id:
+            nombre = Sucursal.objects.filter(pk=sucursal_id).values_list('nombre', flat=True).first()
+            parts.append(f"sucursal-{slugify(nombre or sucursal_id)[:32]}")
+
+        categoria_id = request.GET.get('categoria')
+        if categoria_id:
+            nombre = CatGastos.objects.filter(pk=categoria_id).values_list('nombre', flat=True).first()
+            parts.append(f"categoria-{slugify(nombre or categoria_id)[:32]}")
+
+        cuenta_id = request.GET.get('cuenta')
+        if cuenta_id:
+            cuenta = Cuenta.objects.select_related('id_banco').filter(pk=cuenta_id).first()
+            if cuenta:
+                cuenta_label = f'{cuenta.id_banco.nombre}-{cuenta.numero_cuenta}'
+            else:
+                cuenta_label = cuenta_id
+            parts.append(f"cuenta-{slugify(cuenta_label)[:42]}")
+
+        rango_monto = request.GET.get('rango_monto')
+        if rango_monto:
+            monto_labels = {
+                '0-1000': '0-a-1000',
+                '1000-5000': '1000-a-5000',
+                '5000-10000': '5000-a-10000',
+                '10000-50000': '10000-a-50000',
+                '50000+': '50000-o-mas',
+            }
+            parts.append(f"monto-{monto_labels.get(rango_monto, slugify(rango_monto))}")
+
+        search = request.GET.get('q', '').strip()
+        if search:
+            parts.append(f"busqueda-{slugify(search)[:30]}")
+
+        generated_at = timezone.localtime().strftime('%Y%m%d-%H%M%S')
+        return f"{'_'.join(parts)}_{generated_at}.xlsx"
 
     def export_to_excel(self, request, queryset):
-        from django.http import HttpResponse
         import openpyxl
         import datetime
         from openpyxl.styles import Font, PatternFill, Alignment
@@ -265,9 +327,16 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
             )
             ws.add_table(tab)
 
+        def _fecha_registro_excel(gasto):
+            if not gasto.fecha_registro:
+                return None
+            if timezone.is_aware(gasto.fecha_registro):
+                return timezone.localtime(gasto.fecha_registro).replace(tzinfo=None)
+            return gasto.fecha_registro
+
         queryset = queryset.select_related(
             'id_sucursal', 'id_cat_gastos', 'id_cuenta_banco'
-        ).order_by('fecha')
+        ).order_by('fecha', 'fecha_registro', 'id')
         data = list(queryset)
 
         wb = openpyxl.Workbook()
@@ -278,6 +347,7 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
 
         COLUMNS = [
             ("Fecha",        lambda g: g.fecha,                          14,  "DD/MM/YYYY"),
+            ("Fecha registro", lambda g: _fecha_registro_excel(g),        20,  "DD/MM/YYYY HH:MM"),
             ("Sucursal",     lambda g: g.id_sucursal.nombre,             22,  "@"),
             ("Categoría",    lambda g: g.id_cat_gastos.nombre,           22,  "@"),
             ("Cuenta",       lambda g: g.id_cuenta_banco.numero_cuenta,  22,  "@"),
@@ -313,7 +383,7 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
 
         # Fila TOTAL fuera de la tabla
         total_r = last_data + 1
-        mc = 5
+        mc = 6
         lbl = ws.cell(row=total_r, column=mc - 1, value="TOTAL")
         lbl.font = Font(bold=True)
         lbl.alignment = Alignment(horizontal="right")
@@ -496,7 +566,8 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
         response = HttpResponse(
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        response["Content-Disposition"] = 'attachment; filename="gastos.xlsx"'
+        filename = self.get_export_filename(request)
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
         wb.save(response)
         return response
 
@@ -506,12 +577,38 @@ class GastosAdmin(ImportExportModelAdmin, ModelAdmin):
         urls = super().get_urls()
         custom_urls = [
             path(
+                'exportar-excel/',
+                self.admin_site.admin_view(self.exportar_excel_admin_view),
+                name='gastos_gastos_export_excel',
+            ),
+            path(
                 'balances/',
                 self.admin_site.admin_view(self.balances_admin_view),
                 name='gastos_gastos_balances',
             ),
         ]
         return custom_urls + urls
+
+    def exportar_excel_admin_view(self, request):
+        if not self.has_view_permission(request):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        # La exportacion refleja exactamente el listado: filtros, busqueda y
+        # jerarquia de fecha activos, sin depender de la pagina actual.
+        filter_params = {
+            key for key in request.GET
+            if key not in {'all', 'p', 'o', 'ot', '_popup', '_to_field'}
+        }
+        if not filter_params:
+            self.message_user(
+                request,
+                'Aplica al menos un filtro, fecha o b\u00fasqueda antes de exportar.',
+                level='warning',
+            )
+            return HttpResponseRedirect('../')
+
+        changelist = self.get_changelist_instance(request)
+        return self.export_to_excel(request, changelist.queryset)
 
     def balances_admin_view(self, request):
         from app.services.balance_service import BalanceAnalysisService
@@ -627,7 +724,6 @@ class ComprasAdmin(ImportExportModelAdmin, ModelAdmin):
         class Media:
             js = (
                 'js/compra_calculator.js',
-                'js/scripts.js',
             )
  
 class SaldoMensualResource(resources.ModelResource):
@@ -667,5 +763,80 @@ class SaldoMensualAdmin(ImportExportModelAdmin, ModelAdmin):
         ('Datos del Registro', {
             'fields': ('cuenta', 'año', 'mes', 'saldo_inicial', 'saldo_final')
         }),
-    )     
-     
+    )
+@admin.register(ComprobanteGasto)
+class ComprobanteGastoAdmin(ModelAdmin):
+    """Consulta y auditoria de comprobantes cargados por el flujo OCR."""
+
+    list_display = (
+        'id', 'vista_previa', 'nombre_original', 'estado_visual', 'confianza',
+        'gasto', 'creado_por', 'creado_en',
+    )
+    list_filter = ('estado', 'content_type', 'creado_en')
+    search_fields = ('id', 'nombre_original', 'sha256', 'texto_ocr', 'creado_por__username')
+    list_select_related = ('gasto', 'creado_por')
+    readonly_fields = (
+        'storage_key', 'archivo_enlace', 'vista_previa_grande', 'nombre_original',
+        'content_type', 'tamano_bytes', 'sha256', 'estado', 'datos_extraidos',
+        'texto_ocr', 'confianza', 'error_procesamiento', 'creado_por', 'gasto',
+        'creado_en', 'procesado_en',
+    )
+    ordering = ('-creado_en',)
+    list_per_page = 25
+    date_hierarchy = 'creado_en'
+    fieldsets = (
+        ('Archivo', {'fields': ('vista_previa_grande', 'archivo_enlace', 'nombre_original', 'content_type', 'tamano_bytes', 'sha256')}),
+        ('Procesamiento OCR', {'fields': ('estado', 'confianza', 'datos_extraidos', 'texto_ocr', 'error_procesamiento')}),
+        ('Relacion', {'fields': ('gasto', 'creado_por')}),
+        ('Metadatos', {'fields': ('storage_key', 'creado_en', 'procesado_en')}),
+    )
+
+    @admin.display(description='Archivo')
+    def vista_previa(self, obj):
+        if not obj.archivo:
+            return '-'
+        try:
+            url = obj.archivo.url
+        except (ValueError, OSError):
+            return '-'
+        if obj.content_type.startswith('image/'):
+            return format_html(
+                '<a href="{}" target="_blank" title="Abrir imagen"><img src="{}" alt="" style="width:64px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #cbd5d1" /></a>',
+                url, url,
+            )
+        return format_html('<a href="{}" target="_blank">Abrir archivo</a>', url)
+
+    @admin.display(description='Estado', ordering='estado')
+    def estado_visual(self, obj):
+        colors = {
+            ComprobanteGasto.Estado.PENDIENTE: '#8a6d1d',
+            ComprobanteGasto.Estado.PROCESANDO: '#1d6fa5',
+            ComprobanteGasto.Estado.REVISION: '#16834f',
+            ComprobanteGasto.Estado.ERROR: '#b83232',
+            ComprobanteGasto.Estado.REGISTRADO: '#246b48',
+        }
+        return format_html('<strong style="color:{}">{}</strong>', colors.get(obj.estado, '#374151'), obj.get_estado_display())
+
+    @admin.display(description='Archivo vinculado')
+    def archivo_enlace(self, obj):
+        if not obj.archivo:
+            return '-'
+        try:
+            return format_html('<a href="{}" target="_blank">{} <span aria-hidden="true">↗</span></a>', obj.archivo.url, obj.nombre_original)
+        except (ValueError, OSError):
+            return 'Archivo no disponible'
+
+    @admin.display(description='Vista previa')
+    def vista_previa_grande(self, obj):
+        if not obj.archivo or not obj.content_type.startswith('image/'):
+            return 'La vista previa esta disponible para imagenes.'
+        try:
+            return format_html('<a href="{}" target="_blank"><img src="{}" alt="{}" style="max-width:560px;max-height:420px;border-radius:8px;border:1px solid #d1d5db" /></a>', obj.archivo.url, obj.archivo.url, obj.nombre_original)
+        except (ValueError, OSError):
+            return 'Imagen no disponible'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.has_perm('gastos.view_comprobantegasto')

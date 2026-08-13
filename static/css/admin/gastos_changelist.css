@@ -1,0 +1,482 @@
+/* Gastos changelist: filtros operativos claros para captura administrativa. */
+body.app-gastos.model-gastos.change-list #changelist {
+  display: block;
+}
+
+body.app-gastos.model-gastos.change-list #toolbar,
+body.app-gastos.model-gastos.change-list #changelist-filter {
+  background: #f8fafc;
+  border: 1px solid #d8dce6;
+  border-radius: 16px;
+  box-shadow: 0 12px 28px rgba(15, 31, 53, 0.06);
+  margin-bottom: 16px;
+}
+
+body.app-gastos.model-gastos.change-list #toolbar {
+  padding: 16px;
+  position: relative;
+}
+
+body.app-gastos.model-gastos.change-list #toolbar::before {
+  color: #2f4550;
+  content: "Buscar gastos";
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+body.app-gastos.model-gastos.change-list #toolbar form {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+body.app-gastos.model-gastos.change-list #toolbar input[type="text"],
+body.app-gastos.model-gastos.change-list #toolbar input[type="search"] {
+  background: #fff;
+  border: 1px solid #b9c6d3;
+  border-radius: 12px;
+  color: #173844;
+  min-height: 44px;
+  min-width: min(100%, 300px);
+  padding: 10px 14px;
+}
+
+body.app-gastos.model-gastos.change-list #toolbar input[type="submit"],
+body.app-gastos.model-gastos.change-list #changelist-search input[type="submit"] {
+  background: #18b7a7 !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 18px rgba(24, 183, 167, 0.24);
+  color: #fff !important;
+  font-weight: 800;
+  min-height: 44px;
+  padding: 0 22px !important;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-filter {
+  float: none;
+  padding: 0;
+  width: 100%;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-filter h2 {
+  align-items: center;
+  background: #2f4550 !important;
+  border-radius: 16px 16px 0 0;
+  color: #f4f4f9 !important;
+  display: flex;
+  font-size: 0.82rem;
+  font-weight: 900;
+  gap: 8px;
+  letter-spacing: 0.08em;
+  margin: 0 !important;
+  padding: 14px 18px !important;
+  text-transform: uppercase;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-filter h2::before {
+  background: rgba(184, 219, 217, 0.18);
+  border-radius: 999px;
+  content: "";
+  height: 10px;
+  width: 10px;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-filter h3 {
+  color: #586f7c !important;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-filter select,
+body.app-gastos.model-gastos.change-list #changelist-filter .select2-selection,
+body.app-gastos.model-gastos.change-list #changelist-filter .select2-selection--single {
+  background: #fff !important;
+  border: 1px solid #b9c6d3 !important;
+  border-radius: 12px !important;
+  color: #173844 !important;
+  font-size: 0.82rem !important;
+  min-height: 42px !important;
+  min-width: 180px;
+  padding: 7px 12px !important;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-filter select:focus,
+body.app-gastos.model-gastos.change-list #toolbar input:focus {
+  border-color: #18b7a7 !important;
+  box-shadow: 0 0 0 3px rgba(24, 183, 167, 0.16) !important;
+  outline: none !important;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-filter form,
+body.app-gastos.model-gastos.change-list #changelist-filter .form-row,
+body.app-gastos.model-gastos.change-list #changelist-filter .filters {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-filter > details,
+body.app-gastos.model-gastos.change-list #changelist-filter > div,
+body.app-gastos.model-gastos.change-list #changelist-filter > ul {
+  margin: 0;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-filter .filter-wrapper,
+body.app-gastos.model-gastos.change-list #changelist-filter details {
+  background: #fff;
+  border: 1px solid #e5eaf0;
+  border-radius: 14px;
+  margin: 12px;
+  padding: 12px;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-filter ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-filter li {
+  margin: 0;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-filter li a,
+body.app-gastos.model-gastos.change-list #changelist-filter li.selected a {
+  align-items: center;
+  background: #f4f7fa;
+  border: 1px solid #d8dce6;
+  border-radius: 999px;
+  color: #2f4550 !important;
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 700;
+  min-height: 34px;
+  padding: 7px 12px;
+  text-decoration: none;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-filter li.selected a {
+  background: #18b7a7;
+  border-color: #18b7a7;
+  box-shadow: 0 6px 14px rgba(24, 183, 167, 0.22);
+  color: #fff !important;
+}
+
+body.app-gastos.model-gastos.change-list .actions {
+  background: #fff;
+  border: 1px solid #d8dce6;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 31, 53, 0.05);
+  margin: 14px 0 16px;
+  padding: 12px;
+}
+
+body.app-gastos.model-gastos.change-list .actions label {
+  color: #586f7c;
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+body.app-gastos.model-gastos.change-list .actions select {
+  border: 1px solid #b9c6d3;
+  border-radius: 12px;
+  min-height: 42px;
+}
+
+body.app-gastos.model-gastos.change-list .actions .button {
+  background: #18b7a7 !important;
+  border-radius: 12px !important;
+  color: #fff !important;
+  font-weight: 800;
+  min-height: 42px;
+  padding-inline: 20px !important;
+}
+
+body.app-gastos.model-gastos.change-list .object-tools .addlink,
+body.app-gastos.model-gastos.change-list .object-tools a {
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  min-height: 42px;
+}
+
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #toolbar,
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-filter,
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list .actions {
+  background: var(--surface-card, #242b32);
+  border-color: var(--border-default, #3d4a52);
+}
+
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-filter .filter-wrapper,
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-filter details {
+  background: var(--surface-bg, #1a1f24);
+  border-color: var(--border-default, #3d4a52);
+}
+
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-filter li a {
+  background: var(--surface-hover, #2f3840);
+  border-color: var(--border-default, #3d4a52);
+  color: var(--text-primary, #f4f4f9) !important;
+}
+
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-filter select,
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-filter .select2-selection,
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #toolbar input[type="text"],
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #toolbar input[type="search"] {
+  background: var(--surface-bg, #1a1f24) !important;
+  border-color: var(--border-default, #3d4a52) !important;
+  color: var(--text-primary, #f4f4f9) !important;
+}
+
+/* Acciones principales de Gastos: captura OCR y exportación. */
+body.app-gastos.model-gastos.change-list .object-tools {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin: 0 0 18px;
+  padding: 0;
+}
+
+body.app-gastos.model-gastos.change-list .object-tools > li {
+  list-style: none;
+  margin: 0 !important;
+  padding: 0;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-quick-action {
+  align-items: center;
+  border: 1px solid #d8dce6;
+  border-radius: 10px;
+  color: #2f4550 !important;
+  display: inline-flex;
+  font-size: 0.82rem;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 15px;
+  text-decoration: none !important;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-quick-action:hover {
+  box-shadow: 0 8px 18px rgba(15, 31, 53, .12);
+  transform: translateY(-1px);
+}
+
+body.app-gastos.model-gastos.change-list .gastos-quick-action--ocr {
+  background: #18b7a7;
+  border-color: #18b7a7;
+  color: #fff !important;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-quick-action--ocr:hover {
+  background: #109b8d;
+  border-color: #109b8d;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-quick-action--export {
+  background: #217346;
+  border-color: #217346;
+  color: #fff !important;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-quick-action--export:hover {
+  background: #185c37;
+  border-color: #185c37;
+  color: #fff !important;
+}
+
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list .gastos-quick-action--export {
+  background: #217346;
+  border-color: #2f925b;
+  color: #fff !important;
+}
+
+/* Barra superior real de Jazzmin: filtros, busqueda y acciones. */
+body.app-gastos.model-gastos.change-list #change-list-filters {
+  background: #fff;
+  border: 1px solid #dbe4ea;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(23, 56, 68, 0.07);
+  margin-bottom: 20px;
+  padding: 16px 18px !important;
+}
+
+body.app-gastos.model-gastos.change-list #change-list-filters > .d-flex {
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search {
+  display: grid !important;
+  flex: 1 1 900px !important;
+  gap: 10px !important;
+  grid-template-columns: repeat(4, minmax(150px, 1fr)) minmax(220px, 1.25fr) auto;
+  min-width: 0;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .form-group {
+  margin: 0;
+  min-width: 0;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .form-control,
+body.app-gastos.model-gastos.change-list #changelist-search .select2-container,
+body.app-gastos.model-gastos.change-list #changelist-search .select2-selection--single {
+  width: 100% !important;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .form-control,
+body.app-gastos.model-gastos.change-list #changelist-search .select2-selection--single {
+  background: #fff !important;
+  border: 1px solid #c5d1da !important;
+  border-radius: 10px !important;
+  box-shadow: 0 1px 2px rgba(23, 56, 68, 0.03);
+  color: #173844 !important;
+  font-size: 0.875rem;
+  height: 44px !important;
+  min-height: 44px !important;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search input.form-control {
+  min-width: 0 !important;
+  padding: 0 14px;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .select2-selection__rendered {
+  color: #173844 !important;
+  line-height: 42px !important;
+  padding-left: 13px !important;
+  padding-right: 34px !important;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .select2-selection__arrow {
+  height: 42px !important;
+  right: 8px !important;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .form-control:focus,
+body.app-gastos.model-gastos.change-list #changelist-search .select2-container--focus .select2-selection--single,
+body.app-gastos.model-gastos.change-list #changelist-search .select2-container--open .select2-selection--single {
+  border-color: #18b7a7 !important;
+  box-shadow: 0 0 0 3px rgba(24, 183, 167, 0.14) !important;
+  outline: none !important;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search > .btn {
+  align-items: center;
+  border: 1px solid #18b7a7 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 5px 12px rgba(24, 183, 167, 0.18);
+  display: inline-flex;
+  font-weight: 800;
+  height: 44px;
+  justify-content: center;
+  margin: 0;
+  padding: 0 20px;
+  white-space: nowrap;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-toolbar-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  justify-content: flex-end;
+  margin: 0;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-toolbar-actions > a {
+  float: none !important;
+  height: 44px;
+  margin: 0 !important;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-toolbar-actions > .btn-success {
+  order: -1;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-toolbar-actions > .btn-success,
+body.app-gastos.model-gastos.change-list .gastos-quick-action {
+  align-items: center;
+  border-radius: 10px !important;
+  display: inline-flex;
+  font-size: 0.82rem;
+  font-weight: 800 !important;
+  gap: 7px;
+  justify-content: center;
+  padding: 0 15px !important;
+}
+
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #change-list-filters {
+  background: var(--surface-card, #242b32);
+  border-color: var(--border-default, #3d4a52);
+}
+
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-search .form-control,
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-search .select2-selection--single {
+  background: var(--surface-bg, #1a1f24) !important;
+  border-color: var(--border-default, #3d4a52) !important;
+  color: var(--text-primary, #f4f4f9) !important;
+}
+
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-search .select2-selection__rendered {
+  color: var(--text-primary, #f4f4f9) !important;
+}
+
+@media (max-width: 1500px) {
+  body.app-gastos.model-gastos.change-list #change-list-filters > .d-flex {
+    align-items: stretch !important;
+  }
+
+  body.app-gastos.model-gastos.change-list #changelist-search {
+    grid-template-columns: repeat(2, minmax(180px, 1fr)) minmax(220px, 1.2fr) auto;
+  }
+
+  body.app-gastos.model-gastos.change-list .gastos-toolbar-actions {
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 767px) {
+  body.app-gastos.model-gastos.change-list #change-list-filters {
+    padding: 12px !important;
+  }
+
+  body.app-gastos.model-gastos.change-list #changelist-search {
+    grid-template-columns: 1fr;
+  }
+
+  body.app-gastos.model-gastos.change-list #changelist-search > .btn,
+  body.app-gastos.model-gastos.change-list .gastos-toolbar-actions,
+  body.app-gastos.model-gastos.change-list .gastos-toolbar-actions > a {
+    width: 100%;
+  }
+
+  body.app-gastos.model-gastos.change-list .gastos-toolbar-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

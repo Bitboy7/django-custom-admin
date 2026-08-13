@@ -113,27 +113,26 @@ class RoleManager:
     
     @classmethod
     def create_roles(cls):
-        """Crea todos los roles predefinidos"""
+        """Crea todos los roles predefinidos (solo asigna permisos en creación inicial)"""
         for role_name, role_data in cls.ROLES.items():
             group, created = Group.objects.get_or_create(name=role_name)
             
-            if role_data['permissions'] == ['*']:
-                # Administrador - todos los permisos
-                permissions = Permission.objects.all()
-            else:
-                # Otros roles - permisos específicos usando pares exactos (app_label, codename)
-                perm_query = Q()
-                for perm_string in role_data['permissions']:
-                    app_label, codename = perm_string.rsplit('.', 1)
-                    perm_query |= Q(content_type__app_label=app_label, codename=codename)
-                permissions = Permission.objects.filter(perm_query)
-            
-            group.permissions.set(permissions)
-            
             if created:
+                if role_data['permissions'] == ['*']:
+                    # Administrador - todos los permisos
+                    permissions = Permission.objects.all()
+                else:
+                    # Otros roles - permisos específicos usando pares exactos (app_label, codename)
+                    perm_query = Q()
+                    for perm_string in role_data['permissions']:
+                        app_label, codename = perm_string.rsplit('.', 1)
+                        perm_query |= Q(content_type__app_label=app_label, codename=codename)
+                    permissions = Permission.objects.filter(perm_query)
+                
+                group.permissions.set(permissions)
                 print(f"✓ Rol '{role_name}' creado exitosamente")
             else:
-                print(f"✓ Rol '{role_name}' actualizado")
+                print(f"✓ Rol '{role_name}' ya existe (permisos preservados)")
     
     @classmethod
     def assign_role(cls, user, role_name):

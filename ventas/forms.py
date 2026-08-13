@@ -163,6 +163,7 @@ class CFDIConfirmForm(forms.Form):
     )
     fecha_emision_cfdi = forms.DateField(
         required=False, label='Fecha emisión CFDI',
+        input_formats=['%Y-%m-%d'],
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
     )
     monto = forms.DecimalField(
@@ -222,14 +223,17 @@ class CFDIConfirmForm(forms.Form):
     # ── Manual-only fields ─────────────────────────────────────────────────
     fecha_salida_manifiesto = forms.DateField(
         label='Fecha salida manifiesto',
-        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        input_formats=['%Y-%m-%d'],
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
     )
     fecha_deposito = forms.DateField(
         label='Fecha depósito',
-        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        input_formats=['%Y-%m-%d'],
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
     )
     agente_id = forms.ModelChoiceField(
         queryset=Agente.objects.all().order_by('nombre'),
+        required=False,
         label='Agente aduanal',
         widget=forms.Select(attrs={'class': 'form-control'}),
     )
@@ -254,9 +258,19 @@ class CFDIConfirmForm(forms.Form):
     tipo_registro = forms.ChoiceField(
         choices=Ventas.TipoRegistro.choices,
         initial=Ventas.TipoRegistro.VENTA,
+        required=False,
         label='Tipo de registro',
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        widget=forms.HiddenInput(),
     )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cleaned_data['tipo_registro'] = cleaned_data.get('tipo_registro') or Ventas.TipoRegistro.VENTA
+        if cleaned_data.get('tipo_venta') == Ventas.TipoVenta.NACIONAL:
+            cleaned_data['agente_id'] = None
+            cleaned_data['PO'] = ''
+            cleaned_data['pedimento'] = ''
+        return cleaned_data
 
 
 class AnticipoCFDIUploadForm(forms.Form):

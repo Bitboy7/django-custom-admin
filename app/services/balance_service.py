@@ -97,12 +97,12 @@ class BalanceAnalysisService(BaseReportServiceWithCategories):
         cached_data = cache_service.get(cache_key)
         if cached_data is not None:
             logger.debug(f"Cache hit para balances gastos: {cache_key}")
-            return cached_data
+            return self._sort_balances_by_period(cached_data, periodo)
         
         # Ejecutar consulta
         logger.debug(f"Cache miss para balances gastos: {cache_key}")
         balances = self._get_balances_queryset(filters, periodo)
-        balances_list = list(balances)
+        balances_list = self._sort_balances_by_period(list(balances), periodo)
         
         # Añadir información adicional específica de Gastos
         self._enrich_balance_data(balances_list, filters)
@@ -112,6 +112,35 @@ class BalanceAnalysisService(BaseReportServiceWithCategories):
         cache_service.set(cache_key, balances_list, timeout)
         
         return balances_list
+
+    def _sort_balances_by_period(self, balances_list, periodo):
+        """Ordena los balances cronológicamente para tabla y acumulados."""
+        period_field = {
+            'diario': 'fecha',
+            'semanal': 'semana',
+            'mensual': 'mes',
+        }.get(periodo, 'mes')
+
+        def normalize(value):
+            if not value:
+                return '9999-12-31'
+            if hasattr(value, 'isoformat'):
+                return value.isoformat()
+            return str(value)
+
+        sorted_balances = sorted(
+            balances_list,
+            key=lambda balance: (
+                normalize(balance.get(period_field)),
+                str(balance.get('id_cat_gastos__nombre') or ''),
+                str(balance.get('id_cuenta_banco__numero_cuenta') or ''),
+            )
+        )
+
+        for i, balance in enumerate(sorted_balances, 1):
+            balance['numero_secuencial'] = i
+
+        return sorted_balances
     
     def _get_balances_queryset(self, filters, periodo):
         """Obtiene el queryset base según el período"""
@@ -121,21 +150,21 @@ class BalanceAnalysisService(BaseReportServiceWithCategories):
         if periodo == 'diario':
             return queryset.values(*group_fields).annotate(
                 total_gastos=Sum('monto')
-            ).order_by('id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta', 'fecha')
+            ).order_by('fecha', 'id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta')
             
         elif periodo == 'semanal':
             return queryset.annotate(
                 semana=TruncWeek('fecha')
             ).values(*group_fields).annotate(
                 total_gastos=Sum('monto')
-            ).order_by('id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta', 'semana')
+            ).order_by('semana', 'id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta')
             
         else:  # mensual
             base_fields = [f for f in group_fields if f != 'mes']
             return queryset.values(*base_fields).annotate(
                 total_gastos=Sum('monto'),
                 mes=TruncMonth('fecha')
-            ).order_by('id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta')
+            ).order_by('mes', 'id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta')
     
     def _enrich_balance_data(self, balances_list, filters):
         """Añade información adicional a cada balance"""

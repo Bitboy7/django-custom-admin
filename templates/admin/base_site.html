@@ -13,6 +13,7 @@
 {# ── Modular CSS already loaded via Jazzmin custom_css (admin_custom.css → all modules) ── #}
 {% block extrahead %}
 {{ block.super }}
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>
 (function () {
   var KEY = 'agricola-theme';
@@ -40,6 +41,7 @@
 })();
 </script>
 <link rel="stylesheet" href="{% static 'css/htmx-utils.css' %}">
+<link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
 {# Google Fonts: Playfair Display + Plus Jakarta Sans + JetBrains Mono #}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,6 +55,134 @@
   {% if site_config_global and site_config_global.custom_topbar_css %}
   {{ site_config_global.custom_topbar_css|safe }}
   {% endif %}
+
+  /* ── Critical navbar guard ───────────────────────────────────────
+     Produccion sirve /static/ como immutable; esta regla evita que una
+     copia cacheada de Jazzmin/AdminLTE deje la barra blanca con texto blanco. */
+  html body #jazzy-navbar.main-header.navbar,
+  html body #jazzy-navbar.main-header.navbar.navbar-white,
+  html body #jazzy-navbar.main-header.navbar.navbar-light,
+  html body #jazzy-navbar.main-header.navbar.navbar-dark {
+    background: var(--navbar-bg, #1f2f38) !important;
+    background-color: var(--navbar-bg, #1f2f38) !important;
+    border-bottom-color: var(--navbar-border, rgba(255,255,255,.08)) !important;
+    box-shadow: var(--navbar-shadow, 0 1px 8px rgba(0,0,0,.25)) !important;
+  }
+  html body #jazzy-navbar .navbar-nav > .nav-item > .nav-link,
+  html body #jazzy-navbar.navbar-light .navbar-nav > .nav-item > .nav-link,
+  html body #jazzy-navbar.navbar-white .navbar-nav > .nav-item > .nav-link,
+  html body #jazzy-navbar .btn-navbar,
+  html body #jazzy-navbar .btn-navbar i {
+    color: var(--navbar-text, rgba(244,244,249,.9)) !important;
+  }
+  html body #jazzy-navbar .navbar-nav > .nav-item > .nav-link:hover,
+  html body #jazzy-navbar .navbar-nav > .nav-item > .nav-link:focus {
+    color: var(--navbar-text-active, #fff) !important;
+    background: var(--navbar-bg-hover, rgba(184,219,217,.16)) !important;
+  }
+  html body #jazzy-navbar .form-control-navbar {
+    background: var(--navbar-control-bg, rgba(255,255,255,.07)) !important;
+    border-color: var(--navbar-control-border, rgba(255,255,255,.14)) !important;
+    color: var(--navbar-text-active, #fff) !important;
+  }
+  html body #jazzy-navbar .form-control-navbar::placeholder {
+    color: rgba(244,244,249,.5) !important;
+  }
+
+  /* Sidebar — light by default; dark overrides via [data-theme="dark"].
+     Jazzmin always adds sidebar-dark-primary; our tokens + !important beat it. */
+  body aside#jazzy-sidebar.main-sidebar,
+  body aside#jazzy-sidebar .sidebar,
+  body aside#jazzy-sidebar .os-viewport {
+    background: var(--sidebar-bg, #f0f3f7) !important;
+  }
+  body aside#jazzy-sidebar .brand-link {
+    background: var(--sidebar-brand-bg, #f0f3f7) !important;
+    border-bottom-color: var(--sidebar-brand-border, #d0d6e0) !important;
+    color: var(--sidebar-brand-text, #2f4550) !important;
+  }
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link p,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link i,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link .right,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link .nav-icon {
+    color: var(--sidebar-text, #1a2530) !important;
+  }
+  body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link,
+  body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link p,
+  body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link i {
+    color: var(--sidebar-child-text, #1a2530) !important;
+  }
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active {
+    background: var(--sidebar-active-bg, #586f7c) !important;
+    color: var(--sidebar-active-text, #fff) !important;
+  }
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link p,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link i,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link .right,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active p,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active i,
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active .right {
+    color: var(--sidebar-active-text, #fff) !important;
+  }
+  body aside#jazzy-sidebar .nav-sidebar .nav-header {
+    color: var(--sidebar-text-header, #3d5a66) !important;
+  }
+  body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link:hover {
+    background: var(--sidebar-hover-bg, rgba(184,219,217,.36)) !important;
+    border-left-color: var(--brand-teal-light, #b8dbd9) !important;
+  }
+  body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link:hover {
+    background: var(--sidebar-hover-bg, rgba(184,219,217,.36)) !important;
+  }
+  body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link.active {
+    background: var(--sidebar-active-bg, #586f7c) !important;
+    color: var(--sidebar-active-text, #fff) !important;
+  }
+  body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link.active p,
+  body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link.active i {
+    color: var(--sidebar-active-text, #fff) !important;
+  }
+
+  /* Dark mode — sidebar goes dark, content area also darkens */
+  html[data-theme="dark"] body aside#jazzy-sidebar.main-sidebar,
+  html[data-theme="dark"] body aside#jazzy-sidebar .sidebar,
+  html[data-theme="dark"] body aside#jazzy-sidebar .os-viewport {
+    background: var(--sidebar-bg, #1f2f38) !important;
+  }
+  html[data-theme="dark"] body aside#jazzy-sidebar .brand-link {
+    background: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-navy-dark) 100%) !important;
+    border-bottom-color: var(--brand-teal, #586f7c) !important;
+    color: rgba(255,255,255,.94) !important;
+  }
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link,
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link p,
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link i {
+    color: var(--sidebar-text, rgba(244,244,249,.88)) !important;
+  }
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link,
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link p,
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link i {
+    color: var(--sidebar-child-text, rgba(244,244,249,.6)) !important;
+  }
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link,
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active {
+    background: var(--sidebar-active-bg, rgba(184,219,217,.12)) !important;
+    color: var(--sidebar-active-text, #fff) !important;
+  }
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-sidebar .nav-header {
+    color: var(--sidebar-text-header, rgba(244,244,249,.45)) !important;
+  }
+  html[data-theme="dark"] body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link:hover {
+    background: var(--sidebar-hover-bg, rgba(88,111,124,.2)) !important;
+  }
+  html[data-theme="dark"] body {
+    background-color: var(--surface-bg, #1a1f24) !important;
+  }
+  html[data-theme="dark"] body .content-wrapper {
+    background: var(--surface-bg, #1a1f24) !important;
+  }
 </style>
 {% endblock %}
 

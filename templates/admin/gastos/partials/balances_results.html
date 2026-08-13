@@ -2,30 +2,26 @@
 {% load i18n l10n static humanize gastos_tags %}
 
 {# ── KPI Cards — 6 m&eacute;tricas en una fila ── #}
-<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-5">
+<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-5" data-tour="metrics">
   <div class="kpi-card" style="border-left-color:#2f4550" title="${{ total_gastos|us_currency:2 }}">
-    <div class="kpi-icon-wrap" style="background:#2f4550"><i class="fas fa-coins"></i></div>
     <div class="kpi-body">
       <p class="kpi-label">Acumulado</p>
       <p id="kpi-total-gastos" class="kpi-value">${{ total_gastos|us_currency:2 }}</p>
     </div>
   </div>
   <div class="kpi-card" style="border-left-color:#0369a1" title="${{ promedio_gastos|us_currency:2 }}">
-    <div class="kpi-icon-wrap" style="background:#0369a1"><i class="fas fa-calculator"></i></div>
     <div class="kpi-body">
       <p class="kpi-label">Promedio</p>
       <p id="kpi-promedio" class="kpi-value">${{ promedio_gastos|us_currency:2 }}</p>
     </div>
   </div>
   <div class="kpi-card" style="border-left-color:#586f7c">
-    <div class="kpi-icon-wrap" style="background:#586f7c"><i class="fas fa-exchange-alt"></i></div>
     <div class="kpi-body">
       <p class="kpi-label">Transacciones</p>
       <p id="kpi-transacciones" class="kpi-value">{{ numero_transacciones }}</p>
     </div>
   </div>
   <div class="kpi-card" style="border-left-color:#586f7c" title="${{ gasto_maximo|us_currency:2 }} — {{ categoria_gasto_maximo }}">
-    <div class="kpi-icon-wrap" style="background:#586f7c"><i class="fas fa-arrow-up"></i></div>
     <div class="kpi-body">
       <p class="kpi-label">M&aacute;ximo</p>
       <p id="kpi-maximo" class="kpi-value">${{ gasto_maximo|us_currency:2 }}</p>
@@ -33,7 +29,6 @@
     </div>
   </div>
   <div class="kpi-card" style="border-left-color:#b8dbd9" title="${{ gasto_minimo|us_currency:2 }} — {{ categoria_gasto_minimo }}">
-    <div class="kpi-icon-wrap" style="background:#b8dbd9"><i class="fas fa-arrow-down"></i></div>
     <div class="kpi-body">
       <p class="kpi-label">M&iacute;nimo</p>
       <p id="kpi-minimo" class="kpi-value">${{ gasto_minimo|us_currency:2 }}</p>
@@ -41,16 +36,15 @@
     </div>
   </div>
   <div class="kpi-card" style="border-left-color:#586f7c" title="${{ gasto_mediano|us_currency:2 }}">
-    <div class="kpi-icon-wrap" style="background:#586f7c"><i class="fas fa-equals"></i></div>
     <div class="kpi-body">
-      <p class="kpi-label">Media</p>
+      <p class="kpi-label">Mediana</p>
       <p id="kpi-mediano" class="kpi-value">${{ gasto_mediano|us_currency:2 }}</p>
     </div>
   </div>
 </div>
 
 {# ── Gr&aacute;ficos: dos columnas iguales ── #}
-<div class="flex items-center justify-between mb-3">
+<div class="flex items-center justify-between mb-3" data-tour="exports">
   <span class="text-xs font-bold text-[#586f7c] uppercase tracking-wider flex items-center gap-1.5">
     <i class="fas fa-chart-line text-blue-400"></i> An&aacute;lisis visual
   </span>
@@ -58,7 +52,7 @@
     <i class="fas fa-file-pdf"></i> Exportar PDF
   </button>
 </div>
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5 balances-chart-grid">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5 balances-chart-grid" data-tour="charts">
   <div class="s-card">
     <div class="s-card-head">
       <div class="s-card-ico" style="background:rgba(201,162,39,.08)"><i class="fas fa-chart-bar text-[#c9a227]"></i></div>
@@ -83,7 +77,7 @@
 </div>
 
 {# ── Tabla de detalle ── #}
-<div class="s-card mb-5">
+<div class="s-card mb-5" data-tour="detail">
   <div class="s-card-head">
     <div class="s-card-ico" style="background:rgba(184,219,217,.15)"><i class="fas fa-table text-[#2f4550]"></i></div>
     <span class="s-card-title">Detalle de gastos por categor&iacute;a y cuenta</span>

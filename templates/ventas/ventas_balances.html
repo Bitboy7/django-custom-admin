@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="//cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
 <link rel="stylesheet" href="//cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
 <link rel="stylesheet" href="{% static 'css/datatables-buttons.css' %}">
+<link rel="stylesheet" href="{% static 'css/bank-account-select.css' %}">
 <style>
   /* Estilos personalizados para DataTables */
   .dataTables_processing {
@@ -159,6 +160,92 @@
     border-radius: 12px;
     font-size: 0.875rem;
   }
+
+  /* ═══════════════════════════════════════════════════════════
+     MOBILE RESPONSIVE — ventas balances
+     ═══════════════════════════════════════════════════════════ */
+  @media (max-width: 640px) {
+    /* Filter selects stack full-width */
+    .flex.flex-wrap.gap-4.mb-4 > div {
+      min-width: 100% !important;
+    }
+
+    /* KPI value shrink */
+    .text-xl {
+      font-size: 0.5rem !important;
+    }
+
+    /* KPI card compact */
+    .bg-gradient-to-br.rounded-lg.shadow-lg.p-5 {
+      padding: 0.75rem !important;
+    }
+
+    /* Charts responsive height */
+    [style*="height: 300px"],
+    [style*="height:300px"] {
+      height: 220px !important;
+    }
+    [style*="height: 200px"],
+    [style*="height:200px"] {
+      height: 170px !important;
+    }
+
+    /* Table horizontal scroll */
+    .overflow-x-auto {
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Full-width submit button */
+    button[type="submit"].bg-\[\#5a7d6b\] {
+      width: 100%;
+    }
+
+    /* Filter card padding */
+    .bg-gradient-to-r.from-green-50.to-emerald-50.shadow-lg.rounded-lg.p-6 {
+      padding: 1rem !important;
+    }
+
+    /* H1 shrink */
+    h1.text-2xl {
+      font-size: 1.25rem !important;
+    }
+
+    /* Toast mobile */
+    #toast-notification > div {
+      max-width: calc(100vw - 2rem);
+    }
+
+    /* Month dropdown touch targets */
+    #month-dropdown label {
+      padding: 0.65rem 0.5rem;
+    }
+    #month-dropdown label input[type="checkbox"] {
+      width: 1.15rem;
+      height: 1.15rem;
+    }
+  }
+
+  /* Very small phones */
+  @media (max-width: 400px) {
+    .text-xl {
+      font-size: 1rem !important;
+    }
+    [style*="height: 300px"] {
+      height: 180px !important;
+    }
+  }
+
+  /* Touch: reduce 300ms delay */
+  form {
+    touch-action: manipulation;
+  }
+
+  /* Touch-friendly selects */
+  select.filter-select,
+  .appearance-none.w-full {
+    min-height: 44px;
+    font-size: max(0.875rem, 16px);
+  }
 </style>
 {% endblock %}
 
@@ -230,7 +317,7 @@
       <form method="get" action="{% url 'ventas:ventas_balances' %}" class="space-y-6">
         <div class="flex flex-wrap gap-4 mb-4">
         
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[150px] sm:min-w-[200px] group">
             <label for="cliente_id" class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Cliente:</label>
             <div class="relative">
               <select name="cliente_id" id="cliente_id" 
@@ -246,23 +333,62 @@
             </div>
           </div>
 
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[200px] group">
             <label for="cuenta_id" class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Cuenta:</label>
-            <div class="relative">
-              <select name="cuenta_id" id="cuenta_id" 
-                class="block appearance-none w-full bg-[#f4f4f9] bg-opacity-90 border border-gray-400 hover:border-green-700 px-4 py-2 pr-8 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#b8dbd9] focus:border-transparent">
-                <option value="">Todas las cuentas</option>
+            <div class="bank-account-select" data-bank-account-select>
+              <input type="hidden" name="cuenta_id" id="cuenta_id" value="{{ selected_cuenta_id }}">
+              <button type="button" class="bank-account-trigger" data-bank-account-button aria-expanded="false" aria-controls="cuenta_id_menu">
+                <span class="bank-account-current" data-bank-account-current>
+                  {% if selected_cuenta_id %}
+                    {% for cuenta in cuentas %}
+                      {% if cuenta.id|stringformat:"s" == selected_cuenta_id %}
+                        <span class="bank-account-logo">
+                          {% if cuenta.id_banco.logotipo_url %}<img src="{{ cuenta.id_banco.logotipo_url }}" alt="{{ cuenta.id_banco.nombre }}">{% else %}<i class="fas fa-building-columns text-xs"></i>{% endif %}
+                        </span>
+                        <span class="min-w-0">
+                          <span class="bank-account-number">{{ cuenta.numero_cuenta }}</span>
+                          <span class="bank-account-bank">{{ cuenta.id_banco.nombre }}</span>
+                        </span>
+                      {% endif %}
+                    {% endfor %}
+                  {% else %}
+                    <span class="bank-account-placeholder"><i class="fas fa-wallet text-xs"></i></span>
+                    <span class="min-w-0">
+                      <span class="bank-account-number">Todas las cuentas</span>
+                      <span class="bank-account-bank">Sin filtro de banco</span>
+                    </span>
+                  {% endif %}
+                </span>
+                <i class="fas fa-chevron-down bank-account-chevron"></i>
+              </button>
+              <div class="bank-account-menu" id="cuenta_id_menu" role="listbox">
+                <button type="button" class="bank-account-option {% if not selected_cuenta_id %}is-selected{% endif %}" data-bank-account-option data-value="">
+                  <span class="bank-account-option-content" data-bank-account-label>
+                    <span class="bank-account-placeholder"><i class="fas fa-wallet text-xs"></i></span>
+                    <span class="min-w-0">
+                      <span class="bank-account-number">Todas las cuentas</span>
+                      <span class="bank-account-bank">Sin filtro de banco</span>
+                    </span>
+                  </span>
+                </button>
                 {% for cuenta in cuentas %}
-                <option value="{{ cuenta.id }}" {% if cuenta.id|stringformat:"s" == selected_cuenta_id %}selected{% endif %}>{{ cuenta.numero_cuenta }}</option>
+                <button type="button" class="bank-account-option {% if cuenta.id|stringformat:"s" == selected_cuenta_id %}is-selected{% endif %}" data-bank-account-option data-value="{{ cuenta.id }}">
+                  <span class="bank-account-option-content" data-bank-account-label>
+                    <span class="bank-account-logo">
+                      {% if cuenta.id_banco.logotipo_url %}<img src="{{ cuenta.id_banco.logotipo_url }}" alt="{{ cuenta.id_banco.nombre }}">{% else %}<i class="fas fa-building-columns text-xs"></i>{% endif %}
+                    </span>
+                    <span class="min-w-0">
+                      <span class="bank-account-number">{{ cuenta.numero_cuenta }}</span>
+                      <span class="bank-account-bank">{{ cuenta.id_banco.nombre }}</span>
+                    </span>
+                  </span>
+                </button>
                 {% endfor %}
-              </select>
-              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#586f7c]">
-                <i class="fas fa-chevron-down text-xs"></i>
               </div>
             </div>
           </div>
 
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[200px] group">
             <label for="sucursal_id" class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Sucursal:</label>
             <div class="relative">
               <select name="sucursal_id" id="sucursal_id" 
@@ -278,7 +404,7 @@
             </div>
           </div>
 
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[200px] group">
             <label for="mercado_id" class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Mercado:</label>
             <div class="relative">
               <select name="mercado_id" id="mercado_id" 
@@ -296,7 +422,7 @@
         </div>
 
         <div class="flex flex-wrap gap-4 mb-4">
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[200px] group">
             <label for="modalidad_pago" class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Modalidad de Pago:</label>
             <div class="relative">
               <select name="modalidad_pago" id="modalidad_pago" 
@@ -312,7 +438,7 @@
             </div>
           </div>
 
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[200px] group">
             <label for="estado_cobranza" class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Estado de Cobranza:</label>
             <div class="relative">
               <select name="estado_cobranza" id="estado_cobranza" 
@@ -328,7 +454,7 @@
             </div>
           </div>
 
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[200px] group">
             <label for="year" class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Año:</label>
             <div class="relative">
               <select name="year" id="year" 
@@ -343,7 +469,7 @@
             </div>
           </div>
 
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[200px] group">
             <label class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Meses:</label>
             <div class="relative">
               <input type="hidden" name="months" id="months" value="{{ selected_months|join:',' }}">
@@ -406,7 +532,7 @@
             </div>
           </div>
 
-          <div class="flex-1 min-w-[200px] group">
+          <div class="flex-1 min-w-[150px] sm:min-w-[200px] group">
             <label for="periodo" class="block font-medium mb-2 group-hover:text-[#5a7d6b] transition-colors duration-200">Período:</label>
             <div class="relative">
               <select name="periodo" id="periodo" 
@@ -497,7 +623,7 @@
             <i class="fas fa-dollar-sign text-[#5a7d6b] mr-2 text-3xl"></i>
             <span>Total Ventas</span>
           </h2>
-          <span class="text-3xl font-bold text-green-900">${{ total_ventas|us_currency:2 }}</span>
+          <span class="text-xl font-bold text-green-900">${{ total_ventas|us_currency:2 }}</span>
         </div>
         <div class="mt-4 h-1 w-full bg-[#d8dce6] rounded-full overflow-hidden">
           <div class="bg-green-900 h-1 rounded-full" style="width: 100%"></div>
@@ -512,7 +638,7 @@
             <i class="fas fa-money-check-alt text-[#2f4550] mr-2 text-3xl"></i>
             <span>Total Pagado</span>
           </h2>
-          <span class="text-3xl font-bold text-[#2f4550]">${{ total_pagado|us_currency:2 }}</span>
+          <span class="text-xl font-bold text-[#2f4550]">${{ total_pagado|us_currency:2 }}</span>
         </div>
         <div class="mt-4 h-1 w-full bg-[#d8dce6] rounded-full overflow-hidden">
           <div class="bg-[#586f7c] h-1 rounded-full" style="width: {% widthratio total_pagado total_ventas 100 %}%"></div>
@@ -527,7 +653,7 @@
             <i class="fas fa-exclamation-triangle text-[#b85450] mr-2 text-3xl"></i>
             <span>Pendiente</span>
           </h2>
-          <span class="text-3xl font-bold text-[#b85450]">${{ saldo_pendiente_total|us_currency:2 }}</span>
+          <span class="text-xl font-bold text-[#b85450]">${{ saldo_pendiente_total|us_currency:2 }}</span>
         </div>
         <div class="mt-4 h-1 w-full bg-[#d8dce6] rounded-full overflow-hidden">
           <div class="bg-[#b85450] h-1 rounded-full" style="width: {% widthratio saldo_pendiente_total total_ventas 100 %}%"></div>
@@ -542,7 +668,7 @@
             <i class="fas fa-receipt text-purple-600 mr-2 text-3xl"></i>
             <span>Transacciones</span>
           </h2>
-          <span class="text-3xl font-bold text-purple-900">{{ numero_transacciones }}</span>
+          <span class="text-xl font-bold text-purple-900">{{ numero_transacciones }}</span>
         </div>
         <div class="mt-4 h-1 w-full bg-[#d8dce6] rounded-full overflow-hidden">
           <div class="bg-purple-900 h-1 rounded-full" style="width: 100%"></div>
@@ -892,5 +1018,6 @@ function initVentasCharts() {
 </script>
 
 <script src="{% static 'js/multi-month-selector.js' %}"></script>
+<script src="{% static 'js/bank-account-select.js' %}"></script>
 <script src="{% static 'js/ventas-balances.js' %}"></script>
 {% endblock %}

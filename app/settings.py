@@ -31,7 +31,14 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ["true", "1", "yes"]
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+def _csv_env(name, default=""):
+    return [value.strip() for value in os.getenv(name, default).split(",") if value.strip()]
+
+
+ALLOWED_HOSTS = _csv_env("ALLOWED_HOSTS", "localhost,127.0.0.1")
+
+if os.getenv("DOKPLOY_ALLOW_SSLIP", "False").lower() in ["true", "1", "yes"]:
+    ALLOWED_HOSTS.append(".sslip.io")
 
 # Configuración de seguridad para producción
 if not DEBUG:
@@ -47,7 +54,7 @@ if not DEBUG:
     SESSION_COOKIE_HTTPONLY = True  # Previene acceso vía JavaScript (XSS)
     X_FRAME_OPTIONS = 'DENY'
 
-CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:8000").split(",")
+CSRF_TRUSTED_ORIGINS = _csv_env("CSRF_TRUSTED_ORIGINS", "http://localhost:8000")
 
 # Application definition
 
@@ -131,6 +138,12 @@ JAZZMIN_SETTINGS = {
     
     # Accesos rápidos en menú de usuario (avatar top-right)
     "usermenu_links": [
+        {
+            "name": "Configuración del sitio",
+            "url": "admin:auditoria_siteconfiguration_changelist",
+            "icon": "fas fa-sliders-h",
+            "permissions": ["auditoria.change_siteconfiguration"],
+        },
         {"model": "auth.user"}
     ],
     
@@ -157,6 +170,7 @@ JAZZMIN_SETTINGS = {
         "ventas.Agente",
         "ventas.TerminoCredito",
         "ventas.EstadoCuentaCliente",
+        "auditoria.SiteConfiguration",
         "reportes.ConfiguracionReporte",
         "reportes.ReporteEjecutivo",
         "reportes.DestinatarioReporte",
@@ -183,6 +197,7 @@ JAZZMIN_SETTINGS = {
         "ventas.PagoVenta",
         "ventas.Anticipo",
         "ventas.EstadoCuentaCliente",
+        "ventas.MercadoDestino",
         "ventas.ObligacionFiscal",
         # CATÁLOGO: datos de referencia (incluye agente y término crédito reasignados)
         "catalogo",
@@ -240,6 +255,12 @@ JAZZMIN_SETTINGS = {
                 "url": "admin:ventas_reporte_cobranza",
                 "icon": "fas fa-file-invoice-dollar",
                 "permissions": ["ventas.view_ventas"]
+            },
+            {
+                "name": "Estados de cuenta",
+                "url": "admin:ventas_estadocuentacliente_changelist",
+                "icon": "fas fa-file-invoice",
+                "permissions": ["ventas.view_estadocuentacliente"],
             },
         ],
         "reportes": [
@@ -303,12 +324,6 @@ JAZZMIN_SETTINGS = {
                 "icon": "fas fa-exclamation-triangle",
                 "permissions": ["axes.view_accessfailurelog"],
             },
-            {
-                "name": "Estados de Cuenta",
-                "url": "admin:ventas_estadocuentacliente_changelist",
-                "icon": "fas fa-file-invoice",
-                "permissions": ["ventas.view_estadocuentacliente"],
-            },
         ],
     },
     
@@ -332,6 +347,8 @@ JAZZMIN_SETTINGS = {
         "ventas.PagoVenta": "fas fa-money-check-alt",
         "ventas.Anticipo": "fas fa-hand-holding-usd",
         "ventas.EstadoCuentaCliente": "fas fa-file-invoice",
+        "ventas.MercadoDestino": "fas fa-globe-americas",
+        "ventas.mercadodestino": "fas fa-globe-americas",
         "ventas.ObligacionFiscal": "fas fa-balance-scale",
         "ventas.Agente": "fas fa-user-tie",
         "ventas.TerminoCredito": "fas fa-handshake",
@@ -345,6 +362,8 @@ JAZZMIN_SETTINGS = {
         # AUDITORÍA
         "auditoria": "fas fa-shield-alt",
         "auditoria.LogActividad": "fas fa-clipboard-list",
+        "auditoria.SiteConfiguration": "fas fa-sliders-h",
+        "auditoria.siteconfiguration": "fas fa-sliders-h",
         "admin.LogEntry": "fas fa-history",
         "axes.AccessAttempt": "fas fa-user-times",
         "axes.AccessLog": "fas fa-list-alt",
@@ -385,9 +404,9 @@ JAZZMIN_SETTINGS = {
     # - vertical_tabs
     # - collapsible
     # - carousel
-    "changeform_format": "horizontal_tabs",
+    "changeform_format": "single",
     # override change forms on a per modeladmin basis
-    "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs"},
+    "changeform_format_overrides": {},
     # Add a language dropdown into the admin
     "language_chooser": True,
     "default_theme_mode": "auto",
@@ -445,9 +464,12 @@ MIDDLEWARE = [
     "axes.middleware.AxesMiddleware",
 ]
 
-# Agregar middleware para servir archivos media en producción
-# if not DEBUG:
-#     MIDDLEWARE.insert(-2, "app.middleware.MediaServeMiddleware")  # Insertar antes de los middlewares de auditoría
+# Permite servir /media/ desde Django cuando el despliegue expone Gunicorn
+# directamente. Si todo el tráfico pasa por Nginx, Nginx seguirá sirviendo
+# /media/ antes de llegar a Django.
+SERVE_MEDIA_WITH_DJANGO = os.getenv("SERVE_MEDIA_WITH_DJANGO", "True").lower() in ["true", "1", "yes"]
+if not DEBUG and SERVE_MEDIA_WITH_DJANGO:
+    MIDDLEWARE.insert(1, "app.middleware.media_serve.MediaServeMiddleware")
 
 ROOT_URLCONF = "app.urls"
 
@@ -567,12 +589,12 @@ LOCALE_PATHS = [
 
 STATIC_URL = "/static/"
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-STATIC_ROOT = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'staticfiles')
+MEDIA_ROOT = BASE_DIR / 'media'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-STATICFILES_DIRS = (
-    os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static'),
-)
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 
 TEMPLATE_DIRS = (
     os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'templates'),
@@ -614,17 +636,16 @@ STATICFILES_FINDERS = [
     'compressor.finders.CompressorFinder',
 ]
 
-# Configuración para servir archivos estáticos en producción
 if not DEBUG:
-    # Cambiado a CompressedStaticFilesStorage para evitar hashing de nombres
-    # que causa conflictos con custom_css de Jazzmin
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
-    # Servir estáticos directamente desde STATIC_ROOT (más eficiente en producción)
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+        },
+    }
     WHITENOISE_USE_FINDERS = False
-    # Configuración para servir archivos media con WhiteNoise en producción
-    WHITENOISE_ROOT = MEDIA_ROOT
-    # Añadir configuración para servir archivos media
-    WHITENOISE_MEDIA_PREFIX = '/media/'
 
 # Configuración de logging
 LOGGING = {

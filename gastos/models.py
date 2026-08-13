@@ -1,9 +1,13 @@
+import uuid
+
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from catalogo.models import Sucursal, Productor, Producto
 from django.db.models import Sum
 from django.utils.html import format_html
 from djmoney.models.fields import MoneyField
+from app.media_utils import safe_file_url
 
 class CatGastos(models.Model):
     id = models.AutoField(primary_key=True)
@@ -33,10 +37,15 @@ class Banco(models.Model):
     )
 
     def mostrar_logotipo(self):
-        if self.logotipo:
-            return format_html('<img src="{}" style="width: 50px; height: 50px;" />', self.logotipo.url)
-        return "No Image"
+        url = safe_file_url(self.logotipo)
+        if url:
+            return format_html('<img src="{}" style="width: 50px; height: 50px;" />', url)
+        return "Sin imagen"
     mostrar_logotipo.short_description = 'Logotipo'
+
+    @property
+    def logotipo_url(self):
+        return safe_file_url(self.logotipo)
 
     def __str__(self):
         return f"{self.nombre}"
@@ -79,6 +88,46 @@ class Gastos(models.Model):
         verbose_name = "Gasto"
         verbose_name_plural = "Gastos"
         ordering = ["-fecha_registro"]
+
+
+def comprobante_upload_path(instance, filename):
+    extension = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'bin'
+    return f"comprobantes_gastos/{timezone.now():%Y/%m}/{instance.storage_key}.{extension}"
+
+
+class ComprobanteGasto(models.Model):
+    class Estado(models.TextChoices):
+        PENDIENTE = 'pending', 'Pendiente de procesar'
+        PROCESANDO = 'processing', 'Procesando'
+        REVISION = 'review', 'Listo para revisi?n'
+        ERROR = 'error', 'Error de procesamiento'
+        REGISTRADO = 'recorded', 'Gasto registrado'
+
+    storage_key = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    archivo = models.FileField(upload_to=comprobante_upload_path)
+    nombre_original = models.CharField(max_length=255)
+    content_type = models.CharField(max_length=100)
+    tamano_bytes = models.PositiveIntegerField()
+    sha256 = models.CharField(max_length=64, db_index=True)
+    estado = models.CharField(max_length=16, choices=Estado.choices, default=Estado.PENDIENTE, db_index=True)
+    datos_extraidos = models.JSONField(default=dict, blank=True)
+    texto_ocr = models.TextField(blank=True)
+    confianza = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    error_procesamiento = models.TextField(blank=True)
+    creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    gasto = models.OneToOneField(Gastos, null=True, blank=True, on_delete=models.SET_NULL, related_name='comprobante')
+    creado_en = models.DateTimeField(auto_now_add=True)
+    procesado_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-creado_en']
+        indexes = [
+            models.Index(fields=['estado', 'creado_en'], name='gastos_comp_estado_fecha_idx'),
+            models.Index(fields=['sha256', 'creado_en'], name='gastos_comp_hash_fecha_idx'),
+        ]
+
+    def __str__(self):
+        return f"Comprobante {self.pk} - {self.get_estado_display()}"
 
 class Compra(models.Model):
         fecha_compra = models.DateField()

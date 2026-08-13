@@ -7,6 +7,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from datetime import datetime, timedelta
 from decimal import Decimal
 from django.utils import timezone
+from app.media_utils import safe_file_url
 
 class TerminoCredito(models.Model):
     """Modelo para manejar diferentes términos de crédito"""
@@ -85,12 +86,13 @@ class Cliente(models.Model):
     activo = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.nombre} - {self.pais}"
+        return f"{self.nombre} - {self.pais.nombre}"
 
     def mostrar_logotipo(self):
-        if self.imagen:
-            return format_html('<img src="{}" style="width: 70px; height: 70px;" />', self.imagen.url)
-        return "No Image"
+        url = safe_file_url(self.imagen)
+        if url:
+            return format_html('<img src="{}" style="width: 70px; height: 70px;" />', url)
+        return "Sin imagen"
     mostrar_logotipo.short_description = "Logotipo"
     
     def credito_disponible(self):
@@ -343,7 +345,13 @@ class Ventas(models.Model):
     
     # Campos existentes
     fecha_salida_manifiesto = models.DateField()
-    agente_id = models.ForeignKey(Agente, on_delete=models.CASCADE, verbose_name='Agente aduanal')
+    agente_id = models.ForeignKey(
+        Agente,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Agente aduanal'
+    )
     fecha_deposito = models.DateField(default=timezone.now)
     pedimento = models.CharField(max_length=50, blank=True, null=True)
     carga = models.CharField(max_length=50, blank=True, null=True)

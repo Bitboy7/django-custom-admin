@@ -8,11 +8,16 @@
  */
 
 /* ── Navbar (top) ──────────────────────────────────────────────── */
-body .main-header.navbar,
-body .navbar.navbar-expand-md {
-  background: var(--brand-navy-dark) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.25) !important;
+html body #jazzy-navbar.main-header.navbar,
+html body .main-header.navbar,
+html body .navbar.navbar-expand,
+html body .navbar.navbar-expand-md,
+html body .navbar-white,
+html body .navbar-light {
+  background: var(--navbar-bg, #1f2f38) !important;
+  background-color: var(--navbar-bg, #1f2f38) !important;
+  border-bottom: 1px solid var(--navbar-border, rgba(255, 255, 255, 0.08)) !important;
+  box-shadow: var(--navbar-shadow, 0 1px 8px rgba(0, 0, 0, 0.25)) !important;
   min-height: var(--navbar-height) !important;
   position: sticky;
   top: 0;
@@ -21,9 +26,12 @@ body .navbar.navbar-expand-md {
 }
 
 /* Nav links */
-body .navbar-nav .nav-link,
-body .nav-item .nav-link {
-  color: var(--text-on-dark-muted) !important;
+html body #jazzy-navbar .navbar-nav .nav-link,
+html body #jazzy-navbar .navbar-nav .nav-link.btn,
+html body #jazzy-navbar.navbar-light .navbar-nav .nav-link,
+html body #jazzy-navbar.navbar-white .navbar-nav .nav-link,
+html body .main-header.navbar .navbar-nav .nav-link {
+  color: var(--navbar-text-muted, rgba(244, 244, 249, 0.68)) !important;
   font-family: var(--font-body);
   font-size: var(--font-size-sm);
   font-weight: 500;
@@ -34,30 +42,35 @@ body .nav-item .nav-link {
   display: flex;
   align-items: center;
 }
-body .navbar-nav .nav-link:hover,
-body .nav-item .nav-link:hover {
-  color: #fff !important;
-  background: rgba(13, 148, 136, 0.18) !important;
+html body #jazzy-navbar .navbar-nav .nav-link:hover,
+html body #jazzy-navbar .navbar-nav .nav-link:focus,
+html body .main-header.navbar .navbar-nav .nav-link:hover,
+html body .main-header.navbar .navbar-nav .nav-link:focus {
+  color: var(--navbar-text-active, #fff) !important;
+  background: var(--navbar-bg-hover, rgba(184, 219, 217, 0.16)) !important;
 }
-body .navbar-nav .nav-link.active {
-  color: var(--brand-teal-light) !important;
-  background: rgba(13, 148, 136, 0.14) !important;
+html body #jazzy-navbar .navbar-nav .nav-link.active,
+html body .main-header.navbar .navbar-nav .nav-link.active {
+  color: var(--navbar-text-active, #fff) !important;
+  background: var(--navbar-bg-hover, rgba(184, 219, 217, 0.16)) !important;
+}
+html body #jazzy-navbar .navbar-nav .nav-link i,
+html body #jazzy-navbar .navbar-nav .nav-link svg,
+html body #jazzy-navbar .btn-navbar,
+html body #jazzy-navbar .btn-navbar i {
+  color: var(--navbar-text, rgba(244, 244, 249, 0.9)) !important;
 }
 
 /* Brand */
 body .brand-link {
-  background: linear-gradient(
-    135deg,
-    var(--brand-navy) 0%,
-    var(--brand-navy-dark) 100%
-  ) !important;
-  border-bottom: 2px solid var(--brand-teal) !important;
+  background: var(--sidebar-brand-bg) !important;
+  border-bottom: 1px solid var(--sidebar-brand-border, var(--sidebar-border)) !important;
   padding: var(--space-3) var(--space-6) !important;
   font-family: var(--font-display);
   font-weight: 600;
   font-size: var(--font-size-md);
   letter-spacing: -0.01em;
-  color: rgba(255, 255, 255, 0.94) !important;
+  color: var(--sidebar-brand-text) !important;
 }
 body .brand-text {
   font-size: var(--font-size-sm) !important;
@@ -76,9 +89,9 @@ body .brand-link img {
 
 /* Navbar search */
 body .form-control-navbar {
-  background: rgba(255, 255, 255, 0.07) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  color: #fff !important;
+  background: var(--navbar-control-bg, rgba(255, 255, 255, 0.07)) !important;
+  border: 1px solid var(--navbar-control-border, rgba(255, 255, 255, 0.14)) !important;
+  color: var(--navbar-text-active, #fff) !important;
   border-radius: var(--radius-md) !important;
   font-family: var(--font-body);
   font-size: var(--font-size-sm);
@@ -156,14 +169,146 @@ body .jaz-avatar-name {
   }
 }
 
-/* ── Sidebar ───────────────────────────────────────────────────── */
-body .main-sidebar,
-body .os-viewport,
-body .sidebar {
-  background: var(--sidebar-bg) !important;
+/* ── Dropdown profile card ─────────────────────────────────────── */
+body .jaz-dd-card {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--space-3) !important;
+  padding: var(--space-4) var(--space-5) !important;
+  text-decoration: none !important;
+  color: var(--text-primary) !important;
+  transition: background var(--duration-fast) var(--ease-default);
+  border-radius: var(--radius-md);
+}
+body .jaz-dd-card:hover {
+  background: var(--surface-hover) !important;
+}
+body .profile-mini-avatar,
+body .profile-mini-initials {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+body .profile-mini-avatar {
+  border: 2px solid var(--border-default);
+}
+body .profile-mini-initials {
+  background: linear-gradient(135deg, var(--brand-teal) 0%, var(--brand-teal-dark) 100%);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+body .jaz-dd-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+body .jaz-dd-meta .pname {
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body .jaz-dd-meta .pemail {
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body .jaz-dd-edit-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--surface-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  transition: all var(--duration-fast) var(--ease-default);
+}
+body .jaz-dd-card:hover .jaz-dd-edit-btn {
+  background: var(--brand-teal);
+  color: #fff;
+}
+body .jaz-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-4) !important;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--accent-red) !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer;
+  min-height: 40px;
+  transition: background var(--duration-fast) var(--ease-default);
+}
+body .jaz-logout-btn:hover {
+  background: var(--accent-red-bg) !important;
+}
+
+/* Nuclear: force dropdown-menu visibility over Tailwind preflight */
+body .dropdown-menu {
+  display: none;
+  list-style: none !important;
+  padding: var(--space-1) !important;
+  margin: 0 !important;
+}
+body .dropdown-menu.show {
+  display: block !important;
+}
+body .dropdown-menu .dropdown-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--space-2) !important;
+  padding: var(--space-2) var(--space-4) !important;
+  white-space: nowrap !important;
+}
+body .dropdown-menu .dropdown-divider {
+  height: 1px;
+  margin: var(--space-1) 0;
+  background: var(--border-default);
+  border: none;
+}
+
+/* ── Sidebar — siempre fondo oscuro, texto claro ──────────────── */
+/* Nuclear: anula bg-body-secondary de Bootstrap y data-bs-theme */
+html body aside#jazzy-sidebar,
+html body aside#jazzy-sidebar.bg-body-secondary,
+html body aside#jazzy-sidebar[data-bs-theme],
+html body .main-sidebar,
+html body .os-viewport,
+html body .sidebar {
+  background: var(--sidebar-bg, #1f2f38) !important;
+  background-color: var(--sidebar-bg, #1f2f38) !important;
+  background-image: none !important;
   font-family: var(--font-body);
   scrollbar-width: thin;
-  scrollbar-color: var(--sidebar-text-header) transparent;
+  scrollbar-color: var(--sidebar-text-header, rgba(244,244,249,0.45)) transparent;
+}
+html body .main-sidebar,
+html body aside#jazzy-sidebar {
+  border-right: 1px solid var(--sidebar-border, rgba(255,255,255,0.08)) !important;
+  border-color: var(--sidebar-border, rgba(255,255,255,0.08)) !important;
 }
 body .sidebar::-webkit-scrollbar {
   width: 4px;
@@ -272,6 +417,71 @@ body .nav-treeview .nav-item > .nav-link.active p,
 body .nav-treeview .nav-item > .nav-link.active i,
 body .nav-treeview .nav-item > .nav-link.active .nav-icon {
   color: var(--sidebar-active-text) !important;
+}
+
+/* High-specificity guard against AdminLTE/Tailwind low-contrast sidebar states. */
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link p,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link i,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link .right,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link .nav-icon {
+  color: var(--sidebar-text, rgba(244,244,249,0.88)) !important;
+}
+
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link:hover,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active {
+  background: var(--sidebar-active-bg, rgba(184, 219, 217, 0.18)) !important;
+  border-left-color: var(--brand-teal-light, #b8dbd9) !important;
+  color: var(--sidebar-active-text, #fff) !important;
+}
+
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link:hover p,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link:hover i,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link p,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link i,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link .right,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active p,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active i,
+html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active .right {
+  color: var(--sidebar-active-text, #fff) !important;
+}
+
+/* ── Nuclear: todo texto dentro de #jazzy-sidebar -> claro ───── */
+html body aside#jazzy-sidebar,
+html body aside#jazzy-sidebar .nav-link,
+html body aside#jazzy-sidebar .nav-link p,
+html body aside#jazzy-sidebar .nav-link i,
+html body aside#jazzy-sidebar .nav-item,
+html body aside#jazzy-sidebar .nav-item > a,
+html body aside#jazzy-sidebar .nav-header,
+html body aside#jazzy-sidebar .brand-link,
+html body aside#jazzy-sidebar .brand-text,
+html body aside#jazzy-sidebar .user-panel,
+html body aside#jazzy-sidebar .user-panel a,
+html body aside#jazzy-sidebar .user-panel .info {
+  color: var(--sidebar-text, rgba(244,244,249,0.88)) !important;
+}
+html body aside#jazzy-sidebar .brand-link {
+  background: var(--sidebar-brand-bg, linear-gradient(135deg, #2f4550 0%, #1f2f38 100%)) !important;
+}
+html body aside#jazzy-sidebar .nav-treeview .nav-link,
+html body aside#jazzy-sidebar .nav-treeview .nav-link p,
+html body aside#jazzy-sidebar .nav-treeview .nav-link i {
+  color: var(--sidebar-child-text, rgba(244,244,249,0.6)) !important;
+}
+html body aside#jazzy-sidebar .nav-link.active,
+html body aside#jazzy-sidebar .nav-link.active p,
+html body aside#jazzy-sidebar .nav-link.active i,
+html body aside#jazzy-sidebar .menu-open > .nav-link,
+html body aside#jazzy-sidebar .menu-open > .nav-link p,
+html body aside#jazzy-sidebar .menu-open > .nav-link i {
+  color: var(--sidebar-active-text, #fff) !important;
+}
+html body aside#jazzy-sidebar .nav-link:hover,
+html body aside#jazzy-sidebar .nav-link:hover p,
+html body aside#jazzy-sidebar .nav-link:hover i {
+  color: var(--sidebar-active-text, #fff) !important;
 }
 
 /* User panel — hidden */

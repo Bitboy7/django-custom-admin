@@ -284,3 +284,42 @@ body #changelist-filter li.selected a {
   height: 0 !important;
   opacity: 0 !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   DARK MODE — admin result list tables
+   ═══════════════════════════════════════════════════════════════ */
+html[data-theme="dark"] body #result_list,
+html[data-theme="dark"] body .results table,
+html[data-theme="dark"] body .change-list table {
+  background: var(--surface-card, #242b32);
+}
+
+html[data-theme="dark"] body #result_list tr:nth-child(even) td,
+html[data-theme="dark"] body .results table tr:nth-child(even) td {
+  background: var(--surface-hover, #2f3840);
+}
+
+html[data-theme="dark"] body #result_list tr:hover td,
+html[data-theme="dark"] body .results table tr:hover td {
+  background: rgba(154, 197, 195, 0.08) !important;
+}
+
+html[data-theme="dark"] body #changelist-filter li a:hover {
+  background: var(--surface-hover, #2f3840) !important;
+}
+
+html[data-theme="dark"] body #changelist-filter li.selected a {
+  background: var(--surface-hover, #2f3840);
+}
+
+html[data-theme="dark"] body .paginator a:hover {
+  background: var(--surface-hover, #2f3840) !important;
+}
+
+html[data-theme="dark"] .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+  background: var(--surface-hover, #2f3840) !important;
+}
+
+html[data-theme="dark"] .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+  opacity: 0.4;
+}

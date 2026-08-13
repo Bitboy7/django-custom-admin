@@ -33,7 +33,6 @@ class LogActividadAdmin(ModelAdmin):
         }),
         ('Objeto afectado', {
             'fields': ('modelo_afectado', 'objeto_id', 'campos_modificados'),
-            'classes': ('collapse',)
         }),
     )
     
@@ -146,7 +145,6 @@ class SiteConfigurationAdmin(ModelAdmin):
             'fields': ('custom_topbar_css',),
             'description': 'CSS personalizado para la barra de navegación superior. '
                            'Ejemplo: .main-header { background-color: #ff0000; }',
-            'classes': ('collapse',),
         }),
     )
 

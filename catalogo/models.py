@@ -3,6 +3,7 @@ from django.db import models
 from django.utils import timezone
 from django.contrib import admin
 from django.utils.html import format_html
+from app.media_utils import safe_file_url
 
 class Pais(models.Model):
     siglas = models.CharField(max_length=10)
@@ -17,9 +18,10 @@ class Pais(models.Model):
     )
     
     def mostrar_bandera(self):
-        if self.bandera:
-            return format_html('<img src="{}" style="width: 40px; height: 40px;" />', self.bandera.url)
-        return "No Image"
+        url = safe_file_url(self.bandera)
+        if url:
+            return format_html('<img src="{}" style="width: 40px; height: 40px;" />', url)
+        return "Sin imagen"
     mostrar_bandera.short_description = 'Bandera'
     
     def __str__(self):
@@ -50,7 +52,7 @@ class Sucursal(models.Model):
     id_estado = models.ForeignKey(Estado, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f'{self.nombre} - {self.id_estado}'
+        return f'{self.nombre} - {self.id_estado.nombre}'
     
     class Meta:
         verbose_name = "Sucursal"
@@ -102,7 +104,7 @@ class Producto(models.Model):
             )
     
     def __str__(self):
-            return f"{self.variedad} - {self.disponible}"    
+            return f"{self.variedad}"    
                 
     class Meta:
             verbose_name = 'Producto'

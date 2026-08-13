@@ -26,6 +26,7 @@ from import_export.widgets import ForeignKeyWidget
 from import_export.forms import ExportForm, ImportForm
 from app.widgets import MoneyWidget
 from django.utils.html import format_html
+from app.media_utils import safe_file_url
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import path, reverse
@@ -240,7 +241,6 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
         }),
         ('Estado', {
             'fields': ('activo', 'fecha_registro'),
-            'classes': ('collapse',)
         }),
     )
     
@@ -354,7 +354,7 @@ class VentasResource(resources.ModelResource):
         import_id_fields = ('id',)
         
     def dehydrate_agente(self, ventas):
-        return ventas.agente_id.nombre
+        return ventas.agente_id.nombre if ventas.agente_id else ''
     
     def dehydrate_producto(self, ventas):
         return ventas.producto.variedad
@@ -419,7 +419,6 @@ class VentasAdmin(ModelAdmin):
         ('Documentación Fiscal', {
             'fields': ('fecha_emision_cfdi', 'folio_factura', 'cfdi_cancelado',
                        'nota_credito', 'nota_cargo'),
-            'classes': ('collapse',)
         }),
         ('Producto y Cliente', {
             'fields': ('producto', 'cantidad', 'monto', 'cliente',
@@ -433,11 +432,9 @@ class VentasAdmin(ModelAdmin):
         ('Mercado y Exportación', {
             'fields': ('tipo_venta', 'mercado_destino', 'incoterm',
                        'moneda_venta', 'tipo_cambio', 'numero_carga_comprador'),
-            'classes': ('collapse',)
         }),
         ('Contabilidad', {
             'fields': ('cuenta', 'anticipo', 'ajuste'),
-            'classes': ('collapse',)
         }),
         ('Tipo de Registro', {
             'fields': ('tipo_registro',),
@@ -606,7 +603,7 @@ class VentasAdmin(ModelAdmin):
                         producto=cd['producto'],
                         fecha_salida_manifiesto=cd['fecha_salida_manifiesto'],
                         fecha_deposito=cd['fecha_deposito'],
-                        agente_id=cd['agente_id'],
+                        agente_id=cd.get('agente_id'),
                         pedimento=cd['pedimento'],
                         carga=cd['carga'],
                         sucursal_id=cd['sucursal_id'],
@@ -700,7 +697,7 @@ class VentasAdmin(ModelAdmin):
                 if not producto_inicial and fraccion:
                     producto_inicial = Producto.objects.filter(nombre__icontains='Mango').first()
 
-                from datetime import date as today_date
+                fecha_cfdi = parsed.get('fecha_emision_cfdi') or timezone.now().date()
                 initial = {
                     'folio_factura': parsed.get('folio_factura', ''),
                     'fecha_emision_cfdi': parsed.get('fecha_emision_cfdi'),
@@ -715,7 +712,8 @@ class VentasAdmin(ModelAdmin):
                     'PO': parsed.get('PO', ''),
                     'cliente': cliente_inicial,
                     'producto': producto_inicial,
-                    'fecha_deposito': today_date.today(),
+                    'fecha_salida_manifiesto': fecha_cfdi,
+                    'fecha_deposito': fecha_cfdi,
                 }
 
                 form = CFDIConfirmForm(initial=initial)
@@ -744,19 +742,19 @@ class VentasAdmin(ModelAdmin):
     def get_cliente_info(self, obj):
         """Información del cliente con indicador de riesgo"""
         cliente = obj.cliente
-        color = {
-            'A+': '#28a745',  # Verde
-            'A': '#6c757d',   # Gris
-            'B': '#fd7e14',   # Naranja
-            'C': '#dc3545'    # Rojo
-        }.get(cliente.calificacion_credito, '#6c757d')
+        risk_class = {
+            'A+': 'sales-risk--a-plus',
+            'A': 'sales-risk--a',
+            'B': 'sales-risk--b',
+            'C': 'sales-risk--c',
+        }.get(cliente.calificacion_credito, '')
         
         return format_html(
             '<strong>{}</strong><br>'
-            '<small style="color: {};">📊 {}</small><br>'
-            '<small>🌍 {}</small>',
+            '<small class="sales-risk {}">📊 {}</small><br>'
+            '<small class="sales-muted">🌍 {}</small>',
             cliente.nombre,
-            color,
+            risk_class,
             cliente.get_calificacion_credito_display(),
             cliente.pais.nombre
         )
@@ -764,12 +762,12 @@ class VentasAdmin(ModelAdmin):
     
     def get_monto_formateado(self, obj):
         """Monto con formato mejorado"""
-        color = '#28a745' if obj.modalidad_pago == 'Contado' else '#fd7e14'
+        money_class = 'sales-money--cash' if obj.modalidad_pago == 'Contado' else 'sales-money--credit'
         monto_str = f"{float(obj.monto.amount):,.2f}"
         return format_html(
-            '<span style="color: {}; font-weight: bold;">${}</span><br>'
-            '<small>{}</small>',
-            color,
+            '<span class="sales-money {}">${}</span><br>'
+            '<small class="sales-muted">{}</small>',
+            money_class,
             monto_str,
             obj.moneda_venta
         )
@@ -778,32 +776,32 @@ class VentasAdmin(ModelAdmin):
     def get_saldo_pendiente(self, obj):
         """Saldo pendiente con formato visual"""
         if obj.modalidad_pago == 'Contado':
-            return mark_safe('<span style="color: green;">✓ Pagado</span>')
+            return mark_safe('<span class="sales-badge sales-badge--paid">✓ Pagado</span>')
         
         saldo = obj.saldo_pendiente()
         if saldo <= 0:
-            return mark_safe('<span style="color: green;">✓ $0.00</span>')
+            return mark_safe('<span class="sales-badge sales-badge--paid">✓ $0.00</span>')
         
-        color = '#dc3545' if obj.esta_vencida() else '#fd7e14'
+        balance_class = 'sales-balance--overdue' if obj.esta_vencida() else 'sales-balance--open'
         return format_html(
-            '<span style="color: {}; font-weight: bold;">${}</span>',
-            color, f"{float(saldo):,.2f}"
+            '<span class="sales-balance {}">${}</span>',
+            balance_class, f"{float(saldo):,.2f}"
         )
     get_saldo_pendiente.short_description = 'Saldo Pendiente'
     
     # Métodos originales del admin
     def get_estado_cobranza(self, obj):
         colors = {
-            'Pagado': 'green',
-            'Pendiente': 'orange', 
-            'Parcial': 'blue',
-            'Vencido': 'red',
-            'Incobrable': 'darkred'
+            'Pagado': 'sales-badge--paid',
+            'Pendiente': 'sales-badge--pending',
+            'Parcial': 'sales-badge--partial',
+            'Vencido': 'sales-badge--overdue',
+            'Incobrable': 'sales-badge--bad',
         }
-        color = colors.get(obj.estado_cobranza, 'black')
+        badge_class = colors.get(obj.estado_cobranza, 'sales-badge--neutral')
         return format_html(
-            '<span style="color: {}; font-weight: bold;">{}</span>',
-            color, obj.get_estado_cobranza_display()
+            '<span class="sales-badge {}">{}</span>',
+            badge_class, obj.get_estado_cobranza_display()
         )
     get_estado_cobranza.short_description = 'Estado Cobranza'
     
@@ -812,11 +810,11 @@ class VentasAdmin(ModelAdmin):
             return '-'
         dias = obj.dias_vencido()
         if dias > 0:
-            return format_html('<span style="color: red;">+{} días</span>', dias)
+            return format_html('<span class="sales-due sales-due--overdue">+{} días</span>', dias)
         elif dias < 0:
-            return format_html('<span style="color: green;">{} días</span>', abs(dias))
+            return format_html('<span class="sales-due sales-due--ok">{} días</span>', abs(dias))
         else:
-            return 'Vence hoy'
+            return mark_safe('<span class="sales-due sales-due--today">Vence hoy</span>')
     get_dias_vencimiento.short_description = 'Vencimiento'
     
     def get_mercado_destino(self, obj):
@@ -2093,7 +2091,6 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
         }),
         ('Notas y Auditoría', {
             'fields': ('notas', 'fecha_registro'),
-            'classes': ('collapse',),
         }),
     )
     
@@ -2136,7 +2133,8 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
     
     def get_comprobante(self, obj):
         """Muestra ícono de comprobante si existe con link para preview"""
-        if obj.comprobante_pago:
+        comprobante_url = safe_file_url(obj.comprobante_pago)
+        if comprobante_url:
             file_ext = obj.comprobante_pago.name.split('.')[-1].lower()
             if file_ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
                 icon = '🖼️'
@@ -2156,9 +2154,9 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
                 'title="Click para ver comprobante">'
                 '{} <span style="color:#586f7c; text-decoration:underline;">{}</span>'
                 '</a>',
-                obj.comprobante_pago.url,
+                comprobante_url,
                 file_type.lower(),
-                obj.comprobante_pago.url,
+                comprobante_url,
                 icon,
                 file_type
             )
@@ -2167,7 +2165,8 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
     
     def preview_comprobante(self, obj):
         """Muestra preview del comprobante en el formulario de detalle"""
-        if not obj.comprobante_pago:
+        comprobante_url = safe_file_url(obj.comprobante_pago)
+        if not comprobante_url:
             return mark_safe('<p style="color:#b8dbd9;">No hay comprobante adjunto</p>')
         
         file_ext = obj.comprobante_pago.name.split('.')[-1].lower()
@@ -2184,8 +2183,8 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
                 'Click en la imagen para verla en tamaño completo'
                 '</p>'
                 '</div>',
-                obj.comprobante_pago.url,
-                obj.comprobante_pago.url
+                comprobante_url,
+                comprobante_url
             )
         elif file_ext == 'pdf':
             return format_html(
@@ -2200,7 +2199,7 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
                 'Archivo: {}'
                 '</p>'
                 '</div>',
-                obj.comprobante_pago.url,
+                comprobante_url,
                 obj.comprobante_pago.name.split('/')[-1]
             )
         else:
@@ -2216,7 +2215,7 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
                 'Archivo: {}'
                 '</p>'
                 '</div>',
-                obj.comprobante_pago.url,
+                comprobante_url,
                 obj.comprobante_pago.name.split('/')[-1]
             )
     preview_comprobante.short_description = 'Vista Previa'
@@ -2621,11 +2620,9 @@ class SaldoClienteAdmin(ModelAdmin):
         }),
         ('Control de Pagos', {
             'fields': ('get_monto_pagado', 'fecha_ultimo_pago'),
-            'classes': ('collapse',)
         }),
         ('Auditoria', {
             'fields': ('fecha_creacion',),
-            'classes': ('collapse',)
         })
     )
     
@@ -2750,7 +2747,6 @@ class AntigüedadSaldoAdmin(ModelAdmin):
         }),
         ('Auditoria', {
             'fields': ('calculado_por',),
-            'classes': ('collapse',)
         })
     )
     
@@ -2853,7 +2849,6 @@ class EstadoCuentaClienteAdmin(ModelAdmin):
         }),
         ('Archivo', {
             'fields': ('formato_generado', 'archivo_generado', 'notas'),
-            'classes': ('collapse',)
         })
     )
     
@@ -2956,11 +2951,9 @@ class ConfiguracionCuentasPorCobrarAdmin(ModelAdmin):
         }),
         ('Límites de Crédito', {
             'fields': ('permitir_sobregiro_credito', 'porcentaje_sobregiro_permitido'),
-            'classes': ('collapse',)
         }),
         ('Auditoria', {
             'fields': ('fecha_creacion', 'fecha_modificacion'),
-            'classes': ('collapse',)
         })
     )
     

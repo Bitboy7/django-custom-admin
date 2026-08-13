@@ -1,0 +1,3 @@
+# Pinned CPU combination: avoids the Paddle oneDNN/PIR crash on Python 3.12.
+paddlepaddle==3.2.2
+paddleocr==3.4.1

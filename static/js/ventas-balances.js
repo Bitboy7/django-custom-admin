@@ -20,7 +20,7 @@ $.extend(true, $.fn.dataTable.defaults, {
       extend: "excel",
       title: "Reporte de Ventas",
       text: '<i class="fas fa-file-excel"></i> Excel',
-      className: "btn btn-success btn-sm",
+      className: "btn-export btn-export-excel",
       exportOptions: {
         columns: ":visible:not(.no-export)",
       },
@@ -29,7 +29,7 @@ $.extend(true, $.fn.dataTable.defaults, {
       extend: "pdf",
       title: "Reporte de Ventas",
       text: '<i class="fas fa-file-pdf"></i> PDF',
-      className: "btn btn-danger btn-sm",
+      className: "btn-export btn-export-pdf",
       orientation: "landscape",
       pageSize: "A4",
       exportOptions: {
@@ -40,7 +40,7 @@ $.extend(true, $.fn.dataTable.defaults, {
       extend: "print",
       title: "Reporte de Ventas",
       text: '<i class="fas fa-print"></i> Imprimir',
-      className: "btn btn-info btn-sm",
+      className: "btn-export btn-export-print",
       exportOptions: {
         columns: ":visible:not(.no-export)",
       },
@@ -450,7 +450,7 @@ $(document).ready(function () {
           extend: "excel",
           title: "Análisis de Ventas - " + new Date().toLocaleDateString(),
           text: '<i class="fas fa-file-excel"></i> Excel',
-          className: "btn btn-success btn-sm",
+          className: "btn-export btn-export-excel",
           exportOptions: {
             columns: ":visible",
           },
@@ -459,7 +459,7 @@ $(document).ready(function () {
           extend: "pdf",
           title: "Análisis de Ventas",
           text: '<i class="fas fa-file-pdf"></i> PDF',
-          className: "btn btn-danger btn-sm",
+          className: "btn-export btn-export-pdf",
           orientation: "landscape",
           pageSize: "A4",
           exportOptions: {
@@ -470,7 +470,7 @@ $(document).ready(function () {
           extend: "print",
           title: "Análisis de Ventas",
           text: '<i class="fas fa-print"></i> Imprimir',
-          className: "btn btn-info btn-sm",
+          className: "btn-export btn-export-print",
           exportOptions: {
             columns: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
           },

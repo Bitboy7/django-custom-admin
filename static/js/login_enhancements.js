@@ -9,16 +9,57 @@
   "use strict";
 
   document.addEventListener("DOMContentLoaded", function () {
+    initLoginPlaceholders();
     initPasswordToggle();
     initFormEnhancements();
   });
+
+  function initLoginPlaceholders() {
+    const inputs = document.querySelectorAll(
+      '.field-wrap input[type="text"], .field-wrap input[type="password"], .field-wrap input[type="email"], .field-wrap input[type="number"]',
+    );
+
+    inputs.forEach(function (input) {
+      const name = (input.getAttribute("name") || "").toLowerCase();
+      const id = (input.getAttribute("id") || "").toLowerCase();
+      const label = getFieldLabel(input).toLowerCase();
+      const key = name + " " + id + " " + label;
+
+      if (key.includes("password") || key.includes("contraseña")) {
+        input.setAttribute("placeholder", "Ingresa tu contraseña");
+        input.setAttribute("autocomplete", "current-password");
+      } else if (
+        key.includes("token") ||
+        key.includes("otp") ||
+        key.includes("código") ||
+        key.includes("codigo")
+      ) {
+        input.setAttribute("placeholder", "000000");
+        input.setAttribute("autocomplete", "one-time-code");
+        input.setAttribute("inputmode", "numeric");
+      } else if (
+        key.includes("username") ||
+        key.includes("usuario") ||
+        key.includes("email")
+      ) {
+        input.setAttribute("placeholder", "tu.usuario");
+        input.setAttribute("autocomplete", "username");
+      }
+    });
+  }
+
+  function getFieldLabel(input) {
+    if (!input.id) return "";
+    const label = document.querySelector('label[for="' + input.id + '"]');
+    return label ? label.textContent.trim() : "";
+  }
 
   /**
    * Inicializa el botón para mostrar/ocultar contraseña
    */
   function initPasswordToggle() {
     const passwordInput = document.querySelector(
-      'input[type="password"][name="password"]'
+      '.field-wrap input[type="password"]',
     );
 
     if (!passwordInput) return;
@@ -30,6 +71,7 @@
 
     const toggleButton = createToggleButton();
     fieldWrap.appendChild(toggleButton);
+    passwordInput.setAttribute("data-password-visible", "false");
 
     toggleButton.addEventListener("click", function (e) {
       e.preventDefault();
@@ -38,7 +80,8 @@
     });
 
     // Ajustar padding del input
-    const currentPadding = parseFloat(window.getComputedStyle(passwordInput).paddingRight) || 0;
+    const currentPadding =
+      parseFloat(window.getComputedStyle(passwordInput).paddingRight) || 0;
     passwordInput.style.paddingRight = Math.max(currentPadding, 48) + "px";
   }
 
@@ -48,24 +91,10 @@
     button.className = "password-toggle-btn";
     button.setAttribute("aria-label", "Mostrar contraseña");
     button.setAttribute("title", "Mostrar contraseña");
-    button.style.cssText =
-      "position:absolute;right:12px;top:50%;transform:translateY(-50%);" +
-      "background:none;border:none;padding:6px;cursor:pointer;" +
-      "color:#586f7c;font-size:14px;line-height:1;border-radius:6px;" +
-      "transition:color .2s,background .2s;";
 
     const icon = document.createElement("i");
     icon.className = "fas fa-eye";
     button.appendChild(icon);
-
-    button.addEventListener("mouseenter", function () {
-      this.style.color = "#586f7c";
-      this.style.background = "#f4f4f9";
-    });
-    button.addEventListener("mouseleave", function () {
-      this.style.color = this.classList.contains("active") ? "#2f4550" : "#586f7c";
-      this.style.background = "transparent";
-    });
 
     return button;
   }
@@ -80,14 +109,14 @@
       button.setAttribute("aria-label", "Ocultar contraseña");
       button.setAttribute("title", "Ocultar contraseña");
       button.classList.add("active");
-      button.style.color = "#2f4550";
+      input.setAttribute("data-password-visible", "true");
     } else {
       input.type = "password";
       icon.className = "fas fa-eye";
       button.setAttribute("aria-label", "Mostrar contraseña");
       button.setAttribute("title", "Mostrar contraseña");
       button.classList.remove("active");
-      button.style.color = "#586f7c";
+      input.setAttribute("data-password-visible", "false");
     }
 
     input.focus();
@@ -98,7 +127,7 @@
    */
   function initFormEnhancements() {
     const inputs = document.querySelectorAll(
-      'input[type="text"], input[type="password"], input[type="email"]'
+      'input[type="text"], input[type="password"], input[type="email"], input[type="number"]',
     );
 
     inputs.forEach(function (input) {
@@ -131,16 +160,18 @@
           if (firstInvalid) firstInvalid.focus();
         } else {
           // Deshabilitar botón y mostrar spinner durante envío
-          const btn = form.querySelector('.btn-submit');
+          const btn = form.querySelector(".btn-submit");
           if (btn) {
             btn.disabled = true;
-            btn.style.opacity = '0.7';
+            btn.style.opacity = "0.7";
             const originalHTML = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> ' + (btn.textContent.trim().split(' ')[0] || 'Procesando...');
+            btn.innerHTML =
+              '<i class="fas fa-circle-notch fa-spin"></i> ' +
+              (btn.textContent.trim().split(" ")[0] || "Procesando...");
             // Restaurar después de 10s por si hay error de red
-            setTimeout(function() {
+            setTimeout(function () {
               btn.disabled = false;
-              btn.style.opacity = '';
+              btn.style.opacity = "";
               btn.innerHTML = originalHTML;
             }, 10000);
           }

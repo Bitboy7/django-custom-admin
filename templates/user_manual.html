@@ -147,6 +147,72 @@
     text-decoration: none;
     transform: translateY(-2px);
   }
+
+  .section { scroll-margin-top: 1rem; }
+  .manual-quick-actions, .manual-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 18px 0 30px; }
+  .manual-button { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid #d8dce6; border-radius: 8px; background: #fff; color: #2f4550; font-weight: 700; text-decoration: none; box-shadow: 0 2px 7px rgba(47,69,80,.08); }
+  .manual-button:hover, .manual-button:focus-visible { border-color: #417690; background: #f8fbfc; color: #2f4550; text-decoration: none; outline: 3px solid rgba(65,118,144,.18); }
+  .manual-card { border: 1px solid #dee2e6; border-radius: 8px; padding: 18px; background: #f8f9fa; }
+  .manual-card h3, .manual-card h4 { margin-top: 0; color: #2f4550; }
+  .manual-card .manual-button { margin-top: 14px; padding: 11px 14px; background: #417690; color: #fff; }
+  .manual-table-wrap { overflow-x: auto; margin: 16px 0 24px; border: 1px solid #dee2e6; border-radius: 8px; }
+  .manual-table { width: 100%; min-width: 720px; border-collapse: collapse; background: #fff; }
+  .manual-table th, .manual-table td { padding: 12px 14px; border-bottom: 1px solid #e9ecef; text-align: left; vertical-align: top; }
+  .manual-table th { background: #2f4550; color: #fff; font-size: .9rem; }
+  .manual-table tr:last-child td { border-bottom: 0; }
+  .manual-steps { counter-reset: manual-step; list-style: none; margin-left: 0 !important; padding: 0; }
+  .manual-steps li { position: relative; min-height: 38px; margin: 12px 0; padding: 8px 8px 8px 48px; }
+  .manual-steps li::before { counter-increment: manual-step; content: counter(manual-step); position: absolute; left: 0; top: 4px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: #417690; color: #fff; font-weight: 700; }
+  /* Jazzmin puede aplicar texto claro globalmente; estas reglas garantizan
+     contraste legible sobre las tarjetas blancas del manual. */
+  .user-manual { color: #2f4550; }
+  .user-manual .section { color: #3d4d57; }
+  .user-manual .section p,
+  .user-manual .section li,
+  .user-manual .section td {
+    color: #3d4d57 !important;
+    opacity: 1 !important;
+  }
+  .user-manual .section strong,
+  .user-manual .section h3,
+  .user-manual .section h4 {
+    color: #263b46 !important;
+    opacity: 1 !important;
+  }
+  .user-manual .section a:not(.manual-button) {
+    color: #1f6280 !important;
+    text-decoration: underline;
+  }
+  .user-manual .highlight-box,
+  .user-manual .highlight-box p,
+  .user-manual .highlight-box li,
+  .user-manual .highlight-box strong {
+    color: #214b60 !important;
+    opacity: 1 !important;
+  }
+  .user-manual .warning-box,
+  .user-manual .warning-box p,
+  .user-manual .warning-box li,
+  .user-manual .warning-box strong {
+    color: #5c3a00 !important;
+    opacity: 1 !important;
+  }
+  .user-manual .code-block {
+    color: #263b46 !important;
+    opacity: 1 !important;
+  }
+  .user-manual .manual-table th {
+    color: #ffffff !important;
+    opacity: 1 !important;
+  }
+  @media (max-width: 760px) {
+    .user-manual { padding: 10px; }
+    .manual-header { padding: 28px 18px; }
+    .manual-header h1 { font-size: 2rem; }
+    .manual-quick-actions, .manual-grid { grid-template-columns: 1fr; }
+    .section, .table-of-contents { padding: 18px; }
+    .back-to-admin { position: static; display: inline-block; margin: 10px; }
+  }
 </style>
 {% endblock %}
 
@@ -159,6 +225,14 @@
     <p>{% trans "Sistema de administración Agrícola de la Costa San Luis S.P.R. de R.L." %}</p>
   </div>
 
+  <div class="manual-quick-actions" aria-label="{% trans 'Accesos rápidos a balances' %}">
+    <a class="manual-button" href="{% url 'admin:gastos_gastos_balances' %}?guia=1">
+      <span>{% trans "Abrir balance de gastos e iniciar guía" %}</span><span aria-hidden="true">→</span>
+    </a>
+    <a class="manual-button" href="{% url 'admin:ventas_ventas_balances' %}?guia=1">
+      <span>{% trans "Abrir balance de ventas e iniciar guía" %}</span><span aria-hidden="true">→</span>
+    </a>
+  </div>
   <div class="table-of-contents">
     <h2>{% trans "Tabla de Contenidos" %}</h2>
     <ul>
@@ -169,27 +243,21 @@
       <li><a href="#capital-inversiones">{% trans "Capital e Inversiones" %}</a></li>
       <li><a href="#balances-y-reportes">{% trans "Balances y Reportes" %}</a></li>
       <li><a href="#auditoria">{% trans "Auditoría del Sistema" %}</a></li>
-      <li><a href="#configuracion">{% trans "Configuración" %}</a></li>
+      <li><a href="#buenas-practicas">{% trans "Buenas prácticas" %}</a></li>
       <li><a href="#soporte-tecnico">{% trans "Soporte Técnico" %}</a></li>
     </ul>
   </div>
 
   <div class="section" id="acceso-al-sistema">
     <h2>{% trans "Acceso al Sistema" %}</h2>
-    <p>
-      {% trans "Para acceder al sistema, abre tu navegador web y dirígete a la URL del servidor de la aplicación. Si estás utilizando el servidor de desarrollo, la URL será:" %}
-    </p>
-    <div class="code-block">http://localhost:8000</div>
-
-    <h3>{% trans "Inicio de Sesión" %}</h3>
-    <ol>
-      <li>{% trans "Ingresa tu nombre de usuario y contraseña en la página de inicio de sesión." %}</li>
-      <li>{% trans "Haz clic en el botón 'Iniciar Sesión'." %}</li>
+    <p>{% trans "Accede únicamente con la dirección proporcionada por el administrador de la empresa. Cada usuario debe utilizar sus propias credenciales y el segundo factor de autenticación configurado en su dispositivo." %}</p>
+    <h3>{% trans "Inicio de sesión con verificación en dos pasos" %}</h3>
+    <ol class="manual-steps">
+      <li>{% trans "Ingresa tu nombre de usuario y contraseña." %}</li>
+      <li>{% trans "Introduce el código temporal de seis dígitos generado por tu aplicación de autenticación." %}</li>
+      <li>{% trans "Si cambiaste o perdiste el dispositivo, utiliza un token de respaldo y solicita al administrador la recuperación del acceso." %}</li>
     </ol>
-    
-    <div class="highlight-box">
-      <strong>{% trans "Nota:" %}</strong> {% trans "El sistema requiere autenticación. Solo usuarios autorizados pueden acceder a las funcionalidades." %}
-    </div>
+    <div class="warning-box"><strong>{% trans "Seguridad:" %}</strong> {% trans "No compartas contraseñas, códigos temporales ni tokens de respaldo. Cierra la sesión al terminar, especialmente en equipos compartidos." %}</div>
   </div>
 
   <div class="section" id="gestion-de-catalogos">
@@ -356,32 +424,75 @@
   </div>
 
   <div class="section" id="balances-y-reportes">
-    <h2>{% trans "Balances y Reportes" %}</h2>
-    <p>
-      {% trans "La sección de balances y reportes te permite generar informes financieros detallados y analizar el estado financiero de la empresa." %}
-    </p>
+    <h2>{% trans "Balances y reportes" %}</h2>
+    <p>{% trans "Los balances convierten los registros capturados en indicadores, gráficas y tablas exportables. Todos los filtros seleccionados se combinan: cuanto más específica sea la selección, más reducido será el resultado." %}</p>
 
-    <h3>{% trans "Acceder a los Balances" %}</h3>
-    <ol>
-      <li>{% trans "Desde el dashboard principal, haz clic en 'Ver Balances'." %}</li>
-      <li>{% trans "También puedes acceder directamente desde el menú navegando a '/balances/'." %}</li>
+    <div class="manual-grid">
+      <article class="manual-card">
+        <h3>{% trans "Balance de gastos" %}</h3>
+        <p>{% trans "Analiza egresos por cuenta bancaria, sucursal, año, meses y periodo. Incluye distribución por categoría, acumulados y valores representativos." %}</p>
+        <a class="manual-button" href="{% url 'admin:gastos_gastos_balances' %}?guia=1">{% trans "Abrir e iniciar guía de gastos" %}<span aria-hidden="true">→</span></a>
+      </article>
+      <article class="manual-card">
+        <h3>{% trans "Balance de ventas" %}</h3>
+        <p>{% trans "Analiza ventas y cobranza por cliente, cuenta, sucursal, mercado, modalidad de pago, estado, año, meses y periodo." %}</p>
+        <a class="manual-button" href="{% url 'admin:ventas_ventas_balances' %}?guia=1">{% trans "Abrir e iniciar guía de ventas" %}<span aria-hidden="true">→</span></a>
+      </article>
+    </div>
+
+    <h3>{% trans "Procedimiento recomendado" %}</h3>
+    <ol class="manual-steps">
+      <li><strong>{% trans "Define la pregunta." %}</strong> {% trans "Por ejemplo: gastos de una sucursal durante el trimestre o ventas a crédito pendientes de un mercado." %}</li>
+      <li><strong>{% trans "Selecciona los filtros." %}</strong> {% trans "Deja ‘Todos’ o ‘Todas’ cuando no quieras restringir ese criterio." %}</li>
+      <li><strong>{% trans "Elige el periodo." %}</strong> {% trans "Usa diario para fechas exactas, semanal para seguimiento operativo y mensual para revisión ejecutiva." %}</li>
+      <li><strong>{% trans "Aplica y valida." %}</strong> {% trans "Comprueba los indicadores y revisa algunas filas de detalle antes de exportar." %}</li>
+      <li><strong>{% trans "Genera el reporte." %}</strong> {% trans "Escoge el formato adecuado e identifica el periodo analizado al compartirlo." %}</li>
     </ol>
 
-    <h3>{% trans "Tipos de Reportes Disponibles" %}</h3>
-    <ul>
-      <li><strong>{% trans "Reporte Completo Excel:" %}</strong> {% trans "Incluye gastos, compras, ventas y balances mensuales." %}</li>
-      <li><strong>{% trans "Balance Mensual:" %}</strong> {% trans "Resumen financiero por mes." %}</li>
-      <li><strong>{% trans "Análisis de Flujo de Caja:" %}</strong> {% trans "Estado de ingresos y egresos." %}</li>
-      <li><strong>{% trans "Reportes por Categoría:" %}</strong> {% trans "Gastos agrupados por tipo." %}</li>
-    </ul>
+    <h3>{% trans "Cómo usar cada filtro" %}</h3>
+    <div class="manual-table-wrap"><table class="manual-table">
+      <thead><tr><th>{% trans "Filtro" %}</th><th>{% trans "Disponible en" %}</th><th>{% trans "Uso recomendado" %}</th></tr></thead>
+      <tbody>
+        <tr><td><strong>{% trans "Cuenta" %}</strong></td><td>{% trans "Gastos y ventas" %}</td><td>{% trans "Limita el análisis a los movimientos de una cuenta bancaria. Selecciona ‘Todas’ para consolidar cuentas." %}</td></tr>
+        <tr><td><strong>{% trans "Sucursal" %}</strong></td><td>{% trans "Gastos y ventas" %}</td><td>{% trans "Revisa una ubicación o deja todas las sucursales para obtener el consolidado." %}</td></tr>
+        <tr><td><strong>{% trans "Cliente y mercado" %}</strong></td><td>{% trans "Ventas" %}</td><td>{% trans "Cliente estudia una relación comercial específica; Mercado agrupa las operaciones por destino." %}</td></tr>
+        <tr><td><strong>{% trans "Modalidad y cobranza" %}</strong></td><td>{% trans "Ventas" %}</td><td>{% trans "Modalidad separa contado y crédito. Estado ayuda a localizar ventas pagadas, pendientes o vencidas." %}</td></tr>
+        <tr><td><strong>{% trans "Año y meses" %}</strong></td><td>{% trans "Gastos y ventas" %}</td><td>{% trans "En periodos semanal y mensual, selecciona el año y uno o varios meses. Sin meses seleccionados se consulta todo el año." %}</td></tr>
+        <tr><td><strong>{% trans "Periodo diario" %}</strong></td><td>{% trans "Gastos y ventas" %}</td><td>{% trans "Activa Día específico o Rango de fechas. En ventas se usa la fecha de depósito; en gastos, la fecha del gasto." %}</td></tr>
+        <tr><td><strong>{% trans "Periodo semanal" %}</strong></td><td>{% trans "Gastos y ventas" %}</td><td>{% trans "Agrupa por semana dentro del año y meses seleccionados; es útil para seguimiento operativo." %}</td></tr>
+        <tr><td><strong>{% trans "Periodo mensual" %}</strong></td><td>{% trans "Gastos y ventas" %}</td><td>{% trans "Agrupa por mes y facilita comparaciones ejecutivas y cierres periódicos." %}</td></tr>
+      </tbody>
+    </table></div>
 
-    <h3>{% trans "Generar Reportes" %}</h3>
-    <ol>
-      <li>{% trans "Selecciona el tipo de reporte deseado." %}</li>
-      <li>{% trans "Configura el rango de fechas si es necesario." %}</li>
-      <li>{% trans "Haz clic en 'Generar' o 'Exportar'." %}</li>
-      <li>{% trans "El sistema generará el archivo Excel automáticamente." %}</li>
-    </ol>
+    <div class="highlight-box"><strong>{% trans "Importante:" %}</strong> {% trans "Año y meses se aplican a consultas semanales o mensuales. Cuando el periodo es diario, utiliza un día o un rango completo con fecha inicial y final." %}</div>
+
+    <h3>{% trans "Interpretación de resultados" %}</h3>
+    <div class="manual-grid">
+      <article class="manual-card"><h4>{% trans "Indicadores de gastos" %}</h4><ul>
+        <li><strong>{% trans "Acumulado:" %}</strong> {% trans "suma total del gasto filtrado." %}</li>
+        <li><strong>{% trans "Promedio y mediana:" %}</strong> {% trans "referencias para reconocer importes atípicos; la mediana es el valor central." %}</li>
+        <li><strong>{% trans "Máximo y mínimo:" %}</strong> {% trans "extremos del conjunto y categoría relacionada." %}</li>
+      </ul></article>
+      <article class="manual-card"><h4>{% trans "Indicadores de ventas" %}</h4><ul>
+        <li><strong>{% trans "Total ventas:" %}</strong> {% trans "importe vendido dentro de la consulta." %}</li>
+        <li><strong>{% trans "Total pagado:" %}</strong> {% trans "importe cobrado y registrado." %}</li>
+        <li><strong>{% trans "Pendiente:" %}</strong> {% trans "diferencia por cobrar; revísala junto con estado y vencimiento." %}</li>
+      </ul></article>
+    </div>
+    <p>{% trans "Las gráficas ayudan a detectar concentraciones por categoría, modalidad, estado o cliente. La tabla permite buscar, ordenar, cambiar el número de filas y navegar por páginas." %}</p>
+
+    <h3>{% trans "Generar y compartir reportes" %}</h3>
+    <div class="manual-table-wrap"><table class="manual-table">
+      <thead><tr><th>{% trans "Formato" %}</th><th>{% trans "Cuándo utilizarlo" %}</th><th>{% trans "Consideraciones" %}</th></tr></thead>
+      <tbody>
+        <tr><td><strong>{% trans "PDF" %}</strong></td><td>{% trans "Presentación, autorización o archivo visual." %}</td><td>{% trans "Verifica títulos, filtros y totales antes de enviarlo." %}</td></tr>
+        <tr><td><strong>{% trans "Excel" %}</strong></td><td>{% trans "Análisis adicional, conciliación o entrega de datos." %}</td><td>{% trans "Conserva el detalle de la tabla filtrada." %}</td></tr>
+        <tr><td><strong>{% trans "Resumen Excel" %}</strong></td><td>{% trans "Revisión consolidada de gastos." %}</td><td>{% trans "Agrupa por sucursal y cuenta, con subtotales y categorías." %}</td></tr>
+        <tr><td><strong>{% trans "CSV o Copiar" %}</strong></td><td>{% trans "Intercambio rápido con otras herramientas." %}</td><td>{% trans "Disponibles en gastos; no conservan diseño ni gráficas." %}</td></tr>
+        <tr><td><strong>{% trans "Imprimir" %}</strong></td><td>{% trans "Revisión física o impresión a PDF." %}</td><td>{% trans "Confirma orientación, escala y páginas en la vista previa." %}</td></tr>
+      </tbody>
+    </table></div>
+    <div class="warning-box"><strong>{% trans "Antes de compartir:" %}</strong> {% trans "Confirma cuenta o sucursal, fechas, número de transacciones y total. Envía la información financiera únicamente a personas autorizadas." %}</div>
   </div>
 
   <div class="section" id="auditoria">
@@ -405,54 +516,27 @@
     </ol>
   </div>
 
-  <div class="section" id="configuracion">
-    <h2>{% trans "Configuración del Sistema" %}</h2>
-    <p>
-      {% trans "Para el correcto funcionamiento del sistema, asegúrate de que las siguientes configuraciones estén establecidas:" %}
-    </p>
-    <h3>{% trans "Variables de Entorno" %}</h3>
-    <p>{% trans "En tu archivo" %} <code>.env</code>:</p>
+  <div class="section" id="buenas-practicas">
+    <h2>{% trans "Buenas prácticas para usuarios" %}</h2>
     <ul>
-      <li><code>SECRET_KEY</code>: {% trans "La clave secreta de Django." %}</li>
-      <li><code>DEBUG</code>: {% trans "Define si el modo debug está activado" %} (<code>True</code> {% trans "o" %} <code>False</code>).</li>
-      <li><code>ALLOWED_HOSTS</code>: {% trans "Lista de hosts permitidos." %}</li>
-      <li><code>DATABASE_URL</code>: {% trans "URL de conexión a la base de datos." %}</li>
-      <li><code>CURRENCY_API_KEY</code>: {% trans "Clave para el servicio de conversión de monedas." %}</li>
-    </ul>
-
-    <h3>{% trans "Configuraciones Especiales" %}</h3>
-    <ul>
-      <li><strong>{% trans "Multiidioma:" %}</strong> {% trans "El sistema soporta español, inglés, francés, alemán y portugués." %}</li>
-      <li><strong>{% trans "Conversión de Monedas:" %}</strong> {% trans "Integración con APIs para conversión automática." %}</li>
-      <li><strong>{% trans "IA:" %}</strong> {% trans "Categorización automática de gastos usando inteligencia artificial." %}</li>
+      <li>{% trans "Verifica sucursal, cuenta, fecha e importe antes de guardar un registro." %}</li>
+      <li>{% trans "Adjunta únicamente documentos legibles y relacionados con la operación." %}</li>
+      <li>{% trans "No elimines catálogos o movimientos sin confirmar su impacto y contar con autorización." %}</li>
+      <li>{% trans "Utiliza los filtros antes de exportar para no compartir información ajena al análisis." %}</li>
+      <li>{% trans "Cierra sesión al terminar y nunca compartas credenciales o códigos de autenticación." %}</li>
     </ul>
   </div>
 
   <div class="section" id="soporte-tecnico">
-    <h2>{% trans "Soporte Técnico" %}</h2>
-    <p>
-      {% trans "Si necesitas ayuda adicional con el sistema, puedes:" %}
-    </p>
-    
+    <h2>{% trans "Solicitar ayuda" %}</h2>
+    <p>{% trans "Si una pantalla no muestra el resultado esperado, reúne esta información antes de contactar al administrador:" %}</p>
     <ul>
-      <li>{% trans "Contactar al administrador del sistema" %}</li>
-      <li>{% trans "Revisar los logs de error en la sección de auditoría" %}</li>
-      <li>{% trans "Consultar la documentación técnica en la carpeta Docs/" %}</li>
+      <li>{% trans "Módulo y acción que intentabas realizar." %}</li>
+      <li>{% trans "Filtros o fechas seleccionados, sin incluir contraseñas ni códigos de autenticación." %}</li>
+      <li>{% trans "Mensaje mostrado y una captura que no exponga datos sensibles." %}</li>
+      <li>{% trans "Fecha y hora aproximada del problema." %}</li>
     </ul>
-
-    <div class="highlight-box">
-      <h4>{% trans "Documentación Adicional" %}</h4>
-      <ul>
-        <li><strong>AI_INVOICE_MODULE.md:</strong> {% trans "Información sobre el módulo de IA" %}</li>
-        <li><strong>DEPLOYMENT_GUIDE.md:</strong> {% trans "Guía de despliegue" %}</li>
-        <li><strong>ROLES_GUIDE.md:</strong> {% trans "Gestión de roles y permisos" %}</li>
-        <li><strong>TRANSLATIONS_GUIDE.md:</strong> {% trans "Guía de traducciones" %}</li>
-      </ul>
-    </div>
-
-    <div class="warning-box">
-      <strong>{% trans "Importante:" %}</strong> {% trans "Mantén siempre respaldos regulares de tu base de datos y archivos del sistema." %}
-    </div>
+    <div class="highlight-box"><strong>{% trans "Ayuda en balances:" %}</strong> {% trans "Usa ‘¿Cómo usar esta pantalla?’ para repetir la guía interactiva sin modificar tus datos." %}</div>
   </div>
 
   <hr style="margin: 40px 0;">
@@ -460,7 +544,7 @@
   <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
     <p style="margin: 0; color: #6c757d;">
       <strong>{% trans "Sistema de Gestión Agrícola de la Costa San Luis S.P.R. de R.L." %}</strong><br>
-      {% trans "Este manual cubre las funciones principales de la aplicación. Para más información, consulta la documentación técnica." %}
+      {% trans "Este manual cubre las funciones principales de la aplicación. Si necesitas apoyo adicional, contacta al administrador del sistema." %}
     </p>
   </div>
 </div>
