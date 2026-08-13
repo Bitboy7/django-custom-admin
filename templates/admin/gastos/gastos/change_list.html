@@ -1,13 +1,15 @@
 {% extends "admin/change_list.html" %}
 
 {% block object-tools-items %}
-  <a href="{% url 'gastos:capturar_comprobante' %}" class="gastos-quick-action gastos-quick-action--ocr">
-    <i class="fas fa-camera" aria-hidden="true"></i>
-    <span>Capturar con OCR</span>
-  </a>
-  <a href="{% url 'admin:gastos_gastos_export_excel' %}" class="gastos-quick-action gastos-quick-action--export">
-    <i class="fas fa-file-excel" aria-hidden="true"></i>
-    <span>Exportar Excel</span>
-  </a>
-  {{ block.super }}
+  <div class="gastos-toolbar-actions" aria-label="Acciones de gastos">
+    <a href="{% url 'gastos:capturar_comprobante' %}" class="gastos-quick-action gastos-quick-action--ocr">
+      <i class="fas fa-camera" aria-hidden="true"></i>
+      <span>Capturar con OCR</span>
+    </a>
+    <a href="{% url 'admin:gastos_gastos_export_excel' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="gastos-quick-action gastos-quick-action--export" title="Exporta solamente los gastos mostrados por los filtros activos">
+      <i class="fas fa-file-excel" aria-hidden="true"></i>
+      <span>Exportar Excel</span>
+    </a>
+    {{ block.super }}
+  </div>
 {% endblock %}

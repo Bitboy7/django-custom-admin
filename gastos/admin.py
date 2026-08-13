@@ -3,33 +3,17 @@ from django.contrib.admin import ModelAdmin
 from django.contrib.admin import SimpleListFilter
 from django.template.response import TemplateResponse
 from django.urls import path
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from import_export.admin import ImportExportModelAdmin
 from import_export.forms import ExportForm, ImportForm
 from .models import CatGastos, Banco, Cuenta, Gastos, Compra, SaldoMensual, ComprobanteGasto
 from django.utils.html import format_html
+from django.utils.text import slugify
 from django.utils import timezone
 from catalogo.models import Sucursal, Productor, Producto
 from app.widgets import MoneyWidget
-from datetime import timedelta
-
-
-class BancoGastoFilter(SimpleListFilter):
-    title = 'Banco'
-    parameter_name = 'banco'
-
-    def lookups(self, request, model_admin):
-        return [
-            (str(banco.id), banco.nombre)
-            for banco in Banco.objects.order_by('nombre')
-        ]
-
-    def queryset(self, request, queryset):
-        if self.value():
-            return queryset.filter(id_cuenta_banco__id_banco_id=self.value())
-        return queryset
 
 
 class SucursalGastoFilter(SimpleListFilter):
@@ -107,32 +91,6 @@ class MontoGastoFilter(SimpleListFilter):
             return queryset.filter(monto__amount__gte=50000)
         return queryset
 
-
-class PeriodoGastoFilter(SimpleListFilter):
-    title = 'Periodo'
-    parameter_name = 'periodo'
-
-    def lookups(self, request, model_admin):
-        return [
-            ('hoy', 'Hoy'),
-            ('semana', 'Ultimos 7 dias'),
-            ('mes', 'Mes actual'),
-            ('anio', 'Año actual'),
-        ]
-
-    def queryset(self, request, queryset):
-        today = timezone.localdate()
-        value = self.value()
-
-        if value == 'hoy':
-            return queryset.filter(fecha=today)
-        if value == 'semana':
-            return queryset.filter(fecha__gte=today - timedelta(days=7), fecha__lte=today)
-        if value == 'mes':
-            return queryset.filter(fecha__year=today.year, fecha__month=today.month)
-        if value == 'anio':
-            return queryset.filter(fecha__year=today.year)
-        return queryset
 
 class CatGastoResource(resources.ModelResource):
     fields = ('id', 'nombre', 'fecha_registro')
@@ -251,7 +209,9 @@ class GastosAdmin(ModelAdmin):
     list_display = ('id', 'id_sucursal', 'id_cat_gastos',
                     'id_cuenta_banco', 'monto', 'descripcion', 'fecha', 'fecha_registro')
     search_fields = ('descripcion', 'id_sucursal__nombre', 'id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta', 'id_cuenta_banco__id_banco__nombre')
-    list_filter = (BancoGastoFilter, SucursalGastoFilter, CategoriaGastoFilter, CuentaGastoFilter, MontoGastoFilter, PeriodoGastoFilter, 'fecha_registro')
+    # La cuenta ya identifica el banco; la fecha del gasto se filtra desde
+    # date_hierarchy. Evitamos duplicar controles que confunden al usuario.
+    list_filter = (SucursalGastoFilter, CategoriaGastoFilter, CuentaGastoFilter, MontoGastoFilter)
     date_hierarchy = 'fecha'
     ordering = ('fecha', 'fecha_registro', 'id')
     list_select_related = ('id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', 'id_cuenta_banco__id_banco')
@@ -265,11 +225,64 @@ class GastosAdmin(ModelAdmin):
             'fields': ('id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', 'monto', 'descripcion', 'fecha')
         }),
     )
-    
-    actions = ['export_to_excel']
+    # La exportacion usa el boton superior y respeta los filtros activos.
+    # Deshabilitamos acciones masivas para evitar una barra vacia y casillas
+    # de seleccion que ya no forman parte de este flujo.
+    actions = None
+
+    def get_export_filename(self, request):
+        """Construye un nombre legible a partir de los filtros activos."""
+        parts = ['gastos']
+
+        year = request.GET.get('fecha__year')
+        month = request.GET.get('fecha__month')
+        day = request.GET.get('fecha__day')
+        if year:
+            date_parts = [year]
+            if month:
+                date_parts.append(month.zfill(2))
+            if day:
+                date_parts.append(day.zfill(2))
+            parts.append(f"fecha-{'-'.join(date_parts)}")
+
+        sucursal_id = request.GET.get('sucursal')
+        if sucursal_id:
+            nombre = Sucursal.objects.filter(pk=sucursal_id).values_list('nombre', flat=True).first()
+            parts.append(f"sucursal-{slugify(nombre or sucursal_id)[:32]}")
+
+        categoria_id = request.GET.get('categoria')
+        if categoria_id:
+            nombre = CatGastos.objects.filter(pk=categoria_id).values_list('nombre', flat=True).first()
+            parts.append(f"categoria-{slugify(nombre or categoria_id)[:32]}")
+
+        cuenta_id = request.GET.get('cuenta')
+        if cuenta_id:
+            cuenta = Cuenta.objects.select_related('id_banco').filter(pk=cuenta_id).first()
+            if cuenta:
+                cuenta_label = f'{cuenta.id_banco.nombre}-{cuenta.numero_cuenta}'
+            else:
+                cuenta_label = cuenta_id
+            parts.append(f"cuenta-{slugify(cuenta_label)[:42]}")
+
+        rango_monto = request.GET.get('rango_monto')
+        if rango_monto:
+            monto_labels = {
+                '0-1000': '0-a-1000',
+                '1000-5000': '1000-a-5000',
+                '5000-10000': '5000-a-10000',
+                '10000-50000': '10000-a-50000',
+                '50000+': '50000-o-mas',
+            }
+            parts.append(f"monto-{monto_labels.get(rango_monto, slugify(rango_monto))}")
+
+        search = request.GET.get('q', '').strip()
+        if search:
+            parts.append(f"busqueda-{slugify(search)[:30]}")
+
+        generated_at = timezone.localtime().strftime('%Y%m%d-%H%M%S')
+        return f"{'_'.join(parts)}_{generated_at}.xlsx"
 
     def export_to_excel(self, request, queryset):
-        from django.http import HttpResponse
         import openpyxl
         import datetime
         from openpyxl.styles import Font, PatternFill, Alignment
@@ -553,7 +566,8 @@ class GastosAdmin(ModelAdmin):
         response = HttpResponse(
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        response["Content-Disposition"] = 'attachment; filename="gastos.xlsx"'
+        filename = self.get_export_filename(request)
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
         wb.save(response)
         return response
 
@@ -579,7 +593,22 @@ class GastosAdmin(ModelAdmin):
         if not self.has_view_permission(request):
             from django.core.exceptions import PermissionDenied
             raise PermissionDenied
-        return self.export_to_excel(request, self.get_queryset(request))
+        # La exportacion refleja exactamente el listado: filtros, busqueda y
+        # jerarquia de fecha activos, sin depender de la pagina actual.
+        filter_params = {
+            key for key in request.GET
+            if key not in {'all', 'p', 'o', 'ot', '_popup', '_to_field'}
+        }
+        if not filter_params:
+            self.message_user(
+                request,
+                'Aplica al menos un filtro, fecha o b\u00fasqueda antes de exportar.',
+                level='warning',
+            )
+            return HttpResponseRedirect('../')
+
+        changelist = self.get_changelist_instance(request)
+        return self.export_to_excel(request, changelist.queryset)
 
     def balances_admin_view(self, request):
         from app.services.balance_service import BalanceAnalysisService

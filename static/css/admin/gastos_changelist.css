@@ -250,6 +250,15 @@ body.app-gastos.model-gastos.change-list .object-tools {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  justify-content: flex-end;
+  margin: 0 0 18px;
+  padding: 0;
+}
+
+body.app-gastos.model-gastos.change-list .object-tools > li {
+  list-style: none;
+  margin: 0 !important;
+  padding: 0;
 }
 
 body.app-gastos.model-gastos.change-list .gastos-quick-action {
@@ -285,16 +294,189 @@ body.app-gastos.model-gastos.change-list .gastos-quick-action--ocr:hover {
 }
 
 body.app-gastos.model-gastos.change-list .gastos-quick-action--export {
-  background: #fff;
+  background: #217346;
+  border-color: #217346;
+  color: #fff !important;
 }
 
 body.app-gastos.model-gastos.change-list .gastos-quick-action--export:hover {
-  background: #f4f7fa;
-  border-color: #b9c6d3;
+  background: #185c37;
+  border-color: #185c37;
+  color: #fff !important;
 }
 
 html[data-theme="dark"] body.app-gastos.model-gastos.change-list .gastos-quick-action--export {
+  background: #217346;
+  border-color: #2f925b;
+  color: #fff !important;
+}
+
+/* Barra superior real de Jazzmin: filtros, busqueda y acciones. */
+body.app-gastos.model-gastos.change-list #change-list-filters {
+  background: #fff;
+  border: 1px solid #dbe4ea;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(23, 56, 68, 0.07);
+  margin-bottom: 20px;
+  padding: 16px 18px !important;
+}
+
+body.app-gastos.model-gastos.change-list #change-list-filters > .d-flex {
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search {
+  display: grid !important;
+  flex: 1 1 900px !important;
+  gap: 10px !important;
+  grid-template-columns: repeat(4, minmax(150px, 1fr)) minmax(220px, 1.25fr) auto;
+  min-width: 0;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .form-group {
+  margin: 0;
+  min-width: 0;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .form-control,
+body.app-gastos.model-gastos.change-list #changelist-search .select2-container,
+body.app-gastos.model-gastos.change-list #changelist-search .select2-selection--single {
+  width: 100% !important;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .form-control,
+body.app-gastos.model-gastos.change-list #changelist-search .select2-selection--single {
+  background: #fff !important;
+  border: 1px solid #c5d1da !important;
+  border-radius: 10px !important;
+  box-shadow: 0 1px 2px rgba(23, 56, 68, 0.03);
+  color: #173844 !important;
+  font-size: 0.875rem;
+  height: 44px !important;
+  min-height: 44px !important;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search input.form-control {
+  min-width: 0 !important;
+  padding: 0 14px;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .select2-selection__rendered {
+  color: #173844 !important;
+  line-height: 42px !important;
+  padding-left: 13px !important;
+  padding-right: 34px !important;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .select2-selection__arrow {
+  height: 42px !important;
+  right: 8px !important;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .form-control:focus,
+body.app-gastos.model-gastos.change-list #changelist-search .select2-container--focus .select2-selection--single,
+body.app-gastos.model-gastos.change-list #changelist-search .select2-container--open .select2-selection--single {
+  border-color: #18b7a7 !important;
+  box-shadow: 0 0 0 3px rgba(24, 183, 167, 0.14) !important;
+  outline: none !important;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search > .btn {
+  align-items: center;
+  border: 1px solid #18b7a7 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 5px 12px rgba(24, 183, 167, 0.18);
+  display: inline-flex;
+  font-weight: 800;
+  height: 44px;
+  justify-content: center;
+  margin: 0;
+  padding: 0 20px;
+  white-space: nowrap;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-toolbar-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  justify-content: flex-end;
+  margin: 0;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-toolbar-actions > a {
+  float: none !important;
+  height: 44px;
+  margin: 0 !important;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-toolbar-actions > .btn-success {
+  order: -1;
+}
+
+body.app-gastos.model-gastos.change-list .gastos-toolbar-actions > .btn-success,
+body.app-gastos.model-gastos.change-list .gastos-quick-action {
+  align-items: center;
+  border-radius: 10px !important;
+  display: inline-flex;
+  font-size: 0.82rem;
+  font-weight: 800 !important;
+  gap: 7px;
+  justify-content: center;
+  padding: 0 15px !important;
+}
+
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #change-list-filters {
   background: var(--surface-card, #242b32);
   border-color: var(--border-default, #3d4a52);
+}
+
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-search .form-control,
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-search .select2-selection--single {
+  background: var(--surface-bg, #1a1f24) !important;
+  border-color: var(--border-default, #3d4a52) !important;
   color: var(--text-primary, #f4f4f9) !important;
+}
+
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-search .select2-selection__rendered {
+  color: var(--text-primary, #f4f4f9) !important;
+}
+
+@media (max-width: 1500px) {
+  body.app-gastos.model-gastos.change-list #change-list-filters > .d-flex {
+    align-items: stretch !important;
+  }
+
+  body.app-gastos.model-gastos.change-list #changelist-search {
+    grid-template-columns: repeat(2, minmax(180px, 1fr)) minmax(220px, 1.2fr) auto;
+  }
+
+  body.app-gastos.model-gastos.change-list .gastos-toolbar-actions {
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 767px) {
+  body.app-gastos.model-gastos.change-list #change-list-filters {
+    padding: 12px !important;
+  }
+
+  body.app-gastos.model-gastos.change-list #changelist-search {
+    grid-template-columns: 1fr;
+  }
+
+  body.app-gastos.model-gastos.change-list #changelist-search > .btn,
+  body.app-gastos.model-gastos.change-list .gastos-toolbar-actions,
+  body.app-gastos.model-gastos.change-list .gastos-toolbar-actions > a {
+    width: 100%;
+  }
+
+  body.app-gastos.model-gastos.change-list .gastos-toolbar-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
 }
