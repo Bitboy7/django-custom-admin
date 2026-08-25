@@ -29,9 +29,17 @@ from ventas.models import (
     Anticipo,
     Cliente,
     ConfiguracionCuentasPorCobrar,
+    DocumentoCFDI,
     Ventas,
 )
 from ventas.services.reporte_cobranza_service import generar_reporte_cobranza
+from ventas.cfdi_parser import parse_cfdi
+from ventas.services.cfdi_import_service import (
+    crear_cliente_desde_cfdi,
+    importar_cfdi,
+    match_cliente,
+)
+from ventas.tests_cfdi_parser import XML_40_INGRESO, XML_NOTA_CARGO
 
 
 # =============================================================================
@@ -386,3 +394,155 @@ class InyeccionSaldoEnFilaTest(ReporteCobranzaBaseTest):
         )
         self.assertIsNotNone(fila)
         self.assertAlmostEqual(fila['anticipo'], 2000.0)  # excedente = 10000 - 8000
+
+
+# =============================================================================
+# Saldo por cobrar con notas (DocumentoCFDI)
+# =============================================================================
+
+class SaldoPorCobrarNotasTest(ReporteCobranzaBaseTest):
+
+    def test_nota_cargo_suma_y_nota_credito_resta(self):
+        """Nota de cargo suma al saldo; nota de crédito resta."""
+        cliente = self._cliente('Cliente Notas')
+        venta = self._venta_credito(cliente, '10000.00')
+
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.NOTA_CARGO,
+            monto=Money('500.00', 'MXN'),
+            venta=venta,
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.EGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.NOTA_CREDITO,
+            monto=Money('200.00', 'MXN'),
+            venta=venta,
+        )
+
+        self.assertAlmostEqual(venta.saldo_por_cobrar(), 10300.00)
+
+    def test_nota_credito_cancelada_no_afecta_saldo(self):
+        """Una nota de crédito cancelada no debe restar del saldo."""
+        cliente = self._cliente('Cliente NC Cancelada')
+        venta = self._venta_credito(cliente, '10000.00')
+
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.EGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.NOTA_CREDITO,
+            monto=Money('200.00', 'MXN'),
+            venta=venta,
+            estado=DocumentoCFDI.EstadoDocumento.CANCELADO,
+        )
+
+        self.assertAlmostEqual(venta.saldo_por_cobrar(), 10000.00)
+
+
+# =============================================================================
+# Importación de CFDI (servicio)
+# =============================================================================
+
+class CFDIImportServiceTest(ReporteCobranzaBaseTest):
+
+    def test_match_cliente_nacional_prioriza_rfc(self):
+        cliente = self._cliente('Grupo Karicy SA de CV')
+        cliente.rfc = 'GKA971127HY7'
+        cliente.save(update_fields=['rfc'])
+        parsed = {
+            '_receptor_nombre': 'GRUPO KARYCY',
+            '_receptor_rfc': 'GKA971127HY7',
+        }
+
+        self.assertEqual(match_cliente(parsed), cliente)
+
+    def test_match_cliente_extranjero_usa_registro_fiscal(self):
+        cliente = self._cliente('Panorama Produce LTD')
+        cliente.rfc = Cliente.RFC_GENERICO_EXTRANJERO
+        cliente.residencia_fiscal = 'CAN'
+        cliente.numero_registro_fiscal = '834911224'
+        cliente.save(update_fields=[
+            'rfc', 'residencia_fiscal', 'numero_registro_fiscal',
+        ])
+        parsed = {
+            '_receptor_nombre': 'PANORAMA PRODUCE LTD',
+            '_receptor_rfc': Cliente.RFC_GENERICO_EXTRANJERO,
+            '_receptor_residencia_fiscal': 'CAN',
+            '_receptor_num_reg_id_trib': '834911224',
+        }
+
+        self.assertEqual(match_cliente(parsed), cliente)
+
+    def test_crear_cliente_desde_cfdi_precarga_datos_fiscales(self):
+        parsed = parse_cfdi(XML_40_INGRESO.encode())
+
+        cliente, creado = crear_cliente_desde_cfdi(parsed, pais=self.pais)
+
+        self.assertTrue(creado)
+        self.assertEqual(cliente.nombre, 'Panorama Produce SA')
+        self.assertEqual(cliente.rfc, Cliente.RFC_GENERICO_EXTRANJERO)
+        self.assertEqual(cliente.residencia_fiscal, 'CAN')
+        self.assertEqual(cliente.numero_registro_fiscal, '834911224')
+        self.assertEqual(cliente.codigo_postal_fiscal, '40906')
+        self.assertEqual(cliente.regimen_fiscal, '616')
+        self.assertEqual(cliente.tipo_cliente, Cliente.TipoCliente.CONTADO)
+
+        mismo_cliente, creado_nuevamente = crear_cliente_desde_cfdi(
+            parsed, pais=self.pais,
+        )
+        self.assertFalse(creado_nuevamente)
+        self.assertEqual(mismo_cliente, cliente)
+
+    def test_importar_venta_crea_venta_y_documento(self):
+        cliente = self._cliente('Cliente Import CFDI')
+        parsed = parse_cfdi(XML_40_INGRESO.encode())
+
+        venta, doc, subtipo = importar_cfdi(
+            parsed, cliente=cliente, producto=self.producto,
+        )
+
+        self.assertEqual(subtipo, 'venta_nacional')
+        self.assertIsNotNone(venta)
+        self.assertEqual(doc.subtipo, 'venta_nacional')
+        self.assertEqual(doc.cliente_id, cliente.id)
+        self.assertEqual(venta.cliente_id, cliente.id)
+        self.assertEqual(str(doc.monto.amount), '13125.00')
+        cliente.refresh_from_db()
+        self.assertEqual(cliente.residencia_fiscal, 'CAN')
+        self.assertEqual(cliente.numero_registro_fiscal, '834911224')
+
+    def test_uuid_duplicado_no_crea_una_segunda_venta(self):
+        cliente = self._cliente('Cliente UUID Duplicado')
+        parsed = parse_cfdi(XML_40_INGRESO.encode())
+        importar_cfdi(parsed, cliente=cliente, producto=self.producto)
+        ventas_antes = Ventas.objects.count()
+
+        with self.assertRaisesMessage(ValueError, 'ya fue importado'):
+            importar_cfdi(parsed, cliente=cliente, producto=self.producto)
+
+        self.assertEqual(Ventas.objects.count(), ventas_antes)
+        self.assertEqual(
+            DocumentoCFDI.objects.filter(uuid=parsed['uuid']).count(),
+            1,
+        )
+
+    def test_importar_nota_cargo_vincula_venta_padre(self):
+        cliente = self._cliente('Cliente Nota Cargo Import')
+        venta_padre = self._venta_credito(cliente, '10000.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL,
+            uuid='11111111-1111-1111-1111-111111111111',
+            monto=Money('10000.00', 'MXN'),
+            venta=venta_padre,
+        )
+
+        parsed = parse_cfdi(XML_NOTA_CARGO.encode())
+        _obj, doc, subtipo = importar_cfdi(parsed, cliente=cliente)
+
+        self.assertEqual(subtipo, 'nota_cargo')
+        self.assertEqual(doc.venta_id, venta_padre.id)
+        self.assertEqual(doc.subtipo, 'nota_cargo')

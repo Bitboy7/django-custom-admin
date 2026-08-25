@@ -1,11 +1,14 @@
+import re
+from datetime import datetime, timedelta
+from decimal import Decimal
+
 from django.db import models
 from catalogo.models import Sucursal, Pais, Producto
 from django.utils.html import format_html
 from djmoney.models.fields import MoneyField
 from djmoney.money import Money
 from django.core.validators import MinValueValidator, MaxValueValidator
-from datetime import datetime, timedelta
-from decimal import Decimal
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from app.media_utils import safe_file_url
 
@@ -55,12 +58,41 @@ class MercadoDestino(models.Model):
         ordering = ['nombre']
 
 class Cliente(models.Model):
-    nombre = models.CharField(max_length=50)
+    RFC_GENERICO_NACIONAL = 'XAXX010101000'
+    RFC_GENERICO_EXTRANJERO = 'XEXX010101000'
+
+    nombre = models.CharField(max_length=200)
     telefono = models.CharField(max_length=15, blank=True, null=True, default='-')
     correo = models.EmailField(blank=True, null=True, default='-')
     direccion = models.CharField(max_length=250, blank=True, null=True, default='Desconocida')
     pais = models.ForeignKey(Pais, on_delete=models.CASCADE, default=3)
     mercado_destino = models.ForeignKey(MercadoDestino, on_delete=models.SET_NULL, null=True, blank=True)
+
+    # Identificación fiscal del receptor CFDI. Los RFC genéricos no son únicos:
+    # XAXX010101000 (público general) y XEXX010101000 (extranjero).
+    rfc = models.CharField(
+        max_length=13, blank=True, null=True, db_index=True,
+        verbose_name='RFC',
+        help_text='RFC del cliente. Para extranjeros puede ser XEXX010101000.',
+    )
+    residencia_fiscal = models.CharField(
+        max_length=3, blank=True, null=True, db_index=True,
+        verbose_name='Residencia fiscal',
+        help_text='Código de país SAT/ISO 3166-1 alfa-3, por ejemplo MEX, USA o CAN.',
+    )
+    numero_registro_fiscal = models.CharField(
+        max_length=40, blank=True, null=True, db_index=True,
+        verbose_name='Registro fiscal extranjero',
+        help_text='NumRegIdTrib del CFDI; identifica al cliente cuando el RFC es XEXX010101000.',
+    )
+    codigo_postal_fiscal = models.CharField(
+        max_length=12, blank=True, null=True,
+        verbose_name='Código postal fiscal',
+    )
+    regimen_fiscal = models.CharField(
+        max_length=3, blank=True, null=True,
+        verbose_name='Régimen fiscal SAT',
+    )
     
     # Configuración de crédito
     limite_credito = MoneyField(max_digits=12, decimal_places=2, default_currency='MXN', default=0)
@@ -84,6 +116,46 @@ class Cliente(models.Model):
     fecha_registro = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     imagen = models.ImageField(upload_to='clientes', blank=True, null=True, default='clientes/default.png', editable=True)
     activo = models.BooleanField(default=True)
+
+    def clean(self):
+        super().clean()
+        self.rfc = re.sub(r'[^A-Z0-9]', '', (self.rfc or '').upper()) or None
+        self.residencia_fiscal = re.sub(
+            r'[^A-Z0-9]', '', (self.residencia_fiscal or '').upper()
+        ) or None
+        self.numero_registro_fiscal = re.sub(
+            r'[^A-Z0-9]', '', (self.numero_registro_fiscal or '').upper()
+        ) or None
+
+        if self.rfc and self.rfc not in {
+            self.RFC_GENERICO_NACIONAL,
+            self.RFC_GENERICO_EXTRANJERO,
+        }:
+            duplicado = Cliente.objects.filter(rfc__iexact=self.rfc).exclude(pk=self.pk)
+            if duplicado.exists():
+                raise ValidationError({'rfc': 'Ya existe un cliente con este RFC.'})
+
+        if self.residencia_fiscal and self.numero_registro_fiscal:
+            duplicado = Cliente.objects.filter(
+                residencia_fiscal__iexact=self.residencia_fiscal,
+                numero_registro_fiscal__iexact=self.numero_registro_fiscal,
+            ).exclude(pk=self.pk)
+            if duplicado.exists():
+                raise ValidationError({
+                    'numero_registro_fiscal': (
+                        'Ya existe un cliente con este registro y residencia fiscal.'
+                    )
+                })
+
+    def save(self, *args, **kwargs):
+        self.rfc = re.sub(r'[^A-Z0-9]', '', (self.rfc or '').upper()) or None
+        self.residencia_fiscal = re.sub(
+            r'[^A-Z0-9]', '', (self.residencia_fiscal or '').upper()
+        ) or None
+        self.numero_registro_fiscal = re.sub(
+            r'[^A-Z0-9]', '', (self.numero_registro_fiscal or '').upper()
+        ) or None
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.nombre} - {self.pais.nombre}"
@@ -164,10 +236,16 @@ class Anticipo(models.Model):
     )
     fecha = models.DateField()
     descripcion = models.TextField(blank=True, null=True, default='Sin descripción')
-    folio_factura_anticipo = models.CharField(
-        max_length=50, null=True, blank=True,
-        verbose_name='Folio factura anticipo',
-        help_text="Folio del CFDI de anticipo (ej: B 1980)"
+    uuid_cfdi = models.CharField(
+        max_length=36, null=True, blank=True,
+        verbose_name='UUID del CFDI de anticipo',
+        help_text="UUID (folio fiscal) del CFDI de anticipo/remanente."
+    )
+    es_remanente = models.BooleanField(
+        default=False,
+        verbose_name='Es remanente de anticipo',
+        help_text="Marca si este registro corresponde al CFDI de remanente de anticipo "
+                  "(saldo a favor del cliente)."
     )
     fecha_registro = models.DateTimeField(auto_now_add=True)
     
@@ -462,38 +540,10 @@ class Ventas(models.Model):
         help_text="Tipo de registro: Venta normal o Maquila"
     )
 
-    # ── Documentación Fiscal ──────────────────────────────────────────────
-    fecha_emision_cfdi = models.DateField(
-        null=True, blank=True,
-        verbose_name='Fecha emisión CFDI',
-        help_text="Fecha de emisión del CFDI de exportación"
-    )
-    folio_factura = models.CharField(
-        max_length=50, null=True, blank=True,
-        verbose_name='Folio factura',
-        help_text="Folio del CFDI (ej: B 1996)"
-    )
-    cfdi_cancelado = models.CharField(
-        max_length=100, null=True, blank=True,
-        verbose_name='CFDIs cancelados',
-    )
-    nota_credito = models.CharField(
-        max_length=50, null=True, blank=True,
-        verbose_name='Nota de crédito',
-    )
-    nota_cargo = models.CharField(
-        max_length=50, null=True, blank=True,
-        verbose_name='Nota de cargo',
-    )
-    # ── Referencia comprador / ajustes ────────────────────────────────────
+    # ── Referencia comprador ──────────────────────────────────────────────
     numero_carga_comprador = models.CharField(
         max_length=50, null=True, blank=True,
         verbose_name='Carga comprador (PANORAMA LOAD)',
-    )
-    ajuste = models.DecimalField(
-        max_digits=12, decimal_places=2, default=0,
-        verbose_name='Ajuste',
-        help_text="Ajuste positivo (cargo) o negativo (descuento)"
     )
 
     def __str__(self):
@@ -584,9 +634,36 @@ class Ventas(models.Model):
             pass  # No fallar si el cache no está disponible
 
     
+    def saldo_por_cobrar(self):
+        """
+        Saldo por cobrar real de la venta.
+
+        = monto original + notas de cargo (DocumentoCFDI vigentes)
+          - notas de crédito (DocumentoCFDI vigentes) - pagos recibidos.
+
+        Fuente de verdad única para el saldo. Las notas de cargo suman y las
+        notas de crédito restan, conforme a la regla de negocio fiscal.
+        """
+        cargos = Decimal('0')
+        creditos = Decimal('0')
+        for doc in self.documentos_cfdi.all():
+            if doc.estado != DocumentoCFDI.EstadoDocumento.VIGENTE:
+                continue
+            if doc.subtipo == DocumentoCFDI.SubtipoDocumento.NOTA_CARGO:
+                cargos += doc.monto.amount
+            elif doc.subtipo == DocumentoCFDI.SubtipoDocumento.NOTA_CREDITO:
+                creditos += doc.monto.amount
+
+        return (
+            float(self.monto.amount)
+            + float(cargos)
+            - float(creditos)
+            - float(self.monto_pagado.amount)
+        )
+
     def saldo_pendiente(self):
-        """Calcula el saldo pendiente de pago"""
-        return float(self.monto.amount) - float(self.monto_pagado.amount)
+        """Alias de saldo_por_cobrar() (compatibilidad retroactiva)."""
+        return self.saldo_por_cobrar()
     
     def dias_vencido(self):
         """Calcula los días de vencimiento (negativo si no ha vencido)"""
@@ -647,7 +724,9 @@ class Ventas(models.Model):
         """Mantiene SaldoCliente sincronizado con el estado real de Ventas."""
         try:
             saldo = self.saldo_cxc  # reverse OneToOne accessor
-            saldo.saldo_pendiente = self.monto - self.monto_pagado
+            saldo.saldo_pendiente = Money(
+                self.saldo_por_cobrar(), self.monto.currency
+            )
             saldo.estado = self.estado_cobranza.upper()
             ultimo_pago = self.pagos.order_by('-fecha_pago').first()
             if ultimo_pago:
@@ -766,7 +845,27 @@ class PagoVenta(models.Model):
         help_text="Comprobante de pago (imagen o PDF)",
         verbose_name="Comprobante de Pago"
     )
-    
+
+    # ── Recibo Electrónico de Pago (REP / complemento de pago) ────────────
+    folio_rep = models.CharField(
+        max_length=50, blank=True, null=True,
+        verbose_name='Folio REP',
+        help_text="Folio del Recibo Electrónico de Pago (complemento de pago)."
+    )
+    uuid_rep = models.CharField(
+        max_length=36, blank=True, null=True,
+        verbose_name='UUID REP',
+        help_text="UUID (folio fiscal) del Recibo Electrónico de Pago."
+    )
+    banco_origen = models.ForeignKey(
+        'gastos.Banco',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Banco origen del depósito',
+        help_text="Banco del cliente desde el cual se depositó (ej: Bancomer, Santander)."
+    )
+
     def __str__(self):
         return f"Pago {self.monto_pago} - {self.venta.carga} - {self.fecha_pago}"
     
@@ -1470,3 +1569,116 @@ class ObligacionFiscal(models.Model):
             'vencido_2': f"{self.dias_vencido_1 + 1}-{self.dias_vencido_2} días",
             'vencido_3': f"{self.dias_vencido_2 + 1}+ días (moroso crítico)"
         }
+
+
+# =============================================================================
+# DOCUMENTOS CFDI (fuente de verdad fiscal unificada)
+# =============================================================================
+
+class DocumentoCFDI(models.Model):
+    """
+    Registro unificado de CFDI (facturas, notas de cargo/crédito, recibos
+    electrónicos de pago y remanentes de anticipo).
+
+    Reemplaza los campos fiscales sueltos que vivían en Ventas y Anticipo.
+    Cada documento puede vincularse a una venta, un anticipo y/o un pago,
+    y las notas de cargo/crédito alimentan el saldo por cobrar.
+    """
+
+    class TipoDocumento(models.TextChoices):
+        INGRESO = 'I', 'Ingreso'
+        EGRESO = 'E', 'Egreso'
+        PAGO = 'P', 'Pago (Recibo Electrónico)'
+
+    class SubtipoDocumento(models.TextChoices):
+        VENTA_NACIONAL = 'venta_nacional', 'Venta Nacional'
+        VENTA_EXPORTACION = 'venta_exportacion', 'Venta Exportación'
+        NOTA_CARGO = 'nota_cargo', 'Nota de Cargo'
+        REMANENTE_ANTICIPO = 'remanente_anticipo', 'Remanente de Anticipo'
+        NOTA_CREDITO = 'nota_credito', 'Nota de Crédito'
+        RECIBO_PAGO = 'recibo_pago', 'Recibo Electrónico de Pago'
+
+    class EstadoDocumento(models.TextChoices):
+        VIGENTE = 'VIGENTE', 'Vigente'
+        CANCELADO = 'CANCELADO', 'Cancelado'
+
+    cliente = models.ForeignKey(
+        Cliente, on_delete=models.PROTECT, related_name='documentos_cfdi'
+    )
+    tipo = models.CharField(max_length=1, choices=TipoDocumento.choices)
+    subtipo = models.CharField(max_length=20, choices=SubtipoDocumento.choices)
+
+    # Identificación SAT
+    serie = models.CharField(max_length=25, blank=True, null=True)
+    folio = models.CharField(max_length=50, blank=True, null=True)
+    uuid = models.CharField(
+        max_length=36, blank=True, null=True, unique=True, db_index=True,
+        verbose_name='UUID (folio fiscal)',
+    )
+
+    fecha_emision = models.DateField(null=True, blank=True)
+    fecha_timbrado = models.DateTimeField(null=True, blank=True)
+
+    # Montos
+    monto = MoneyField(max_digits=14, decimal_places=2, default_currency='MXN')
+    moneda = models.CharField(max_length=3, default='MXN')
+    tipo_cambio = models.DecimalField(max_digits=10, decimal_places=4, default=1.0000)
+
+    # Estado fiscal
+    estado = models.CharField(
+        max_length=10, choices=EstadoDocumento.choices, default=EstadoDocumento.VIGENTE
+    )
+
+    # Relación con documento padre (TipoRelacion SAT)
+    cfdi_relacionado = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='documentos_relacionados',
+    )
+    tipo_relacion = models.CharField(
+        max_length=2, blank=True, null=True,
+        help_text="Código SAT TipoRelacion (01 NC, 02 ND, 03 devolución, 07 anticipo...)"
+    )
+
+    # Vínculos con entidades de negocio
+    venta = models.ForeignKey(
+        Ventas, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='documentos_cfdi',
+    )
+    anticipo = models.ForeignKey(
+        Anticipo, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='documentos_cfdi',
+    )
+    pago_venta = models.OneToOneField(
+        PagoVenta, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='documento_cfdi',
+    )
+
+    # Archivos
+    archivo_xml = models.FileField(upload_to='cfdi/xml/%Y/%m/', blank=True, null=True)
+    archivo_pdf = models.FileField(upload_to='cfdi/pdf/%Y/%m/', blank=True, null=True)
+
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.get_subtipo_display()} {self.folio or self.uuid or self.pk}"
+
+    def es_nota_que_afecta_saldo(self):
+        """True si el documento es una nota de cargo o crédito vigente."""
+        return (
+            self.estado == self.EstadoDocumento.VIGENTE
+            and self.subtipo in (
+                self.SubtipoDocumento.NOTA_CARGO,
+                self.SubtipoDocumento.NOTA_CREDITO,
+            )
+        )
+
+    class Meta:
+        verbose_name = 'Documento CFDI'
+        verbose_name_plural = 'Documentos CFDI'
+        ordering = ['-fecha_emision', '-creado_en']
+        indexes = [
+            models.Index(fields=['cliente', 'fecha_emision']),
+            models.Index(fields=['subtipo', 'estado']),
+            models.Index(fields=['venta', 'subtipo', 'estado']),
+        ]

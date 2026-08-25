@@ -196,6 +196,7 @@ JAZZMIN_SETTINGS = {
         "ventas.Cliente",
         "ventas.PagoVenta",
         "ventas.Anticipo",
+        "ventas.DocumentoCFDI",
         "ventas.EstadoCuentaCliente",
         "ventas.MercadoDestino",
         "ventas.ObligacionFiscal",
@@ -244,6 +245,12 @@ JAZZMIN_SETTINGS = {
             },
         ],
         "ventas": [
+            {
+                "name": "Importar CFDI masivo",
+                "url": "admin:ventas_importar_cfdi_masivo",
+                "icon": "fas fa-file-archive",
+                "permissions": ["ventas.view_ventas"]
+            },
             {
                 "name": "Análisis de ventas",
                 "url": "admin:ventas_ventas_balances",

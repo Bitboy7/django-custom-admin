@@ -25,12 +25,7 @@ class VentasAdminForm(forms.ModelForm):
             'incoterm': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'FOB, CIF, EXW...'}),
             'moneda_venta': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'MXN'}),
             'tipo_cambio': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001', 'placeholder': '17.5000'}),
-            'folio_factura': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: B 1996'}),
-            'cfdi_cancelado': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'UUID del CFDI cancelado'}),
-            'nota_credito': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: NC-001'}),
-            'nota_cargo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: NCG-001'}),
             'numero_carga_comprador': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'PANORAMA LOAD 12345'}),
-            'ajuste': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
         }
 
     def __init__(self, *args, **kwargs):

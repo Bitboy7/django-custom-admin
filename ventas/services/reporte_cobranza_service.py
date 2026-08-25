@@ -20,9 +20,8 @@ ESTADOS_CON_DEUDA = ['Pendiente', 'Parcial', 'Vencido']
 
 
 def _saldo_float(venta):
-    """Retorna el saldo pendiente de una venta como float, nunca negativo."""
-    saldo = float(venta.monto.amount) - float(venta.monto_pagado.amount)
-    return max(saldo, 0.0)
+    """Retorna el saldo por cobrar de una venta como float, nunca negativo."""
+    return max(venta.saldo_por_cobrar(), 0.0)
 
 
 def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_override=None):
@@ -49,7 +48,9 @@ def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_over
     # -------------------------------------------------------------------------
     # 1. Base querysets filtradas por período
     # -------------------------------------------------------------------------
-    qs_base = Ventas.objects.select_related('cliente', 'sucursal_id').filter(
+    qs_base = Ventas.objects.select_related('cliente', 'sucursal_id').prefetch_related(
+        'documentos_cfdi'
+    ).filter(
         estado_cobranza__in=ESTADOS_CON_DEUDA
     )
     if fecha_inicio:

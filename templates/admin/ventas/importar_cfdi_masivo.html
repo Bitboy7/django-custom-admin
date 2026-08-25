@@ -1,0 +1,413 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}{{ title }} | {{ site_title }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% trans "Inicio" %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label='ventas' %}">Ventas</a>
+  &rsaquo; <a href="{% url 'admin:ventas_ventas_changelist' %}">Ventas</a>
+  &rsaquo; Importar CFDI masivo
+</div>
+{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/importar-cfdi-masivo.css' %}?v=1">
+{% endblock %}
+
+{% block content %}
+<main class="bulk-cfdi" data-step="{{ step }}">
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="bulk-alert {% if msg.tags == 'error' %}bulk-alert--error{% else %}bulk-alert--success{% endif %}" role="status">
+        <i class="fas {% if msg.tags == 'error' %}fa-circle-exclamation{% else %}fa-circle-check{% endif %}" aria-hidden="true"></i>
+        <span>{{ msg }}</span>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <header class="bulk-cfdi__header">
+    <div>
+      <p class="bulk-cfdi__eyebrow"><i class="fas fa-file-invoice" aria-hidden="true"></i> Ventas · Documentos fiscales</p>
+      <h1 class="bulk-cfdi__title">Importación masiva de CFDI</h1>
+      <p class="bulk-cfdi__subtitle">
+        Procesa facturas, notas y complementos de pago en un flujo controlado. El sistema analiza cada XML antes de guardar información.
+      </p>
+    </div>
+
+    <nav aria-label="Progreso de importación">
+      <ol class="flow-steps">
+        <li class="flow-step {% if step == 'upload' %}is-active{% else %}is-complete{% endif %}">
+          <span class="flow-step__number">{% if step == 'upload' %}1{% else %}<i class="fas fa-check" aria-hidden="true"></i>{% endif %}</span>
+          <span class="flow-step__label">Cargar</span>
+        </li>
+        <li class="flow-step__line {% if step != 'upload' %}is-complete{% endif %}" aria-hidden="true"></li>
+        <li class="flow-step {% if step == 'confirm' %}is-active{% elif step == 'done' %}is-complete{% endif %}">
+          <span class="flow-step__number">{% if step == 'done' %}<i class="fas fa-check" aria-hidden="true"></i>{% else %}2{% endif %}</span>
+          <span class="flow-step__label">Revisar</span>
+        </li>
+        <li class="flow-step__line {% if step == 'done' %}is-complete{% endif %}" aria-hidden="true"></li>
+        <li class="flow-step {% if step == 'done' %}is-active{% endif %}">
+          <span class="flow-step__number">3</span>
+          <span class="flow-step__label">Resultado</span>
+        </li>
+      </ol>
+    </nav>
+  </header>
+
+  {% if step == 'upload' %}
+    <section class="upload-layout" aria-label="Carga de archivos CFDI">
+      <article class="bulk-panel">
+        <div class="bulk-panel__header">
+          <div class="bulk-panel__heading">
+            <span class="bulk-panel__icon"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i></span>
+            <div>
+              <h2 class="bulk-panel__title">Selecciona tus comprobantes</h2>
+              <p class="bulk-panel__description">Puedes cargar archivos individuales o un paquete comprimido.</p>
+            </div>
+          </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" data-loading-form>
+          {% csrf_token %}
+          <input type="hidden" name="_step" value="upload">
+
+          <div class="bulk-panel__body">
+            {% if errores_upload %}
+              <div class="bulk-alert bulk-alert--error" role="alert">
+                <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
+                <div>
+                  <strong>No pudimos analizar la selección</strong>
+                  <ul>
+                    {% for error in errores_upload %}<li>{{ error }}</li>{% endfor %}
+                  </ul>
+                </div>
+              </div>
+            {% endif %}
+
+            <label class="upload-dropzone" for="id_archivos_cfdi" data-upload-dropzone tabindex="0">
+              <input class="visually-hidden-file" type="file" name="archivos" id="id_archivos_cfdi" multiple accept=".xml,.zip" required aria-describedby="upload-help">
+
+              <span data-drop-default>
+                <span class="upload-dropzone__icon"><i class="fas fa-file-arrow-up" aria-hidden="true"></i></span>
+                <span class="upload-dropzone__title">Arrastra los archivos aquí</span>
+                <span class="upload-dropzone__copy">o <span class="upload-dropzone__action">selecciónalos desde tu equipo</span></span>
+              </span>
+
+              <span data-drop-selected hidden>
+                <span class="upload-dropzone__icon"><i class="fas fa-layer-group" aria-hidden="true"></i></span>
+                <span class="upload-dropzone__title">Archivos listos para analizar</span>
+                <span class="upload-dropzone__copy">Haz clic para cambiar la selección</span>
+              </span>
+
+              <span class="upload-constraints" id="upload-help">
+                <span class="upload-constraint"><i class="fas fa-file-code" aria-hidden="true"></i> XML</span>
+                <span class="upload-constraint"><i class="fas fa-file-zipper" aria-hidden="true"></i> ZIP</span>
+                <span class="upload-constraint"><i class="fas fa-weight-hanging" aria-hidden="true"></i> Máx. 1 MB por archivo</span>
+              </span>
+            </label>
+
+            <div class="file-summary" data-file-summary hidden aria-live="polite">
+              <div class="file-summary__top">
+                <span class="file-summary__count" data-file-count></span>
+                <span class="file-summary__size" data-file-size></span>
+              </div>
+              <ul class="file-summary__list" data-file-list></ul>
+            </div>
+          </div>
+
+          <footer class="bulk-panel__footer">
+            <p class="footer-help"><i class="fas fa-shield-halved" aria-hidden="true"></i> Nada se guardará hasta que revises y confirmes los documentos.</p>
+            <div class="button-cluster">
+              <a href="{% url 'admin:ventas_ventas_changelist' %}" class="bulk-btn bulk-btn--secondary">
+                <i class="fas fa-arrow-left" aria-hidden="true"></i> Cancelar
+              </a>
+              <button type="submit" class="bulk-btn bulk-btn--primary" data-submit-button data-loading-label="Analizando archivos…">
+                <i class="fas fa-circle-notch fa-spin loading-icon" aria-hidden="true"></i>
+                <span data-submit-label>Procesar archivos</span>
+              </button>
+            </div>
+          </footer>
+        </form>
+      </article>
+
+      <aside class="upload-aside" aria-label="Ayuda de importación">
+        <section class="guide-card">
+          <h2 class="guide-card__title">Documentos compatibles</h2>
+          <ul class="guide-list">
+            <li class="guide-list__item">
+              <span class="guide-list__icon"><i class="fas fa-receipt" aria-hidden="true"></i></span>
+              <span><strong>Ventas</strong>Nacionales y de exportación.</span>
+            </li>
+            <li class="guide-list__item">
+              <span class="guide-list__icon"><i class="fas fa-file-circle-plus" aria-hidden="true"></i></span>
+              <span><strong>Notas</strong>De cargo y de crédito.</span>
+            </li>
+            <li class="guide-list__item">
+              <span class="guide-list__icon"><i class="fas fa-hand-holding-dollar" aria-hidden="true"></i></span>
+              <span><strong>Anticipos</strong>Remanentes y saldos a favor.</span>
+            </li>
+            <li class="guide-list__item">
+              <span class="guide-list__icon"><i class="fas fa-money-check-dollar" aria-hidden="true"></i></span>
+              <span><strong>Complementos de pago</strong>Recibos electrónicos de pago.</span>
+            </li>
+          </ul>
+        </section>
+
+        <section class="guide-card">
+          <h2 class="guide-card__title">Validaciones automáticas</h2>
+          <ul class="guide-list">
+            <li class="guide-list__item">
+              <span class="guide-list__icon"><i class="fas fa-fingerprint" aria-hidden="true"></i></span>
+              <span><strong>UUID duplicado</strong>Evita importar dos veces el mismo CFDI.</span>
+            </li>
+            <li class="guide-list__item">
+              <span class="guide-list__icon"><i class="fas fa-user-check" aria-hidden="true"></i></span>
+              <span><strong>Cliente fiscal</strong>Busca por RFC o registro tributario extranjero.</span>
+            </li>
+          </ul>
+          <div class="security-note">
+            <i class="fas fa-circle-info" aria-hidden="true"></i>
+            <span>En el siguiente paso podrás corregir cliente, producto y decidir qué documentos importar.</span>
+          </div>
+        </section>
+      </aside>
+    </section>
+
+  {% elif step == 'confirm' %}
+    <section class="summary-strip" aria-label="Resumen del análisis">
+      <div class="summary-item">
+        <span class="summary-item__icon"><i class="fas fa-layer-group" aria-hidden="true"></i></span>
+        <span><strong class="summary-item__value">{{ total_archivos }}</strong><span class="summary-item__label">Archivos analizados</span></span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-item__icon"><i class="fas fa-circle-check" aria-hidden="true"></i></span>
+        <span><strong class="summary-item__value">{{ total_listos }}</strong><span class="summary-item__label">Listos para importar</span></span>
+      </div>
+      <div class="summary-item {% if total_sin_cliente %}summary-item--warning{% endif %}">
+        <span class="summary-item__icon"><i class="fas fa-user-clock" aria-hidden="true"></i></span>
+        <span><strong class="summary-item__value">{{ total_sin_cliente }}</strong><span class="summary-item__label">Clientes por resolver</span></span>
+      </div>
+      <div class="summary-item {% if total_duplicados %}summary-item--danger{% endif %}">
+        <span class="summary-item__icon"><i class="fas fa-clone" aria-hidden="true"></i></span>
+        <span><strong class="summary-item__value">{{ total_duplicados }}</strong><span class="summary-item__label">Duplicados omitidos</span></span>
+      </div>
+    </section>
+
+    <form method="post" data-loading-form>
+      {% csrf_token %}
+      <input type="hidden" name="_step" value="confirm">
+      <input type="hidden" name="total" value="{{ previews|length }}">
+
+      <section class="bulk-panel">
+        <div class="bulk-panel__header">
+          <div class="bulk-panel__heading">
+            <span class="bulk-panel__icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>
+            <div>
+              <h2 class="bulk-panel__title">Revisión previa</h2>
+              <p class="bulk-panel__description">Confirma cliente y producto. Los registros con advertencias requieren tu atención.</p>
+            </div>
+          </div>
+          <div class="table-toolbar">
+            <label class="selection-control">
+              <input type="checkbox" class="bulk-checkbox" data-select-all>
+              Seleccionar todos
+            </label>
+            <span class="selection-count" data-selection-count></span>
+          </div>
+        </div>
+
+        <div class="bulk-table-wrap">
+          <table class="bulk-table">
+            <thead>
+              <tr>
+                <th scope="col">Importar</th>
+                <th scope="col">Tipo</th>
+                <th scope="col">Folio / UUID</th>
+                <th scope="col">Fecha</th>
+                <th scope="col">Monto</th>
+                <th scope="col">Cliente</th>
+                <th scope="col">Producto</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in previews %}
+                <tr class="{% if p.error %}is-error{% elif p.duplicado %}is-duplicate{% endif %}" data-import-row>
+                  {% if p.error %}
+                    <td>—</td>
+                    <td colspan="6">
+                      <div class="row-error">
+                        <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                        <span><strong>{{ p.nombre }}</strong><br>{{ p.error }}</span>
+                      </div>
+                    </td>
+                  {% else %}
+                    <td>
+                      <input type="checkbox" class="bulk-checkbox" name="include_{{ forloop.counter0 }}" data-include-row
+                             aria-label="Importar {{ p.nombre }}" {% if not p.duplicado %}checked{% else %}disabled{% endif %}>
+                    </td>
+                    <td>
+                      <input type="hidden" name="row_{{ forloop.counter0 }}" value="{{ p.json }}">
+                      <span class="type-badge
+                        {% if p.subtipo == 'venta_exportacion' %}type-badge--export
+                        {% elif p.subtipo == 'venta_nacional' %}type-badge--sale
+                        {% elif p.subtipo == 'nota_cargo' %}type-badge--charge
+                        {% elif p.subtipo == 'nota_credito' %}type-badge--credit
+                        {% elif p.subtipo == 'remanente_anticipo' %}type-badge--advance
+                        {% else %}type-badge--payment{% endif %}">
+                        {{ p.subtipo_label }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="document-id">{{ p.parsed.folio_factura|default:"—" }}</span>
+                      <span class="document-file" title="{{ p.nombre }}">{{ p.nombre }}</span>
+                    </td>
+                    <td><span class="date-value">{{ p.parsed.fecha_emision_cfdi|default:"—" }}</span></td>
+                    <td><span class="money-value">{{ p.parsed.monto }} {{ p.parsed.moneda_venta }}</span></td>
+                    <td>
+                      <select name="cliente_{{ forloop.counter0 }}" data-cliente-select="{{ forloop.counter0 }}" class="bulk-select" {% if p.duplicado %}disabled{% endif %}>
+                        <option value="">— sin cliente —</option>
+                        {% for cliente in clientes %}
+                          <option value="{{ cliente.pk }}" {% if p.cliente and p.cliente.pk == cliente.pk %}selected{% endif %}>{{ cliente.nombre }}</option>
+                        {% endfor %}
+                      </select>
+
+                      {% if p.duplicado %}
+                        <p class="duplicate-note"><i class="fas fa-clone" aria-hidden="true"></i> {{ p.duplicado }}</p>
+                      {% elif not p.cliente %}
+                        <div class="client-alert">
+                          <div class="client-alert__title"><i class="fas fa-user-clock" aria-hidden="true"></i> Cliente no reconocido</div>
+                          <div class="client-alert__identity">
+                            <strong>{{ p.receptor_nombre|default:"Sin razón social" }}</strong>
+                            RFC {{ p.receptor_rfc|default:"—" }}
+                            {% if p.receptor_registro_fiscal %} · ID {{ p.receptor_registro_fiscal }}{% endif %}
+                          </div>
+                          {% if puede_crear_cliente %}
+                            <label class="create-toggle">
+                              <input type="checkbox" class="bulk-checkbox" name="crear_cliente_{{ forloop.counter0 }}" data-crear-cliente="{{ forloop.counter0 }}">
+                              <span>Crear cliente con los datos del CFDI</span>
+                            </label>
+                            <div class="create-fields" data-create-fields="{{ forloop.counter0 }}" hidden>
+                              <label for="pais_cliente_{{ forloop.counter0 }}">País del cliente</label>
+                              <select id="pais_cliente_{{ forloop.counter0 }}" name="pais_cliente_{{ forloop.counter0 }}" class="bulk-select">
+                                <option value="">— selecciona el país —</option>
+                                {% for pais in paises %}
+                                  <option value="{{ pais.pk }}" {% if p.pais_sugerido and p.pais_sugerido.pk == pais.pk %}selected{% endif %}>{{ pais.nombre }}</option>
+                                {% endfor %}
+                              </select>
+                            </div>
+                          {% else %}
+                            <p class="permission-note"><i class="fas fa-lock" aria-hidden="true"></i> No tienes permiso para crear clientes.</p>
+                          {% endif %}
+                        </div>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <select name="producto_{{ forloop.counter0 }}" class="bulk-select" {% if p.duplicado %}disabled{% endif %}>
+                        <option value="">— sin producto —</option>
+                        {% for producto in productos %}
+                          <option value="{{ producto.pk }}" {% if p.producto and p.producto.pk == producto.pk %}selected{% endif %}>{{ producto.variedad }}</option>
+                        {% endfor %}
+                      </select>
+                    </td>
+                  {% endif %}
+                </tr>
+              {% empty %}
+                <tr><td colspan="7">No se encontraron XML para procesar.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <footer class="bulk-panel__footer">
+          <p class="footer-help"><i class="fas fa-circle-info" aria-hidden="true"></i> Solo se importarán las filas marcadas y sin errores.</p>
+          <div class="button-cluster">
+            <a href="{% url 'admin:ventas_importar_cfdi_masivo' %}" class="bulk-btn bulk-btn--secondary">
+              <i class="fas fa-arrow-left" aria-hidden="true"></i> Cargar otros archivos
+            </a>
+            <button type="submit" class="bulk-btn bulk-btn--primary" data-submit-button data-loading-label="Importando documentos…">
+              <i class="fas fa-file-import default-icon" aria-hidden="true"></i>
+              <i class="fas fa-circle-notch fa-spin loading-icon" aria-hidden="true"></i>
+              <span data-submit-label>Importar seleccionados</span>
+            </button>
+          </div>
+        </footer>
+      </section>
+    </form>
+
+  {% elif step == 'done' %}
+    <section class="bulk-panel">
+      <div class="done-hero {% if errores %}done-hero--warning{% endif %}">
+        <span class="done-hero__icon">
+          <i class="fas {% if errores %}fa-triangle-exclamation{% else %}fa-circle-check{% endif %}" aria-hidden="true"></i>
+        </span>
+        <div>
+          <h2 class="done-hero__title">{% if errores %}Importación completada con observaciones{% else %}Importación completada{% endif %}</h2>
+          <p class="done-hero__copy">Revisa el resultado individual antes de continuar con la operación de ventas.</p>
+        </div>
+        <div class="done-hero__metrics">
+          <div class="done-metric"><strong>{{ importados }}</strong><span>Importados</span></div>
+          <div class="done-metric"><strong>{{ errores }}</strong><span>Con error</span></div>
+          <div class="done-metric"><strong>{{ clientes_creados }}</strong><span>Clientes nuevos</span></div>
+        </div>
+      </div>
+
+      <div class="bulk-table-wrap">
+        <table class="bulk-table">
+          <thead>
+            <tr>
+              <th scope="col">Estado</th>
+              <th scope="col">Folio</th>
+              <th scope="col">Tipo</th>
+              <th scope="col">Detalle</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for resultado in resultados %}
+              <tr>
+                <td>
+                  <span class="result-state {% if resultado.ok %}result-state--ok{% else %}result-state--error{% endif %}">
+                    <i class="fas {% if resultado.ok %}fa-circle-check{% else %}fa-circle-xmark{% endif %}" aria-hidden="true"></i>
+                    {% if resultado.ok %}Importado{% else %}Error{% endif %}
+                  </span>
+                </td>
+                <td><span class="document-id">{{ resultado.folio|default:"—" }}</span></td>
+                <td>{{ resultado.subtipo|default:"—" }}</td>
+                <td>
+                  {% if resultado.ok %}
+                    Documento CFDI #{{ resultado.doc_id }}
+                    {% if resultado.cliente_creado %}<span class="status-badge status-badge--created">Cliente creado</span>{% endif %}
+                  {% else %}
+                    <span class="result-state--error">{{ resultado.error }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4">No se procesaron documentos.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="bulk-panel__footer">
+        <p class="footer-help">La bitácora fiscal queda disponible en Documentos CFDI.</p>
+        <div class="button-cluster">
+          <a href="{% url 'admin:ventas_documentocfdi_changelist' %}" class="bulk-btn bulk-btn--secondary">
+            <i class="fas fa-folder-open" aria-hidden="true"></i> Ver Documentos CFDI
+          </a>
+          <a href="{% url 'admin:ventas_ventas_changelist' %}" class="bulk-btn bulk-btn--primary">
+            <i class="fas fa-arrow-right" aria-hidden="true"></i> Volver a Ventas
+          </a>
+        </div>
+      </footer>
+    </section>
+  {% endif %}
+</main>
+{% endblock %}
+
+{% block extrajs %}
+{{ block.super }}
+<script src="{% static 'js/importar-cfdi-masivo.js' %}?v=1"></script>
+{% endblock %}
