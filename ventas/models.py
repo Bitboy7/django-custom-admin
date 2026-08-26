@@ -190,7 +190,37 @@ class Cliente(models.Model):
         if self.mercado_destino:
             return self.mercado_destino.nombre != 'Nacional'
         return self.pais.nombre != 'México'  # Asumiendo que México es el país base
-    
+
+    def saldo_conciliado(self):
+        """
+        Saldo por cobrar conciliado del cliente, calculado desde su ledger de
+        CFDI (DocumentoCFDI) más los anticipos pendientes de aplicar.
+
+        = ventas + notas de cargo - notas de crédito - recibos de pago
+          - anticipos disponibles (saldo a favor).
+
+        Este es el número que usa el cliente para conocer cuánto le deben.
+        """
+        from django.db.models import Sum
+        docs = self.documentos_cfdi.filter(estado='VIGENTE')
+
+        def total(subtipos):
+            return float(
+                docs.filter(subtipo__in=subtipos).aggregate(t=Sum('monto'))['t'] or 0
+            )
+
+        ingresos = total(['venta_nacional', 'venta_exportacion'])
+        notas_cargo = total(['nota_cargo'])
+        notas_credito = total(['nota_credito'])
+        recibos_pago = total(['recibo_pago'])
+
+        anticipos = sum(
+            a.saldo_disponible()
+            for a in self.anticipo_set.exclude(estado_anticipo='Cancelado')
+        )
+
+        return ingresos + notas_cargo - notas_credito - recibos_pago - anticipos
+
     class Meta:
         verbose_name = 'Cliente'
         verbose_name_plural = 'Clientes'
@@ -1656,6 +1686,13 @@ class DocumentoCFDI(models.Model):
     # Archivos
     archivo_xml = models.FileField(upload_to='cfdi/xml/%Y/%m/', blank=True, null=True)
     archivo_pdf = models.FileField(upload_to='cfdi/pdf/%Y/%m/', blank=True, null=True)
+
+    # Conceptos del CFDI (detalle de productos/cantidades/kilos/variedades)
+    conceptos = models.JSONField(
+        default=list, blank=True,
+        verbose_name='Conceptos',
+        help_text='Lista de conceptos extraídos del XML (clave, descripción, cantidad, unidad...).',
+    )
 
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)

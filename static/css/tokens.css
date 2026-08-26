@@ -48,7 +48,7 @@
   --erp-coast-800: #173844;
   --erp-coast-700: #24515e;
   --erp-slate: #527181;
-  --erp-teal: #18b7a7;
+  --erp-teal: #577c65;
   --erp-teal-deep: #0f766e;
   --erp-mint: #d9f5ef;
   --erp-agave: #a6b62d;
@@ -149,7 +149,11 @@
   --sidebar-collapsed: 60px;
   --navbar-height: 56px;
   --sidebar-bg: var(--charcoal-blue-dark);
-  --sidebar-brand-bg: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-navy-dark) 100%);
+  --sidebar-brand-bg: linear-gradient(
+    135deg,
+    var(--brand-navy) 0%,
+    var(--brand-navy-dark) 100%
+  );
   --sidebar-brand-text: rgba(255, 255, 255, 0.94);
   --sidebar-brand-border: var(--brand-teal);
   --sidebar-border: rgba(255, 255, 255, 0.08);
@@ -227,7 +231,11 @@
   --light-blue: #9ac5c3;
 
   --sidebar-bg: var(--charcoal-blue-dark);
-  --sidebar-brand-bg: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-navy-dark) 100%);
+  --sidebar-brand-bg: linear-gradient(
+    135deg,
+    var(--brand-navy) 0%,
+    var(--brand-navy-dark) 100%
+  );
   --sidebar-brand-text: rgba(255, 255, 255, 0.94);
   --sidebar-brand-border: var(--brand-teal);
   --sidebar-border: rgba(255, 255, 255, 0.08);
@@ -290,7 +298,11 @@
     --blue-slate: #6f8793;
     --light-blue: #9ac5c3;
     --sidebar-bg: var(--charcoal-blue-dark);
-    --sidebar-brand-bg: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-navy-dark) 100%);
+    --sidebar-brand-bg: linear-gradient(
+      135deg,
+      var(--brand-navy) 0%,
+      var(--brand-navy-dark) 100%
+    );
     --sidebar-brand-text: rgba(255, 255, 255, 0.94);
     --sidebar-brand-border: var(--brand-teal);
     --sidebar-border: rgba(255, 255, 255, 0.08);

@@ -1,3 +1,4 @@
+import re
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 from django.contrib.admin.filters import SimpleListFilter
@@ -46,25 +47,58 @@ from .services.cache_service import CuentasPorCobrarCache
 from django.utils.html import format_html
 
 
-def _extraer_xmls(archivos):
+CFDI_UPLOAD_LIMITS = {
+    'xml': (1 * 1024 * 1024, '1 MB'),
+    'pdf': (1 * 1024 * 1024, '1 MB'),
+    'zip': (5 * 1024 * 1024, '5 MB'),
+}
+
+
+def _validar_archivo_cfdi(archivo):
+    """Devuelve un mensaje de error si el archivo no cumple tipo o tamaño."""
+    extension = (
+        archivo.name.lower().rsplit('.', 1)[-1]
+        if '.' in archivo.name else ''
+    )
+    limite = CFDI_UPLOAD_LIMITS.get(extension)
+    if limite is None:
+        return f'"{archivo.name}" no es .xml, .zip ni .pdf.'
+
+    limite_bytes, limite_etiqueta = limite
+    if archivo.size > limite_bytes:
+        return f'"{archivo.name}" supera {limite_etiqueta}.'
+    return None
+
+
+def _extraer_archivos(archivos):
     """
-    Extrae una lista de (nombre, bytes_xml) a partir de archivos subidos,
-    soportando archivos .xml individuales y archivos .zip que contengan XMLs.
+    Extrae una lista de (nombre, bytes, ext) a partir de archivos subidos,
+    soportando .xml y .pdf individuales y .zip que contenga ambos tipos.
     """
     import io
     import zipfile
 
-    xmls = []
+    extraidos = []
     for f in archivos:
         nombre = f.name.lower()
         if nombre.endswith('.zip'):
             with zipfile.ZipFile(io.BytesIO(f.read())) as zf:
                 for info in zf.infolist():
-                    if info.filename.lower().endswith('.xml') and not info.is_dir():
-                        xmls.append((info.filename, zf.read(info)))
-        elif nombre.endswith('.xml'):
-            xmls.append((f.name, f.read()))
-    return xmls
+                    if info.is_dir():
+                        continue
+                    ext = info.filename.lower().rsplit('.', 1)[-1] if '.' in info.filename else ''
+                    if ext in ('xml', 'pdf'):
+                        extraidos.append((info.filename, zf.read(info), ext))
+        else:
+            ext = nombre.rsplit('.', 1)[-1] if '.' in nombre else ''
+            if ext in ('xml', 'pdf'):
+                extraidos.append((f.name, f.read(), ext))
+    return extraidos
+
+
+_UUID_RE = re.compile(
+    r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+)
 
 
 # =============================================================================
@@ -248,7 +282,7 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
     
     list_display = (
         'nombre', 'rfc', 'get_pais', 'tipo_cliente', 'limite_credito',
-        'calificacion_credito', 'get_credito_disponible', 'activo'
+        'calificacion_credito', 'get_credito_disponible', 'get_saldo_conciliado', 'activo'
     )
     
     list_filter = ('tipo_cliente', 'calificacion_credito', 'mercado_destino', 'activo', 'pais', RangoCreditoFilter)
@@ -297,7 +331,16 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
             color, f"{float(disponible):,.2f}"
         )
     get_credito_disponible.short_description = 'Crédito Disponible'
-    
+
+    def get_saldo_conciliado(self, obj):
+        saldo = obj.saldo_conciliado()
+        color = 'red' if saldo > 0 else 'green'
+        return format_html(
+            '<span style="color: {}">${}</span>',
+            color, f"{saldo:,.2f}"
+        )
+    get_saldo_conciliado.short_description = 'Saldo CFDI (conciliado)'
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
@@ -306,8 +349,25 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
                 self.admin_site.admin_view(self.reporte_cliente_completo),
                 name='%s_%s_reporte_completo' % (self.model._meta.app_label, self.model._meta.model_name),
             ),
+            path(
+                'conciliacion/',
+                self.admin_site.admin_view(self.conciliacion_view),
+                name='%s_%s_conciliacion' % (self.model._meta.app_label, self.model._meta.model_name),
+            ),
         ]
         return custom_urls + urls
+
+    def conciliacion_view(self, request):
+        """Vista de conciliación de CFDI por cliente."""
+        from .services.conciliacion_service import conciliacion_global
+        filas = conciliacion_global()
+        context = dict(
+            self.admin_site.each_context(request),
+            filas=filas,
+            title='Conciliación de CFDI por cliente',
+            opts=self.model._meta,
+        )
+        return TemplateResponse(request, 'admin/ventas/conciliacion.html', context)
     
     def reporte_cliente_completo(self, request, client_id):
         """Genera un reporte completo del cliente con todas sus transacciones."""
@@ -439,6 +499,7 @@ class VentasAdmin(ModelAdmin):
     )
     
     search_fields = ('carga', 'cliente__nombre', 'producto__variedad', 'PO', 'pedimento')
+    search_help_text = 'Buscar por carga, cliente, producto, PO o pedimento'
     
     list_per_page = 30
     date_hierarchy = 'fecha_salida_manifiesto'
@@ -805,8 +866,9 @@ class VentasAdmin(ModelAdmin):
         """
         from .cfdi_parser import parse_cfdi, classify_subtipo
         from .services.cfdi_import_service import (
-            crear_cliente_desde_cfdi, importar_cfdi, match_cliente,
-            match_producto, parsed_to_json, parsed_from_json, sugerir_pais,
+            crear_cliente_desde_cfdi, crear_producto_desde_cfdi, importar_cfdi,
+            match_cliente, match_producto, parsed_to_json, parsed_from_json,
+            sugerir_pais, sugerir_producto_desde_cfdi,
         )
 
         opts = self.model._meta
@@ -819,6 +881,15 @@ class VentasAdmin(ModelAdmin):
             except (TypeError, ValueError):
                 total = 0
 
+            upload_token = request.POST.get('upload_token') or ''
+            archivos_map = (
+                request.session.pop(f'cfdi_archivos_{upload_token}', None)
+                if upload_token else None
+            ) or {}
+            archivos_xml = archivos_map.get('xml', {})
+            archivos_pdf = archivos_map.get('pdf', {})
+            tempdir = archivos_map.get('dir')
+
             filas = []
             errores_preparacion = {}
             for i in range(total):
@@ -828,21 +899,38 @@ class VentasAdmin(ModelAdmin):
                 if not raw:
                     continue
                 try:
-                    filas.append({
+                    parsed = parsed_from_json(raw)
+                    fila = {
                         'i': i,
-                        'parsed': parsed_from_json(raw),
+                        'parsed': parsed,
                         'cliente_id': request.POST.get(f'cliente_{i}') or None,
                         'producto_id': request.POST.get(f'producto_{i}') or None,
                         'crear_cliente': bool(request.POST.get(f'crear_cliente_{i}')),
+                        'crear_producto': bool(request.POST.get(f'crear_producto_{i}')),
                         'pais_id': request.POST.get(f'pais_cliente_{i}') or None,
-                    })
+                    }
+                    filas.append(fila)
                 except Exception as exc:
                     errores_preparacion[i] = str(exc)
+
+            prioridad_cfdi = {
+                'venta_nacional': 0,
+                'venta_exportacion': 0,
+                'remanente_anticipo': 1,
+                'nota_cargo': 2,
+                'nota_credito': 2,
+                'recibo_pago': 3,
+            }
+            filas.sort(key=lambda fila: prioridad_cfdi.get(
+                classify_subtipo(fila['parsed']), 99
+            ))
 
             # Crea primero los receptores elegidos para que una sola alta se
             # aplique a todos los CFDI con la misma identidad fiscal del lote.
             clientes_creados = set()
             for fila in filas:
+                if fila['i'] in errores_preparacion:
+                    continue
                 if fila['cliente_id'] or not fila['crear_cliente']:
                     continue
                 try:
@@ -858,16 +946,57 @@ class VentasAdmin(ModelAdmin):
                 except Exception as exc:
                     errores_preparacion[fila['i']] = str(exc)
 
+            # Crea primero los productos solicitados. Después vuelve a ejecutar
+            # el matching para reutilizarlos en los demás CFDI del mismo lote.
+            productos_creados = set()
+            for fila in filas:
+                if fila['i'] in errores_preparacion:
+                    continue
+                subtipo = classify_subtipo(fila['parsed'])
+                if (
+                    subtipo not in ('venta_nacional', 'venta_exportacion')
+                    or fila['producto_id']
+                    or not fila['crear_producto']
+                ):
+                    continue
+                try:
+                    if not request.user.has_perm('catalogo.add_producto'):
+                        raise PermissionError('No tienes permiso para crear productos.')
+                    producto, creado = crear_producto_desde_cfdi(fila['parsed'])
+                    fila['producto_id'] = producto.pk
+                    if creado:
+                        productos_creados.add(producto.pk)
+                except Exception as exc:
+                    errores_preparacion[fila['i']] = str(exc)
+
+            for fila in filas:
+                if fila['i'] in errores_preparacion:
+                    continue
+                subtipo = classify_subtipo(fila['parsed'])
+                if (
+                    subtipo in ('venta_nacional', 'venta_exportacion')
+                    and not fila['producto_id']
+                ):
+                    producto = match_producto(fila['parsed'])
+                    if producto:
+                        fila['producto_id'] = producto.pk
+                    else:
+                        errores_preparacion[fila['i']] = (
+                            'Selecciona un producto o créalo con los datos del CFDI.'
+                        )
+
             resultados = []
             errores = 0
             for fila in filas:
                 i = fila['i']
                 parsed = fila['parsed']
+                subtipo = classify_subtipo(parsed)
                 if i in errores_preparacion:
                     errores += 1
                     resultados.append({
                         'ok': False,
                         'folio': parsed.get('folio_factura') or parsed.get('uuid'),
+                        'subtipo': subtipo,
                         'error': errores_preparacion[i],
                     })
                     continue
@@ -880,8 +1009,25 @@ class VentasAdmin(ModelAdmin):
                         Producto.objects.get(pk=fila['producto_id'], disponible=True)
                         if fila['producto_id'] else None
                     )
+
+                    from django.core.files.base import File
+                    uuid_lower = (parsed.get('uuid') or '').strip().lower()
+                    archivo_xml = None
+                    archivo_pdf = None
+                    if uuid_lower and archivos_xml.get(uuid_lower):
+                        archivo_xml = File(
+                            open(archivos_xml[uuid_lower], 'rb'),
+                            name=f'{uuid_lower}.xml',
+                        )
+                    if uuid_lower and archivos_pdf.get(uuid_lower):
+                        archivo_pdf = File(
+                            open(archivos_pdf[uuid_lower], 'rb'),
+                            name=f'{uuid_lower}.pdf',
+                        )
+
                     _obj, doc, subtipo = importar_cfdi(
                         parsed, cliente=cliente, producto=producto,
+                        archivo_pdf=archivo_pdf, archivo_xml=archivo_xml,
                     )
                     resultados.append({
                         'ok': True,
@@ -889,14 +1035,23 @@ class VentasAdmin(ModelAdmin):
                         'subtipo': subtipo,
                         'doc_id': doc.pk,
                         'cliente_creado': doc.cliente_id in clientes_creados,
+                        'producto_creado': (
+                            getattr(_obj, 'producto_id', None) in productos_creados
+                        ),
                     })
                 except Exception as exc:
                     errores += 1
                     resultados.append({
                         'ok': False,
                         'folio': parsed.get('folio_factura') or parsed.get('uuid'),
+                        'subtipo': subtipo,
                         'error': str(exc),
                     })
+
+            if tempdir:
+                import shutil
+                shutil.rmtree(tempdir, ignore_errors=True)
+
 
             context = dict(
                 self.admin_site.each_context(request),
@@ -905,6 +1060,7 @@ class VentasAdmin(ModelAdmin):
                 errores=errores,
                 importados=sum(1 for resultado in resultados if resultado.get('ok')),
                 clientes_creados=len(clientes_creados),
+                productos_creados=len(productos_creados),
                 title='Resultado de importación masiva',
                 opts=opts,
             )
@@ -912,15 +1068,17 @@ class VentasAdmin(ModelAdmin):
 
         # ── Step 1 → parse XMLs ───────────────────────────────────────────
         if request.method == 'POST' and request.POST.get('_step') == 'upload':
+            import os
+            import tempfile
+            import uuid as uuid_mod
+
             archivos = request.FILES.getlist('archivos')
             errores_upload = []
             archivos_validos = []
             for f in archivos:
-                ext = f.name.lower().rsplit('.', 1)[-1] if '.' in f.name else ''
-                if ext not in ('xml', 'zip'):
-                    errores_upload.append(f'"{f.name}" no es .xml ni .zip.')
-                elif f.size > 1 * 1024 * 1024:
-                    errores_upload.append(f'"{f.name}" supera 1 MB.')
+                error = _validar_archivo_cfdi(f)
+                if error:
+                    errores_upload.append(error)
                 else:
                     archivos_validos.append(f)
 
@@ -928,14 +1086,29 @@ class VentasAdmin(ModelAdmin):
                 errores_upload.append('Debes seleccionar al menos un archivo.')
 
             if not errores_upload and archivos_validos:
+                extraidos = _extraer_archivos(archivos_validos)
+                xmls = [(n, b) for n, b, e in extraidos if e == 'xml']
+                pdfs = [(n, b) for n, b, e in extraidos if e == 'pdf']
+
+                # UUID de cada PDF, extraído del nombre del archivo (Blikon).
+                pdfs_por_uuid = {}
+                for nombre, contenido in pdfs:
+                    m = _UUID_RE.search(nombre)
+                    if m:
+                        pdfs_por_uuid[m.group(0).lower()] = contenido
+
+                tempdir = tempfile.mkdtemp(prefix='cfdi_import_')
+                archivos_map = {'xml': {}, 'pdf': {}, 'dir': tempdir}
+
                 previews = []
                 uuids_lote = set()
-                for nombre, xml_bytes in _extraer_xmls(archivos_validos):
+                for nombre, xml_bytes in xmls:
                     item = {'nombre': nombre}
                     try:
                         parsed = parse_cfdi(xml_bytes)
                         subtipo = classify_subtipo(parsed)
                         uuid = (parsed.get('uuid') or '').strip()
+                        uuid_lower = uuid.lower()
                         duplicado = None
                         if uuid and uuid in uuids_lote:
                             duplicado = 'El UUID está repetido dentro de este lote.'
@@ -943,6 +1116,21 @@ class VentasAdmin(ModelAdmin):
                             duplicado = 'Este UUID ya fue importado anteriormente.'
                         if uuid:
                             uuids_lote.add(uuid)
+
+                        tiene_pdf = False
+                        if uuid_lower:
+                            xml_path = os.path.join(tempdir, f'{uuid_lower}.xml')
+                            with open(xml_path, 'wb') as fh:
+                                fh.write(xml_bytes)
+                            archivos_map['xml'][uuid_lower] = xml_path
+
+                            if uuid_lower in pdfs_por_uuid:
+                                pdf_path = os.path.join(tempdir, f'{uuid_lower}.pdf')
+                                with open(pdf_path, 'wb') as fh:
+                                    fh.write(pdfs_por_uuid[uuid_lower])
+                                archivos_map['pdf'][uuid_lower] = pdf_path
+                                tiene_pdf = True
+
                         item.update({
                             'parsed': parsed,
                             'subtipo': subtipo,
@@ -950,6 +1138,7 @@ class VentasAdmin(ModelAdmin):
                             'cliente': match_cliente(parsed),
                             'pais_sugerido': sugerir_pais(parsed),
                             'producto': match_producto(parsed),
+                            'producto_sugerido': sugerir_producto_desde_cfdi(parsed),
                             'receptor_nombre': parsed.get('_receptor_nombre') or '',
                             'receptor_rfc': parsed.get('_receptor_rfc') or '',
                             'receptor_residencia': (
@@ -960,14 +1149,19 @@ class VentasAdmin(ModelAdmin):
                             ),
                             'json': parsed_to_json(parsed),
                             'duplicado': duplicado,
+                            'tiene_pdf': tiene_pdf,
                         })
                     except Exception as exc:
                         item['error'] = str(exc)
                     previews.append(item)
 
+                token = uuid_mod.uuid4().hex
+                request.session[f'cfdi_archivos_{token}'] = archivos_map
+
                 context = dict(
                     self.admin_site.each_context(request),
                     step='confirm',
+                    upload_token=token,
                     previews=previews,
                     total_archivos=len(previews),
                     total_listos=sum(
@@ -986,6 +1180,7 @@ class VentasAdmin(ModelAdmin):
                     paises=Pais.objects.order_by('nombre'),
                     productos=Producto.objects.filter(disponible=True).order_by('variedad'),
                     puede_crear_cliente=request.user.has_perm('ventas.add_cliente'),
+                    puede_crear_producto=request.user.has_perm('catalogo.add_producto'),
                     title='Confirmar importación masiva de CFDI',
                     opts=opts,
                 )

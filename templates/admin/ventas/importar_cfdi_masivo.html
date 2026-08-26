@@ -88,7 +88,7 @@
             {% endif %}
 
             <label class="upload-dropzone" for="id_archivos_cfdi" data-upload-dropzone tabindex="0">
-              <input class="visually-hidden-file" type="file" name="archivos" id="id_archivos_cfdi" multiple accept=".xml,.zip" required aria-describedby="upload-help">
+              <input class="visually-hidden-file" type="file" name="archivos" id="id_archivos_cfdi" multiple accept=".xml,.zip,.pdf" required aria-describedby="upload-help">
 
               <span data-drop-default>
                 <span class="upload-dropzone__icon"><i class="fas fa-file-arrow-up" aria-hidden="true"></i></span>
@@ -105,7 +105,8 @@
               <span class="upload-constraints" id="upload-help">
                 <span class="upload-constraint"><i class="fas fa-file-code" aria-hidden="true"></i> XML</span>
                 <span class="upload-constraint"><i class="fas fa-file-zipper" aria-hidden="true"></i> ZIP</span>
-                <span class="upload-constraint"><i class="fas fa-weight-hanging" aria-hidden="true"></i> Máx. 1 MB por archivo</span>
+                <span class="upload-constraint"><i class="fas fa-file-pdf" aria-hidden="true"></i> PDF</span>
+                <span class="upload-constraint"><i class="fas fa-weight-hanging" aria-hidden="true"></i> ZIP: máx. 5 MB · XML/PDF: máx. 1 MB</span>
               </span>
             </label>
 
@@ -200,6 +201,7 @@
       {% csrf_token %}
       <input type="hidden" name="_step" value="confirm">
       <input type="hidden" name="total" value="{{ previews|length }}">
+      {% if upload_token %}<input type="hidden" name="upload_token" value="{{ upload_token }}">{% endif %}
 
       <section class="bulk-panel">
         <div class="bulk-panel__header">
@@ -263,6 +265,7 @@
                     <td>
                       <span class="document-id">{{ p.parsed.folio_factura|default:"—" }}</span>
                       <span class="document-file" title="{{ p.nombre }}">{{ p.nombre }}</span>
+                      {% if p.tiene_pdf %}<span class="status-badge status-badge--pdf" title="PDF vinculado por UUID"><i class="fas fa-file-pdf" aria-hidden="true"></i> PDF</span>{% endif %}
                     </td>
                     <td><span class="date-value">{{ p.parsed.fecha_emision_cfdi|default:"—" }}</span></td>
                     <td><span class="money-value">{{ p.parsed.monto }} {{ p.parsed.moneda_venta }}</span></td>
@@ -305,12 +308,49 @@
                       {% endif %}
                     </td>
                     <td>
-                      <select name="producto_{{ forloop.counter0 }}" class="bulk-select" {% if p.duplicado %}disabled{% endif %}>
+                      <select name="producto_{{ forloop.counter0 }}" class="bulk-select"
+                              data-product-select="{{ forloop.counter0 }}"
+                              data-product-required="{% if p.subtipo == 'venta_nacional' or p.subtipo == 'venta_exportacion' %}true{% else %}false{% endif %}"
+                              {% if p.duplicado %}disabled{% elif p.subtipo == 'venta_nacional' or p.subtipo == 'venta_exportacion' %}required aria-required="true"{% endif %}>
                         <option value="">— sin producto —</option>
                         {% for producto in productos %}
                           <option value="{{ producto.pk }}" {% if p.producto and p.producto.pk == producto.pk %}selected{% endif %}>{{ producto.variedad }}</option>
                         {% endfor %}
                       </select>
+                      {% if not p.producto and not p.duplicado %}
+                        {% if p.subtipo == 'venta_nacional' or p.subtipo == 'venta_exportacion' %}
+                          <div class="client-alert product-alert-card">
+                            <div class="client-alert__title">
+                              <i class="fas fa-seedling" aria-hidden="true"></i>
+                              Producto no reconocido
+                            </div>
+                            {% if p.producto_sugerido %}
+                              <div class="client-alert__identity">
+                                <strong>{{ p.producto_sugerido.nombre }}</strong>
+                                Clave SAT {{ p.producto_sugerido.clave_sat|default:"—" }}
+                                {% if p.producto_sugerido.no_identificacion %} · ID {{ p.producto_sugerido.no_identificacion }}{% endif %}
+                                {% if p.producto_sugerido.clave_unidad %} · Unidad {{ p.producto_sugerido.clave_unidad }}{% endif %}
+                              </div>
+                              {% if puede_crear_producto %}
+                                <label class="create-toggle">
+                                  <input type="checkbox" class="bulk-checkbox" name="crear_producto_{{ forloop.counter0 }}"
+                                         data-crear-producto="{{ forloop.counter0 }}" data-product-suggestion="{{ p.producto_sugerido.variedad }}">
+                                  <span>Crear “{{ p.producto_sugerido.variedad }}” con los datos del CFDI</span>
+                                </label>
+                                <p class="creation-scope"><i class="fas fa-link" aria-hidden="true"></i> Se aplicará a las demás filas del mismo producto.</p>
+                              {% else %}
+                                <p class="permission-note"><i class="fas fa-lock" aria-hidden="true"></i> No tienes permiso para crear productos.</p>
+                              {% endif %}
+                            {% else %}
+                              <div class="client-alert__identity">El CFDI contiene conceptos diferentes; selecciona el producto que represente la venta.</div>
+                            {% endif %}
+                            <p class="product-alert" data-product-help>
+                              <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                              Selecciona un producto o marca la opción para crearlo.
+                            </p>
+                          </div>
+                        {% endif %}
+                      {% endif %}
                     </td>
                   {% endif %}
                 </tr>
@@ -351,6 +391,7 @@
           <div class="done-metric"><strong>{{ importados }}</strong><span>Importados</span></div>
           <div class="done-metric"><strong>{{ errores }}</strong><span>Con error</span></div>
           <div class="done-metric"><strong>{{ clientes_creados }}</strong><span>Clientes nuevos</span></div>
+          <div class="done-metric"><strong>{{ productos_creados }}</strong><span>Productos nuevos</span></div>
         </div>
       </div>
 
@@ -379,6 +420,7 @@
                   {% if resultado.ok %}
                     Documento CFDI #{{ resultado.doc_id }}
                     {% if resultado.cliente_creado %}<span class="status-badge status-badge--created">Cliente creado</span>{% endif %}
+                    {% if resultado.producto_creado %}<span class="status-badge status-badge--created">Producto creado</span>{% endif %}
                   {% else %}
                     <span class="result-state--error">{{ resultado.error }}</span>
                   {% endif %}
@@ -409,5 +451,5 @@
 
 {% block extrajs %}
 {{ block.super }}
-<script src="{% static 'js/importar-cfdi-masivo.js' %}?v=1"></script>
+<script src="{% static 'js/importar-cfdi-masivo.js' %}?v=2"></script>
 {% endblock %}

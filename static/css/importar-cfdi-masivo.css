@@ -797,6 +797,22 @@ body #content-main {
   outline: none;
 }
 
+.bulk-select:required:invalid {
+  background-color: var(--accent-amber-bg, rgba(242, 165, 26, .1));
+  border-color: var(--accent-amber, #f2a51a);
+}
+
+.product-alert {
+  align-items: flex-start;
+  color: #8a6400;
+  display: flex;
+  font-size: .66rem;
+  font-weight: 700;
+  gap: .35rem;
+  line-height: 1.4;
+  margin: .45rem 0 0;
+}
+
 .bulk-select:disabled {
   cursor: not-allowed;
   opacity: .65;
@@ -808,6 +824,15 @@ body #content-main {
   border-radius: 7px;
   margin-top: .5rem;
   padding: .6rem;
+}
+
+.product-alert-card {
+  background: rgba(24, 183, 167, .055);
+  border-color: rgba(24, 183, 167, .22);
+}
+
+.product-alert-card .client-alert__title {
+  color: var(--brand-teal-dark, #0f766e);
 }
 
 .client-alert__title {
@@ -849,6 +874,16 @@ body #content-main {
 
 .create-toggle:hover {
   border-color: var(--brand-teal, #18b7a7);
+}
+
+.creation-scope {
+  align-items: center;
+  color: var(--text-muted, #586f7c);
+  display: flex;
+  font-size: .61rem;
+  gap: .3rem;
+  line-height: 1.35;
+  margin: .35rem 0 0;
 }
 
 .create-fields {
@@ -1001,6 +1036,10 @@ html[data-theme="dark"] .done-metric {
 html[data-theme="dark"] .client-alert,
 html[data-theme="dark"] .security-note {
   background: rgba(242, 165, 26, .08);
+}
+
+html[data-theme="dark"] .product-alert-card {
+  background: rgba(24, 183, 167, .08);
 }
 
 @media (max-width: 1080px) {

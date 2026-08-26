@@ -252,6 +252,12 @@ JAZZMIN_SETTINGS = {
                 "permissions": ["ventas.view_ventas"]
             },
             {
+                "name": "Conciliación de CFDI",
+                "url": "admin:ventas_cliente_conciliacion",
+                "icon": "fas fa-balance-scale",
+                "permissions": ["ventas.view_cliente"]
+            },
+            {
                 "name": "Análisis de ventas",
                 "url": "admin:ventas_ventas_balances",
                 "icon": "fas fa-chart-line",

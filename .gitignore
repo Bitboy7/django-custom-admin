@@ -72,7 +72,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
-
+media/cfdi
 # Translations
 *.mo
 # Django stuff:

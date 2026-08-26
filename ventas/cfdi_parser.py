@@ -27,6 +27,8 @@ CCE11_NS = 'http://www.sat.gob.mx/ComercioExterior11'
 CCE20_NS = 'http://www.sat.gob.mx/ComercioExterior20'
 TFD_NS = 'http://www.sat.gob.mx/TimbreFiscalDigital'
 PAGOS_NS = 'http://www.sat.gob.mx/Pagos'
+PAGOS20_NS = 'http://www.sat.gob.mx/Pagos20'
+PAGOS_NAMESPACES = (PAGOS20_NS, PAGOS_NS)
 
 MAX_XML_BYTES = 1 * 1024 * 1024  # 1 MB
 
@@ -85,11 +87,17 @@ def _extract_pagos(root):
           'num_operacion': str, 'doctos': [{'uuid': str, 'pagado': Decimal, ...}]}]
     """
     pagos = []
-    pagos_root = root.find(f'.//{{{PAGOS_NS}}}Pagos')
-    if pagos_root is None:
+    pagos_root = None
+    pagos_ns = None
+    for namespace in PAGOS_NAMESPACES:
+        pagos_root = root.find(f'.//{{{namespace}}}Pagos')
+        if pagos_root is not None:
+            pagos_ns = namespace
+            break
+    if pagos_root is None or pagos_ns is None:
         return pagos
 
-    for pago in pagos_root.findall(f'{{{PAGOS_NS}}}Pago'):
+    for pago in pagos_root.findall(f'{{{pagos_ns}}}Pago'):
         fecha_raw = pago.get('FechaPago', '')
         fecha = None
         if fecha_raw:
@@ -105,7 +113,7 @@ def _extract_pagos(root):
             pass
 
         doctos = []
-        for d in pago.findall(f'{{{PAGOS_NS}}}DoctoRelacionado'):
+        for d in pago.findall(f'{{{pagos_ns}}}DoctoRelacionado'):
             pagado = Decimal('0')
             try:
                 pagado = Decimal(d.get('ImpPagado', '0') or '0')
@@ -131,6 +139,16 @@ def _extract_pagos(root):
         })
 
     return pagos
+
+
+def _decimal_str(raw):
+    """Normaliza un valor numérico de XML a string sin perder precisión."""
+    if raw in (None, ''):
+        return '0'
+    try:
+        return str(Decimal(str(raw)))
+    except InvalidOperation:
+        return str(raw)
 
 
 def parse_cfdi(xml_bytes: bytes) -> dict:
@@ -219,21 +237,34 @@ def parse_cfdi(xml_bytes: bytes) -> dict:
     receptor_regimen_fiscal = attr(receptor, 'RegimenFiscalReceptor')
     receptor_uso_cfdi = attr(receptor, 'UsoCFDI')
 
-    # ── Primer concepto ───────────────────────────────────────────────────
-    concepto = root.find('.//cfdi:Concepto', ns)
+    # ── Conceptos (todos) ────────────────────────────────────────────────
+    conceptos = []
     cantidad = None
     descripcion = ''
     no_identificacion = ''
     clave_prod_serv = ''
-    if concepto is not None:
+    for idx, concepto in enumerate(root.findall('.//cfdi:Concepto', ns)):
         try:
-            cantidad = Decimal(attr(concepto, 'Cantidad', '0'))
+            cant = Decimal(attr(concepto, 'Cantidad', '0'))
         except InvalidOperation:
-            cantidad = None
-        raw_desc = attr(concepto, 'Descripcion')
-        descripcion = re.sub(r'\s+', ' ', raw_desc).strip()[:100]
-        no_identificacion = attr(concepto, 'NoIdentificacion')
-        clave_prod_serv = attr(concepto, 'ClaveProdServ')
+            cant = Decimal('0')
+        desc = re.sub(r'\s+', ' ', attr(concepto, 'Descripcion')).strip()
+
+        conceptos.append({
+            'clave_prod_serv': attr(concepto, 'ClaveProdServ'),
+            'no_identificacion': attr(concepto, 'NoIdentificacion'),
+            'clave_unidad': attr(concepto, 'ClaveUnidad'),
+            'descripcion': desc,
+            'cantidad': str(cant),
+            'valor_unitario': _decimal_str(attr(concepto, 'ValorUnitario')),
+            'importe': _decimal_str(attr(concepto, 'Importe')),
+        })
+
+        if idx == 0:
+            cantidad = cant
+            descripcion = desc[:100]
+            no_identificacion = attr(concepto, 'NoIdentificacion')
+            clave_prod_serv = attr(concepto, 'ClaveProdServ')
 
     # ── Complemento ComercioExterior (1.1 o 2.0) ──────────────────────────
     cce = root.find('.//cce20:ComercioExterior', ns)
@@ -280,6 +311,13 @@ def parse_cfdi(xml_bytes: bytes) -> dict:
 
     # ── Complemento de pagos (REP) ────────────────────────────────────────
     pagos = _extract_pagos(root)
+    if tipo_comprobante == 'P' and not relacionados:
+        relacionados = [
+            docto['uuid']
+            for pago in pagos
+            for docto in pago.get('doctos', [])
+            if docto.get('uuid')
+        ]
 
     # ── P.O. detection ────────────────────────────────────────────────────
     po = _detect_po(root, cfdi_ns, descripcion)
@@ -297,6 +335,7 @@ def parse_cfdi(xml_bytes: bytes) -> dict:
         'cantidad': cantidad,
         'descripcion': descripcion,
         'PO': po,
+        'conceptos': conceptos,
         # ── Claves de clasificación ───────────────────────────────────────
         'tipo_comprobante': tipo_comprobante,
         'tipo_relacion': tipo_relacion,

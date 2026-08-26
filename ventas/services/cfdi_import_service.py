@@ -242,24 +242,142 @@ def actualizar_datos_fiscales_cliente(cliente, parsed):
 
 def match_producto(parsed):
     """Busca el producto más probable según descripción / NoIdentificacion."""
-    desc = parsed.get('descripcion') or ''
-    no_id = parsed.get('_no_identificacion') or ''
+    conceptos = parsed.get('conceptos') or []
+    descripciones = [parsed.get('descripcion') or '']
+    descripciones.extend(c.get('descripcion') or '' for c in conceptos)
+    identificadores = [parsed.get('_no_identificacion') or '']
+    identificadores.extend(c.get('no_identificacion') or '' for c in conceptos)
     fraccion = parsed.get('_fraccion_arancelaria') or ''
+    productos = list(
+        Producto.objects.filter(disponible=True).order_by('variedad')
+    )
 
-    if desc:
-        for p in Producto.objects.filter(disponible=True).order_by('variedad'):
-            if p.variedad and p.variedad.strip().lower() in desc.lower():
+    for identificador in identificadores:
+        identificador = identificador.strip().lower()
+        if not identificador:
+            continue
+        for p in productos:
+            valores = (p.variedad or '', p.nombre or '', p.descripcion or '')
+            if any(identificador in valor.lower() for valor in valores):
                 return p
-    if no_id:
-        p = (
-            Producto.objects.filter(variedad__icontains=no_id).first()
-            or Producto.objects.filter(descripcion__icontains=no_id).first()
-        )
-        if p:
-            return p
+
+    for descripcion in descripciones:
+        descripcion_normalizada = descripcion.strip().lower()
+        if not descripcion_normalizada:
+            continue
+        palabras_descripcion = set(re.findall(r'[a-záéíóúñ0-9]+', descripcion_normalizada))
+        for p in productos:
+            variedad = (p.variedad or '').strip().lower()
+            nombre = (p.nombre or '').strip().lower()
+            if (variedad and variedad in descripcion_normalizada) or (
+                nombre and nombre in descripcion_normalizada
+            ):
+                return p
+            palabras_variedad = {
+                palabra for palabra in re.findall(r'[a-záéíóúñ0-9]+', variedad)
+                if len(palabra) >= 4
+            }
+            if palabras_variedad & palabras_descripcion:
+                return p
+
     if fraccion:
         return Producto.objects.filter(nombre__icontains='Mango').first()
     return None
+
+
+def sugerir_producto_desde_cfdi(parsed):
+    """Obtiene una propuesta de catálogo cuando el CFDI contiene un solo producto.
+
+    Una venta puede incluir varios renglones del mismo producto (por ejemplo,
+    distintas cantidades de Soya). En ese caso se conserva una sola propuesta.
+    Si hay descripciones diferentes, no se adivina cuál debería representar a
+    toda la venta porque el modelo ``Ventas`` admite un único producto.
+    """
+    conceptos = parsed.get('conceptos') or []
+    if not conceptos:
+        conceptos = [{
+            'descripcion': parsed.get('descripcion') or '',
+            'clave_prod_serv': parsed.get('_clave_prod_serv') or '',
+            'no_identificacion': parsed.get('_no_identificacion') or '',
+            'clave_unidad': '',
+        }]
+
+    conceptos_validos = []
+    descripciones = set()
+    for concepto in conceptos:
+        descripcion = re.sub(
+            r'\s+', ' ', (concepto.get('descripcion') or '').strip()
+        )
+        if not descripcion:
+            continue
+        conceptos_validos.append((concepto, descripcion))
+        descripciones.add(descripcion.casefold())
+
+    if not conceptos_validos or len(descripciones) != 1:
+        return None
+
+    concepto, descripcion = conceptos_validos[0]
+    return {
+        'nombre': descripcion[:100],
+        'variedad': descripcion[:50],
+        'clave_sat': (concepto.get('clave_prod_serv') or '').strip(),
+        'no_identificacion': (
+            concepto.get('no_identificacion') or ''
+        ).strip(),
+        'clave_unidad': (concepto.get('clave_unidad') or '').strip(),
+    }
+
+
+@transaction.atomic
+def crear_producto_desde_cfdi(parsed):
+    """Crea explícitamente un producto disponible a partir del concepto CFDI."""
+    existente = match_producto(parsed)
+    if existente:
+        return existente, False
+
+    sugerencia = sugerir_producto_desde_cfdi(parsed)
+    if sugerencia is None:
+        raise ValueError(
+            'El CFDI contiene varios productos o no incluye una descripción '
+            'suficiente. Selecciona un producto del catálogo.'
+        )
+
+    existente = Producto.objects.filter(
+        disponible=True,
+        variedad__iexact=sugerencia['variedad'],
+    ).first()
+    if existente:
+        return existente, False
+
+    inactivo = Producto.objects.filter(
+        variedad__iexact=sugerencia['variedad'],
+        disponible=False,
+    ).first()
+    if inactivo:
+        raise ValueError(
+            f'El producto {inactivo.variedad} ya existe, pero no está disponible.'
+        )
+
+    metadatos = ['Creado desde CFDI.']
+    if sugerencia['clave_sat']:
+        metadatos.append(f"Clave SAT: {sugerencia['clave_sat']}.")
+    if sugerencia['no_identificacion']:
+        metadatos.append(
+            f"No. identificación: {sugerencia['no_identificacion']}."
+        )
+    if sugerencia['clave_unidad']:
+        metadatos.append(f"Unidad SAT: {sugerencia['clave_unidad']}.")
+
+    producto = Producto(
+        nombre=sugerencia['nombre'],
+        variedad=sugerencia['variedad'],
+        precio_unitario=0,
+        disponible=True,
+        descripcion=' '.join(metadatos),
+    )
+    producto.full_clean()
+    producto.save()
+    return producto, True
 
 
 def resolver_venta(parsed):
@@ -281,8 +399,17 @@ def _monto_recibo(parsed):
     return Decimal(str(parsed.get('monto') or 0))
 
 
+def _moneda_recibo(parsed):
+    """Moneda real de un recibo electrónico de pago (MonedaP)."""
+    pagos = parsed.get('pagos') or []
+    if pagos and pagos[0].get('moneda'):
+        return pagos[0]['moneda']
+    return parsed.get('moneda_venta') or 'MXN'
+
+
 def crear_documento(parsed, *, cliente, subtipo=None, venta=None,
-                    anticipo=None, pago_venta=None, estado='VIGENTE'):
+                    anticipo=None, pago_venta=None, estado='VIGENTE',
+                    conceptos=None, archivo_pdf=None, archivo_xml=None):
     """Crea un DocumentoCFDI a partir de un CFDI parseado."""
     subtipo = subtipo or classify_subtipo(parsed)
 
@@ -293,11 +420,18 @@ def crear_documento(parsed, *, cliente, subtipo=None, venta=None,
     else:
         tipo = DocumentoCFDI.TipoDocumento.INGRESO
 
-    moneda = parsed.get('moneda_venta') or 'MXN'
-    monto = parsed.get('monto') or Decimal('0')
+    if subtipo == 'recibo_pago':
+        moneda = _moneda_recibo(parsed)
+        monto = _monto_recibo(parsed)
+    else:
+        moneda = parsed.get('moneda_venta') or 'MXN'
+        monto = parsed.get('monto') or Decimal('0')
     fecha_timbrado = parsed.get('fecha_timbrado')
     if fecha_timbrado and timezone.is_naive(fecha_timbrado):
         fecha_timbrado = timezone.make_aware(fecha_timbrado)
+
+    if conceptos is None:
+        conceptos = parsed.get('conceptos') or []
 
     folio = parsed.get('folio_num') or parsed.get('folio_factura') or None
     return DocumentoCFDI.objects.create(
@@ -317,6 +451,9 @@ def crear_documento(parsed, *, cliente, subtipo=None, venta=None,
         venta=venta,
         anticipo=anticipo,
         pago_venta=pago_venta,
+        conceptos=conceptos,
+        archivo_pdf=archivo_pdf,
+        archivo_xml=archivo_xml,
     )
 
 
@@ -325,6 +462,10 @@ def _crear_venta(parsed, cliente, producto, sucursal, cuenta):
     from gastos.models import Cuenta
 
     producto = producto or match_producto(parsed)
+    if producto is None:
+        raise ValueError(
+            'Selecciona un producto para importar este CFDI como venta.'
+        )
     sucursal = sucursal or Sucursal.objects.order_by('id').first()
     cuenta = cuenta or Cuenta.objects.order_by('id').first()
 
@@ -374,7 +515,7 @@ def _crear_anticipo(parsed, cliente, cuenta):
     return anticipo
 
 
-def _crear_recibo_pago(parsed, cliente, cuenta):
+def _crear_recibo_pago(parsed, cliente, cuenta, archivo_pdf=None, archivo_xml=None):
     from gastos.models import Cuenta
 
     cuenta = cuenta or Cuenta.objects.order_by('id').first()
@@ -393,7 +534,23 @@ def _crear_recibo_pago(parsed, cliente, cuenta):
             if venta:
                 break
 
-    doc = crear_documento(parsed, cliente=cliente, venta=venta, subtipo='recibo_pago')
+    referencias = [
+        docto.get('uuid')
+        for pago in (parsed.get('pagos') or [])
+        for docto in (pago.get('doctos') or [])
+        if docto.get('uuid')
+    ]
+    if not venta and referencias:
+        raise ValueError(
+            'No se encontró la factura relacionada con UUID '
+            f'{referencias[0]}. Importa primero la factura y después su '
+            'complemento de pago.'
+        )
+
+    doc = crear_documento(
+        parsed, cliente=cliente, venta=venta, subtipo='recibo_pago',
+        archivo_pdf=archivo_pdf, archivo_xml=archivo_xml,
+    )
 
     if venta and venta.modalidad_pago == Ventas.ModalidadPago.CREDITO and \
             venta.estado_cobranza in ('Pendiente', 'Parcial', 'Vencido'):
@@ -401,13 +558,16 @@ def _crear_recibo_pago(parsed, cliente, cuenta):
         if saldo > 0:
             monto_pago = min(_monto_recibo(parsed), Decimal(str(saldo)))
             if monto_pago > 0:
-                moneda = parsed.get('moneda_venta') or 'MXN'
+                moneda = _moneda_recibo(parsed)
                 num_operacion = ''
+                fecha_pago = parsed.get('fecha_emision_cfdi') or timezone.now().date()
                 if parsed.get('pagos'):
-                    num_operacion = parsed['pagos'][0].get('num_operacion') or ''
+                    primer_pago = parsed['pagos'][0]
+                    num_operacion = primer_pago.get('num_operacion') or ''
+                    fecha_pago = primer_pago.get('fecha') or fecha_pago
                 pago = PagoVenta.objects.create(
                     venta=venta,
-                    fecha_pago=parsed.get('fecha_emision_cfdi') or timezone.now().date(),
+                    fecha_pago=fecha_pago,
                     monto_pago=Money(monto_pago, moneda),
                     cuenta_destino=cuenta or venta.cuenta,
                     metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
@@ -423,17 +583,35 @@ def _crear_recibo_pago(parsed, cliente, cuenta):
 
 
 @transaction.atomic
-def importar_cfdi(parsed, *, cliente=None, producto=None, sucursal=None, cuenta=None):
+def importar_cfdi(parsed, *, cliente=None, producto=None, sucursal=None, cuenta=None,
+                  archivo_pdf=None, archivo_xml=None):
     """
     Importa un CFDI ya parseado y clasificado.
 
     Retorna (objeto_principal, documento, subtipo).
     """
-    uuid = (parsed.get('uuid') or '').strip()
-    if uuid and DocumentoCFDI.objects.filter(uuid__iexact=uuid).exists():
-        raise ValueError(f'El CFDI con UUID {uuid} ya fue importado.')
-
     subtipo = classify_subtipo(parsed)
+    uuid = (parsed.get('uuid') or '').strip()
+    existente = (
+        DocumentoCFDI.objects.filter(uuid__iexact=uuid).first()
+        if uuid else None
+    )
+    if existente:
+        complemento_incompleto = (
+            subtipo == 'recibo_pago'
+            and existente.subtipo == DocumentoCFDI.SubtipoDocumento.RECIBO_PAGO
+            and existente.venta_id is None
+            and existente.pago_venta_id is None
+            and existente.monto.amount == 0
+        )
+        if complemento_incompleto:
+            # Permite reparar importaciones antiguas que guardaron Pagos 2.0
+            # como documentos de monto cero. Si la reparación falla, atomic
+            # revierte también esta eliminación.
+            existente.delete()
+        else:
+            raise ValueError(f'El CFDI con UUID {uuid} ya fue importado.')
+
     cliente = cliente or match_cliente(parsed)
 
     if cliente is None:
@@ -443,23 +621,25 @@ def importar_cfdi(parsed, *, cliente=None, producto=None, sucursal=None, cuenta=
 
     actualizar_datos_fiscales_cliente(cliente, parsed)
 
+    kwargs_doc = {'archivo_pdf': archivo_pdf, 'archivo_xml': archivo_xml}
+
     if subtipo in ('venta_nacional', 'venta_exportacion'):
         venta = _crear_venta(parsed, cliente, producto, sucursal, cuenta)
-        doc = crear_documento(parsed, cliente=cliente, venta=venta, subtipo=subtipo)
+        doc = crear_documento(parsed, cliente=cliente, venta=venta, subtipo=subtipo, **kwargs_doc)
         return venta, doc, subtipo
 
     if subtipo in ('nota_cargo', 'nota_credito'):
         venta = resolver_venta(parsed)
-        doc = crear_documento(parsed, cliente=cliente, venta=venta, subtipo=subtipo)
+        doc = crear_documento(parsed, cliente=cliente, venta=venta, subtipo=subtipo, **kwargs_doc)
         return doc, doc, subtipo
 
     if subtipo == 'remanente_anticipo':
         anticipo = _crear_anticipo(parsed, cliente, cuenta)
-        doc = crear_documento(parsed, cliente=cliente, anticipo=anticipo, subtipo=subtipo)
+        doc = crear_documento(parsed, cliente=cliente, anticipo=anticipo, subtipo=subtipo, **kwargs_doc)
         return anticipo, doc, subtipo
 
     if subtipo == 'recibo_pago':
-        pago, doc = _crear_recibo_pago(parsed, cliente, cuenta)
+        pago, doc = _crear_recibo_pago(parsed, cliente, cuenta, archivo_pdf=archivo_pdf, archivo_xml=archivo_xml)
         return pago, doc, subtipo
 
     raise ValueError(f'Subtipo no soportado: {subtipo}')

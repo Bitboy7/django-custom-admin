@@ -1,38 +1,427 @@
-/* Ventas changelist — semantic colours aligned with design tokens. */
+/* Ventas changelist — toolbar, filters and data table. */
 
-body #changelist #result_list {
+body.app-ventas.model-ventas.change-list .content-wrapper > .content {
+  overflow-x: hidden;
+}
+
+body.app-ventas.model-ventas.change-list .sales-period-bar {
+  align-items: center;
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  gap: var(--space-4);
+  margin: 0 7.5px var(--space-4);
+  min-height: 52px;
+  padding: var(--space-2) var(--space-4);
+}
+
+body.app-ventas.model-ventas.change-list .sales-period-bar__label {
+  align-items: center;
+  color: var(--text-secondary);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  gap: var(--space-2);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+body.app-ventas.model-ventas.change-list .sales-period-bar__label i {
+  color: var(--brand-teal-dark);
+}
+
+body.app-ventas.model-ventas.change-list .sales-period-bar__links,
+body.app-ventas.model-ventas.change-list .sales-period-bar__links .toplinks {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+body.app-ventas.model-ventas.change-list .sales-period-bar__links a,
+body.app-ventas.model-ventas.change-list .sales-period-bar__links .date-back,
+body.app-ventas.model-ventas.change-list .sales-period-bar__links .date-back a {
+  align-items: center;
+  background: var(--surface-bg) !important;
+  border: 1px solid var(--border-default) !important;
+  border-radius: var(--radius-full) !important;
+  color: var(--text-secondary) !important;
+  display: inline-flex;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 var(--space-4) !important;
+  text-decoration: none !important;
+  transition: border-color var(--duration-fast) var(--ease-default), background var(--duration-fast) var(--ease-default), color var(--duration-fast) var(--ease-default);
+}
+
+body.app-ventas.model-ventas.change-list .sales-period-bar__links a:hover {
+  background: rgba(24, 183, 167, 0.09) !important;
+  border-color: var(--brand-teal) !important;
+  color: var(--brand-teal-dark) !important;
+}
+
+body.app-ventas.model-ventas.change-list #change-list-filters.sales-command-bar {
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 10px 28px rgba(15, 31, 53, 0.07);
+  margin: 0 7.5px var(--space-5);
+  padding: 0 !important;
+  width: calc(100% - 15px);
+}
+
+body.app-ventas.model-ventas.change-list .sales-command-bar__header {
+  align-items: center;
+  border-bottom: 1px solid var(--border-default);
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+}
+
+body.app-ventas.model-ventas.change-list .sales-command-bar__header h2 {
+  align-items: center;
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--text-primary) !important;
+  display: flex;
+  font-size: var(--font-size-base) !important;
+  font-weight: 700 !important;
+  gap: var(--space-2);
+  letter-spacing: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-transform: none !important;
+}
+
+body.app-ventas.model-ventas.change-list .sales-command-bar__header h2 i {
+  color: var(--brand-teal-dark);
+}
+
+body.app-ventas.model-ventas.change-list .sales-command-bar__header p {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  margin: var(--space-1) 0 0;
+}
+
+body.app-ventas.model-ventas.change-list #changelist-search.sales-filter-grid {
+  display: grid !important;
+  gap: var(--space-3) !important;
+  grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+  padding: var(--space-5);
+}
+
+body.app-ventas.model-ventas.change-list #changelist-search .form-group {
+  margin: 0;
+  min-width: 0;
+}
+
+body.app-ventas.model-ventas.change-list #changelist-search .form-control,
+body.app-ventas.model-ventas.change-list #changelist-search .select2-container,
+body.app-ventas.model-ventas.change-list #changelist-search .select2-selection--single {
+  width: 100% !important;
+}
+
+body.app-ventas.model-ventas.change-list #changelist-search .form-control,
+body.app-ventas.model-ventas.change-list #changelist-search .select2-selection--single {
+  background-color: var(--surface-card) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 1px 2px rgba(15, 31, 53, 0.03);
+  color: var(--text-primary) !important;
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm) !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  transition: border-color var(--duration-fast) var(--ease-default), box-shadow var(--duration-fast) var(--ease-default), background var(--duration-fast) var(--ease-default);
+}
+
+body.app-ventas.model-ventas.change-list #changelist-search .select2-selection__rendered {
+  color: var(--text-secondary) !important;
+  line-height: 42px !important;
+  overflow: hidden;
+  padding-left: 13px !important;
+  padding-right: 34px !important;
+  text-overflow: ellipsis;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+body.app-ventas.model-ventas.change-list #changelist-search .select2-selection__arrow {
+  height: 42px !important;
+  right: 8px !important;
+}
+
+body.app-ventas.model-ventas.change-list #changelist-search .select2-selection__clear {
+  color: var(--text-muted);
+  margin-right: var(--space-2);
+}
+
+body.app-ventas.model-ventas.change-list #changelist-search .form-control:focus,
+body.app-ventas.model-ventas.change-list #changelist-search .select2-container--focus .select2-selection--single,
+body.app-ventas.model-ventas.change-list #changelist-search .select2-container--open .select2-selection--single {
+  border-color: var(--brand-teal) !important;
+  box-shadow: 0 0 0 3px rgba(24, 183, 167, 0.15) !important;
+  outline: none !important;
+}
+
+body.app-ventas.model-ventas.change-list .sales-search-field {
+  grid-column: span 2;
+  min-width: 0;
+  position: relative;
+}
+
+body.app-ventas.model-ventas.change-list .sales-search-field > i {
+  color: var(--text-muted);
+  left: 14px;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+body.app-ventas.model-ventas.change-list .sales-search-field input.form-control {
+  min-width: 0 !important;
+  padding: 0 14px 0 40px !important;
+}
+
+body.app-ventas.model-ventas.change-list .sales-search-field input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.82;
+}
+
+body.app-ventas.model-ventas.change-list #changelist-search .sales-filter-submit {
+  align-items: center;
+  border-radius: 10px !important;
+  box-shadow: 0 6px 14px rgba(24, 183, 167, 0.2);
+  display: inline-flex;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  gap: var(--space-2);
+  height: 44px;
+  justify-content: center;
+  margin: 0;
+  min-width: 112px;
+  padding: 0 var(--space-5) !important;
+}
+
+body.app-ventas.model-ventas.change-list .sales-command-bar__footer {
+  align-items: center;
+  background: var(--surface-bg);
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  border-top: 1px solid var(--border-default);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-5);
+}
+
+body.app-ventas.model-ventas.change-list .sales-results-summary {
+  align-items: center;
+  color: var(--text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--font-size-xs);
+  gap: var(--space-2);
+}
+
+body.app-ventas.model-ventas.change-list .sales-results-summary__total {
+  color: var(--text-muted);
+}
+
+body.app-ventas.model-ventas.change-list .sales-clear-filters {
+  align-items: center;
+  color: var(--brand-teal-dark) !important;
+  display: inline-flex;
+  font-weight: 700;
+  gap: var(--space-1);
+  margin-left: var(--space-2);
+  text-decoration: none !important;
+}
+
+body.app-ventas.model-ventas.change-list .sales-clear-filters:hover {
+  text-decoration: underline !important;
+}
+
+body.app-ventas.model-ventas.change-list .sales-toolbar-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+body.app-ventas.model-ventas.change-list .sales-toolbar-actions > a {
+  align-items: center;
+  border-radius: 10px !important;
+  display: inline-flex;
+  float: none !important;
+  font-size: var(--font-size-xs) !important;
+  font-weight: 700 !important;
+  gap: var(--space-2);
+  height: 40px;
+  justify-content: center;
+  margin: 0 !important;
+  min-height: 40px;
+  padding: 0 var(--space-4) !important;
+  text-decoration: none !important;
+  white-space: nowrap;
+}
+
+body.app-ventas.model-ventas.change-list .sales-toolbar-actions > a small {
+  border-left: 1px solid currentColor;
+  font-size: 0.64rem;
+  font-weight: 700;
+  margin-left: 2px;
+  opacity: 0.72;
+  padding-left: var(--space-2);
+}
+
+body.app-ventas.model-ventas.change-list .sales-quick-action--secondary {
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary) !important;
+}
+
+body.app-ventas.model-ventas.change-list .sales-quick-action--secondary:hover {
+  background: rgba(24, 183, 167, 0.08);
+  border-color: var(--brand-teal);
+  color: var(--brand-teal-dark) !important;
+}
+
+body.app-ventas.model-ventas.change-list .sales-quick-action--primary {
+  background: var(--brand-navy);
+  border: 1px solid var(--brand-navy);
+  color: #fff !important;
+}
+
+body.app-ventas.model-ventas.change-list .sales-quick-action--primary:hover {
+  background: var(--brand-navy-light);
+  border-color: var(--brand-navy-light);
+  box-shadow: var(--shadow-sm);
+  color: #fff !important;
+}
+
+body.app-ventas.model-ventas.change-list .sales-toolbar-actions > .btn-success {
+  background: var(--brand-teal) !important;
+  border-color: var(--brand-teal) !important;
+  color: #fff !important;
+}
+
+body.app-ventas.model-ventas.change-list .sales-toolbar-actions > .btn-success:hover {
+  background: var(--brand-teal-dark) !important;
+  border-color: var(--brand-teal-dark) !important;
+}
+
+body.app-ventas.model-ventas.change-list #changelist {
+  margin-top: 0;
+}
+
+body.app-ventas.model-ventas.change-list .change-list-actions {
+  padding-bottom: var(--space-3) !important;
+}
+
+body.app-ventas.model-ventas.change-list .actions {
+  align-items: center;
+  background: var(--surface-bg);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+}
+
+body.app-ventas.model-ventas.change-list .actions label {
+  align-items: center;
+  color: var(--text-secondary);
+  display: inline-flex;
+  flex: 0 1 420px;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  gap: var(--space-2);
+  margin: 0;
+  white-space: nowrap;
+}
+
+body.app-ventas.model-ventas.change-list .actions select {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  height: 40px;
+  min-height: 40px;
+  min-width: 250px;
+  padding-bottom: 0;
+  padding-top: 0;
+  width: auto !important;
+}
+
+body.app-ventas.model-ventas.change-list .actions .button {
+  border-radius: 9px !important;
+  font-size: var(--font-size-xs) !important;
+  font-weight: 700;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 var(--space-4) !important;
+}
+
+body.app-ventas.model-ventas.change-list .actions .action-counter,
+body.app-ventas.model-ventas.change-list .actions .all,
+body.app-ventas.model-ventas.change-list .actions .question,
+body.app-ventas.model-ventas.change-list .actions .clear {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+body.app-ventas.model-ventas.change-list .actions .question a,
+body.app-ventas.model-ventas.change-list .actions .clear a {
+  color: var(--brand-teal-dark) !important;
+  font-weight: 700;
+}
+
+body.app-ventas.model-ventas.change-list #changelist #result_list {
   border: 1px solid var(--border-default) !important;
   border-radius: var(--radius-lg) !important;
   box-shadow: var(--shadow-sm) !important;
   overflow: hidden;
 }
 
-body #changelist #result_list thead th {
+body.app-ventas.model-ventas.change-list #changelist #result_list thead th {
   background: var(--sales-table-head-bg, var(--brand-navy)) !important;
   color: var(--sales-table-head-text, #fff) !important;
   border-bottom: 1px solid rgba(184, 219, 217, 0.22) !important;
 }
 
-body #changelist #result_list tbody tr td {
+body.app-ventas.model-ventas.change-list #changelist #result_list tbody tr td {
   background: var(--surface-card) !important;
   border-bottom: 1px solid var(--border-default) !important;
 }
 
-body #changelist #result_list tbody tr:nth-child(even) td {
+body.app-ventas.model-ventas.change-list #changelist #result_list tbody tr:nth-child(even) td {
   background: rgba(184, 219, 217, 0.07) !important;
 }
 
-body #changelist #result_list tbody tr:hover td {
+body.app-ventas.model-ventas.change-list #changelist #result_list tbody tr:hover td {
   background: rgba(184, 219, 217, 0.16) !important;
 }
 
-body #changelist #result_list td.field-fecha_salida_manifiesto {
+body.app-ventas.model-ventas.change-list #changelist #result_list td.field-fecha_salida_manifiesto {
   background: var(--sales-table-key-bg, rgba(184, 219, 217, 0.22)) !important;
   color: var(--sales-table-key-text, var(--brand-navy)) !important;
   font-weight: 750 !important;
 }
 
-body #changelist #result_list tbody tr:hover td.field-fecha_salida_manifiesto {
+body.app-ventas.model-ventas.change-list #changelist #result_list tbody tr:hover td.field-fecha_salida_manifiesto {
   background: rgba(184, 219, 217, 0.28) !important;
 }
 
@@ -138,18 +527,93 @@ body #changelist #result_list tbody tr:hover td.field-fecha_salida_manifiesto {
 /* ═══════════════════════════════════════════════════════════════
    DARK MODE — ventas changelist
    ═══════════════════════════════════════════════════════════════ */
-html[data-theme="dark"] body #changelist #result_list tbody tr td {
+html[data-theme="dark"] body.app-ventas.model-ventas.change-list #changelist #result_list tbody tr td {
   background: var(--surface-card, #242b32) !important;
 }
 
-html[data-theme="dark"] body #changelist #result_list tbody tr:nth-child(even) td {
+html[data-theme="dark"] body.app-ventas.model-ventas.change-list #changelist #result_list tbody tr:nth-child(even) td {
   background: var(--surface-hover, #2f3840) !important;
 }
 
-html[data-theme="dark"] body #changelist #result_list tbody tr:hover td {
+html[data-theme="dark"] body.app-ventas.model-ventas.change-list #changelist #result_list tbody tr:hover td {
   background: rgba(154, 197, 195, 0.12) !important;
 }
 
-html[data-theme="dark"] body #changelist #result_list tbody tr:hover td.field-fecha_salida_manifiesto {
+html[data-theme="dark"] body.app-ventas.model-ventas.change-list #changelist #result_list tbody tr:hover td.field-fecha_salida_manifiesto {
   background: rgba(154, 197, 195, 0.2) !important;
+}
+
+html[data-theme="dark"] body.app-ventas.model-ventas.change-list .sales-period-bar,
+html[data-theme="dark"] body.app-ventas.model-ventas.change-list #change-list-filters.sales-command-bar {
+  background: var(--surface-card);
+  border-color: var(--border-default);
+}
+
+html[data-theme="dark"] body.app-ventas.model-ventas.change-list .sales-command-bar__footer,
+html[data-theme="dark"] body.app-ventas.model-ventas.change-list .actions {
+  background: var(--surface-bg);
+}
+
+html[data-theme="dark"] body.app-ventas.model-ventas.change-list #changelist-search .form-control,
+html[data-theme="dark"] body.app-ventas.model-ventas.change-list #changelist-search .select2-selection--single,
+html[data-theme="dark"] body.app-ventas.model-ventas.change-list .sales-quick-action--secondary {
+  background-color: var(--surface-bg) !important;
+  border-color: var(--border-default) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="dark"] body.app-ventas.model-ventas.change-list #changelist-search .select2-selection__rendered {
+  color: var(--text-primary) !important;
+}
+
+@media (max-width: 991px) {
+  body.app-ventas.model-ventas.change-list .sales-search-field {
+    grid-column: span 1;
+  }
+
+  body.app-ventas.model-ventas.change-list .sales-command-bar__footer,
+  body.app-ventas.model-ventas.change-list .sales-toolbar-actions {
+    align-items: stretch;
+  }
+
+  body.app-ventas.model-ventas.change-list .sales-toolbar-actions {
+    flex-basis: 100%;
+  }
+
+  body.app-ventas.model-ventas.change-list .sales-toolbar-actions > a {
+    flex: 1 1 190px;
+  }
+}
+
+@media (max-width: 575px) {
+  body.app-ventas.model-ventas.change-list .sales-period-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  body.app-ventas.model-ventas.change-list #changelist-search.sales-filter-grid {
+    grid-template-columns: 1fr;
+    padding: var(--space-4);
+  }
+
+  body.app-ventas.model-ventas.change-list .sales-command-bar__header,
+  body.app-ventas.model-ventas.change-list .sales-command-bar__footer {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+
+  body.app-ventas.model-ventas.change-list .sales-toolbar-actions,
+  body.app-ventas.model-ventas.change-list .sales-toolbar-actions > a,
+  body.app-ventas.model-ventas.change-list #changelist-search .sales-filter-submit,
+  body.app-ventas.model-ventas.change-list .actions,
+  body.app-ventas.model-ventas.change-list .actions label,
+  body.app-ventas.model-ventas.change-list .actions select,
+  body.app-ventas.model-ventas.change-list .actions .button {
+    width: 100%;
+  }
+
+  body.app-ventas.model-ventas.change-list .actions select {
+    min-width: 0;
+    width: 100% !important;
+  }
 }

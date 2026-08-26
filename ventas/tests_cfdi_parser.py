@@ -4,6 +4,9 @@ Pruebas unitarias del parser CFDI 3.3 / 4.0 y de la clasificación de subtipos.
 Ejecución:
     python manage.py test ventas.tests_cfdi_parser --verbosity=2
 """
+from datetime import date
+from decimal import Decimal
+
 from django.test import SimpleTestCase
 
 from ventas.cfdi_parser import parse_cfdi, classify_subtipo
@@ -107,6 +110,51 @@ XML_RECIBO_PAGO = """<?xml version="1.0" encoding="UTF-8"?>
 </cfdi:Comprobante>
 """
 
+XML_RECIBO_PAGO_20 = """<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4"
+    xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital"
+    xmlns:pago20="http://www.sat.gob.mx/Pagos20"
+    Serie="B" Folio="2325" Fecha="2026-07-18T14:45:16" TipoDeComprobante="P"
+    Moneda="XXX" Total="0" Exportacion="01">
+  <cfdi:Receptor Rfc="EMA220607QL9" Nombre="EMSEGA MARKET"/>
+  <cfdi:Conceptos>
+    <cfdi:Concepto ClaveProdServ="84111506" Cantidad="1" ClaveUnidad="ACT"
+      Descripcion="Pago" ValorUnitario="0" Importe="0"/>
+  </cfdi:Conceptos>
+  <cfdi:Complemento>
+    <pago20:Pagos Version="2.0">
+      <pago20:Pago FechaPago="2026-07-16T12:00:00" FormaDePagoP="03"
+          MonedaP="MXN" TipoCambioP="1" Monto="162480.00">
+        <pago20:DoctoRelacionado
+          IdDocumento="28C06FD3-D87D-45C5-8C4D-D4927FCD3A64"
+          Serie="B" Folio="2318" MonedaDR="MXN" NumParcialidad="1"
+          ImpSaldoAnt="162480.00" ImpPagado="162480.00"
+          ImpSaldoInsoluto="0"/>
+      </pago20:Pago>
+    </pago20:Pagos>
+    <tfd:TimbreFiscalDigital
+      UUID="10BEF933-60EF-45B5-AB78-40C7D9A6246D"
+      FechaTimbrado="2026-07-18T14:56:22"/>
+  </cfdi:Complemento>
+</cfdi:Comprobante>
+"""
+
+XML_MULTI_CONCEPTOS = """<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4"
+    xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital"
+    Serie="B" Folio="2100" Fecha="2026-06-01T10:00:00" TipoDeComprobante="I"
+    Moneda="MXN" Total="20000.00" MetodoPago="PUE" Exportacion="01">
+  <cfdi:Receptor Rfc="XAXX010101000" Nombre="Frutas 5 Hermanos" UsoCFDI="G01"/>
+  <cfdi:Conceptos>
+    <cfdi:Concepto ClaveProdServ="01010101" NoIdentificacion="TOMMY" Cantidad="800" ClaveUnidad="H87" Descripcion="Mango Tommy 800 cajas" ValorUnitario="15" Importe="12000.00"/>
+    <cfdi:Concepto ClaveProdServ="01010101" NoIdentificacion="ATAULFO" Cantidad="400" ClaveUnidad="H87" Descripcion="Mango Ataulfo 400 cajas" ValorUnitario="20" Importe="8000.00"/>
+  </cfdi:Conceptos>
+  <cfdi:Complemento>
+    <tfd:TimbreFiscalDigital UUID="66666666-6666-6666-6666-666666666666" FechaTimbrado="2026-06-01T10:01:00"/>
+  </cfdi:Complemento>
+</cfdi:Comprobante>
+"""
+
 
 class CFDIParserTest(SimpleTestCase):
 
@@ -152,6 +200,32 @@ class CFDIParserTest(SimpleTestCase):
         self.assertEqual(str(parsed['pagos'][0]['monto']), '5000.00')
         self.assertEqual(parsed['pagos'][0]['doctos'][0]['uuid'],
                          '11111111-1111-1111-1111-111111111111')
+
+    def test_recibo_pago_20_extrae_pago_y_documento_relacionado(self):
+        parsed = parse_cfdi(XML_RECIBO_PAGO_20.encode())
+
+        self.assertEqual(classify_subtipo(parsed), 'recibo_pago')
+        self.assertEqual(len(parsed['pagos']), 1)
+        self.assertEqual(parsed['pagos'][0]['fecha'], date(2026, 7, 16))
+        self.assertEqual(parsed['pagos'][0]['moneda'], 'MXN')
+        self.assertEqual(parsed['pagos'][0]['monto'], Decimal('162480.00'))
+        self.assertEqual(
+            parsed['pagos'][0]['doctos'][0]['uuid'],
+            '28C06FD3-D87D-45C5-8C4D-D4927FCD3A64',
+        )
+        self.assertEqual(
+            parsed['relacionados'],
+            ['28C06FD3-D87D-45C5-8C4D-D4927FCD3A64'],
+        )
+
+    def test_multiples_conceptos(self):
+        parsed = parse_cfdi(XML_MULTI_CONCEPTOS.encode())
+        self.assertEqual(len(parsed['conceptos']), 2)
+        self.assertEqual(parsed['conceptos'][0]['no_identificacion'], 'TOMMY')
+        self.assertEqual(parsed['conceptos'][0]['cantidad'], '800')
+        self.assertEqual(parsed['conceptos'][0]['clave_unidad'], 'H87')
+        self.assertEqual(parsed['conceptos'][1]['no_identificacion'], 'ATAULFO')
+        self.assertEqual(parsed['conceptos'][1]['importe'], '8000.00')
 
     def test_remantente_por_concepto(self):
         parsed = parse_cfdi(XML_40_INGRESO.encode())

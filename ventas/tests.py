@@ -18,8 +18,9 @@ Ejecución:
 """
 from datetime import date
 from decimal import Decimal
+from types import SimpleNamespace
 
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from djmoney.money import Money
 
 from catalogo.models import Estado, Pais, Producto, Sucursal
@@ -36,10 +37,46 @@ from ventas.services.reporte_cobranza_service import generar_reporte_cobranza
 from ventas.cfdi_parser import parse_cfdi
 from ventas.services.cfdi_import_service import (
     crear_cliente_desde_cfdi,
+    crear_producto_desde_cfdi,
     importar_cfdi,
     match_cliente,
+    match_producto,
+    sugerir_producto_desde_cfdi,
 )
-from ventas.tests_cfdi_parser import XML_40_INGRESO, XML_NOTA_CARGO
+from ventas.tests_cfdi_parser import (
+    XML_40_INGRESO,
+    XML_MULTI_CONCEPTOS,
+    XML_NOTA_CARGO,
+    XML_RECIBO_PAGO_20,
+)
+from ventas.admin import CFDI_UPLOAD_LIMITS, _validar_archivo_cfdi
+
+
+class CFDIUploadLimitsTest(SimpleTestCase):
+
+    def test_zip_de_hasta_5_mb_es_valido(self):
+        limite_zip = CFDI_UPLOAD_LIMITS['zip'][0]
+        archivo = SimpleNamespace(name='cfdi-lote.zip', size=limite_zip)
+
+        self.assertIsNone(_validar_archivo_cfdi(archivo))
+
+    def test_zip_mayor_a_5_mb_es_rechazado(self):
+        limite_zip = CFDI_UPLOAD_LIMITS['zip'][0]
+        archivo = SimpleNamespace(name='cfdi-lote.zip', size=limite_zip + 1)
+
+        self.assertEqual(
+            _validar_archivo_cfdi(archivo),
+            '"cfdi-lote.zip" supera 5 MB.',
+        )
+
+    def test_xml_conserva_limite_de_1_mb(self):
+        limite_xml = CFDI_UPLOAD_LIMITS['xml'][0]
+        archivo = SimpleNamespace(name='factura.xml', size=limite_xml + 1)
+
+        self.assertEqual(
+            _validar_archivo_cfdi(archivo),
+            '"factura.xml" supera 1 MB.',
+        )
 
 
 # =============================================================================
@@ -447,6 +484,166 @@ class SaldoPorCobrarNotasTest(ReporteCobranzaBaseTest):
 
 class CFDIImportServiceTest(ReporteCobranzaBaseTest):
 
+    def test_importar_pago_20_lo_aplica_a_la_factura_relacionada(self):
+        cliente = self._cliente('EMSEGA MARKET')
+        cliente.rfc = 'EMA220607QL9'
+        cliente.save(update_fields=['rfc'])
+        venta = self._venta_credito(cliente, '162480.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL,
+            uuid='28C06FD3-D87D-45C5-8C4D-D4927FCD3A64',
+            monto=Money('162480.00', 'MXN'),
+            venta=venta,
+        )
+        parsed = parse_cfdi(XML_RECIBO_PAGO_20.encode())
+
+        pago, documento, subtipo = importar_cfdi(
+            parsed, cliente=cliente, cuenta=self.cuenta,
+        )
+
+        self.assertEqual(subtipo, 'recibo_pago')
+        self.assertEqual(pago.venta_id, venta.id)
+        self.assertEqual(pago.fecha_pago, date(2026, 7, 16))
+        self.assertEqual(pago.monto_pago, Money('162480.00', 'MXN'))
+        self.assertEqual(documento.venta_id, venta.id)
+        self.assertEqual(documento.pago_venta_id, pago.id)
+        self.assertEqual(documento.monto, Money('162480.00', 'MXN'))
+        venta.refresh_from_db()
+        self.assertEqual(venta.estado_cobranza, Ventas.EstadoCobranza.PAGADO)
+
+    def test_pago_20_sin_factura_relacionada_indica_orden_correcto(self):
+        cliente = self._cliente('EMSEGA MARKET sin factura')
+        parsed = parse_cfdi(XML_RECIBO_PAGO_20.encode())
+
+        with self.assertRaisesMessage(
+            ValueError,
+            'Importa primero la factura y después su complemento de pago.',
+        ):
+            importar_cfdi(parsed, cliente=cliente, cuenta=self.cuenta)
+
+    def test_reimportar_pago_20_repara_documento_incompleto(self):
+        cliente = self._cliente('EMSEGA MARKET reparación')
+        venta = self._venta_credito(cliente, '162480.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL,
+            uuid='28C06FD3-D87D-45C5-8C4D-D4927FCD3A64',
+            monto=Money('162480.00', 'MXN'),
+            venta=venta,
+        )
+        incompleto = DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.PAGO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.RECIBO_PAGO,
+            uuid='10BEF933-60EF-45B5-AB78-40C7D9A6246D',
+            monto=Money('0.00', 'XXX'),
+        )
+        parsed = parse_cfdi(XML_RECIBO_PAGO_20.encode())
+
+        pago, documento, _subtipo = importar_cfdi(
+            parsed, cliente=cliente, cuenta=self.cuenta,
+        )
+
+        self.assertNotEqual(documento.id, incompleto.id)
+        self.assertEqual(documento.monto, Money('162480.00', 'MXN'))
+        self.assertEqual(documento.pago_venta_id, pago.id)
+        self.assertEqual(
+            DocumentoCFDI.objects.filter(uuid=parsed['uuid']).count(), 1
+        )
+
+    def test_match_producto_usa_conceptos_del_cfdi(self):
+        parsed = parse_cfdi(XML_MULTI_CONCEPTOS.encode())
+
+        producto = match_producto(parsed)
+
+        self.assertEqual(producto, self.producto)
+
+    def test_sugerir_producto_repetido_en_varios_conceptos(self):
+        parsed = {
+            'descripcion': 'Soya',
+            'conceptos': [
+                {
+                    'descripcion': 'Soya',
+                    'clave_prod_serv': '10151516',
+                    'no_identificacion': '01010110',
+                    'clave_unidad': 'A75',
+                },
+                {
+                    'descripcion': '  Soya  ',
+                    'clave_prod_serv': '10151516',
+                    'no_identificacion': '01010110',
+                    'clave_unidad': 'A75',
+                },
+            ],
+        }
+
+        sugerencia = sugerir_producto_desde_cfdi(parsed)
+
+        self.assertEqual(sugerencia['nombre'], 'Soya')
+        self.assertEqual(sugerencia['variedad'], 'Soya')
+        self.assertEqual(sugerencia['clave_sat'], '10151516')
+        self.assertEqual(sugerencia['no_identificacion'], '01010110')
+        self.assertEqual(sugerencia['clave_unidad'], 'A75')
+
+    def test_no_sugiere_un_producto_si_los_conceptos_son_distintos(self):
+        parsed = {
+            'conceptos': [
+                {'descripcion': 'Soya'},
+                {'descripcion': 'Maíz'},
+            ],
+        }
+
+        self.assertIsNone(sugerir_producto_desde_cfdi(parsed))
+
+    def test_crear_producto_desde_cfdi_reutiliza_el_catalogo(self):
+        parsed = {
+            'descripcion': 'Soya',
+            'conceptos': [{
+                'descripcion': 'Soya',
+                'clave_prod_serv': '10151516',
+                'no_identificacion': '01010110',
+                'clave_unidad': 'A75',
+            }],
+            '_no_identificacion': '01010110',
+            '_fraccion_arancelaria': '',
+        }
+
+        producto, creado = crear_producto_desde_cfdi(parsed)
+
+        self.assertTrue(creado)
+        self.assertEqual(producto.nombre, 'Soya')
+        self.assertEqual(producto.variedad, 'Soya')
+        self.assertEqual(producto.precio_unitario, 0)
+        self.assertIn('Clave SAT: 10151516', producto.descripcion)
+        self.assertIn('No. identificación: 01010110', producto.descripcion)
+        self.assertEqual(match_producto(parsed), producto)
+
+        mismo_producto, creado_nuevamente = crear_producto_desde_cfdi(parsed)
+        self.assertFalse(creado_nuevamente)
+        self.assertEqual(mismo_producto, producto)
+
+    def test_importar_venta_sin_producto_muestra_error_claro(self):
+        cliente = self._cliente('Cliente sin producto CFDI')
+        parsed = parse_cfdi(XML_40_INGRESO.encode())
+        parsed.update({
+            'descripcion': 'Producto agrícola sin variedad',
+            'conceptos': [{
+                'descripcion': 'Producto agrícola sin variedad',
+                'no_identificacion': '',
+            }],
+            '_no_identificacion': '',
+            '_fraccion_arancelaria': '',
+        })
+
+        with self.assertRaisesMessage(
+            ValueError,
+            'Selecciona un producto para importar este CFDI como venta.',
+        ):
+            importar_cfdi(parsed, cliente=cliente)
+
     def test_match_cliente_nacional_prioriza_rfc(self):
         cliente = self._cliente('Grupo Karicy SA de CV')
         cliente.rfc = 'GKA971127HY7'
@@ -546,3 +743,60 @@ class CFDIImportServiceTest(ReporteCobranzaBaseTest):
         self.assertEqual(subtipo, 'nota_cargo')
         self.assertEqual(doc.venta_id, venta_padre.id)
         self.assertEqual(doc.subtipo, 'nota_cargo')
+
+    def test_importar_venta_guarda_conceptos_y_pdf(self):
+        import tempfile
+        from django.core.files.base import ContentFile
+        from django.test import override_settings
+
+        cliente = self._cliente('Cliente Conceptos PDF')
+        parsed = parse_cfdi(XML_MULTI_CONCEPTOS.encode())
+
+        with override_settings(MEDIA_ROOT=tempfile.mkdtemp()):
+            _venta, doc, subtipo = importar_cfdi(
+                parsed,
+                cliente=cliente,
+                producto=self.producto,
+                archivo_pdf=ContentFile(
+                    b'%PDF-1.4 fake',
+                    name='66666666-6666-6666-6666-666666666666.pdf',
+                ),
+            )
+
+        self.assertEqual(subtipo, 'venta_nacional')
+        self.assertEqual(len(doc.conceptos), 2)
+        self.assertEqual(doc.conceptos[0]['no_identificacion'], 'TOMMY')
+        self.assertEqual(doc.conceptos[0]['cantidad'], '800')
+        self.assertEqual(doc.conceptos[0]['clave_unidad'], 'H87')
+        self.assertTrue(doc.archivo_pdf.name.endswith('.pdf'))
+
+
+# =============================================================================
+# Conciliación de CFDI (saldo por cliente)
+# =============================================================================
+
+class ConciliacionCFDITest(ReporteCobranzaBaseTest):
+
+    def test_saldo_conciliado_agrega_ingresos_y_egresos(self):
+        cliente = self._cliente('Cliente Conciliación')
+
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            monto=Money('10000.00', 'MXN'),
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='nota_cargo',
+            monto=Money('500.00', 'MXN'),
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='E', subtipo='nota_credito',
+            monto=Money('200.00', 'MXN'),
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='P', subtipo='recibo_pago',
+            monto=Money('3000.00', 'MXN'),
+        )
+        self._anticipo(cliente, '1000.00')
+
+        # 10000 + 500 - 200 - 3000 - 1000 = 6300
+        self.assertAlmostEqual(cliente.saldo_conciliado(), 6300.00)

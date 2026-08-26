@@ -1,17 +1,106 @@
 {% extends "admin/change_list.html" %}
-{% load i18n static %}
+{% load i18n static admin_list jazzmin %}
 
 {% block extrahead %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'css/ventas-changelist.css' %}">
 {% endblock %}
 
-{% block object-tools-items %}
-  <a href="{% url 'admin:ventas_importar_cfdi_masivo' %}" class="btn btn-success float-right mr-2">
-    <i class="fas fa-file-archive"></i>&nbsp; Importar CFDI masivo (XML/ZIP)
-  </a>
-  <a href="{% url 'admin:ventas_importar_cfdi' %}" class="btn btn-info float-right mr-2">
-    <i class="fas fa-file-import"></i>&nbsp; Importar desde CFDI (XML)
-  </a>
-  {{ block.super }}
+{% block date_hierarchy %}
+  {% if cl.date_hierarchy %}
+    <section class="sales-period-bar" aria-label="{% translate 'Navegación por período' %}">
+      <span class="sales-period-bar__label">
+        <i class="fas fa-calendar-alt" aria-hidden="true"></i>
+        {% translate "Período" %}
+      </span>
+      <div class="sales-period-bar__links">
+        {% date_hierarchy cl %}
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}
+
+{% block search %}
+  <section class="sales-command-bar col-12" id="change-list-filters" aria-labelledby="sales-filters-title">
+    <header class="sales-command-bar__header">
+      <div>
+        <h2 id="sales-filters-title">
+          <i class="fas fa-sliders-h" aria-hidden="true"></i>
+          {% translate "Filtros y búsqueda" %}
+        </h2>
+        <p>{% translate "Refina el listado por operación, cobranza, cliente o período." %}</p>
+      </div>
+    </header>
+
+    <form id="changelist-search" class="sales-filter-grid" method="get" role="search">
+      {% if cl.has_filters %}
+        {% for spec in cl.filter_specs %}{% jazzmin_list_filter cl spec %}{% endfor %}
+      {% endif %}
+
+      {% if cl.search_fields %}
+        <div class="sales-search-field">
+          <i class="fas fa-search" aria-hidden="true"></i>
+          <input
+            class="form-control"
+            type="search"
+            name="q"
+            value="{{ cl.query }}"
+            id="searchbar"
+            aria-label="{{ cl.search_help_text }}"
+            placeholder="{{ cl.search_help_text }}"
+          >
+        </div>
+      {% endif %}
+
+      {% if cl.has_filters or cl.search_fields %}
+        <button type="submit" class="btn {{ jazzmin_ui.button_classes.primary }} sales-filter-submit">
+          <i class="fas fa-search" aria-hidden="true"></i>
+          {% translate "Buscar" %}
+        </button>
+        {% admin_extra_filters cl as extra_filters %}
+        {% for pair in extra_filters.items %}
+          {% if pair.0 != "q" %}<input type="hidden" name="{{ pair.0 }}" value="{{ pair.1 }}">{% endif %}
+        {% endfor %}
+      {% endif %}
+    </form>
+
+    <footer class="sales-command-bar__footer">
+      <div class="sales-results-summary" aria-live="polite">
+        {% if show_result_count %}
+          <span>
+            {% blocktrans count counter=cl.result_count %}<strong>{{ counter }}</strong> resultado{% plural %}<strong>{{ counter }}</strong> resultados{% endblocktrans %}
+          </span>
+          {% if cl.show_full_result_count %}
+            <span class="sales-results-summary__total">
+              {% blocktrans with full_result_count=cl.full_result_count %}de {{ full_result_count }} ventas{% endblocktrans %}
+            </span>
+          {% endif %}
+        {% endif %}
+        {% if request.GET %}
+          <a class="sales-clear-filters" href="?{% if cl.is_popup %}_popup=1{% endif %}">
+            <i class="fas fa-times" aria-hidden="true"></i>
+            {% translate "Limpiar filtros" %}
+          </a>
+        {% endif %}
+      </div>
+
+      {% block object-tools %}
+        <div class="sales-toolbar-actions" aria-label="{% translate 'Acciones de ventas' %}">
+          {% block object-tools-items %}
+            <a href="{% url 'admin:ventas_importar_cfdi_masivo' %}" class="sales-quick-action sales-quick-action--secondary">
+              <i class="fas fa-file-archive" aria-hidden="true"></i>
+              <span>{% translate "Importar CFDI masivo" %}</span>
+              <small>XML/ZIP</small>
+            </a>
+            <a href="{% url 'admin:ventas_importar_cfdi' %}" class="sales-quick-action sales-quick-action--primary">
+              <i class="fas fa-file-import" aria-hidden="true"></i>
+              <span>{% translate "Importar CFDI" %}</span>
+              <small>XML</small>
+            </a>
+            {% change_list_object_tools %}
+          {% endblock %}
+        </div>
+      {% endblock %}
+    </footer>
+  </section>
 {% endblock %}

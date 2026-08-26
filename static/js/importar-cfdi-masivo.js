@@ -123,6 +123,21 @@
     }
   }
 
+  function syncProductRequirement(row) {
+    var include = row.querySelector("[data-include-row]");
+    var product = row.querySelector("[data-product-select]");
+    var createProduct = row.querySelector("[data-crear-producto]");
+    var help = row.querySelector("[data-product-help]");
+    if (!product) return;
+
+    var requiredForType = product.dataset.productRequired === "true";
+    var rowIncluded = !include || include.checked;
+    var creatingProduct = Boolean(createProduct && createProduct.checked);
+    product.required = requiredForType && rowIncluded && !product.disabled && !creatingProduct;
+    product.setAttribute("aria-required", product.required ? "true" : "false");
+    if (help) help.hidden = !product.required || Boolean(product.value) || creatingProduct;
+  }
+
   function initSelectionControls() {
     var selectAll = document.querySelector("[data-select-all]");
     var checkboxes = document.querySelectorAll("[data-include-row]:not(:disabled)");
@@ -131,13 +146,23 @@
       selectAll.addEventListener("change", function () {
         checkboxes.forEach(function (checkbox) {
           checkbox.checked = selectAll.checked;
+          syncProductRequirement(checkbox.closest("[data-import-row]"));
         });
         updateSelectionCount();
       });
     }
 
     checkboxes.forEach(function (checkbox) {
-      checkbox.addEventListener("change", updateSelectionCount);
+      checkbox.addEventListener("change", function () {
+        syncProductRequirement(checkbox.closest("[data-import-row]"));
+        updateSelectionCount();
+      });
+    });
+    document.querySelectorAll("[data-import-row]").forEach(syncProductRequirement);
+    document.querySelectorAll("[data-product-select]").forEach(function (product) {
+      product.addEventListener("change", function () {
+        syncProductRequirement(product.closest("[data-import-row]"));
+      });
     });
     updateSelectionCount();
   }
@@ -170,10 +195,39 @@
     });
   }
 
+  function initProductCreation() {
+    document.querySelectorAll("[data-crear-producto]").forEach(function (toggle) {
+      var index = toggle.dataset.crearProducto;
+      var select = document.querySelector('[data-product-select="' + index + '"]');
+      var row = toggle.closest("[data-import-row]");
+
+      toggle.addEventListener("change", function () {
+        var suggestion = toggle.dataset.productSuggestion;
+        document.querySelectorAll("[data-crear-producto]").forEach(function (candidate) {
+          if (candidate.dataset.productSuggestion !== suggestion) return;
+          candidate.checked = toggle.checked;
+          var candidateIndex = candidate.dataset.crearProducto;
+          var candidateSelect = document.querySelector('[data-product-select="' + candidateIndex + '"]');
+          if (candidateSelect && candidate.checked) candidateSelect.value = "";
+          syncProductRequirement(candidate.closest("[data-import-row]"));
+        });
+      });
+
+      if (select) {
+        select.addEventListener("change", function () {
+          if (select.value && toggle.checked) toggle.checked = false;
+          syncProductRequirement(row);
+        });
+      }
+      syncProductRequirement(row);
+    });
+  }
+
   ready(function () {
     initDropzone();
     initSubmitState();
     initSelectionControls();
     initClientCreation();
+    initProductCreation();
   });
 })();
