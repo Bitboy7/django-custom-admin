@@ -1,9 +1,105 @@
 {% extends "admin/change_list.html" %}
 {% load i18n static %}
 
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/cfdi-pdf-preview.css' %}">
+  <script defer src="{% static 'js/cfdi-pdf-preview.js' %}"></script>
+{% endblock %}
+
 {% block object-tools-items %}
   <a href="{% url 'admin:ventas_importar_cfdi_masivo' %}" class="btn btn-success float-right mr-2">
     <i class="fas fa-file-archive"></i>&nbsp; Importar CFDI masivo (XML/ZIP)
   </a>
   {{ block.super }}
+{% endblock %}
+
+{% block content %}
+  {{ block.super }}
+
+  <div
+    id="cfdi-pdf-modal"
+    class="cfdi-pdf-modal"
+    hidden
+    aria-hidden="true"
+  >
+    <div class="cfdi-pdf-modal__backdrop" data-pdf-close></div>
+
+    <section
+      class="cfdi-pdf-modal__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cfdi-pdf-modal-title"
+      aria-describedby="cfdi-pdf-modal-description"
+      tabindex="-1"
+    >
+      <header class="cfdi-pdf-modal__header">
+        <div class="cfdi-pdf-modal__identity">
+          <span class="cfdi-pdf-modal__icon" aria-hidden="true">
+            <i class="fas fa-file-pdf"></i>
+          </span>
+          <div>
+            <h2 id="cfdi-pdf-modal-title">{% translate "Vista previa del documento" %}</h2>
+            <p id="cfdi-pdf-modal-description">{% translate "PDF del CFDI" %}</p>
+          </div>
+        </div>
+
+        <div class="cfdi-pdf-modal__actions">
+          <a
+            id="cfdi-pdf-open-tab"
+            class="cfdi-pdf-modal__external"
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+            <span>{% translate "Abrir en pestaña" %}</span>
+          </a>
+          <button
+            type="button"
+            class="cfdi-pdf-modal__close"
+            data-pdf-close
+            aria-label="{% translate 'Cerrar vista previa' %}"
+            title="{% translate 'Cerrar (Esc)' %}"
+          >
+            <i class="fas fa-times" aria-hidden="true"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="cfdi-pdf-modal__body">
+        <div id="cfdi-pdf-loader" class="cfdi-pdf-modal__loader" role="status">
+          <span class="cfdi-pdf-modal__spinner" aria-hidden="true"></span>
+          <strong>{% translate "Cargando documento…" %}</strong>
+          <small>{% translate "Estamos preparando una vista segura del PDF." %}</small>
+        </div>
+
+        <iframe
+          id="cfdi-pdf-frame"
+          class="cfdi-pdf-modal__frame"
+          title="{% translate 'Vista previa del documento PDF' %}"
+          referrerpolicy="same-origin"
+          hidden
+        ></iframe>
+
+        <div id="cfdi-pdf-fallback" class="cfdi-pdf-modal__fallback" hidden>
+          <span class="cfdi-pdf-modal__fallback-icon" aria-hidden="true">
+            <i class="fas fa-file-download"></i>
+          </span>
+          <h3>{% translate "La vista previa está tardando más de lo esperado" %}</h3>
+          <p>{% translate "Puedes abrir el PDF directamente en una pestaña nueva." %}</p>
+          <a
+            id="cfdi-pdf-fallback-link"
+            class="cfdi-pdf-modal__fallback-action"
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+            {% translate "Abrir documento" %}
+          </a>
+        </div>
+      </div>
+    </section>
+  </div>
 {% endblock %}

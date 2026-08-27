@@ -1,10 +1,12 @@
 import re
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 from django.contrib.admin.filters import SimpleListFilter
 from django.contrib.admin.views.main import ChangeList
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.utils import unquote
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from .models import (
     Cliente, Agente, Ventas, Anticipo, TerminoCredito, MercadoDestino, PagoVenta,
@@ -28,7 +30,9 @@ from import_export.forms import ExportForm, ImportForm
 from app.widgets import MoneyWidget
 from django.utils.html import format_html
 from app.media_utils import safe_file_url
-from django.http import HttpResponse, JsonResponse
+from django.http import (
+    FileResponse, Http404, HttpResponse, HttpResponseRedirect, JsonResponse,
+)
 from django.shortcuts import render, redirect
 from django.urls import path, reverse
 from django.utils.safestring import mark_safe
@@ -36,6 +40,7 @@ from django.db import models
 from django.db.models import Sum, Count, Avg, Q, F, Case, When, Value
 from django.db.models.functions import Extract, TruncMonth, TruncDay, Coalesce
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from datetime import datetime, timedelta, date
 from decimal import Decimal
 from djmoney.money import Money
@@ -3557,12 +3562,90 @@ class ObligacionFiscalAdmin(ModelAdmin):
 @admin.register(DocumentoCFDI)
 class DocumentoCFDIAdmin(ModelAdmin):
     change_list_template = 'admin/ventas/documentocfdi/change_list.html'
-    list_display = ('subtipo', 'folio', 'uuid', 'get_cliente', 'fecha_emision', 'monto', 'estado')
+    list_display = (
+        'subtipo', 'folio', 'uuid', 'get_cliente', 'fecha_emision', 'monto',
+        'estado', 'pdf_preview',
+    )
     list_filter = ('tipo', 'subtipo', 'estado', 'fecha_emision')
     search_fields = ('folio', 'uuid', 'cliente__nombre', 'venta__carga')
     date_hierarchy = 'fecha_emision'
     list_per_page = 30
+    list_select_related = ('cliente',)
     readonly_fields = ('creado_en', 'actualizado_en')
+
+    def get_urls(self):
+        custom_urls = [
+            path(
+                '<path:object_id>/pdf/',
+                self.admin_site.admin_view(self.pdf_view),
+                name='ventas_documentocfdi_pdf',
+            ),
+        ]
+        return custom_urls + super().get_urls()
+
+    def pdf_view(self, request, object_id):
+        """Redirect an authorized user to a fresh local or R2 PDF URL."""
+        documento = self.get_object(request, unquote(object_id))
+        if documento is None or not documento.archivo_pdf:
+            raise Http404(_('Este CFDI no tiene un PDF asociado.'))
+        if not self.has_view_permission(request, documento):
+            raise PermissionDenied
+
+        if not settings.DEBUG:
+            # En R2 se genera la URL firmada justo al hacer clic. El navegador
+            # descarga el PDF directamente sin consumir un worker de Django.
+            response = HttpResponseRedirect(documento.archivo_pdf.url)
+            response['X-Frame-Options'] = 'SAMEORIGIN'
+            response['Content-Security-Policy'] = "frame-ancestors 'self'"
+            response['Cache-Control'] = 'private, no-store'
+            return response
+
+        try:
+            pdf_file = documento.archivo_pdf.open('rb')
+        except (FileNotFoundError, OSError):
+            raise Http404(_('No fue posible encontrar el archivo PDF.'))
+
+        filename = documento.archivo_pdf.name.rsplit('/', 1)[-1]
+        response = FileResponse(
+            pdf_file,
+            content_type='application/pdf',
+            as_attachment=False,
+            filename=filename,
+        )
+        # XFrameOptionsMiddleware respeta una cabecera ya definida. Esto
+        # permite el modal local sin abrir el documento a sitios externos.
+        response['X-Frame-Options'] = 'SAMEORIGIN'
+        response['Content-Security-Policy'] = "frame-ancestors 'self'"
+        response['Cache-Control'] = 'private, no-store'
+        return response
+
+    def pdf_preview(self, obj):
+        if not obj.archivo_pdf:
+            return format_html(
+                '<span class="cfdi-pdf-missing" title="{}">'
+                '<i class="far fa-file-pdf" aria-hidden="true"></i>'
+                '<span>{}</span></span>',
+                _('Este CFDI no tiene un PDF asociado.'),
+                _('Sin PDF'),
+            )
+
+        identifier = obj.folio or obj.uuid or str(obj.pk)
+        pdf_url = reverse('admin:ventas_documentocfdi_pdf', args=[obj.pk])
+        aria_label = _('Visualizar PDF del CFDI %(identifier)s') % {
+            'identifier': identifier,
+        }
+        return format_html(
+            '<button type="button" class="cfdi-pdf-trigger js-cfdi-pdf-preview" '
+            'data-pdf-url="{}" data-pdf-title="{}" '
+            'aria-label="{}">'
+            '<i class="fas fa-file-pdf" aria-hidden="true"></i>'
+            '<span>{}</span></button>',
+            pdf_url,
+            _('CFDI %(identifier)s') % {'identifier': identifier},
+            aria_label,
+            _('Ver PDF'),
+        )
+    pdf_preview.short_description = _('Documento')
 
     fieldsets = (
         ('Clasificación', {
