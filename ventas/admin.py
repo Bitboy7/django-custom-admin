@@ -101,6 +101,50 @@ def _extraer_archivos(archivos):
     return extraidos
 
 
+def _pdf_response(file_field):
+    """Return an embeddable PDF response for local storage or a fresh R2 URL."""
+    if not settings.DEBUG:
+        # En R2 el navegador descarga directamente el objeto firmado y no
+        # mantiene ocupado un worker de Django durante la visualización.
+        response = HttpResponseRedirect(file_field.url)
+    else:
+        try:
+            pdf_file = file_field.open('rb')
+        except (FileNotFoundError, OSError):
+            raise Http404(_('No fue posible encontrar el archivo PDF.'))
+
+        filename = file_field.name.rsplit('/', 1)[-1]
+        response = FileResponse(
+            pdf_file,
+            content_type='application/pdf',
+            as_attachment=False,
+            filename=filename,
+        )
+
+    # XFrameOptionsMiddleware no reemplaza cabeceras ya definidas. La vista se
+    # puede incrustar únicamente dentro del mismo sistema administrativo.
+    response['X-Frame-Options'] = 'SAMEORIGIN'
+    response['Content-Security-Policy'] = "frame-ancestors 'self'"
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
+def _pdf_preview_button(pdf_url, title, identifier):
+    aria_label = _('Visualizar PDF %(identifier)s') % {
+        'identifier': identifier,
+    }
+    return format_html(
+        '<button type="button" class="cfdi-pdf-trigger js-cfdi-pdf-preview" '
+        'data-pdf-url="{}" data-pdf-title="{}" aria-label="{}">'
+        '<i class="fas fa-file-pdf" aria-hidden="true"></i>'
+        '<span>{}</span></button>',
+        pdf_url,
+        title,
+        aria_label,
+        _('Ver PDF'),
+    )
+
+
 _UUID_RE = re.compile(
     r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
 )
@@ -2592,7 +2636,9 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
     Implementa RF01, RF02, RF03: validaciones de nivel financiero.
     """
     resource_class = PagoVentaResource
+    change_list_template = 'admin/ventas/pagoventa/change_list.html'
     list_display = ('fecha_pago', 'get_venta_info', 'monto_pago', 'metodo_pago', 'get_saldo_pendiente', 'folio_rep', 'get_comprobante', 'referencia', 'fecha_registro')
+    list_select_related = ('venta', 'venta__cliente', 'documento_cfdi')
     list_filter = ('fecha_pago', 'metodo_pago', 'venta__cliente', 'venta__estado_cobranza')
     search_fields = ('venta__carga', 'venta__cliente__nombre', 'referencia', 'notas', 'folio_rep', 'uuid_rep')
     date_hierarchy = 'fecha_pago'
@@ -2601,6 +2647,48 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
     # Usar formulario personalizado con validaciones bancarias
     from .forms_banking import PagoVentaForm
     form = PagoVentaForm
+
+    def get_urls(self):
+        custom_urls = [
+            path(
+                '<path:object_id>/pdf/',
+                self.admin_site.admin_view(self.pdf_view),
+                name='ventas_pagoventa_pdf',
+            ),
+        ]
+        return custom_urls + super().get_urls()
+
+    @staticmethod
+    def _linked_document(obj):
+        try:
+            return obj.documento_cfdi
+        except DocumentoCFDI.DoesNotExist:
+            return None
+
+    def _pdf_source(self, obj):
+        documento = self._linked_document(obj)
+        if documento and documento.archivo_pdf:
+            return documento.archivo_pdf, documento
+
+        comprobante = obj.comprobante_pago
+        if (
+            comprobante
+            and comprobante.name.lower().rsplit('.', 1)[-1] == 'pdf'
+        ):
+            return comprobante, None
+        return None, documento
+
+    def pdf_view(self, request, object_id):
+        pago = self.get_object(request, unquote(object_id))
+        if pago is None:
+            raise Http404(_('No se encontró el pago solicitado.'))
+        if not self.has_view_permission(request, pago):
+            raise PermissionDenied
+
+        pdf_file, _documento = self._pdf_source(pago)
+        if not pdf_file:
+            raise Http404(_('Este pago no tiene un PDF asociado.'))
+        return _pdf_response(pdf_file)
     
     fieldsets = (
         ('Información del Pago', {
@@ -2663,16 +2751,30 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
     get_saldo_pendiente.short_description = 'Saldo Restante'
     
     def get_comprobante(self, obj):
-        """Muestra ícono de comprobante si existe con link para preview"""
+        """Prioriza el PDF del REP y conserva el comprobante manual."""
+        pdf_file, documento = self._pdf_source(obj)
+        if pdf_file:
+            identifier = (
+                (documento.folio or documento.uuid or str(documento.pk))
+                if documento
+                else (obj.folio_rep or obj.uuid_rep or str(obj.pk))
+            )
+            pdf_url = reverse('admin:ventas_pagoventa_pdf', args=[obj.pk])
+            title = (
+                _('REP %(identifier)s') % {'identifier': identifier}
+                if documento
+                else _('Comprobante del pago %(identifier)s') % {
+                    'identifier': identifier,
+                }
+            )
+            return _pdf_preview_button(pdf_url, title, identifier)
+
         comprobante_url = safe_file_url(obj.comprobante_pago)
         if comprobante_url:
             file_ext = obj.comprobante_pago.name.split('.')[-1].lower()
             if file_ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
                 icon = '🖼️'
                 file_type = 'Imagen'
-            elif file_ext == 'pdf':
-                icon = '📄'
-                file_type = 'PDF'
             else:
                 icon = '📎'
                 file_type = 'Archivo'
@@ -2691,7 +2793,13 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
                 icon,
                 file_type
             )
-        return mark_safe('<span style="color:#b8dbd9;">Sin comprobante</span>')
+        return format_html(
+            '<span class="cfdi-pdf-missing" title="{}">'
+            '<i class="far fa-file" aria-hidden="true"></i>'
+            '<span>{}</span></span>',
+            _('Este pago no tiene un comprobante asociado.'),
+            _('Sin archivo'),
+        )
     get_comprobante.short_description = 'Comprobante'
     
     def preview_comprobante(self, obj):
@@ -3590,34 +3698,7 @@ class DocumentoCFDIAdmin(ModelAdmin):
             raise Http404(_('Este CFDI no tiene un PDF asociado.'))
         if not self.has_view_permission(request, documento):
             raise PermissionDenied
-
-        if not settings.DEBUG:
-            # En R2 se genera la URL firmada justo al hacer clic. El navegador
-            # descarga el PDF directamente sin consumir un worker de Django.
-            response = HttpResponseRedirect(documento.archivo_pdf.url)
-            response['X-Frame-Options'] = 'SAMEORIGIN'
-            response['Content-Security-Policy'] = "frame-ancestors 'self'"
-            response['Cache-Control'] = 'private, no-store'
-            return response
-
-        try:
-            pdf_file = documento.archivo_pdf.open('rb')
-        except (FileNotFoundError, OSError):
-            raise Http404(_('No fue posible encontrar el archivo PDF.'))
-
-        filename = documento.archivo_pdf.name.rsplit('/', 1)[-1]
-        response = FileResponse(
-            pdf_file,
-            content_type='application/pdf',
-            as_attachment=False,
-            filename=filename,
-        )
-        # XFrameOptionsMiddleware respeta una cabecera ya definida. Esto
-        # permite el modal local sin abrir el documento a sitios externos.
-        response['X-Frame-Options'] = 'SAMEORIGIN'
-        response['Content-Security-Policy'] = "frame-ancestors 'self'"
-        response['Cache-Control'] = 'private, no-store'
-        return response
+        return _pdf_response(documento.archivo_pdf)
 
     def pdf_preview(self, obj):
         if not obj.archivo_pdf:
@@ -3631,19 +3712,10 @@ class DocumentoCFDIAdmin(ModelAdmin):
 
         identifier = obj.folio or obj.uuid or str(obj.pk)
         pdf_url = reverse('admin:ventas_documentocfdi_pdf', args=[obj.pk])
-        aria_label = _('Visualizar PDF del CFDI %(identifier)s') % {
-            'identifier': identifier,
-        }
-        return format_html(
-            '<button type="button" class="cfdi-pdf-trigger js-cfdi-pdf-preview" '
-            'data-pdf-url="{}" data-pdf-title="{}" '
-            'aria-label="{}">'
-            '<i class="fas fa-file-pdf" aria-hidden="true"></i>'
-            '<span>{}</span></button>',
+        return _pdf_preview_button(
             pdf_url,
             _('CFDI %(identifier)s') % {'identifier': identifier},
-            aria_label,
-            _('Ver PDF'),
+            identifier,
         )
     pdf_preview.short_description = _('Documento')
 

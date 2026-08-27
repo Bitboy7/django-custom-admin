@@ -1,17 +1,10 @@
 {% extends "admin/change_list.html" %}
-{% load i18n static %}
+{% load static %}
 
 {% block extrahead %}
   {{ block.super }}
   <link rel="stylesheet" href="{% static 'css/cfdi-pdf-preview.css' %}">
   <script defer src="{% static 'js/cfdi-pdf-preview.js' %}"></script>
-{% endblock %}
-
-{% block object-tools-items %}
-  <a href="{% url 'admin:ventas_importar_cfdi_masivo' %}" class="btn btn-success float-right mr-2">
-    <i class="fas fa-file-archive"></i>&nbsp; Importar CFDI masivo (XML/ZIP)
-  </a>
-  {{ block.super }}
 {% endblock %}
 
 {% block content %}

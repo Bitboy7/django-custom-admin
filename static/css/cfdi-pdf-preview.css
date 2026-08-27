@@ -1,7 +1,9 @@
 /* Accessible CFDI PDF preview, scoped to the DocumentoCFDI changelist. */
 
 body.app-ventas.model-documentocfdi.change-list .column-pdf_preview,
-body.app-ventas.model-documentocfdi.change-list .field-pdf_preview {
+body.app-ventas.model-documentocfdi.change-list .field-pdf_preview,
+body.app-ventas.model-pagoventa.change-list .column-get_comprobante,
+body.app-ventas.model-pagoventa.change-list .field-get_comprobante {
   text-align: center;
   white-space: nowrap;
   width: 128px;
