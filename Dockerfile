@@ -53,9 +53,8 @@ COPY . .
 # Copiar CSS compilado desde stage anterior (stage 1 usa WORKDIR /build)
 COPY --from=node-builder /build/static/css/output.css ./static/css/output.css
 
-# Crear directorios necesarios
-RUN mkdir -p /app/staticfiles /app/media /app/logs && \
-    mkdir -p /app/media/bancos /app/media/catalogo /app/media/clientes /app/media/paises /app/media/productores /app/media/temp_documents /app/media/temp_invoices
+# Los archivos persistentes viven en Cloudflare R2 en producción.
+RUN mkdir -p /app/staticfiles /app/logs
 
 # Dar permisos al script de entrada (ya copiado con COPY . .)
 RUN chmod +x /app/entrypoint.sh

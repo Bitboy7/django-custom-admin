@@ -18,6 +18,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 from import_export.formats.base_formats import *
 from dotenv import load_dotenv
 import os
+from django.core.exceptions import ImproperlyConfigured
 from django.templatetags.static import static
 from django.urls import reverse_lazy
 
@@ -69,6 +70,7 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'django_extensions',
     'compressor',
+    'storages',
     'djmoney',  # Django Money para manejo de monedas
     # 2FA
     'django_otp',
@@ -477,13 +479,6 @@ MIDDLEWARE = [
     "axes.middleware.AxesMiddleware",
 ]
 
-# Permite servir /media/ desde Django cuando el despliegue expone Gunicorn
-# directamente. Si todo el tráfico pasa por Nginx, Nginx seguirá sirviendo
-# /media/ antes de llegar a Django.
-SERVE_MEDIA_WITH_DJANGO = os.getenv("SERVE_MEDIA_WITH_DJANGO", "True").lower() in ["true", "1", "yes"]
-if not DEBUG and SERVE_MEDIA_WITH_DJANGO:
-    MIDDLEWARE.insert(1, "app.middleware.media_serve.MediaServeMiddleware")
-
 ROOT_URLCONF = "app.urls"
 
 TEMPLATES = [
@@ -649,13 +644,67 @@ STATICFILES_FINDERS = [
     'compressor.finders.CompressorFinder',
 ]
 
-if not DEBUG:
-    STORAGES = {
-        'default': {
-            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+# Los archivos subidos se guardan en disco únicamente durante desarrollo. En
+# producción se usa Cloudflare R2; los estáticos continúan en WhiteNoise.
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        'OPTIONS': {
+            'location': MEDIA_ROOT,
+            'base_url': MEDIA_URL,
         },
-        'staticfiles': {
-            'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+    },
+    'staticfiles': {
+        'BACKEND': (
+            'django.contrib.staticfiles.storage.StaticFilesStorage'
+            if DEBUG
+            else 'whitenoise.storage.CompressedStaticFilesStorage'
+        ),
+    },
+}
+
+if not DEBUG:
+    _r2_access_key = os.getenv('R2_ACCESS_KEY_ID', '').strip()
+    _r2_secret_key = os.getenv('R2_SECRET_ACCESS_KEY', '').strip()
+    _r2_bucket_name = os.getenv('R2_BUCKET_NAME', '').strip()
+    _r2_account_id = os.getenv('R2_ACCOUNT_ID', '').strip()
+    _r2_endpoint_url = os.getenv('R2_ENDPOINT_URL', '').strip()
+
+    _missing_r2_settings = [
+        name
+        for name, value in (
+            ('R2_ACCESS_KEY_ID', _r2_access_key),
+            ('R2_SECRET_ACCESS_KEY', _r2_secret_key),
+            ('R2_BUCKET_NAME', _r2_bucket_name),
+        )
+        if not value
+    ]
+    if not _r2_endpoint_url and not _r2_account_id:
+        _missing_r2_settings.append('R2_ACCOUNT_ID o R2_ENDPOINT_URL')
+    if _missing_r2_settings:
+        raise ImproperlyConfigured(
+            'Cloudflare R2 es obligatorio cuando DEBUG=False. Faltan: '
+            + ', '.join(_missing_r2_settings)
+        )
+
+    if not _r2_endpoint_url:
+        _r2_endpoint_url = (
+            f'https://{_r2_account_id}.r2.cloudflarestorage.com'
+        )
+
+    STORAGES['default'] = {
+        'BACKEND': 'storages.backends.s3.S3Storage',
+        'OPTIONS': {
+            'access_key': _r2_access_key,
+            'secret_key': _r2_secret_key,
+            'bucket_name': _r2_bucket_name,
+            'endpoint_url': _r2_endpoint_url,
+            'region_name': 'auto',
+            'signature_version': 's3v4',
+            'default_acl': None,
+            'querystring_auth': True,
+            'querystring_expire': int(os.getenv('R2_SIGNED_URL_EXPIRE', '3600')),
+            'file_overwrite': False,
         },
     }
     WHITENOISE_USE_FINDERS = False

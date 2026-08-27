@@ -14,6 +14,6 @@ COPY requirements.txt requirements-ocr.txt ./
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt -r requirements-ocr.txt
 COPY . .
-RUN mkdir -p /app/media /app/logs && chown -R appuser:appuser /app
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app
 USER appuser
 CMD ["python", "manage.py", "process_receipt_ocr", "--loop", "--sleep", "2"]

@@ -1,6 +1,8 @@
 import json
 import logging
 import os
+import tempfile
+from pathlib import Path
 from django.conf import settings
 import threading
 from django.contrib.auth.decorators import login_required
@@ -65,9 +67,11 @@ def ingresar_gasto_factura(request):
             asignar_categorias = form.cleaned_data.get('asignar_categorias', False)
             modelo_ia = form.cleaned_data.get('modelo_ia', None)
 
-            temp_file_path = os.path.join(settings.MEDIA_ROOT, 'temp_documents', documento_pdf.name)
-            os.makedirs(os.path.dirname(temp_file_path), exist_ok=True)
-            with open(temp_file_path, 'wb+') as destination:
+            # El reconocimiento necesita una ruta local, pero el documento aún
+            # no es un archivo persistente: se usa el directorio temporal del SO.
+            suffix = Path(documento_pdf.name).suffix
+            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as destination:
+                temp_file_path = destination.name
                 for chunk in documento_pdf.chunks():
                     destination.write(chunk)
 

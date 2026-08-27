@@ -75,7 +75,6 @@ services:
     command: /app/entrypoint.sh
     volumes:
       - static_volume:/app/staticfiles
-      - media_volume:/app/media
       - logs_volume:/app/logs
     expose:
       - "8000"
@@ -104,7 +103,6 @@ services:
     restart: unless-stopped
     command: python manage.py process_receipt_ocr --loop --sleep 2
     volumes:
-      - media_volume:/app/media
       - logs_volume:/app/logs
     depends_on:
       db:
@@ -133,7 +131,6 @@ services:
       - "80"
     volumes:
       - static_volume:/app/staticfiles:ro
-      - media_volume:/app/media:ro
     depends_on:
       - web
     networks:
@@ -143,7 +140,6 @@ volumes:
   mysql_data:
   redis_data:
   static_volume:
-  media_volume:
   logs_volume:
 
 networks:
