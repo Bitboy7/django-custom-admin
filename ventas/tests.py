@@ -51,7 +51,7 @@ from ventas.tests_cfdi_parser import (
     XML_NOTA_CARGO,
     XML_RECIBO_PAGO_20,
 )
-from ventas.admin import CFDI_UPLOAD_LIMITS, _validar_archivo_cfdi
+from ventas.admin import CFDI_UPLOAD_LIMITS, _pdf_response, _validar_archivo_cfdi
 
 
 class CFDIUploadLimitsTest(SimpleTestCase):
@@ -78,6 +78,37 @@ class CFDIUploadLimitsTest(SimpleTestCase):
         self.assertEqual(
             _validar_archivo_cfdi(archivo),
             '"factura.xml" supera 1 MB.',
+        )
+
+
+class PDFResponseTest(SimpleTestCase):
+
+    def test_pdf_is_served_from_storage_without_redirecting_to_its_url(self):
+        from io import BytesIO
+
+        class StoredPDF:
+            name = 'cfdi/pdf/2026/08/factura.pdf'
+
+            @property
+            def url(self):
+                raise AssertionError('La respuesta no debe solicitar una URL firmada')
+
+            def open(self, mode):
+                self.open_mode = mode
+                return BytesIO(b'%PDF-1.4\ncontenido')
+
+        stored_pdf = StoredPDF()
+        response = _pdf_response(stored_pdf)
+
+        self.assertEqual(stored_pdf.open_mode, 'rb')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertIn('inline', response['Content-Disposition'])
+        self.assertEqual(response['X-Frame-Options'], 'SAMEORIGIN')
+        self.assertEqual(response['Cache-Control'], 'private, no-store')
+        self.assertEqual(
+            b''.join(response.streaming_content),
+            b'%PDF-1.4\ncontenido',
         )
 
 

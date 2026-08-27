@@ -1,5 +1,4 @@
 import re
-from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 from django.contrib.admin.filters import SimpleListFilter
@@ -31,7 +30,7 @@ from app.widgets import MoneyWidget
 from django.utils.html import format_html
 from app.media_utils import safe_file_url
 from django.http import (
-    FileResponse, Http404, HttpResponse, HttpResponseRedirect, JsonResponse,
+    FileResponse, Http404, HttpResponse, JsonResponse,
 )
 from django.shortcuts import render, redirect
 from django.urls import path, reverse
@@ -102,24 +101,19 @@ def _extraer_archivos(archivos):
 
 
 def _pdf_response(file_field):
-    """Return an embeddable PDF response for local storage or a fresh R2 URL."""
-    if not settings.DEBUG:
-        # En R2 el navegador descarga directamente el objeto firmado y no
-        # mantiene ocupado un worker de Django durante la visualización.
-        response = HttpResponseRedirect(file_field.url)
-    else:
-        try:
-            pdf_file = file_field.open('rb')
-        except (FileNotFoundError, OSError):
-            raise Http404(_('No fue posible encontrar el archivo PDF.'))
+    """Serve an authorized PDF through Django from local storage or R2."""
+    try:
+        pdf_file = file_field.open('rb')
+    except (FileNotFoundError, OSError):
+        raise Http404(_('No fue posible encontrar el archivo PDF.'))
 
-        filename = file_field.name.rsplit('/', 1)[-1]
-        response = FileResponse(
-            pdf_file,
-            content_type='application/pdf',
-            as_attachment=False,
-            filename=filename,
-        )
+    filename = file_field.name.rsplit('/', 1)[-1]
+    response = FileResponse(
+        pdf_file,
+        content_type='application/pdf',
+        as_attachment=False,
+        filename=filename,
+    )
 
     # XFrameOptionsMiddleware no reemplaza cabeceras ya definidas. La vista se
     # puede incrustar únicamente dentro del mismo sistema administrativo.
