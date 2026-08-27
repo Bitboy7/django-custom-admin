@@ -760,6 +760,11 @@ body #content-main {
   color: var(--brand-teal-dark, #0f766e);
 }
 
+.type-badge--service {
+  background: rgba(36, 123, 160, .1);
+  color: #247ba0;
+}
+
 .type-badge--charge {
   background: var(--accent-amber-bg, rgba(242, 165, 26, .1));
   color: #8a6400;
@@ -833,6 +838,36 @@ body #content-main {
 
 .product-alert-card .client-alert__title {
   color: var(--brand-teal-dark, #0f766e);
+}
+
+.service-concept-card {
+  background: rgba(36, 123, 160, .055);
+  border: 1px solid rgba(36, 123, 160, .22);
+  border-radius: 7px;
+  padding: .65rem;
+}
+
+.service-concept-card .client-alert__title {
+  color: #1f6c8d;
+}
+
+.service-concept-card__note {
+  align-items: flex-start;
+  color: var(--brand-teal-dark, #0f766e);
+  display: flex;
+  font-size: .64rem;
+  font-weight: 700;
+  gap: .35rem;
+  line-height: 1.4;
+  margin: .5rem 0 0;
+}
+
+.not-applicable {
+  align-items: center;
+  color: var(--text-muted, #586f7c);
+  display: inline-flex;
+  font-size: .68rem;
+  gap: .35rem;
 }
 
 .client-alert__title {
@@ -1040,6 +1075,10 @@ html[data-theme="dark"] .security-note {
 
 html[data-theme="dark"] .product-alert-card {
   background: rgba(24, 183, 167, .08);
+}
+
+html[data-theme="dark"] .service-concept-card {
+  background: rgba(36, 123, 160, .09);
 }
 
 @media (max-width: 1080px) {

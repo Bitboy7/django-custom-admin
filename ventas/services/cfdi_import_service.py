@@ -4,7 +4,8 @@ Servicio de importación de CFDI (3.3/4.0) → registros de negocio.
 Mapea un CFDI parseado y clasificado a los modelos Ventas / Anticipo /
 PagoVenta / DocumentoCFDI, conforme a la taxonomía del cliente:
 
-  - Venta Nacional / Exportación   → Ventas + DocumentoCFDI (ingreso)
+  - Venta Nacional / Exportación   → Ventas + DocumentoCFDI (producto)
+  - Ingreso por servicio           → Ventas sin producto + DocumentoCFDI
   - Nota de Cargo                  → DocumentoCFDI (ingreso, suma saldo)
   - Remanente de Anticipo          → Anticipo + DocumentoCFDI (saldo a favor)
   - Nota de Crédito                → DocumentoCFDI (egreso, resta saldo)
@@ -19,7 +20,7 @@ from django.db import transaction
 from django.utils import timezone
 from djmoney.money import Money
 
-from ..cfdi_parser import classify_subtipo
+from ..cfdi_parser import classify_naturaleza_conceptos, classify_subtipo
 from ..models import Anticipo, Cliente, DocumentoCFDI, PagoVenta, Producto, Ventas
 
 
@@ -242,6 +243,8 @@ def actualizar_datos_fiscales_cliente(cliente, parsed):
 
 def match_producto(parsed):
     """Busca el producto más probable según descripción / NoIdentificacion."""
+    if classify_naturaleza_conceptos(parsed) != 'producto':
+        return None
     conceptos = parsed.get('conceptos') or []
     descripciones = [parsed.get('descripcion') or '']
     descripciones.extend(c.get('descripcion') or '' for c in conceptos)
@@ -293,6 +296,9 @@ def sugerir_producto_desde_cfdi(parsed):
     Si hay descripciones diferentes, no se adivina cuál debería representar a
     toda la venta porque el modelo ``Ventas`` admite un único producto.
     """
+    if classify_naturaleza_conceptos(parsed) != 'producto':
+        return None
+
     conceptos = parsed.get('conceptos') or []
     if not conceptos:
         conceptos = [{
@@ -457,12 +463,15 @@ def crear_documento(parsed, *, cliente, subtipo=None, venta=None,
     )
 
 
-def _crear_venta(parsed, cliente, producto, sucursal, cuenta):
+def _crear_venta(parsed, cliente, producto, sucursal, cuenta, *, es_servicio=False):
     from catalogo.models import Sucursal
     from gastos.models import Cuenta
 
-    producto = producto or match_producto(parsed)
-    if producto is None:
+    if es_servicio:
+        producto = None
+    else:
+        producto = producto or match_producto(parsed)
+    if not es_servicio and producto is None:
         raise ValueError(
             'Selecciona un producto para importar este CFDI como venta.'
         )
@@ -480,7 +489,10 @@ def _crear_venta(parsed, cliente, producto, sucursal, cuenta):
         producto=producto,
         cuenta=cuenta,
         tipo_venta=parsed.get('tipo_venta') or 'Nacional',
-        tipo_registro='VENTA',
+        tipo_registro=(
+            Ventas.TipoRegistro.SERVICIO
+            if es_servicio else Ventas.TipoRegistro.VENTA
+        ),
         modalidad_pago=parsed.get('modalidad_pago') or 'Contado',
         monto=Money(Decimal(str(monto)), moneda),
         moneda_venta=moneda,
@@ -623,10 +635,19 @@ def importar_cfdi(parsed, *, cliente=None, producto=None, sucursal=None, cuenta=
 
     kwargs_doc = {'archivo_pdf': archivo_pdf, 'archivo_xml': archivo_xml}
 
-    if subtipo in ('venta_nacional', 'venta_exportacion'):
-        venta = _crear_venta(parsed, cliente, producto, sucursal, cuenta)
+    if subtipo in ('venta_nacional', 'venta_exportacion', 'ingreso_servicio'):
+        venta = _crear_venta(
+            parsed, cliente, producto, sucursal, cuenta,
+            es_servicio=subtipo == 'ingreso_servicio',
+        )
         doc = crear_documento(parsed, cliente=cliente, venta=venta, subtipo=subtipo, **kwargs_doc)
         return venta, doc, subtipo
+
+    if subtipo == 'ingreso_mixto':
+        raise ValueError(
+            'El CFDI mezcla productos y servicios. Revisa los conceptos y '
+            'registra cada operación manualmente antes de vincular el documento.'
+        )
 
     if subtipo in ('nota_cargo', 'nota_credito'):
         venta = resolver_venta(parsed)

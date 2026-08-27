@@ -3,7 +3,7 @@ Servicio para generar el Reporte Global de Cobranza.
 
 Produce tres secciones:
   1. Ventas x Cobrar — por cliente, desglosado por sucursal.
-  2. Maquila x Cobrar — por cliente, desglosado por sucursal (moneda USD + conversión MXN).
+  2. Maquila y servicios x Cobrar — por cliente y sucursal.
   3. Impuestos a Pagar — desde el modelo ObligacionFiscal.
 """
 from decimal import Decimal
@@ -36,7 +36,7 @@ def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_over
     Retorna dict con claves:
         sucursales          — lista ordenada de Sucursal usadas en el período
         ventas_por_cliente  — lista de filas para la tabla Ventas x Cobrar
-        maquila_por_cliente — lista de filas para la tabla Maquila x Cobrar
+        maquila_por_cliente — filas para la tabla Maquila/Servicios x Cobrar
         totales_ventas      — dict de totales de la sección ventas
         totales_maquila     — dict de totales de la sección maquila (USD + MXN)
         tipo_cambio         — tipo de cambio efectivo usado para maquila
@@ -59,7 +59,9 @@ def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_over
         qs_base = qs_base.filter(fecha_salida_manifiesto__lte=fecha_fin)
 
     qs_ventas = qs_base.filter(tipo_registro='VENTA')
-    qs_maquila = qs_base.filter(tipo_registro='MAQUILA')
+    # Los servicios comparten la sección operativa de maquila/servicios para
+    # que sus cuentas por cobrar no desaparezcan de este reporte legado.
+    qs_maquila = qs_base.filter(tipo_registro__in=['MAQUILA', 'SERVICIO'])
 
     # -------------------------------------------------------------------------
     # 2. Sucursales con movimientos en el período
@@ -87,7 +89,7 @@ def generar_reporte_cobranza(fecha_inicio=None, fecha_fin=None, tipo_cambio_over
     totales_ventas = _calcular_totales(ventas_por_cliente, sucursales)  # suma mixta (legacy)
 
     # -------------------------------------------------------------------------
-    # 4. Tabla Maquila x Cobrar
+    # 4. Tabla Maquila y servicios x Cobrar
     # -------------------------------------------------------------------------
     maquila_por_cliente = _calcular_saldos_por_cliente(qs_maquila, sucursales)
 

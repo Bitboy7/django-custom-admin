@@ -453,14 +453,14 @@ class VentasResource(resources.ModelResource):
 
     class Meta:
         model = Ventas
-        fields = ('id', 'fecha_salida_manifiesto', 'agente', 'fecha_deposito', 'carga', 'PO', 'producto', 'cantidad', 'monto', 'descripcion', 'cliente', 'fecha_registro', 'sucursal','cuenta')
+        fields = ('id', 'fecha_salida_manifiesto', 'agente', 'fecha_deposito', 'carga', 'PO', 'producto', 'cantidad', 'monto', 'descripcion', 'tipo_registro', 'cliente', 'fecha_registro', 'sucursal','cuenta')
         import_id_fields = ('id',)
         
     def dehydrate_agente(self, ventas):
         return ventas.agente_id.nombre if ventas.agente_id else ''
     
     def dehydrate_producto(self, ventas):
-        return ventas.producto.variedad
+        return ventas.producto.variedad if ventas.producto_id else ''
     
     def dehydrate_cliente(self, ventas):
         return ventas.cliente.nombre
@@ -498,8 +498,11 @@ class VentasAdmin(ModelAdmin):
         'cliente__calificacion_credito', 'cliente__tipo_cliente'
     )
     
-    search_fields = ('carga', 'cliente__nombre', 'producto__variedad', 'PO', 'pedimento')
-    search_help_text = 'Buscar por carga, cliente, producto, PO o pedimento'
+    search_fields = (
+        'carga', 'cliente__nombre', 'producto__variedad', 'descripcion',
+        'PO', 'pedimento',
+    )
+    search_help_text = 'Buscar por carga, cliente, producto/servicio, PO o pedimento'
     
     list_per_page = 30
     date_hierarchy = 'fecha_salida_manifiesto'
@@ -520,7 +523,7 @@ class VentasAdmin(ModelAdmin):
             'fields': ('fecha_salida_manifiesto', 'agente_id', 'fecha_deposito',
                        'carga', 'PO', 'pedimento')
         }),
-        ('Producto y Cliente', {
+        ('Concepto y Cliente', {
             'fields': ('producto', 'cantidad', 'monto', 'cliente',
                        'sucursal_id', 'descripcion')
         }),
@@ -538,7 +541,7 @@ class VentasAdmin(ModelAdmin):
         }),
         ('Tipo de Registro', {
             'fields': ('tipo_registro',),
-            'description': 'Indica si este registro es una Venta normal o una Maquila.'
+            'description': 'Indica si el ingreso corresponde a una venta, maquila o servicio.'
         }),
     )
     
@@ -680,7 +683,7 @@ class VentasAdmin(ModelAdmin):
         POST step=upload  → parse XML, show confirmation form (step 2)
         POST step=confirm → validate and create Ventas, redirect to change view
         """
-        from .cfdi_parser import parse_cfdi
+        from .cfdi_parser import classify_subtipo, parse_cfdi
         from djmoney.money import Money
 
         opts = self.model._meta
@@ -703,7 +706,7 @@ class VentasAdmin(ModelAdmin):
                         descripcion=cd['descripcion'],
                         PO=cd['PO'],
                         cliente=cd['cliente'],
-                        producto=cd['producto'],
+                        producto=cd.get('producto'),
                         fecha_salida_manifiesto=cd['fecha_salida_manifiesto'],
                         fecha_deposito=cd['fecha_deposito'],
                         agente_id=cd.get('agente_id'),
@@ -717,11 +720,14 @@ class VentasAdmin(ModelAdmin):
                     venta.full_clean()
                     venta.save()
 
-                    subtipo = (
-                        DocumentoCFDI.SubtipoDocumento.VENTA_EXPORTACION
-                        if cd['tipo_venta'] == Ventas.TipoVenta.EXPORTACION
-                        else DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL
-                    )
+                    if cd['tipo_registro'] == Ventas.TipoRegistro.SERVICIO:
+                        subtipo = DocumentoCFDI.SubtipoDocumento.INGRESO_SERVICIO
+                    else:
+                        subtipo = (
+                            DocumentoCFDI.SubtipoDocumento.VENTA_EXPORTACION
+                            if cd['tipo_venta'] == Ventas.TipoVenta.EXPORTACION
+                            else DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL
+                        )
                     DocumentoCFDI.objects.create(
                         cliente=cd['cliente'],
                         tipo=DocumentoCFDI.TipoDocumento.INGRESO,
@@ -774,6 +780,42 @@ class VentasAdmin(ModelAdmin):
                     )
                     return TemplateResponse(request, 'admin/ventas/importar_cfdi.html', context)
 
+                subtipo = classify_subtipo(parsed)
+                if subtipo == 'ingreso_mixto':
+                    messages.error(
+                        request,
+                        'El CFDI mezcla productos y servicios. No se puede '
+                        'convertir automáticamente en una sola operación.',
+                    )
+                    return TemplateResponse(
+                        request,
+                        'admin/ventas/importar_cfdi.html',
+                        dict(
+                            self.admin_site.each_context(request),
+                            form=CFDIUploadForm(), step='upload',
+                            title='Importar venta desde CFDI (XML)', opts=opts,
+                        ),
+                    )
+                if subtipo not in (
+                    'venta_nacional', 'venta_exportacion', 'ingreso_servicio',
+                ):
+                    messages.error(
+                        request,
+                        'Este documento no es una factura de venta o servicio. '
+                        'Utiliza la importación masiva para procesarlo.',
+                    )
+                    return TemplateResponse(
+                        request,
+                        'admin/ventas/importar_cfdi.html',
+                        dict(
+                            self.admin_site.each_context(request),
+                            form=CFDIUploadForm(), step='upload',
+                            title='Importar venta desde CFDI (XML)', opts=opts,
+                        ),
+                    )
+
+                es_servicio = subtipo == 'ingreso_servicio'
+
                 # Try to find best client match against receptor nombre
                 receptor_nombre = parsed.get('_receptor_nombre', '')
                 cliente_inicial = None
@@ -802,19 +844,19 @@ class VentasAdmin(ModelAdmin):
                 fraccion = parsed.get('_fraccion_arancelaria', '')
                 producto_inicial = None
                 # 1) Match any Producto.variedad found inside the CFDI description text
-                if descripcion_cfdi:
+                if descripcion_cfdi and not es_servicio:
                     for p in Producto.objects.filter(disponible=True).order_by('variedad'):
                         if p.variedad and p.variedad.strip().lower() in descripcion_cfdi.lower():
                             producto_inicial = p
                             break
                 # 2) Fallback: match by NoIdentificacion field
-                if not producto_inicial and no_id:
+                if not es_servicio and not producto_inicial and no_id:
                     producto_inicial = (
                         Producto.objects.filter(variedad__icontains=no_id).first()
                         or Producto.objects.filter(descripcion__icontains=no_id).first()
                     )
                 # 3) Fallback: match by nombre (e.g. "Mango") when fraccion arancelaria present
-                if not producto_inicial and fraccion:
+                if not es_servicio and not producto_inicial and fraccion:
                     producto_inicial = Producto.objects.filter(nombre__icontains='Mango').first()
 
                 fecha_cfdi = parsed.get('fecha_emision_cfdi') or timezone.now().date()
@@ -832,6 +874,10 @@ class VentasAdmin(ModelAdmin):
                     'PO': parsed.get('PO', ''),
                     'cliente': cliente_inicial,
                     'producto': producto_inicial,
+                    'tipo_registro': (
+                        Ventas.TipoRegistro.SERVICIO
+                        if es_servicio else Ventas.TipoRegistro.VENTA
+                    ),
                     'fecha_salida_manifiesto': fecha_cfdi,
                     'fecha_deposito': fecha_cfdi,
                 }
@@ -845,6 +891,7 @@ class VentasAdmin(ModelAdmin):
                     opts=opts,
                     parsed=parsed,
                     cliente_sugerido_nombre=cliente_sugerido_nombre,
+                    es_servicio=es_servicio,
                 )
                 return TemplateResponse(request, 'admin/ventas/importar_cfdi.html', context)
 
@@ -916,6 +963,8 @@ class VentasAdmin(ModelAdmin):
             prioridad_cfdi = {
                 'venta_nacional': 0,
                 'venta_exportacion': 0,
+                'ingreso_servicio': 0,
+                'ingreso_mixto': 0,
                 'remanente_anticipo': 1,
                 'nota_cargo': 2,
                 'nota_credito': 2,
@@ -1151,6 +1200,11 @@ class VentasAdmin(ModelAdmin):
                             'duplicado': duplicado,
                             'tiene_pdf': tiene_pdf,
                         })
+                        if subtipo == 'ingreso_mixto':
+                            item['error'] = (
+                                'El CFDI mezcla productos y servicios. Requiere '
+                                'revisión manual y no se importará como una sola venta.'
+                            )
                     except Exception as exc:
                         item['error'] = str(exc)
                     previews.append(item)
@@ -1456,7 +1510,7 @@ class VentasAdmin(ModelAdmin):
             ("Fecha",          lambda v: v.fecha_salida_manifiesto,                     13, "DD/MM/YYYY"),
             ("Cliente",        lambda v: v.cliente.nombre,                              28, "@"),
             ("Carga",          lambda v: v.carga or "",                                 16, "@"),
-            ("Producto",       lambda v: v.producto.variedad if hasattr(v.producto, 'variedad') else str(v.producto), 22, "@"),
+            ("Producto / Servicio", lambda v: v.producto.variedad if v.producto_id else (v.descripcion or "Servicio"), 28, "@"),
             ("Sucursal",       lambda v: v.sucursal_id.nombre,                          18, "@"),
             ("Tipo",           lambda v: v.tipo_venta,                                  14, "@"),
             ("Modalidad",      lambda v: v.modalidad_pago,                              14, "@"),
@@ -1881,7 +1935,7 @@ class VentasAdmin(ModelAdmin):
         row = 1
         ws_ventas.merge_cells(f'A{row}:' + get_column_letter(len(sucursales) + 3) + f'{row}')
         cell = ws_ventas[f'A{row}']
-        cell.value = f'TEMPORADA {fecha_inicio} — {fecha_fin}\nMAQUILA Y VENTAS X COBRAR'
+        cell.value = f'TEMPORADA {fecha_inicio} — {fecha_fin}\nMAQUILA, SERVICIOS Y VENTAS X COBRAR'
         cell.fill = header_fill
         cell.font = header_font
         cell.alignment = center_align
@@ -2005,14 +2059,14 @@ class VentasAdmin(ModelAdmin):
         for i in range(3, len(sucursales) + 4):
             ws_ventas.column_dimensions[get_column_letter(i)].width = 18
 
-        # ============== SHEET 2: MAQUILA X COBRAR ==============
-        ws_maquila = wb.create_sheet('Maquila x Cobrar', 1)
+        # ============== SHEET 2: MAQUILA Y SERVICIOS X COBRAR ==============
+        ws_maquila = wb.create_sheet('Maquila y servicios', 1)
         
         # Header
         row = 1
         ws_maquila.merge_cells(f'A{row}:' + get_column_letter(len(sucursales) + 2) + f'{row}')
         cell = ws_maquila[f'A{row}']
-        cell.value = f'TEMPORADA {fecha_inicio} — {fecha_fin}\nMAQUILA X COBRAR'
+        cell.value = f'TEMPORADA {fecha_inicio} — {fecha_fin}\nMAQUILA Y SERVICIOS X COBRAR'
         cell.fill = header_fill
         cell.font = header_font
         cell.alignment = center_align
@@ -2064,7 +2118,7 @@ class VentasAdmin(ModelAdmin):
 
         # Totales
         row += 1
-        ws_maquila[f'A{row}'] = 'TOTAL MAQUILA X COBRAR'
+        ws_maquila[f'A{row}'] = 'TOTAL MAQUILA Y SERVICIOS X COBRAR'
         ws_maquila[f'B{row}'] = '$'
         col_idx = 3
         for suc in sucursales:
@@ -2238,7 +2292,7 @@ class VentasAdmin(ModelAdmin):
         elements.append(Paragraph(f'REPORTE GLOBAL DE COBRANZA', title_style))
         elements.append(Paragraph(f'Período: {fecha_inicio} — {fecha_fin}', section_style))
         elements.append(Spacer(1, 0.2*inch))
-        elements.append(Paragraph('MAQUILA Y VENTAS X COBRAR', section_style))
+        elements.append(Paragraph('MAQUILA, SERVICIOS Y VENTAS X COBRAR', section_style))
         
         # Tabla ventas
         ventas_data = [['CLIENTE', 'MON.'] + [s.nombre.upper() for s in sucursales] + ['TOTAL']]
@@ -2292,8 +2346,8 @@ class VentasAdmin(ModelAdmin):
         elements.append(ventas_table)
         elements.append(PageBreak())
 
-        # ============== SECCIÓN 2: MAQUILA X COBRAR ==============
-        elements.append(Paragraph(f'MAQUILA X COBRAR', section_style))
+        # ============== SECCIÓN 2: MAQUILA Y SERVICIOS X COBRAR ==============
+        elements.append(Paragraph('MAQUILA Y SERVICIOS X COBRAR', section_style))
         elements.append(Spacer(1, 0.1*inch))
         
         maquila_data = [['CLIENTE', ''] + [s.nombre.upper() for s in sucursales] + ['TOTAL']]
@@ -2306,7 +2360,7 @@ class VentasAdmin(ModelAdmin):
             row.append(f"${fila['total']:,.2f}")
             maquila_data.append(row)
 
-        total_maq = ['TOTAL MAQUILA', '$'] + [''] * len(sucursales) + [f"${datos['totales_maquila']['total']:,.2f}"]
+        total_maq = ['TOTAL MAQUILA/SERVICIOS', '$'] + [''] * len(sucursales) + [f"${datos['totales_maquila']['total']:,.2f}"]
         maquila_data.append(total_maq)
         tc_maq = [f'TIPO CAMBIO {hoy}', f"{datos['tipo_cambio']:.4f}"] + [''] * len(sucursales) + ['']
         maquila_data.append(tc_maq)

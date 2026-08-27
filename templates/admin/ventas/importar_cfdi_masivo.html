@@ -209,7 +209,7 @@
             <span class="bulk-panel__icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>
             <div>
               <h2 class="bulk-panel__title">Revisión previa</h2>
-              <p class="bulk-panel__description">Confirma cliente y producto. Los registros con advertencias requieren tu atención.</p>
+              <p class="bulk-panel__description">Confirma cliente y clasificación operativa. Los registros con advertencias requieren tu atención.</p>
             </div>
           </div>
           <div class="table-toolbar">
@@ -231,7 +231,7 @@
                 <th scope="col">Fecha</th>
                 <th scope="col">Monto</th>
                 <th scope="col">Cliente</th>
-                <th scope="col">Producto</th>
+                <th scope="col">Producto / concepto</th>
               </tr>
             </thead>
             <tbody>
@@ -255,6 +255,7 @@
                       <span class="type-badge
                         {% if p.subtipo == 'venta_exportacion' %}type-badge--export
                         {% elif p.subtipo == 'venta_nacional' %}type-badge--sale
+                        {% elif p.subtipo == 'ingreso_servicio' %}type-badge--service
                         {% elif p.subtipo == 'nota_cargo' %}type-badge--charge
                         {% elif p.subtipo == 'nota_credito' %}type-badge--credit
                         {% elif p.subtipo == 'remanente_anticipo' %}type-badge--advance
@@ -308,17 +309,35 @@
                       {% endif %}
                     </td>
                     <td>
-                      <select name="producto_{{ forloop.counter0 }}" class="bulk-select"
-                              data-product-select="{{ forloop.counter0 }}"
-                              data-product-required="{% if p.subtipo == 'venta_nacional' or p.subtipo == 'venta_exportacion' %}true{% else %}false{% endif %}"
-                              {% if p.duplicado %}disabled{% elif p.subtipo == 'venta_nacional' or p.subtipo == 'venta_exportacion' %}required aria-required="true"{% endif %}>
-                        <option value="">— sin producto —</option>
-                        {% for producto in productos %}
-                          <option value="{{ producto.pk }}" {% if p.producto and p.producto.pk == producto.pk %}selected{% endif %}>{{ producto.variedad }}</option>
-                        {% endfor %}
-                      </select>
-                      {% if not p.producto and not p.duplicado %}
-                        {% if p.subtipo == 'venta_nacional' or p.subtipo == 'venta_exportacion' %}
+                      {% if p.subtipo == 'ingreso_servicio' %}
+                        <div class="service-concept-card">
+                          <div class="client-alert__title">
+                            <i class="fas fa-screwdriver-wrench" aria-hidden="true"></i>
+                            Ingreso por servicio
+                          </div>
+                          <div class="client-alert__identity">
+                            <strong>{{ p.parsed.descripcion|default:"Servicio sin descripción" }}</strong>
+                            {% with concepto=p.parsed.conceptos.0 %}
+                              Clave SAT {{ concepto.clave_prod_serv|default:"—" }}
+                              {% if concepto.clave_unidad %} · Unidad {{ concepto.clave_unidad }}{% endif %}
+                            {% endwith %}
+                          </div>
+                          <p class="service-concept-card__note">
+                            <i class="fas fa-circle-check" aria-hidden="true"></i>
+                            Se registrará sin producto físico y no afectará inventario.
+                          </p>
+                        </div>
+                      {% elif p.subtipo == 'venta_nacional' or p.subtipo == 'venta_exportacion' %}
+                        <select name="producto_{{ forloop.counter0 }}" class="bulk-select"
+                                data-product-select="{{ forloop.counter0 }}"
+                                data-product-required="true"
+                                {% if p.duplicado %}disabled{% else %}required aria-required="true"{% endif %}>
+                          <option value="">— sin producto —</option>
+                          {% for producto in productos %}
+                            <option value="{{ producto.pk }}" {% if p.producto and p.producto.pk == producto.pk %}selected{% endif %}>{{ producto.variedad }}</option>
+                          {% endfor %}
+                        </select>
+                        {% if not p.producto and not p.duplicado %}
                           <div class="client-alert product-alert-card">
                             <div class="client-alert__title">
                               <i class="fas fa-seedling" aria-hidden="true"></i>
@@ -350,6 +369,8 @@
                             </p>
                           </div>
                         {% endif %}
+                      {% else %}
+                        <span class="not-applicable"><i class="fas fa-minus" aria-hidden="true"></i> No aplica</span>
                       {% endif %}
                     </td>
                   {% endif %}

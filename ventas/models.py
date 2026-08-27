@@ -209,7 +209,9 @@ class Cliente(models.Model):
                 docs.filter(subtipo__in=subtipos).aggregate(t=Sum('monto'))['t'] or 0
             )
 
-        ingresos = total(['venta_nacional', 'venta_exportacion'])
+        ingresos = total([
+            'venta_nacional', 'venta_exportacion', 'ingreso_servicio',
+        ])
         notas_cargo = total(['nota_cargo'])
         notas_credito = total(['nota_credito'])
         recibos_pago = total(['recibo_pago'])
@@ -464,7 +466,13 @@ class Ventas(models.Model):
     pedimento = models.CharField(max_length=50, blank=True, null=True)
     carga = models.CharField(max_length=50, blank=True, null=True)
     PO = models.CharField(max_length=50, blank=True, null=True)
-    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    producto = models.ForeignKey(
+        Producto,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text='Requerido para ventas de producto; no aplica a servicios.',
+    )
     cantidad = models.DecimalField(
         max_digits=12,
         decimal_places=3,
@@ -562,12 +570,13 @@ class Ventas(models.Model):
     class TipoRegistro(models.TextChoices):
         VENTA = 'VENTA', 'Venta'
         MAQUILA = 'MAQUILA', 'Maquila'
+        SERVICIO = 'SERVICIO', 'Servicio'
 
     tipo_registro = models.CharField(
         max_length=10,
         choices=TipoRegistro.choices,
         default=TipoRegistro.VENTA,
-        help_text="Tipo de registro: Venta normal o Maquila"
+        help_text="Tipo de registro: venta, maquila o ingreso por servicio"
     )
 
     # ── Referencia comprador ──────────────────────────────────────────────
@@ -577,7 +586,11 @@ class Ventas(models.Model):
     )
 
     def __str__(self):
-        return f"-{self.carga} - {self.fecha_salida_manifiesto} - {self.monto} - {self.cliente.nombre}- {self.producto.nombre}"
+        concepto = (
+            self.producto.nombre
+            if self.producto_id else (self.descripcion or 'Servicio')
+        )
+        return f"-{self.carga} - {self.fecha_salida_manifiesto} - {self.monto} - {self.cliente.nombre}- {concepto}"
     
     def clean(self):
         """
@@ -620,6 +633,18 @@ class Ventas(models.Model):
         if self.cantidad <= 0:
             raise ValidationError({
                 'cantidad': 'La cantidad debe ser mayor a cero.'
+            })
+
+        if self.tipo_registro == self.TipoRegistro.SERVICIO and self.producto_id:
+            raise ValidationError({
+                'producto': 'Un ingreso por servicio no debe tener un producto físico.'
+            })
+        if (
+            self.tipo_registro in (self.TipoRegistro.VENTA, self.TipoRegistro.MAQUILA)
+            and not self.producto_id
+        ):
+            raise ValidationError({
+                'producto': 'Selecciona un producto para este tipo de registro.'
             })
     
     def save(self, *args, **kwargs):
@@ -821,6 +846,18 @@ class Ventas(models.Model):
             models.Index(fields=['modalidad_pago', 'estado_cobranza']),
             models.Index(fields=['fecha_vencimiento']),
             models.Index(fields=['cliente', 'estado_cobranza']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(tipo_registro='SERVICIO', producto__isnull=True)
+                    | models.Q(
+                        tipo_registro__in=['VENTA', 'MAQUILA'],
+                        producto__isnull=False,
+                    )
+                ),
+                name='venta_producto_segun_tipo_registro',
+            ),
         ]
 
 class PagoVenta(models.Model):
@@ -1623,6 +1660,8 @@ class DocumentoCFDI(models.Model):
     class SubtipoDocumento(models.TextChoices):
         VENTA_NACIONAL = 'venta_nacional', 'Venta Nacional'
         VENTA_EXPORTACION = 'venta_exportacion', 'Venta Exportación'
+        INGRESO_SERVICIO = 'ingreso_servicio', 'Ingreso por Servicio'
+        INGRESO_MIXTO = 'ingreso_mixto', 'Ingreso Mixto (revisión)'
         NOTA_CARGO = 'nota_cargo', 'Nota de Cargo'
         REMANENTE_ANTICIPO = 'remanente_anticipo', 'Remanente de Anticipo'
         NOTA_CREDITO = 'nota_credito', 'Nota de Crédito'
@@ -1687,7 +1726,7 @@ class DocumentoCFDI(models.Model):
     archivo_xml = models.FileField(upload_to='cfdi/xml/%Y/%m/', blank=True, null=True)
     archivo_pdf = models.FileField(upload_to='cfdi/pdf/%Y/%m/', blank=True, null=True)
 
-    # Conceptos del CFDI (detalle de productos/cantidades/kilos/variedades)
+    # Conceptos del CFDI (bienes o servicios, cantidades y claves SAT)
     conceptos = models.JSONField(
         default=list, blank=True,
         verbose_name='Conceptos',

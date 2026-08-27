@@ -4,7 +4,8 @@ CFDI 3.3 / 4.0 XML parser for the ventas module.
 Soporta tanto CFDI 3.3 (Blikon / PAC legacy) como CFDI 4.0. Extrae los campos
 necesarios para clasificar el documento dentro de la taxonomía de negocio:
 
-  - Venta Nacional / Exportación (ingreso)
+  - Venta Nacional / Exportación (ingreso de productos)
+  - Ingreso por servicio (sin producto físico)
   - Nota de Cargo (ingreso, TipoRelacion 02)
   - Remanente de Anticipo (ingreso, TipoRelacion 07 o concepto anticipo/remanente)
   - Nota de Crédito (egreso)
@@ -421,11 +422,60 @@ def _detect_po(root, cfdi_ns, descripcion):
 SUBIPO_TO_TIPO = {
     'venta_nacional': 'I',
     'venta_exportacion': 'I',
+    'ingreso_servicio': 'I',
+    'ingreso_mixto': 'I',
     'nota_cargo': 'I',
     'remanente_anticipo': 'I',
     'nota_credito': 'E',
     'recibo_pago': 'P',
 }
+
+
+# E48 está definida por el SAT como "Unidad de servicio". Las palabras y
+# claves adicionales son señales conservadoras para CFDI que no usan E48.
+UNIDADES_SERVICIO = {'E48'}
+CLAVES_SERVICIO_CONOCIDAS = {
+    '70111701',  # Servicios de trabajo / mantenimiento agrícola
+}
+PALABRAS_SERVICIO = {
+    'servicio', 'servicios', 'fumigacion', 'fumigación', 'maquila',
+    'mantenimiento', 'honorarios', 'arrendamiento', 'comision', 'comisión',
+}
+
+
+def classify_naturaleza_conceptos(parsed: dict) -> str:
+    """Clasifica los conceptos como producto, servicio o mixto.
+
+    ``TipoDeComprobante=I`` no distingue bienes de servicios. La señal más
+    fuerte disponible en el XML es ClaveUnidad=E48; para claves ya revisadas
+    y descripciones inequívocas se aplican reglas adicionales. Ante una mezcla
+    se evita adivinar y se solicita revisión manual.
+    """
+    conceptos = parsed.get('conceptos') or []
+    if not conceptos:
+        conceptos = [{
+            'descripcion': parsed.get('descripcion') or '',
+            'clave_prod_serv': parsed.get('_clave_prod_serv') or '',
+            'clave_unidad': '',
+        }]
+
+    naturalezas = set()
+    for concepto in conceptos:
+        unidad = (concepto.get('clave_unidad') or '').strip().upper()
+        clave = (concepto.get('clave_prod_serv') or '').strip()
+        descripcion = (concepto.get('descripcion') or '').strip().lower()
+        palabras = set(re.findall(r'[a-záéíóúñ]+', descripcion))
+
+        es_servicio = (
+            unidad in UNIDADES_SERVICIO
+            or clave in CLAVES_SERVICIO_CONOCIDAS
+            or bool(palabras & PALABRAS_SERVICIO)
+        )
+        naturalezas.add('servicio' if es_servicio else 'producto')
+
+    if len(naturalezas) > 1:
+        return 'mixto'
+    return next(iter(naturalezas), 'producto')
 
 
 def classify_subtipo(parsed: dict) -> str:
@@ -438,7 +488,9 @@ def classify_subtipo(parsed: dict) -> str:
       - Ingreso (I) + TipoRelacion 02     → nota_cargo
       - Ingreso (I) + TipoRelacion 07 o
         concepto anticipo/remanente       → remanente_anticipo
-      - Ingreso (I) resto                 → venta (nacional/exportación)
+      - Ingreso (I) de servicios          → ingreso de servicio
+      - Ingreso (I) con bienes/servicios  → ingreso mixto (revisión manual)
+      - Ingreso (I) de productos          → venta (nacional/exportación)
     """
     tipo_comprobante = (parsed.get('tipo_comprobante') or 'I').upper()
     tipo_relacion = parsed.get('tipo_relacion') or ''
@@ -456,5 +508,11 @@ def classify_subtipo(parsed: dict) -> str:
         return 'remanente_anticipo'
     if tipo_relacion in ('01', '03'):
         return 'nota_credito'
+
+    naturaleza = classify_naturaleza_conceptos(parsed)
+    if naturaleza == 'servicio':
+        return 'ingreso_servicio'
+    if naturaleza == 'mixto':
+        return 'ingreso_mixto'
 
     return 'venta_exportacion' if parsed.get('tipo_venta') == 'Exportación' else 'venta_nacional'

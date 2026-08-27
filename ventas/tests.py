@@ -45,6 +45,8 @@ from ventas.services.cfdi_import_service import (
 )
 from ventas.tests_cfdi_parser import (
     XML_40_INGRESO,
+    XML_INGRESO_MIXTO,
+    XML_INGRESO_SERVICIO,
     XML_MULTI_CONCEPTOS,
     XML_NOTA_CARGO,
     XML_RECIBO_PAGO_20,
@@ -478,6 +480,36 @@ class SaldoPorCobrarNotasTest(ReporteCobranzaBaseTest):
         self.assertAlmostEqual(venta.saldo_por_cobrar(), 10000.00)
 
 
+class ServiciosPorCobrarTest(ReporteCobranzaBaseTest):
+
+    def test_ingreso_servicio_aparece_en_maquila_y_servicios(self):
+        cliente = self._cliente('Cliente Servicio Pendiente')
+        Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=self.sucursal,
+            producto=None,
+            cuenta=self.cuenta,
+            tipo_venta=Ventas.TipoVenta.NACIONAL,
+            tipo_registro=Ventas.TipoRegistro.SERVICIO,
+            modalidad_pago=Ventas.ModalidadPago.CREDITO,
+            estado_cobranza=Ventas.EstadoCobranza.PENDIENTE,
+            monto=Money('3000.00', 'MXN'),
+            monto_pagado=Money('0.00', 'MXN'),
+            cantidad=Decimal('1.000'),
+            descripcion='Servicio de fumigación',
+            fecha_salida_manifiesto=date(2026, 2, 1),
+            fecha_deposito=date(2026, 2, 1),
+        )
+
+        datos = generar_reporte_cobranza()
+
+        fila = next(
+            item for item in datos['maquila_por_cliente']
+            if item['cliente'].id == cliente.id
+        )
+        self.assertAlmostEqual(fila['total'], 3000.0)
+
+
 # =============================================================================
 # Importación de CFDI (servicio)
 # =============================================================================
@@ -560,6 +592,41 @@ class CFDIImportServiceTest(ReporteCobranzaBaseTest):
         producto = match_producto(parsed)
 
         self.assertEqual(producto, self.producto)
+
+    def test_servicio_no_se_propone_como_producto(self):
+        parsed = parse_cfdi(XML_INGRESO_SERVICIO.encode())
+
+        self.assertIsNone(match_producto(parsed))
+        self.assertIsNone(sugerir_producto_desde_cfdi(parsed))
+
+    def test_importar_ingreso_servicio_no_crea_producto(self):
+        cliente = self._cliente('Jose Feliciano Lopez')
+        parsed = parse_cfdi(XML_INGRESO_SERVICIO.encode())
+        productos_antes = Producto.objects.count()
+
+        venta, documento, subtipo = importar_cfdi(parsed, cliente=cliente)
+
+        self.assertEqual(subtipo, 'ingreso_servicio')
+        self.assertEqual(documento.subtipo, 'ingreso_servicio')
+        self.assertEqual(documento.venta_id, venta.id)
+        self.assertIsNone(venta.producto_id)
+        self.assertEqual(venta.tipo_registro, Ventas.TipoRegistro.SERVICIO)
+        self.assertEqual(
+            venta.descripcion,
+            'Servicio de trabajo agrícola 4 has fumigación.',
+        )
+        self.assertEqual(Producto.objects.count(), productos_antes)
+
+    def test_importar_ingreso_mixto_se_detiene_para_revision(self):
+        cliente = self._cliente('Cliente Mixto')
+        parsed = parse_cfdi(XML_INGRESO_MIXTO.encode())
+
+        with self.assertRaisesMessage(ValueError, 'mezcla productos y servicios'):
+            importar_cfdi(parsed, cliente=cliente)
+
+        self.assertFalse(
+            DocumentoCFDI.objects.filter(uuid=parsed['uuid']).exists()
+        )
 
     def test_sugerir_producto_repetido_en_varios_conceptos(self):
         parsed = {
@@ -785,6 +852,10 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
             monto=Money('10000.00', 'MXN'),
         )
         DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='ingreso_servicio',
+            monto=Money('1000.00', 'MXN'),
+        )
+        DocumentoCFDI.objects.create(
             cliente=cliente, tipo='I', subtipo='nota_cargo',
             monto=Money('500.00', 'MXN'),
         )
@@ -798,5 +869,5 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
         )
         self._anticipo(cliente, '1000.00')
 
-        # 10000 + 500 - 200 - 3000 - 1000 = 6300
-        self.assertAlmostEqual(cliente.saldo_conciliado(), 6300.00)
+        # 10000 producto + 1000 servicio + 500 - 200 - 3000 - 1000 = 7300
+        self.assertAlmostEqual(cliente.saldo_conciliado(), 7300.00)

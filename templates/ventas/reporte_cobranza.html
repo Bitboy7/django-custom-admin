@@ -142,7 +142,7 @@
         Reporte Global de Cobranza
       </h1>
       <p class="text-[#586f7c] text-sm mt-1">
-        Ventas x Cobrar &bull; Maquila x Cobrar &bull; Obligaciones Fiscales
+        Ventas x Cobrar &bull; Maquila y servicios x Cobrar &bull; Obligaciones Fiscales
       </p>
     </div>
     <div class="flex gap-2">
@@ -198,7 +198,7 @@
           <tr>
             <th class="rc-header-section" colspan="{{ sucursales|length|add:3 }}">
               TEMPORADA {{ fecha_inicio_str }} — {{ fecha_fin_str }}<br>
-              MAQUILA Y VENTAS X COBRAR
+              MAQUILA, SERVICIOS Y VENTAS X COBRAR
             </th>
             {% if total_anticipos > 0 %}
             <th class="rc-header-section" style="background-color:rgba(184,219,217,.3);">
@@ -353,7 +353,7 @@
   </div>
 
   <!-- ============================================================
-       SECCIÓN 2 — MAQUILA X COBRAR
+       SECCIÓN 2 — MAQUILA Y SERVICIOS X COBRAR
        ============================================================ -->
   <div class="rc-card">
     <div class="rc-scroll">
@@ -362,7 +362,7 @@
           <tr>
             <th class="rc-header-section" colspan="{{ sucursales|length|add:2 }}">
               TEMPORADA {{ fecha_inicio_str }} — {{ fecha_fin_str }}<br>
-              MAQUILA X COBRAR
+              MAQUILA Y SERVICIOS X COBRAR
             </th>
           </tr>
           <tr>
@@ -398,7 +398,7 @@
           {% empty %}
           <tr>
             <td colspan="{{ sucursales|length|add:2 }}" class="text-center text-[#b8dbd9] py-4 italic">
-              Sin maquila pendiente en el período seleccionado.
+              Sin maquila ni servicios pendientes en el período seleccionado.
             </td>
           </tr>
           {% endfor %}
@@ -407,7 +407,7 @@
         <tfoot>
           <!-- Total maquila USD -->
           <tr class="rc-total">
-            <td>TOTAL MAQUILA X COBRAR</td>
+            <td>TOTAL MAQUILA Y SERVICIOS X COBRAR</td>
             <td class="rc-num">$</td>
             {% for suc in sucursales %}
               {% with monto=totales_maquila.por_sucursal|get_item:suc.id %}

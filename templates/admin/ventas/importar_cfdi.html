@@ -164,20 +164,30 @@
       </div>
 
       <div class="cfdi-confirm-secondary">
-        <!-- Cliente y Producto -->
+        <!-- Cliente y concepto operativo -->
         <div class="cfdi-card">
-          <h2><i class="fas fa-user-tie"></i> Cliente y Producto</h2>
+          <h2><i class="fas fa-user-tie"></i> Cliente y concepto</h2>
           <div class="field-row field-row--two">
             <div class="field-group">
               <label>Cliente <span class="badge-xml">XML (sugerido)</span></label>
               {{ form.cliente }}
               {{ form.cliente.errors }}
             </div>
-            <div class="field-group">
-              <label>Producto <span class="badge-xml">XML (sugerido)</span></label>
-              {{ form.producto }}
-              {{ form.producto.errors }}
-            </div>
+            {% if form.tipo_registro.value == 'SERVICIO' %}
+              <div class="field-group">
+                <label>Clasificación operativa <span class="badge-xml">XML</span></label>
+                <div class="warn-box" style="margin:0">
+                  <i class="fas fa-screwdriver-wrench"></i>
+                  <span><strong>Ingreso por servicio</strong><br>No se creará ni asignará un producto físico.</span>
+                </div>
+              </div>
+            {% else %}
+              <div class="field-group">
+                <label>Producto <span class="badge-xml">XML (sugerido)</span></label>
+                {{ form.producto }}
+                {{ form.producto.errors }}
+              </div>
+            {% endif %}
           </div>
         </div>
 

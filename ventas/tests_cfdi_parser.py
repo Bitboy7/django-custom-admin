@@ -9,7 +9,11 @@ from decimal import Decimal
 
 from django.test import SimpleTestCase
 
-from ventas.cfdi_parser import parse_cfdi, classify_subtipo
+from ventas.cfdi_parser import (
+    classify_naturaleza_conceptos,
+    classify_subtipo,
+    parse_cfdi,
+)
 
 
 XML_40_INGRESO = """<?xml version="1.0" encoding="UTF-8"?>
@@ -155,6 +159,44 @@ XML_MULTI_CONCEPTOS = """<?xml version="1.0" encoding="UTF-8"?>
 </cfdi:Comprobante>
 """
 
+XML_INGRESO_SERVICIO = """<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4"
+    xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital"
+    Serie="B" Folio="1991" Fecha="2025-12-29T16:29:23" TipoDeComprobante="I"
+    Moneda="MXN" Total="3000.00" MetodoPago="PUE" Exportacion="01">
+  <cfdi:Receptor Rfc="XAXX010101000" Nombre="Jose Feliciano Lopez"
+      UsoCFDI="S01" DomicilioFiscalReceptor="40906" RegimenFiscalReceptor="616"/>
+  <cfdi:Conceptos>
+    <cfdi:Concepto ClaveProdServ="70111701" Cantidad="1" ClaveUnidad="E48"
+      Unidad="Servicio" Descripcion="Servicio de trabajo agrícola 4 has fumigación."
+      ValorUnitario="3000.00" Importe="3000.00"/>
+  </cfdi:Conceptos>
+  <cfdi:Complemento>
+    <tfd:TimbreFiscalDigital UUID="640ECF0E-B228-4AE5-AD9F-177C845F06F7"
+      FechaTimbrado="2025-12-29T16:42:30"/>
+  </cfdi:Complemento>
+</cfdi:Comprobante>
+"""
+
+XML_INGRESO_MIXTO = """<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4"
+    xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital"
+    Serie="B" Folio="2002" Fecha="2026-06-02T10:00:00" TipoDeComprobante="I"
+    Moneda="MXN" Total="5000.00" MetodoPago="PUE" Exportacion="01">
+  <cfdi:Receptor Rfc="XAXX010101000" Nombre="Cliente Mixto"/>
+  <cfdi:Conceptos>
+    <cfdi:Concepto ClaveProdServ="10151516" Cantidad="100" ClaveUnidad="KGM"
+      Descripcion="Soya" ValorUnitario="20" Importe="2000.00"/>
+    <cfdi:Concepto ClaveProdServ="70111701" Cantidad="1" ClaveUnidad="E48"
+      Descripcion="Servicio de fumigación" ValorUnitario="3000" Importe="3000.00"/>
+  </cfdi:Conceptos>
+  <cfdi:Complemento>
+    <tfd:TimbreFiscalDigital UUID="77777777-7777-7777-7777-777777777777"
+      FechaTimbrado="2026-06-02T10:01:00"/>
+  </cfdi:Complemento>
+</cfdi:Comprobante>
+"""
+
 
 class CFDIParserTest(SimpleTestCase):
 
@@ -226,6 +268,20 @@ class CFDIParserTest(SimpleTestCase):
         self.assertEqual(parsed['conceptos'][0]['clave_unidad'], 'H87')
         self.assertEqual(parsed['conceptos'][1]['no_identificacion'], 'ATAULFO')
         self.assertEqual(parsed['conceptos'][1]['importe'], '8000.00')
+
+    def test_ingreso_e48_se_clasifica_como_servicio(self):
+        parsed = parse_cfdi(XML_INGRESO_SERVICIO.encode())
+
+        self.assertEqual(classify_naturaleza_conceptos(parsed), 'servicio')
+        self.assertEqual(classify_subtipo(parsed), 'ingreso_servicio')
+        self.assertEqual(parsed['conceptos'][0]['clave_unidad'], 'E48')
+        self.assertEqual(parsed['conceptos'][0]['clave_prod_serv'], '70111701')
+
+    def test_ingreso_con_producto_y_servicio_requiere_revision(self):
+        parsed = parse_cfdi(XML_INGRESO_MIXTO.encode())
+
+        self.assertEqual(classify_naturaleza_conceptos(parsed), 'mixto')
+        self.assertEqual(classify_subtipo(parsed), 'ingreso_mixto')
 
     def test_remantente_por_concepto(self):
         parsed = parse_cfdi(XML_40_INGRESO.encode())

@@ -82,6 +82,16 @@ class VentasAdminForm(forms.ModelForm):
         cliente = cleaned_data.get('cliente')
         tipo_venta = cleaned_data.get('tipo_venta')
         anticipo = cleaned_data.get('anticipo')
+        tipo_registro = cleaned_data.get('tipo_registro')
+        producto = cleaned_data.get('producto')
+
+        if tipo_registro == Ventas.TipoRegistro.SERVICIO:
+            cleaned_data['producto'] = None
+        elif not producto:
+            self.add_error(
+                'producto',
+                'Selecciona un producto para una venta o maquila.',
+            )
 
         # Validar término de crédito
         if modalidad == Ventas.ModalidadPago.CREDITO and not termino:
@@ -211,6 +221,7 @@ class CFDIConfirmForm(forms.Form):
     )
     producto = forms.ModelChoiceField(
         queryset=Producto.objects.filter(disponible=True).order_by('variedad'),
+        required=False,
         label='Producto',
         widget=forms.Select(attrs={'class': 'form-control'}),
     )
@@ -261,6 +272,13 @@ class CFDIConfirmForm(forms.Form):
     def clean(self):
         cleaned_data = super().clean()
         cleaned_data['tipo_registro'] = cleaned_data.get('tipo_registro') or Ventas.TipoRegistro.VENTA
+        if cleaned_data['tipo_registro'] == Ventas.TipoRegistro.SERVICIO:
+            cleaned_data['producto'] = None
+        elif not cleaned_data.get('producto'):
+            self.add_error(
+                'producto',
+                'Selecciona un producto para importar esta venta.',
+            )
         if cleaned_data.get('tipo_venta') == Ventas.TipoVenta.NACIONAL:
             cleaned_data['agente_id'] = None
             cleaned_data['PO'] = ''

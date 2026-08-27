@@ -16,7 +16,9 @@ from django.db.models import Count
 
 from ..models import DocumentoCFDI
 
-INGRESOS_VENTA = ['venta_nacional', 'venta_exportacion']
+INGRESOS_VENTA = [
+    'venta_nacional', 'venta_exportacion', 'ingreso_servicio',
+]
 
 
 def _sum_por_moneda(docs, subtipos):
