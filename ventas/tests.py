@@ -20,6 +20,7 @@ from datetime import date
 from decimal import Decimal
 from types import SimpleNamespace
 
+from django.contrib import admin
 from django.test import SimpleTestCase, TestCase
 from djmoney.money import Money
 
@@ -51,7 +52,62 @@ from ventas.tests_cfdi_parser import (
     XML_NOTA_CARGO,
     XML_RECIBO_PAGO_20,
 )
-from ventas.admin import CFDI_UPLOAD_LIMITS, _pdf_response, _validar_archivo_cfdi
+from ventas.admin import (
+    CFDI_UPLOAD_LIMITS,
+    VentasAdmin,
+    _pdf_response,
+    _validar_archivo_cfdi,
+)
+
+
+class VentasAdminDisplayTest(SimpleTestCase):
+
+    def setUp(self):
+        self.model_admin = VentasAdmin(Ventas, admin.site)
+
+    def test_cliente_info_usa_icono_y_bandera_sin_emojis(self):
+        bandera = SimpleNamespace(
+            name='paises/banderas/mexico.png',
+            url='/media/paises/banderas/mexico.png',
+        )
+        pais = SimpleNamespace(nombre='México', bandera=bandera)
+        cliente = SimpleNamespace(
+            nombre='Productora Agrícola',
+            calificacion_credito='A',
+            pais=pais,
+            get_calificacion_credito_display=lambda: 'Bueno',
+        )
+
+        html = str(self.model_admin.get_cliente_info(SimpleNamespace(cliente=cliente)))
+
+        self.assertIn('fas fa-chart-line', html)
+        self.assertIn('sales-country__flag', html)
+        self.assertIn('/media/paises/banderas/mexico.png', html)
+        self.assertIn('width="18" height="12"', html)
+        self.assertNotIn('📊', html)
+        self.assertNotIn('🌍', html)
+
+    def test_cliente_info_muestra_respaldo_si_no_hay_bandera(self):
+        pais = SimpleNamespace(nombre='México', bandera=None)
+        cliente = SimpleNamespace(
+            nombre='Productora Agrícola',
+            calificacion_credito='B',
+            pais=pais,
+            get_calificacion_credito_display=lambda: 'Bueno',
+        )
+
+        html = str(self.model_admin.get_cliente_info(SimpleNamespace(cliente=cliente)))
+
+        self.assertIn('fas fa-map-marker-alt', html)
+        self.assertIn('México', html)
+
+    def test_saldo_pagado_usa_icono_font_awesome(self):
+        venta = SimpleNamespace(modalidad_pago='Contado')
+
+        html = str(self.model_admin.get_saldo_pendiente(venta))
+
+        self.assertIn('fas fa-check', html)
+        self.assertNotIn('✓', html)
 
 
 class CFDIUploadLimitsTest(SimpleTestCase):
@@ -841,6 +897,44 @@ class CFDIImportServiceTest(ReporteCobranzaBaseTest):
         self.assertEqual(subtipo, 'nota_cargo')
         self.assertEqual(doc.venta_id, venta_padre.id)
         self.assertEqual(doc.subtipo, 'nota_cargo')
+
+    def test_importar_remanente_cero_guarda_documento_sin_anticipo(self):
+        cliente = self._cliente('Cliente Remanente Cero')
+        parsed = parse_cfdi(XML_40_INGRESO.encode())
+        parsed.update({
+            'uuid': '38E576C9-E87F-49A9-9F86-FD79DE7FCAFC',
+            'folio_factura': 'B 2020 | 38E576C9-E87F-49A9-9F86-FD79DE7FCAFC',
+            'descripcion': 'REMANENTE DE ANTICIPO',
+            'monto': Decimal('0.00'),
+        })
+
+        objeto, doc, subtipo = importar_cfdi(parsed, cliente=cliente)
+
+        self.assertEqual(subtipo, 'remanente_anticipo')
+        self.assertEqual(objeto, doc)
+        self.assertEqual(doc.monto, Money('0.00', 'MXN'))
+        self.assertIsNone(doc.anticipo_id)
+        self.assertFalse(
+            Anticipo.objects.filter(uuid_cfdi=parsed['uuid']).exists()
+        )
+
+    def test_importar_remanente_positivo_crea_anticipo(self):
+        cliente = self._cliente('Cliente Remanente Positivo')
+        parsed = parse_cfdi(XML_40_INGRESO.encode())
+        parsed.update({
+            'uuid': '99999999-9999-9999-9999-999999999999',
+            'folio_factura': 'B 2024 | 99999999-9999-9999-9999-999999999999',
+            'descripcion': 'REMANENTE DE ANTICIPO',
+            'monto': Decimal('1234.56'),
+        })
+
+        anticipo, doc, subtipo = importar_cfdi(
+            parsed, cliente=cliente, cuenta=self.cuenta,
+        )
+
+        self.assertEqual(subtipo, 'remanente_anticipo')
+        self.assertEqual(anticipo.monto, Money('1234.56', 'MXN'))
+        self.assertEqual(doc.anticipo_id, anticipo.id)
 
     def test_importar_venta_guarda_conceptos_y_pdf(self):
         import tempfile

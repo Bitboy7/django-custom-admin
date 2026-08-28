@@ -418,7 +418,11 @@ body.app-ventas.model-ventas.change-list #changelist #result_list tbody tr:hover
 body.app-ventas.model-ventas.change-list #changelist #result_list td.field-fecha_salida_manifiesto {
   background: var(--sales-table-key-bg, rgba(184, 219, 217, 0.22)) !important;
   color: var(--sales-table-key-text, var(--brand-navy)) !important;
-  font-weight: 750 !important;
+  font-family: var(--font-body, "Roboto", "Segoe UI", sans-serif) !important;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em;
 }
 
 body.app-ventas.model-ventas.change-list #changelist #result_list tbody tr:hover td.field-fecha_salida_manifiesto {
@@ -428,8 +432,18 @@ body.app-ventas.model-ventas.change-list #changelist #result_list tbody tr:hover
 .sales-money,
 .sales-balance {
   color: var(--sales-money, var(--brand-navy-light)) !important;
-  font-weight: 750;
-  font-variant-numeric: tabular-nums;
+  font-family: var(--font-body, "Roboto", "Segoe UI", sans-serif) !important;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+  font-size: 0.84rem;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+
+body.app-ventas.model-ventas.change-list #changelist #result_list td.field-get_monto_formateado,
+body.app-ventas.model-ventas.change-list #changelist #result_list td.field-get_saldo_pendiente {
+  font-family: var(--font-body, "Roboto", "Segoe UI", sans-serif) !important;
 }
 
 .sales-money--cash,
@@ -448,6 +462,63 @@ body.app-ventas.model-ventas.change-list #changelist #result_list tbody tr:hover
 
 .sales-muted {
   color: var(--text-muted) !important;
+  font-family: var(--font-body, "Roboto", "Segoe UI", sans-serif) !important;
+  font-size: 0.72rem;
+}
+
+.sales-client-name {
+  color: var(--text-primary);
+  font-family: var(--font-body, "Roboto", "Segoe UI", sans-serif);
+  font-weight: 700;
+}
+
+.sales-client-meta,
+.sales-country {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.35rem;
+  line-height: 1.25;
+  margin-top: 0.18rem;
+  vertical-align: middle;
+}
+
+.sales-client-meta i,
+.sales-country--fallback i {
+  font-size: 0.68rem;
+  text-align: center;
+  width: 0.9rem;
+}
+
+.sales-country--flag {
+  border-radius: 0.18rem;
+  height: 12px !important;
+  line-height: 0;
+  margin-top: 0.18rem;
+  max-height: 12px !important;
+  max-width: 18px !important;
+  overflow: hidden;
+  width: 18px !important;
+}
+
+body.app-ventas.model-ventas.change-list #result_list .sales-country__flag {
+  border: 1px solid rgba(15, 61, 70, 0.18);
+  border-radius: 0.18rem;
+  box-sizing: border-box;
+  display: block !important;
+  height: 12px !important;
+  margin: 0 !important;
+  max-height: 12px !important;
+  max-width: 18px !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  object-fit: cover !important;
+  padding: 0 !important;
+  width: 18px !important;
+}
+
+.sales-country--fallback {
+  color: var(--text-muted);
+  font-family: var(--font-body, "Roboto", "Segoe UI", sans-serif);
   font-size: 0.72rem;
 }
 
@@ -491,6 +562,7 @@ body.app-ventas.model-ventas.change-list #changelist #result_list tbody tr:hover
 
 .sales-risk {
   color: var(--text-muted) !important;
+  font-family: var(--font-body, "Roboto", "Segoe UI", sans-serif);
   font-size: 0.72rem;
 }
 

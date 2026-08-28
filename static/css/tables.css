@@ -165,6 +165,327 @@ body #changelist-filter li.selected a {
   background: rgba(13, 148, 136, 0.06);
 }
 
+/* ── Changelist controls ──────────────────────────────────────────
+   Shared visual language for every Jazzmin data-list page. Scoped to
+   .change-list so edit/create forms keep their own layout rules. */
+body.change-list #change-list-filters {
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--space-5);
+  padding: var(--space-4) !important;
+}
+
+body.change-list #change-list-filters:not(:has(.form-group)) {
+  display: none;
+}
+
+body.change-list #changelist-search {
+  align-items: center;
+  display: grid !important;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  width: 100%;
+}
+
+body.change-list #changelist-search > .form-group {
+  margin: 0 !important;
+  min-width: 0;
+  width: 100%;
+}
+
+body.change-list #changelist-search .form-control:not(.select2-hidden-accessible),
+body.change-list #changelist-search input[type="text"],
+body.change-list #changelist-search input[type="search"],
+body.change-list #changelist-search input[type="number"],
+body.change-list #changelist-search input[type="date"],
+body.change-list #changelist-search select:not(.select2-hidden-accessible),
+body.change-list #changelist-filter input,
+body.change-list #changelist-filter select:not(.select2-hidden-accessible),
+body.change-list #changelist-filter .form-control:not(.select2-hidden-accessible) {
+  background-color: var(--surface-card) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 1px 2px rgba(15, 31, 53, 0.03) !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-body) !important;
+  font-size: var(--font-size-sm) !important;
+  height: 44px !important;
+  line-height: 1.35 !important;
+  min-height: 44px !important;
+  padding: 0 var(--space-4) !important;
+  width: 100% !important;
+}
+
+body.change-list #changelist-search select:not(.select2-hidden-accessible),
+body.change-list #changelist-filter select:not(.select2-hidden-accessible) {
+  padding-right: 2.5rem !important;
+}
+
+body.change-list #changelist-search input::placeholder,
+body.change-list #changelist-filter input::placeholder,
+body.change-list #result_list input::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.78;
+}
+
+/* Jazzmin converts filters and bulk actions to Select2 after page load. */
+body.change-list .select2-container {
+  font-family: var(--font-body) !important;
+  max-width: 100%;
+}
+
+body.change-list #changelist-search .select2-container,
+body.change-list #changelist-filter .select2-container {
+  width: 100% !important;
+}
+
+body.change-list .select2-container--default .select2-selection--single {
+  background-color: var(--surface-card) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 1px 2px rgba(15, 31, 53, 0.03) !important;
+  color: var(--text-primary) !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  transition:
+    border-color var(--duration-fast) var(--ease-default),
+    box-shadow var(--duration-fast) var(--ease-default),
+    background var(--duration-fast) var(--ease-default);
+}
+
+body.change-list .select2-container--default .select2-selection--single .select2-selection__rendered {
+  color: var(--text-secondary) !important;
+  font-size: var(--font-size-sm) !important;
+  line-height: 42px !important;
+  overflow: hidden;
+  padding-left: var(--space-4) !important;
+  padding-right: 2.35rem !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.change-list .select2-container--default .select2-selection--single .select2-selection__placeholder {
+  color: var(--text-muted) !important;
+}
+
+body.change-list .select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 42px !important;
+  right: 8px !important;
+}
+
+body.change-list .select2-container--default .select2-selection--single .select2-selection__clear {
+  color: var(--text-muted) !important;
+  margin-right: var(--space-2);
+}
+
+body.change-list #changelist-search .form-control:not(.select2-hidden-accessible):focus,
+body.change-list #changelist-filter .form-control:not(.select2-hidden-accessible):focus,
+body.change-list #changelist-search input:focus,
+body.change-list #changelist-filter input:focus,
+body.change-list #changelist-search select:not(.select2-hidden-accessible):focus,
+body.change-list #changelist-filter select:not(.select2-hidden-accessible):focus,
+body.change-list .select2-container--focus .select2-selection--single,
+body.change-list .select2-container--open .select2-selection--single {
+  border-color: var(--brand-teal) !important;
+  box-shadow: 0 0 0 3px rgba(24, 183, 167, 0.15) !important;
+  outline: none !important;
+}
+
+body.change-list .select2-container--default.select2-container--disabled .select2-selection--single,
+body.change-list #changelist-search input:disabled,
+body.change-list #changelist-search select:not(.select2-hidden-accessible):disabled {
+  background: var(--surface-bg) !important;
+  border-color: var(--border-default) !important;
+  box-shadow: none !important;
+  color: var(--text-muted) !important;
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+body.change-list .select2-dropdown {
+  background: var(--surface-card) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--shadow-md) !important;
+  color: var(--text-primary) !important;
+  overflow: hidden;
+}
+
+body.change-list .select2-search--dropdown {
+  background: var(--surface-card);
+  padding: var(--space-2) !important;
+}
+
+body.change-list .select2-search--dropdown .select2-search__field {
+  background: var(--surface-card) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--radius-md) !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-body) !important;
+  font-size: var(--font-size-sm) !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 var(--space-3) !important;
+}
+
+body.change-list .select2-results__option {
+  color: var(--text-secondary) !important;
+  font-size: var(--font-size-sm) !important;
+  padding: var(--space-2) var(--space-4) !important;
+}
+
+body.change-list .select2-container--default .select2-results__option--highlighted[aria-selected] {
+  background: var(--brand-navy) !important;
+  color: #fff !important;
+}
+
+body.change-list .select2-container--default .select2-results__option[aria-selected="true"] {
+  background: var(--surface-hover) !important;
+  color: var(--brand-teal-dark) !important;
+  font-weight: 700;
+}
+
+body.change-list #changelist-search #search_group {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+body.change-list #changelist-search #search_group > .btn,
+body.change-list #changelist-search button[type="submit"] {
+  align-items: center;
+  border-radius: 10px !important;
+  display: inline-flex;
+  font-size: var(--font-size-sm) !important;
+  font-weight: 700 !important;
+  height: 44px !important;
+  justify-content: center;
+  margin: 0 !important;
+  min-height: 44px !important;
+  min-width: 110px;
+  padding: 0 var(--space-5) !important;
+}
+
+body.change-list #changelist-search #search_group .quiet {
+  color: var(--text-muted) !important;
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+}
+
+/* Bulk actions use the same controls, with a flexible summary area. */
+body.change-list #changelist .actions {
+  align-items: center;
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  min-height: 58px;
+  padding: var(--space-2) var(--space-3);
+}
+
+body.change-list #changelist .actions label {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 1 320px;
+  margin: 0 !important;
+  min-width: 220px;
+}
+
+body.change-list #changelist .actions label > select:not(.select2-hidden-accessible),
+body.change-list #changelist .actions label > .select2-container {
+  width: 100% !important;
+}
+
+body.change-list #changelist .actions .select2-container--default .select2-selection--single,
+body.change-list #changelist .actions select.form-control:not(.select2-hidden-accessible) {
+  height: 40px !important;
+  min-height: 40px !important;
+}
+
+body.change-list #changelist .actions .select2-selection__rendered {
+  line-height: 38px !important;
+}
+
+body.change-list #changelist .actions .select2-selection__arrow {
+  height: 38px !important;
+}
+
+body.change-list #changelist .actions button[type="submit"],
+body.change-list #changelist .actions .button {
+  align-items: center;
+  border-radius: 9px !important;
+  display: inline-flex;
+  font-size: var(--font-size-xs) !important;
+  font-weight: 700 !important;
+  height: 40px !important;
+  justify-content: center;
+  margin: 0 !important;
+  min-height: 40px !important;
+  min-width: 82px;
+  padding: 0 var(--space-4) !important;
+}
+
+body.change-list #changelist .actions .action-counter,
+body.change-list #changelist .actions .all,
+body.change-list #changelist .actions .question,
+body.change-list #changelist .actions .clear {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+}
+
+body.change-list #changelist .actions .question a,
+body.change-list #changelist .actions .clear a {
+  color: var(--brand-teal-dark) !important;
+  font-weight: 700;
+}
+
+/* Compact variant for list_editable fields inside data rows. */
+body.change-list #result_list tbody input:not([type="checkbox"]):not([type="radio"]),
+body.change-list #result_list tbody select:not(.select2-hidden-accessible),
+body.change-list #result_list tbody textarea {
+  background: var(--surface-card) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--radius-md) !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-body) !important;
+  font-size: var(--font-size-xs) !important;
+  min-height: 38px !important;
+  padding: var(--space-1) var(--space-3) !important;
+}
+
+body.change-list #result_list tbody input:focus,
+body.change-list #result_list tbody select:not(.select2-hidden-accessible):focus,
+body.change-list #result_list tbody textarea:focus {
+  border-color: var(--brand-teal) !important;
+  box-shadow: 0 0 0 3px rgba(24, 183, 167, 0.13) !important;
+  outline: none !important;
+}
+
+@media (max-width: 767px) {
+  body.change-list #changelist-search {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.change-list #changelist-search #search_group,
+  body.change-list #changelist-search #search_group > .btn,
+  body.change-list #changelist .actions label,
+  body.change-list #changelist .actions label > .select2-container {
+    width: 100% !important;
+  }
+
+  body.change-list #changelist .actions label {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+}
+
 /* ── DataTables ──────────────────────────────────────────────────── */
 .dt-button {
   font-family: var(--font-body) !important;
@@ -310,6 +631,21 @@ html[data-theme="dark"] body #changelist-filter li a:hover {
 
 html[data-theme="dark"] body #changelist-filter li.selected a {
   background: var(--surface-hover, #2f3840);
+}
+
+html[data-theme="dark"] body.change-list #changelist-search select:not(.select2-hidden-accessible),
+html[data-theme="dark"] body.change-list #changelist-filter select:not(.select2-hidden-accessible),
+html[data-theme="dark"] body.change-list #changelist .actions select:not(.select2-hidden-accessible) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239ac5c3' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+html[data-theme="dark"] body.change-list .select2-container--default .select2-results__option[aria-selected="true"] {
+  color: var(--light-blue, #9ac5c3) !important;
+}
+
+html[data-theme="dark"] body.change-list #changelist .actions .question a,
+html[data-theme="dark"] body.change-list #changelist .actions .clear a {
+  color: var(--light-blue, #9ac5c3) !important;
 }
 
 html[data-theme="dark"] body .paginator a:hover {

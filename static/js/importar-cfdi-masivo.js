@@ -99,7 +99,11 @@
 
   function initSubmitState() {
     document.querySelectorAll("[data-loading-form]").forEach(function (form) {
+      if (form.dataset.ajaxUpload === "true") return;
       form.addEventListener("submit", function () {
+        var progress = form.querySelector("[data-processing-progress]");
+        form.setAttribute("aria-busy", "true");
+        if (progress) progress.hidden = false;
         var button = form.querySelector("[data-submit-button]");
         if (!button) return;
         button.classList.add("is-loading");
@@ -107,6 +111,157 @@
         var label = button.querySelector("[data-submit-label]");
         if (label) label.textContent = button.dataset.loadingLabel || "Procesando…";
       });
+    });
+  }
+
+  function initUploadProgress() {
+    var form = document.querySelector("[data-upload-form]");
+    if (!form || !window.FormData || !window.XMLHttpRequest) return;
+
+    form.dataset.ajaxUpload = "true";
+
+    var input = document.getElementById("id_archivos_cfdi");
+    var dropzone = form.querySelector("[data-upload-dropzone]");
+    var progress = form.querySelector("[data-upload-progress]");
+    var track = form.querySelector("[data-upload-track]");
+    var bar = form.querySelector("[data-upload-bar]");
+    var value = form.querySelector("[data-upload-value]");
+    var title = form.querySelector("[data-upload-title]");
+    var status = form.querySelector("[data-upload-status]");
+    var note = form.querySelector("[data-upload-note]");
+    var button = form.querySelector("[data-submit-button]");
+    var buttonLabel = button ? button.querySelector("[data-submit-label]") : null;
+    var originalButtonLabel = buttonLabel ? buttonLabel.textContent : "Procesar archivos";
+
+    function setProgress(percent) {
+      var safePercent = Math.max(0, Math.min(100, Math.round(percent)));
+      if (bar) bar.style.width = safePercent + "%";
+      if (value) value.textContent = safePercent + "%";
+      if (track) {
+        track.setAttribute("aria-valuenow", String(safePercent));
+        track.removeAttribute("aria-valuetext");
+      }
+    }
+
+    function setLoading(active) {
+      form.setAttribute("aria-busy", active ? "true" : "false");
+      if (input) input.disabled = active;
+      if (dropzone) {
+        dropzone.classList.toggle("is-uploading", active);
+        dropzone.setAttribute("aria-disabled", active ? "true" : "false");
+        dropzone.tabIndex = active ? -1 : 0;
+      }
+      if (button) {
+        button.disabled = active;
+        button.classList.toggle("is-loading", active);
+      }
+    }
+
+    function showError(message) {
+      setLoading(false);
+      if (progress) {
+        progress.hidden = false;
+        progress.classList.remove("is-processing");
+        progress.classList.add("is-error");
+      }
+      if (title) title.textContent = "No se pudieron subir los archivos";
+      if (status) status.textContent = message;
+      if (note) note.textContent = "Revisa tu conexión y vuelve a intentarlo.";
+      if (value) value.textContent = "Error";
+      if (track) {
+        track.removeAttribute("aria-valuenow");
+        track.setAttribute("aria-valuetext", "Error durante la carga");
+      }
+      if (buttonLabel) buttonLabel.textContent = "Intentar de nuevo";
+    }
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      if (form.dataset.uploading === "true") return;
+
+      var files = input && input.files ? input.files.length : 0;
+      if (!files) return;
+
+      var body = new FormData(form);
+      var request = new XMLHttpRequest();
+      form.dataset.uploading = "true";
+      setLoading(true);
+      setProgress(0);
+
+      if (progress) {
+        progress.hidden = false;
+        progress.classList.remove("is-error", "is-processing");
+      }
+      if (title) title.textContent = files === 1 ? "Subiendo comprobante…" : "Subiendo comprobantes…";
+      if (status) status.textContent = files === 1 ? "Enviando 1 archivo" : "Enviando " + files + " archivos";
+      if (note) note.textContent = "No cierres esta ventana mientras termina la carga.";
+      if (buttonLabel) buttonLabel.textContent = "Subiendo archivos…";
+
+      request.open((form.method || "POST").toUpperCase(), form.action || window.location.href, true);
+      request.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+
+      request.upload.addEventListener("progress", function (uploadEvent) {
+        if (!uploadEvent.lengthComputable) {
+          if (progress) progress.classList.add("is-processing");
+          if (value) value.textContent = "Subiendo";
+          if (track) {
+            track.removeAttribute("aria-valuenow");
+            track.setAttribute("aria-valuetext", "Subiendo archivos");
+          }
+          return;
+        }
+        if (progress) progress.classList.remove("is-processing");
+        setProgress((uploadEvent.loaded / uploadEvent.total) * 100);
+        if (status) status.textContent = formatBytes(uploadEvent.loaded) + " de " + formatBytes(uploadEvent.total);
+      });
+
+      request.upload.addEventListener("load", function () {
+        setProgress(100);
+        if (progress) progress.classList.add("is-processing");
+        if (title) title.textContent = "Carga completada";
+        if (status) status.textContent = "Analizando y validando los comprobantes…";
+        if (note) note.textContent = "Este paso puede tardar unos segundos.";
+        if (value) value.textContent = "Procesando";
+        if (track) {
+          track.removeAttribute("aria-valuenow");
+          track.setAttribute("aria-valuetext", "Analizando archivos");
+        }
+        if (buttonLabel) buttonLabel.textContent = "Analizando archivos…";
+      });
+
+      request.addEventListener("load", function () {
+        form.dataset.uploading = "false";
+        if (request.status >= 200 && request.status < 400) {
+          if (request.responseURL && new URL(request.responseURL).pathname !== window.location.pathname) {
+            window.location.assign(request.responseURL);
+            return;
+          }
+          document.open();
+          document.write(request.responseText);
+          document.close();
+          return;
+        }
+        showError("El servidor respondió con el código " + request.status + ".");
+      });
+
+      request.addEventListener("error", function () {
+        form.dataset.uploading = "false";
+        showError("Se interrumpió la conexión durante la carga.");
+      });
+
+      request.addEventListener("abort", function () {
+        form.dataset.uploading = "false";
+        showError("La carga fue cancelada antes de completarse.");
+      });
+
+      request.send(body);
+    });
+
+    window.addEventListener("pageshow", function (event) {
+      if (!event.persisted) return;
+      form.dataset.uploading = "false";
+      setLoading(false);
+      if (buttonLabel) buttonLabel.textContent = originalButtonLabel;
     });
   }
 
@@ -225,6 +380,7 @@
 
   ready(function () {
     initDropzone();
+    initUploadProgress();
     initSubmitState();
     initSelectionControls();
     initClientCreation();

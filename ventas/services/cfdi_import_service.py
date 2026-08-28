@@ -514,6 +514,11 @@ def _crear_anticipo(parsed, cliente, cuenta):
     moneda = parsed.get('moneda_venta') or 'MXN'
     monto = parsed.get('monto') or Decimal('0')
 
+    if Decimal(str(monto)) <= 0:
+        raise ValueError(
+            'No se puede crear un anticipo con monto menor o igual a cero.'
+        )
+
     anticipo = Anticipo.objects.create(
         cliente=cliente,
         cuenta=cuenta,
@@ -655,6 +660,15 @@ def importar_cfdi(parsed, *, cliente=None, producto=None, sucursal=None, cuenta=
         return doc, doc, subtipo
 
     if subtipo == 'remanente_anticipo':
+        monto = Decimal(str(parsed.get('monto') or 0))
+        if monto == 0:
+            # Un CFDI de aplicacion de anticipo puede quedar en cero cuando el
+            # descuento cancela por completo el subtotal. Se conserva como
+            # documento fiscal, pero no genera un nuevo saldo a favor.
+            doc = crear_documento(
+                parsed, cliente=cliente, subtipo=subtipo, **kwargs_doc
+            )
+            return doc, doc, subtipo
         anticipo = _crear_anticipo(parsed, cliente, cuenta)
         doc = crear_documento(parsed, cliente=cliente, anticipo=anticipo, subtipo=subtipo, **kwargs_doc)
         return anticipo, doc, subtipo

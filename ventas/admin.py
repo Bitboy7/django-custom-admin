@@ -525,6 +525,7 @@ class VentasResource(resources.ModelResource):
 class VentasAdmin(ModelAdmin):
     form = VentasAdminForm
     change_list_template = 'admin/ventas/ventas/change_list.html'
+    list_select_related = ('cliente', 'cliente__pais', 'mercado_destino')
 
     class Media:
         js = ('js/ventas_form_logic.js',)
@@ -1304,6 +1305,38 @@ class VentasAdmin(ModelAdmin):
     def get_cliente_info(self, obj):
         """Información del cliente con indicador de riesgo"""
         cliente = obj.cliente
+        pais = getattr(cliente, 'pais', None)
+        pais_nombre = getattr(pais, 'nombre', '')
+        bandera = getattr(pais, 'bandera', None)
+        bandera_url = ''
+        if bandera and getattr(bandera, 'name', ''):
+            try:
+                bandera_url = bandera.url
+            except (AttributeError, ValueError):
+                bandera_url = ''
+
+        if bandera_url:
+            pais_html = format_html(
+                '<span class="sales-country sales-country--flag" '
+                'aria-label="País: {}" title="{}">'
+                '<img class="sales-country__flag" src="{}" alt="" '
+                'width="18" height="12" loading="lazy">'
+                '</span>',
+                pais_nombre,
+                pais_nombre,
+                bandera_url,
+            )
+        elif pais_nombre:
+            pais_html = format_html(
+                '<span class="sales-country sales-country--fallback">'
+                '<i class="fas fa-map-marker-alt" aria-hidden="true"></i>'
+                '<span>{}</span>'
+                '</span>',
+                pais_nombre,
+            )
+        else:
+            pais_html = mark_safe('<span class="sales-muted">—</span>')
+
         risk_class = {
             'A+': 'sales-risk--a-plus',
             'A': 'sales-risk--a',
@@ -1312,13 +1345,16 @@ class VentasAdmin(ModelAdmin):
         }.get(cliente.calificacion_credito, '')
         
         return format_html(
-            '<strong>{}</strong><br>'
-            '<small class="sales-risk {}">📊 {}</small><br>'
-            '<small class="sales-muted">🌍 {}</small>',
+            '<strong class="sales-client-name">{}</strong><br>'
+            '<span class="sales-client-meta sales-risk {}">'
+            '<i class="fas fa-chart-line" aria-hidden="true"></i>'
+            '<span>{}</span>'
+            '</span><br>'
+            '{}',
             cliente.nombre,
             risk_class,
             cliente.get_calificacion_credito_display(),
-            cliente.pais.nombre
+            pais_html,
         )
     get_cliente_info.short_description = 'Cliente & Riesgo'
     
@@ -1338,11 +1374,19 @@ class VentasAdmin(ModelAdmin):
     def get_saldo_pendiente(self, obj):
         """Saldo pendiente con formato visual"""
         if obj.modalidad_pago == 'Contado':
-            return mark_safe('<span class="sales-badge sales-badge--paid">✓ Pagado</span>')
+            return mark_safe(
+                '<span class="sales-badge sales-badge--paid">'
+                '<i class="fas fa-check" aria-hidden="true"></i>Pagado'
+                '</span>'
+            )
         
         saldo = obj.saldo_pendiente()
         if saldo <= 0:
-            return mark_safe('<span class="sales-badge sales-badge--paid">✓ $0.00</span>')
+            return mark_safe(
+                '<span class="sales-badge sales-badge--paid">'
+                '<i class="fas fa-check" aria-hidden="true"></i>$0.00'
+                '</span>'
+            )
         
         balance_class = 'sales-balance--overdue' if obj.esta_vencida() else 'sales-balance--open'
         return format_html(

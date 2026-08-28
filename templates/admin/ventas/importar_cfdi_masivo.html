@@ -14,7 +14,7 @@
 
 {% block extrastyle %}
 {{ block.super }}
-<link rel="stylesheet" href="{% static 'css/importar-cfdi-masivo.css' %}?v=1">
+<link rel="stylesheet" href="{% static 'css/importar-cfdi-masivo.css' %}?v=2">
 {% endblock %}
 
 {% block content %}
@@ -70,7 +70,7 @@
           </div>
         </div>
 
-        <form method="post" enctype="multipart/form-data" data-loading-form>
+        <form method="post" enctype="multipart/form-data" data-loading-form data-upload-form>
           {% csrf_token %}
           <input type="hidden" name="_step" value="upload">
 
@@ -117,6 +117,25 @@
               </div>
               <ul class="file-summary__list" data-file-list></ul>
             </div>
+
+            <section class="upload-progress" data-upload-progress hidden aria-live="polite" aria-atomic="true">
+              <div class="upload-progress__icon" aria-hidden="true">
+                <i class="fas fa-cloud-arrow-up"></i>
+              </div>
+              <div class="upload-progress__content">
+                <div class="upload-progress__heading">
+                  <div>
+                    <strong data-upload-title>Subiendo comprobantes…</strong>
+                    <span data-upload-status>Preparando una conexión segura</span>
+                  </div>
+                  <span class="upload-progress__value" data-upload-value>0%</span>
+                </div>
+                <div class="upload-progress__track" role="progressbar" aria-label="Progreso de carga" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-upload-track>
+                  <span class="upload-progress__bar" data-upload-bar></span>
+                </div>
+                <p class="upload-progress__note" data-upload-note>No cierres esta ventana mientras termina la carga.</p>
+              </div>
+            </section>
           </div>
 
           <footer class="bulk-panel__footer">
@@ -382,6 +401,25 @@
           </table>
         </div>
 
+        <section class="upload-progress is-processing import-progress" data-processing-progress hidden aria-live="polite" aria-atomic="true">
+          <div class="upload-progress__icon" aria-hidden="true">
+            <i class="fas fa-cloud-arrow-up"></i>
+          </div>
+          <div class="upload-progress__content">
+            <div class="upload-progress__heading">
+              <div>
+                <strong>Importando documentos…</strong>
+                <span>Guardando XML y PDF en el almacenamiento seguro</span>
+              </div>
+              <span class="upload-progress__value">Procesando</span>
+            </div>
+            <div class="upload-progress__track" role="progressbar" aria-label="Importación de documentos en curso">
+              <span class="upload-progress__bar"></span>
+            </div>
+            <p class="upload-progress__note">No cierres esta ventana. Verás el resultado individual al terminar.</p>
+          </div>
+        </section>
+
         <footer class="bulk-panel__footer">
           <p class="footer-help"><i class="fas fa-circle-info" aria-hidden="true"></i> Solo se importarán las filas marcadas y sin errores.</p>
           <div class="button-cluster">
@@ -472,5 +510,5 @@
 
 {% block extrajs %}
 {{ block.super }}
-<script src="{% static 'js/importar-cfdi-masivo.js' %}?v=2"></script>
+<script src="{% static 'js/importar-cfdi-masivo.js' %}?v=3"></script>
 {% endblock %}
