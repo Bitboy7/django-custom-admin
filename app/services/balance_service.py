@@ -5,6 +5,7 @@ REFACTORIZADO: Ahora usa la arquitectura modular de servicios base.
 La mayoría de la lógica común está en BaseReportServiceWithCategories.
 OPTIMIZADO: Implementa cache Redis para mejorar rendimiento.
 """
+from collections import defaultdict
 from datetime import datetime
 from django.db.models import Count
 from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
@@ -329,6 +330,54 @@ class BalanceAnalysisService(BaseReportServiceWithCategories):
         })
         
         return context
+
+    # ==================== ACUMULADOS PARA EXPORTACIÓN EXCEL ====================
+
+    def get_accumulated_by_category(self, balances):
+        """
+        Acumulado de gastos por categoría.
+
+        Args:
+            balances: Lista de balances (diccionarios) ya filtrados.
+
+        Returns:
+            Lista de diccionarios {'categoria': str, 'total': float}
+            ordenados de mayor a menor total.
+        """
+        acumulado = defaultdict(float)
+        for balance in balances:
+            categoria = balance.get('id_cat_gastos__nombre') or 'Sin categoría'
+            acumulado[categoria] += float(balance.get('total_gastos') or 0)
+        items = sorted(acumulado.items(), key=lambda kv: kv[1], reverse=True)
+        return [{'categoria': categoria, 'total': total} for categoria, total in items]
+
+    def get_accumulated_by_category_per_sucursal(self, balances):
+        """
+        Acumulado de gastos por categoría y sucursal.
+
+        Args:
+            balances: Lista de balances (diccionarios) ya filtrados.
+
+        Returns:
+            Dict con:
+              - 'sucursales': lista ordenada de nombres de sucursal
+              - 'categorias': lista ordenada de nombres de categoría
+              - 'matrix': dict {(sucursal, categoria): float}
+        """
+        sucursales = set()
+        categorias = set()
+        matrix = defaultdict(float)
+        for balance in balances:
+            sucursal = balance.get('id_sucursal__nombre') or 'Sin sucursal'
+            categoria = balance.get('id_cat_gastos__nombre') or 'Sin categoría'
+            sucursales.add(sucursal)
+            categorias.add(categoria)
+            matrix[(sucursal, categoria)] += float(balance.get('total_gastos') or 0)
+        return {
+            'sucursales': sorted(sucursales),
+            'categorias': sorted(categorias),
+            'matrix': matrix,
+        }
 
 
 

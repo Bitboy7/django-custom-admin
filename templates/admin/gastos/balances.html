@@ -31,7 +31,8 @@
 {% block content %}
 <div class="text-[#2f4550]" data-balances-page data-balance-tour="gastos"
      data-manual-url="{% url 'user_manual' %}#balances-y-reportes"
-     data-ajax-url="{% url 'admin:gastos_gastos_balances' %}">
+     data-ajax-url="{% url 'admin:gastos_gastos_balances' %}"
+     data-resumen-excel-url="{% url 'admin:gastos_gastos_balances_resumen_excel' %}">
 
   {# ── Toast de notificación ── #}
   <div id="toast-notification" class="fixed top-4 right-4 z-50 transform translate-x-full transition-all duration-300 opacity-0">
@@ -118,7 +119,7 @@
       </span>
     </div>
     <div class="p-4">
-      <form method="get" action="{% url 'admin:gastos_gastos_balances' %}" class="space-y-3" style="touch-action:manipulation"
+      <form method="get" action="{% url 'admin:gastos_gastos_balances' %}" id="balances-filter-form" class="space-y-3" style="touch-action:manipulation"
             hx-get="{% url 'admin:gastos_gastos_balances' %}"
             hx-target="#balances-results"
             hx-swap="innerHTML"

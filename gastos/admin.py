@@ -586,6 +586,11 @@ class GastosAdmin(ModelAdmin):
                 self.admin_site.admin_view(self.balances_admin_view),
                 name='gastos_gastos_balances',
             ),
+            path(
+                'balances/resumen-excel/',
+                self.admin_site.admin_view(self.balances_resumen_excel_view),
+                name='gastos_gastos_balances_resumen_excel',
+            ),
         ]
         return custom_urls + urls
 
@@ -664,7 +669,256 @@ class GastosAdmin(ModelAdmin):
             })
 
         return TemplateResponse(request, 'admin/gastos/balances.html', context)
-    
+
+    def balances_resumen_excel_view(self, request):
+        if not self.has_view_permission(request):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+
+        from app.services.balance_service import BalanceAnalysisService
+        from collections import defaultdict
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.utils import get_column_letter
+
+        balance_service = BalanceAnalysisService()
+        context = balance_service.get_full_context(request)
+        balances = context.get('balances', [])
+        periodo = context.get('periodo', 'diario')
+        sucursal_id = context.get('sucursal_id', '')
+
+        por_categoria = balance_service.get_accumulated_by_category(balances)
+        por_sucursal = None
+        if not sucursal_id:
+            por_sucursal = balance_service.get_accumulated_by_category_per_sucursal(balances)
+
+        NAVY = "2F4550"
+        LIGHT = "E6F3FF"
+        WHITE = "FFFFFF"
+        MONEY = '"$"#,##0.00'
+
+        def nav_hdr(cell):
+            cell.font = Font(bold=True, color=WHITE)
+            cell.fill = PatternFill("solid", fgColor=NAVY)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        def money_cell(cell, bold=False):
+            cell.number_format = MONEY
+            cell.alignment = Alignment(horizontal="right")
+            if bold:
+                cell.font = Font(bold=True)
+
+        def balance_fecha(balance):
+            if periodo == 'diario':
+                return balance.get('fecha')
+            if periodo == 'semanal':
+                return balance.get('semana')
+            return balance.get('mes')
+
+        def fecha_text(value):
+            if not value:
+                return ""
+            if hasattr(value, 'strftime'):
+                if periodo == 'mensual':
+                    return value.strftime('%Y-%m')
+                return value.strftime('%Y-%m-%d')
+            return str(value)
+
+        def fill_row(ws, row, col_end, bg, font=None):
+            for cidx in range(1, col_end + 1):
+                cell = ws.cell(row=row, column=cidx)
+                cell.fill = PatternFill("solid", fgColor=bg)
+                if font is not None:
+                    cell.font = font
+
+        wb = openpyxl.Workbook()
+
+        # ── HOJA 1 — Resumen ──────────────────────────────────────────────────
+        ws = wb.active
+        ws.title = "Resumen"
+
+        title_cell = ws.cell(row=1, column=1, value="Resumen de Gastos")
+        title_cell.font = Font(bold=True, size=14, color=NAVY)
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=5)
+
+        total = float(context.get('total_gastos') or 0)
+
+        lbl = ws.cell(row=3, column=4, value="Sumatoria total de gastos filtrados:")
+        lbl.font = Font(bold=True)
+        lbl.alignment = Alignment(horizontal="right")
+        tc = ws.cell(row=3, column=5, value=total)
+        tc.number_format = MONEY
+        tc.font = Font(bold=True, color=WHITE)
+        tc.alignment = Alignment(horizontal="right")
+        tc.fill = PatternFill("solid", fgColor=NAVY)
+
+        headers = ["Fecha", "Sucursal", "Cuenta", "Categoría", "Total"]
+        hdr_row = 5
+        for ci, h in enumerate(headers, 1):
+            nav_hdr(ws.cell(row=hdr_row, column=ci, value=h))
+
+        ordered = sorted(
+            balances,
+            key=lambda b: (
+                str(b.get('id_sucursal__nombre') or ''),
+                str(b.get('id_cuenta_banco__numero_cuenta') or ''),
+            ),
+        )
+
+        r = hdr_row + 1
+        last_sucursal = None
+        last_cuenta = None
+        suc_total = 0.0
+        cta_total = 0.0
+        grand_total = 0.0
+
+        def write_detail_row(r, fecha, sucursal, cuenta, categoria, total):
+            ws.cell(row=r, column=1, value=fecha)
+            ws.cell(row=r, column=2, value=sucursal)
+            ws.cell(row=r, column=3, value=cuenta)
+            ws.cell(row=r, column=4, value=categoria)
+            money_cell(ws.cell(row=r, column=5, value=total))
+            return r + 1
+
+        def write_subtotal_row(r, label_col, label, total):
+            cell = ws.cell(row=r, column=label_col, value=label)
+            cell.font = Font(bold=True)
+            money_cell(ws.cell(row=r, column=5, value=total), bold=True)
+            fill_row(ws, r, 5, LIGHT)
+            return r + 1
+
+        for balance in ordered:
+            sucursal = balance.get('id_sucursal__nombre') or ''
+            cuenta = balance.get('id_cuenta_banco__numero_cuenta') or ''
+            total_b = float(balance.get('total_gastos') or 0)
+
+            if last_sucursal is not None and sucursal != last_sucursal:
+                if last_cuenta:
+                    r = write_subtotal_row(r, 3, f"{last_cuenta} - SUBTOTAL", cta_total)
+                r = write_subtotal_row(r, 2, f"{last_sucursal} - SUBTOTAL", suc_total)
+                grand_total += suc_total
+                suc_total = 0.0
+                cta_total = 0.0
+                last_cuenta = None
+
+            if last_cuenta is not None and cuenta != last_cuenta and sucursal == last_sucursal:
+                r = write_subtotal_row(r, 3, f"{last_cuenta} - SUBTOTAL", cta_total)
+                cta_total = 0.0
+
+            r = write_detail_row(
+                r,
+                fecha_text(balance_fecha(balance)),
+                sucursal,
+                cuenta,
+                balance.get('id_cat_gastos__nombre') or '',
+                total_b,
+            )
+            cta_total += total_b
+            suc_total += total_b
+            last_sucursal = sucursal
+            last_cuenta = cuenta
+
+        if last_cuenta:
+            r = write_subtotal_row(r, 3, f"{last_cuenta} - SUBTOTAL", cta_total)
+        if last_sucursal is not None:
+            r = write_subtotal_row(r, 2, f"{last_sucursal} - SUBTOTAL", suc_total)
+            grand_total += suc_total
+
+        # TOTAL GENERAL
+        ws.cell(row=r, column=2, value="TOTAL GENERAL")
+        money_cell(ws.cell(row=r, column=5, value=grand_total), bold=True)
+        fill_row(ws, r, 5, NAVY, font=Font(bold=True, color=WHITE))
+        r += 2
+
+        # ── Gastos por Categoría ──
+        sec = ws.cell(row=r, column=1, value="Gastos por Categoría")
+        sec.font = Font(bold=True, color=WHITE, size=11)
+        sec.fill = PatternFill("solid", fgColor=NAVY)
+        sec.alignment = Alignment(horizontal="left", vertical="center")
+        ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=4)
+        r += 1
+
+        for ci, h in enumerate(["#", "Categoría", "Total", "%"], 1):
+            nav_hdr(ws.cell(row=r, column=ci, value=h))
+        r += 1
+
+        cat_total = sum(item['total'] for item in por_categoria) or 0
+        for idx, item in enumerate(por_categoria, 1):
+            ws.cell(row=r, column=1, value=idx)
+            ws.cell(row=r, column=2, value=item['categoria'])
+            money_cell(ws.cell(row=r, column=3, value=item['total']))
+            pct = (item['total'] / cat_total * 100) if cat_total else 0.0
+            pc = ws.cell(row=r, column=4, value=round(pct, 1) / 100)
+            pc.number_format = '0.0%'
+            pc.alignment = Alignment(horizontal="right")
+            r += 1
+
+        ws.cell(row=r, column=2, value="TOTAL").font = Font(bold=True)
+        money_cell(ws.cell(row=r, column=3, value=cat_total), bold=True)
+        pc = ws.cell(row=r, column=4, value=1.0)
+        pc.number_format = '0.0%'
+        pc.alignment = Alignment(horizontal="right")
+        pc.font = Font(bold=True)
+        fill_row(ws, r, 4, LIGHT)
+
+        for ci, w in enumerate([12, 22, 22, 24, 16], 1):
+            ws.column_dimensions[get_column_letter(ci)].width = w
+        ws.freeze_panes = "A6"
+
+        # ── HOJA 2 — Por Sucursal (solo cuando el filtro es todas las sucursales) ──
+        if por_sucursal is not None:
+            ws2 = wb.create_sheet("Por Sucursal")
+            sucursales = por_sucursal['sucursales']
+            categorias = por_sucursal['categorias']
+            matrix = por_sucursal['matrix']
+
+            total_col = 2 + len(sucursales)
+
+            title2 = ws2.cell(row=1, column=1, value="Gastos por Categoría por Sucursal")
+            title2.font = Font(bold=True, size=14, color=NAVY)
+            ws2.merge_cells(start_row=1, start_column=1, end_row=1, end_column=total_col)
+
+            nav_hdr(ws2.cell(row=2, column=1, value="Categoría"))
+            for ci, suc in enumerate(sucursales, 2):
+                nav_hdr(ws2.cell(row=2, column=ci, value=suc))
+            nav_hdr(ws2.cell(row=2, column=total_col, value="Total"))
+
+            col_totals = defaultdict(float)
+            rr = 3
+            for categoria in categorias:
+                ws2.cell(row=rr, column=1, value=categoria).font = Font(bold=True)
+                row_total = 0.0
+                for ci, suc in enumerate(sucursales, 2):
+                    val = matrix.get((suc, categoria), 0.0)
+                    money_cell(ws2.cell(row=rr, column=ci, value=val))
+                    row_total += val
+                    col_totals[suc] += val
+                money_cell(ws2.cell(row=rr, column=total_col, value=row_total), bold=True)
+                fill_row(ws2, rr, total_col, LIGHT)
+                rr += 1
+
+            ws2.cell(row=rr, column=1, value="Total")
+            grand = 0.0
+            for ci, suc in enumerate(sucursales, 2):
+                val = col_totals.get(suc, 0.0)
+                money_cell(ws2.cell(row=rr, column=ci, value=val), bold=True)
+                grand += val
+            money_cell(ws2.cell(row=rr, column=total_col, value=grand), bold=True)
+            fill_row(ws2, rr, total_col, NAVY, font=Font(bold=True, color=WHITE))
+
+            ws2.column_dimensions['A'].width = 26
+            for ci in range(2, total_col + 1):
+                ws2.column_dimensions[get_column_letter(ci)].width = 16
+            ws2.freeze_panes = "B3"
+
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        filename = f"gastos-resumen-{timezone.now().strftime('%Y-%m-%d')}.xlsx"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        wb.save(response)
+        return response
+
 class ComprasResource(resources.ModelResource):
     
     productor = fields.Field(
