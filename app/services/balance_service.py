@@ -12,7 +12,7 @@ from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
 from django.db.models import Sum
 import logging
 
-from gastos.models import Gastos, Cuenta
+from gastos.models import Gastos, Cuenta, CatGastos
 from .base_report_service import BaseReportServiceWithCategories
 from .cache_service import cache_service, cache_result
 
@@ -79,7 +79,31 @@ class BalanceAnalysisService(BaseReportServiceWithCategories):
             return base_fields
     
     # ==================== PERSONALIZACIÓN ESPECÍFICA DE GASTOS ====================
-    
+
+    def get_filter_data(self):
+        """
+        Opciones de filtro para Gastos.
+
+        Añade el catálogo de categorías (CatGastos) para poder filtrar
+        los gastos por categoría desde la pantalla de acumulado.
+        """
+        data = super().get_filter_data()
+        data['categorias'] = CatGastos.objects.all().order_by('nombre')
+        return data
+
+    def build_filters(self, categoria_id=None, **kwargs):
+        """
+        Construye filtros incluyendo la categoría de gasto.
+
+        El campo real del modelo Gastos es ``id_cat_gastos``; el método base
+        genérico usaba ``id_categoria`` y por eso se sobrescribe aquí.
+        """
+        filters = super().build_filters(**kwargs)
+        validated_categoria = self.filter_builder.validate_id(categoria_id)
+        if validated_categoria:
+            filters['id_cat_gastos_id'] = validated_categoria
+        return filters
+
     def get_balances_by_period(self, filters, periodo='mensual'):
         """
         Override del método base para añadir lógica específica de Gastos
@@ -248,6 +272,7 @@ class BalanceAnalysisService(BaseReportServiceWithCategories):
             'month': request.GET.get('month', ''),
             'cuenta_id': request.GET.get('cuenta_id', ''),
             'sucursal_id': request.GET.get('sucursal_id', ''),
+            'categoria_id': request.GET.get('categoria_id', ''),
             'periodo': request.GET.get('periodo', 'diario'),
             'dia': request.GET.get('dia', datetime.now().strftime('%Y-%m-%d')),
             'fecha_inicio': request.GET.get('fecha_inicio', ''),
@@ -300,7 +325,8 @@ class BalanceAnalysisService(BaseReportServiceWithCategories):
             fecha_fin=params['fecha_fin'],
             mes_inicio=params['mes_inicio'],
             mes_fin=params['mes_fin'],
-            sucursal_id=params['sucursal_id']
+            sucursal_id=params['sucursal_id'],
+            categoria_id=params['categoria_id'],
         )
         
         # Obtener balances (usa método personalizado)
@@ -325,6 +351,7 @@ class BalanceAnalysisService(BaseReportServiceWithCategories):
         context.update({
             'selected_cuenta_id': params['cuenta_id'],
             'selected_sucursal_id': params['sucursal_id'],
+            'selected_categoria_id': params['categoria_id'],
             'selected_year': params['year'],
             'selected_month': params['month'],
             'selected_periodo': params['periodo'],

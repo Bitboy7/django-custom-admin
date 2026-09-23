@@ -102,6 +102,8 @@
     var categorias = {};
 
     if (!table || !table.tBodies.length) {
+      window.balancesCategoriasLabels = [];
+      window.balancesCategoriasData = [];
       return;
     }
 

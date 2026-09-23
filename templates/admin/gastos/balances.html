@@ -194,6 +194,17 @@
             </select>
           </div>
 
+          {# Categoría #}
+          <div class="flex-1 min-w-[120px] sm:min-w-[140px]">
+            <label for="categoria_id" class="filter-label">Seleccione la categoría:</label>
+            <select name="categoria_id" id="categoria_id" class="filter-select">
+              <option value="">Todas</option>
+              {% for categoria in categorias %}
+              <option value="{{ categoria.id }}" {% if categoria.id|stringformat:"s" == selected_categoria_id %}selected{% endif %}>{{ categoria.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
           {# Año #}
           <div class="flex-1 min-w-[100px] sm:min-w-[110px]">
             <label for="year" class="filter-label">Seleccione el año:</label>

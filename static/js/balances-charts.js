@@ -582,6 +582,40 @@ function exportBalancesPDF() {
 
 window.exportBalancesPDF = exportBalancesPDF;
 
+/**
+ * Limpia el gráfico de barras cuando no hay datos, sin eliminar el canvas.
+ * Se destruye la instancia de Chart y se limpian los píxeles dibujados para
+ * que un filtro con resultados vuelva a renderizar sin recargar la página.
+ */
+function clearGastosCategoriasChart() {
+  if (gastosChart) {
+    gastosChart.destroy();
+    gastosChart = null;
+  }
+  var canvas = document.getElementById("gastosCategoriasChart");
+  if (canvas) {
+    var ctx = canvas.getContext("2d");
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+/**
+ * Limpia el gráfico de distribución y su leyenda cuando no hay datos.
+ */
+function clearDistribucionGastosChart() {
+  if (distribucionChart) {
+    distribucionChart.destroy();
+    distribucionChart = null;
+  }
+  var canvas = document.getElementById("distribucionGastosChart");
+  if (canvas) {
+    var ctx = canvas.getContext("2d");
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  var legend = document.getElementById("donut-legend");
+  if (legend) legend.innerHTML = "";
+}
+
 function createGastosCategoriasChart() {
   // Verificar que el elemento canvas exista
   var ctxCategorias = document.getElementById("gastosCategoriasChart");
@@ -589,13 +623,14 @@ function createGastosCategoriasChart() {
     return false;
   }
 
-  // Verificar que los datos estén disponibles
+  // Sin datos: limpiar el gráfico previo en lugar de dejar datos obsoletos.
   if (
     !window.balancesCategoriasLabels ||
     !window.balancesCategoriasData ||
     window.balancesCategoriasLabels.length === 0
   ) {
-    return false;
+    clearGastosCategoriasChart();
+    return true;
   }
 
   ctxCategorias = ctxCategorias.getContext("2d");
@@ -708,10 +743,6 @@ function createGastosCategoriasChart() {
       console.error("Error al crear el gráfico de barras:", error);
       return false;
     }
-  } else {
-    document.querySelector("#gastosCategoriasChart").closest("div").innerHTML =
-      '<div class="flex flex-col items-center justify-center h-full"><i class="fas fa-info-circle text-[#b8dbd9] text-4xl mb-2"></i><p class="text-[#586f7c]">No hay datos disponibles para mostrar</p></div>';
-    return true;
   }
 }
 
@@ -723,12 +754,14 @@ function createDistribucionGastosChart() {
     return false;
   }
 
+  // Sin datos: limpiar el gráfico y la leyenda previos.
   if (
     !window.balancesCategoriasLabels ||
     !window.balancesCategoriasData ||
     window.balancesCategoriasLabels.length === 0
   ) {
-    return false;
+    clearDistribucionGastosChart();
+    return true;
   }
 
   ctxDistribucion = ctxDistribucion.getContext("2d");
@@ -833,5 +866,9 @@ if (typeof module !== "undefined" && module.exports) {
     hslToHex: hslToHex,
     paletteHex: paletteHex,
     buildCategoryRows: buildCategoryRows,
+    createGastosCategoriasChart: createGastosCategoriasChart,
+    createDistribucionGastosChart: createDistribucionGastosChart,
+    clearGastosCategoriasChart: clearGastosCategoriasChart,
+    clearDistribucionGastosChart: clearDistribucionGastosChart,
   };
 }

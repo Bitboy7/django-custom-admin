@@ -34,6 +34,8 @@ const {
   hslToHex,
   paletteHex,
   buildCategoryRows,
+  createGastosCategoriasChart,
+  createDistribucionGastosChart,
 } = require("../balances-charts.js");
 
 // ─────────────────────────────────────────────
@@ -208,5 +210,53 @@ describe("hslToHex", () => {
     for (let h = 0; h < 360; h += 30) {
       expect(hslToHex(h, 60, 50)).toMatch(/^#[0-9a-f]{6}$/i);
     }
+  });
+});
+
+// ─────────────────────────────────────────────
+// Limpieza de gráficos sin datos (filtros vacíos)
+// ─────────────────────────────────────────────
+describe("limpieza de gráficos cuando no hay datos", () => {
+  afterEach(() => {
+    global.document.getElementById = function () {
+      return null;
+    };
+  });
+
+  test("createGastosCategoriasChart limpia el canvas y no pide reintento", () => {
+    const clearRect = jest.fn();
+    global.document.getElementById = jest.fn((id) => {
+      if (id === "gastosCategoriasChart") {
+        return { getContext: () => ({ clearRect }), width: 100, height: 100 };
+      }
+      return null;
+    });
+    global.window.balancesCategoriasLabels = [];
+    global.window.balancesCategoriasData = [];
+
+    const result = createGastosCategoriasChart();
+
+    expect(result).toBe(true);
+    expect(clearRect).toHaveBeenCalled();
+  });
+
+  test("createDistribucionGastosChart limpia canvas y leyenda, sin reintento", () => {
+    const clearRect = jest.fn();
+    const legend = { innerHTML: "datos previos" };
+    global.document.getElementById = jest.fn((id) => {
+      if (id === "distribucionGastosChart") {
+        return { getContext: () => ({ clearRect }), width: 100, height: 100 };
+      }
+      if (id === "donut-legend") return legend;
+      return null;
+    });
+    global.window.balancesCategoriasLabels = [];
+    global.window.balancesCategoriasData = [];
+
+    const result = createDistribucionGastosChart();
+
+    expect(result).toBe(true);
+    expect(clearRect).toHaveBeenCalled();
+    expect(legend.innerHTML).toBe("");
   });
 });

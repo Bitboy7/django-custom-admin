@@ -53,6 +53,7 @@ function saveFiltersToStorage() {
     const filters = {
       cuenta_id: document.getElementById("cuenta_id")?.value || "",
       sucursal_id: document.getElementById("sucursal_id")?.value || "",
+      categoria_id: document.getElementById("categoria_id")?.value || "",
       year: document.getElementById("year")?.value || "",
       month: document.getElementById("month")?.value || "",
       periodo: document.getElementById("periodo")?.value || "",
@@ -141,6 +142,7 @@ function syncUrlParamsWithStorage() {
   const currentFilters = {
     cuenta_id: urlParams.get("cuenta_id") || "",
     sucursal_id: urlParams.get("sucursal_id") || "",
+    categoria_id: urlParams.get("categoria_id") || "",
     year: urlParams.get("year") || "",
     month: urlParams.get("month") || "",
     periodo: urlParams.get("periodo") || "",
@@ -178,6 +180,7 @@ function updateFormInputsFromUrl() {
   const urlToFormMapping = {
     cuenta_id: "cuenta_id",
     sucursal_id: "sucursal_id",
+    categoria_id: "categoria_id",
     year: "year",
     month: "month",
     periodo: "periodo",
@@ -272,6 +275,7 @@ function checkAndShowFilterToast() {
   const hasFilters =
     urlParams.has("cuenta_id") ||
     urlParams.has("sucursal_id") ||
+    urlParams.has("categoria_id") ||
     urlParams.has("year") ||
     urlParams.has("month") ||
     urlParams.has("periodo") ||
@@ -293,6 +297,12 @@ function checkAndShowFilterToast() {
       const sucursalText =
         getSelectedOptionText(sucursalSelect) || urlParams.get("sucursal_id");
       activeFilters.push(`Sucursal: ${sucursalText}`);
+    }
+    if (urlParams.get("categoria_id")) {
+      const categoriaSelect = document.getElementById("categoria_id");
+      const categoriaText =
+        getSelectedOptionText(categoriaSelect) || urlParams.get("categoria_id");
+      activeFilters.push(`Categoría: ${categoriaText}`);
     }
     if (urlParams.get("year")) {
       activeFilters.push(`Año: ${urlParams.get("year")}`);

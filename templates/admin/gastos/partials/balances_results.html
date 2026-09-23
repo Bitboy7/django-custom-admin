@@ -21,18 +21,18 @@
       <p id="kpi-transacciones" class="kpi-value">{{ numero_transacciones }}</p>
     </div>
   </div>
-  <div class="kpi-card" style="border-left-color:#586f7c" title="${{ gasto_maximo|us_currency:2 }} — {{ categoria_gasto_maximo }}">
+  <div class="kpi-card" style="border-left-color:#586f7c" title="${{ gasto_maximo|us_currency:2 }} — {{ categoria_gasto_maximo|default_if_none:'' }}">
     <div class="kpi-body">
       <p class="kpi-label">M&aacute;ximo</p>
       <p id="kpi-maximo" class="kpi-value">${{ gasto_maximo|us_currency:2 }}</p>
-      <p id="kpi-sub-maximo" class="kpi-sub">{{ categoria_gasto_maximo }}</p>
+      <p id="kpi-sub-maximo" class="kpi-sub">{{ categoria_gasto_maximo|default_if_none:'' }}</p>
     </div>
   </div>
-  <div class="kpi-card" style="border-left-color:#b8dbd9" title="${{ gasto_minimo|us_currency:2 }} — {{ categoria_gasto_minimo }}">
+  <div class="kpi-card" style="border-left-color:#b8dbd9" title="${{ gasto_minimo|us_currency:2 }} — {{ categoria_gasto_minimo|default_if_none:'' }}">
     <div class="kpi-body">
       <p class="kpi-label">M&iacute;nimo</p>
       <p id="kpi-minimo" class="kpi-value">${{ gasto_minimo|us_currency:2 }}</p>
-      <p id="kpi-sub-minimo" class="kpi-sub">{{ categoria_gasto_minimo }}</p>
+      <p id="kpi-sub-minimo" class="kpi-sub">{{ categoria_gasto_minimo|default_if_none:'' }}</p>
     </div>
   </div>
   <div class="kpi-card" style="border-left-color:#586f7c" title="${{ gasto_mediano|us_currency:2 }}">
