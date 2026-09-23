@@ -206,7 +206,7 @@
           </div>
 
           {# Año #}
-          <div class="flex-1 min-w-[100px] sm:min-w-[110px]">
+          <div class="flex-1 min-w-[100px] sm:min-w-[110px]" id="filtro-year-wrap">
             <label for="year" class="filter-label">Seleccione el año:</label>
             <select name="year" id="year" class="filter-select">
               {% for year in available_years %}
@@ -216,7 +216,7 @@
           </div>
 
           {# Meses #}
-          <div class="flex-1 min-w-[130px] sm:min-w-[150px]">
+          <div class="flex-1 min-w-[130px] sm:min-w-[150px]" id="filtro-meses-wrap">
             <label class="filter-label">Seleccione los meses:</label>
             <div class="relative">
               <input type="hidden" name="months" id="months" value="{{ selected_months|join:',' }}">

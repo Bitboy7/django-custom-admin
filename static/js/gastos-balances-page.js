@@ -149,6 +149,8 @@
       } else {
         $("#filtro-mensual-opciones").slideUp(300);
       }
+
+      toggleMonthlyMode();
     });
 
     $('input[name="tipo_fecha"]').on("change", function () {
@@ -195,28 +197,39 @@
     }
   }
 
+  function toggleMonthlyMode() {
+    if (!window.jQuery) return;
+
+    var $ = window.jQuery;
+    var esMensual = $("#periodo").val() === "mensual";
+    var esRango = esMensual && $('input[name="tipo_mes"]:checked').val() === "rango";
+
+    // En "Rango de meses" (solo dentro del período mensual) los filtros de
+    // Año y Meses no se toman en cuenta, así que se ocultan para no confundir
+    // al usuario. En cualquier otro caso permanecen visibles.
+    if (esRango) {
+      $("#filtro-year-wrap").hide();
+      $("#filtro-meses-wrap").hide();
+      $("#campos-rango-meses").show();
+      clearMonthSelection();
+    } else {
+      $("#filtro-year-wrap").show();
+      $("#filtro-meses-wrap").show();
+      $("#campos-rango-meses").hide();
+      $("#mes_inicio").val("");
+      $("#mes_fin").val("");
+    }
+  }
+
   function initMonthlyFilters() {
     if (!window.jQuery) return;
 
     var $ = window.jQuery;
 
-    $('input[name="tipo_mes"]').on("change", function () {
-      if ($(this).val() === "rango") {
-        $("#campos-rango-meses").slideDown(300);
-        clearMonthSelection();
-      } else {
-        $("#campos-rango-meses").slideUp(300);
-        $("#mes_inicio").val("");
-        $("#mes_fin").val("");
-      }
-    });
+    $('input[name="tipo_mes"]').on("change", toggleMonthlyMode);
 
-    var $rangeRadios = $('input[name="tipo_mes"]');
-    if ($rangeRadios.filter(":checked").val() === "rango") {
-      $("#campos-rango-meses").show();
-    } else {
-      $("#campos-rango-meses").hide();
-    }
+    // Estado inicial según el período y el modo seleccionados.
+    toggleMonthlyMode();
   }
 
   function bindChartsDataUpdates() {
