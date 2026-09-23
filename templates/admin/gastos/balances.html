@@ -284,9 +284,46 @@
           </div>
         </div>
 
+        {# Opciones de filtro mensual #}
+        <div id="filtro-mensual-opciones" {% if selected_periodo != 'mensual' %}style="display:none"{% endif %}>
+          <div class="bg-[#f4f4f9] border border-[#d8dce6] rounded-lg p-3">
+            <p class="text-xs font-bold text-[#586f7c] mb-2 flex items-center gap-1.5">
+              <i class="fas fa-calendar-alt text-[#586f7c]"></i> Tipo de consulta mensual
+            </p>
+            <div class="flex flex-wrap gap-4 mb-3">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="tipo_mes" value="anio" id="radio-anio"
+                  class="w-4 h-4 text-[#2f4550] focus:ring-[#b8dbd9]"
+                  {% if not selected_mes_inicio %}checked{% endif %}>
+                <span class="text-xs font-medium text-[#586f7c]"><i class="fas fa-calendar text-[#586f7c] mr-1"></i> Año y meses</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="tipo_mes" value="rango" id="radio-rango-mes"
+                  class="w-4 h-4 text-[#5a7d6b] focus:ring-[#b8dbd9]"
+                  {% if selected_mes_inicio %}checked{% endif %}>
+                <span class="text-xs font-medium text-[#586f7c]"><i class="fas fa-calendar-alt text-[#5a7d6b] mr-1"></i> Rango de meses</span>
+              </label>
+            </div>
+
+            {# Rango de meses #}
+            <div id="campos-rango-meses" {% if not selected_mes_inicio %}style="display:none"{% endif %}>
+              <div class="flex flex-wrap gap-3">
+                <div class="flex-1 min-w-[140px] sm:min-w-[160px]">
+                  <label class="filter-label">Mes inicial:</label>
+                  <input type="month" name="mes_inicio" id="mes_inicio" value="{{ selected_mes_inicio }}" class="filter-select">
+                </div>
+                <div class="flex-1 min-w-[140px] sm:min-w-[160px]">
+                  <label class="filter-label">Mes fin:</label>
+                  <input type="month" name="mes_fin" id="mes_fin" value="{{ selected_mes_fin }}" class="filter-select">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {# Botones #}
         <div class="flex items-center gap-2 pt-1" data-tour="actions">
-          <button type="button" id="clear-months"
+          <button type="button" id="clear-filters"
             class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#586f7c] hover:text-[#586f7c] border border-[#d8dce6] px-3 py-1.5 rounded hover:bg-[#f4f4f9] transition-colors">
             <i class="fas fa-times"></i> Limpiar
           </button>

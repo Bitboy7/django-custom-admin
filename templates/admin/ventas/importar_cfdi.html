@@ -92,6 +92,7 @@
     {% csrf_token %}
     <input type="hidden" name="_step" value="confirm">
     {{ form.tipo_registro }}
+    {{ form.parsed_json }}
 
     <div class="cfdi-confirm-layout">
       <div class="cfdi-confirm-primary">
@@ -172,6 +173,21 @@
               <label>Cliente <span class="badge-xml">XML (sugerido)</span></label>
               {{ form.cliente }}
               {{ form.cliente.errors }}
+              {% if cliente_no_encontrado %}
+                {% if puede_crear_cliente %}
+                  <label class="create-toggle">
+                    {{ form.crear_cliente }}
+                    <span>Crear cliente con los datos del CFDI</span>
+                  </label>
+                  <div class="create-fields" id="pais-cliente-fields" hidden>
+                    <label>País del cliente</label>
+                    {{ form.pais_cliente }}
+                    {{ form.pais_cliente.errors }}
+                  </div>
+                {% else %}
+                  <p class="permission-note"><i class="fas fa-lock"></i> No tienes permiso para crear clientes.</p>
+                {% endif %}
+              {% endif %}
             </div>
             {% if form.tipo_registro.value == 'SERVICIO' %}
               <div class="field-group">
@@ -186,6 +202,16 @@
                 <label>Producto <span class="badge-xml">XML (sugerido)</span></label>
                 {{ form.producto }}
                 {{ form.producto.errors }}
+                {% if producto_no_encontrado %}
+                  {% if puede_crear_producto %}
+                    <label class="create-toggle">
+                      {{ form.crear_producto }}
+                      <span>Crear producto con los datos del CFDI</span>
+                    </label>
+                  {% else %}
+                    <p class="permission-note"><i class="fas fa-lock"></i> No tienes permiso para crear productos.</p>
+                  {% endif %}
+                {% endif %}
               </div>
             {% endif %}
           </div>

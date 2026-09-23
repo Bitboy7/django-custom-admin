@@ -464,9 +464,6 @@ def crear_documento(parsed, *, cliente, subtipo=None, venta=None,
 
 
 def _crear_venta(parsed, cliente, producto, sucursal, cuenta, *, es_servicio=False):
-    from catalogo.models import Sucursal
-    from gastos.models import Cuenta
-
     if es_servicio:
         producto = None
     else:
@@ -475,8 +472,15 @@ def _crear_venta(parsed, cliente, producto, sucursal, cuenta, *, es_servicio=Fal
         raise ValueError(
             'Selecciona un producto para importar este CFDI como venta.'
         )
-    sucursal = sucursal or Sucursal.objects.order_by('id').first()
-    cuenta = cuenta or Cuenta.objects.order_by('id').first()
+
+    modalidad = parsed.get('modalidad_pago') or 'Contado'
+
+    if sucursal is None:
+        raise ValueError('Selecciona la sucursal para importar esta venta.')
+    if modalidad == 'Contado' and cuenta is None:
+        raise ValueError(
+            'Selecciona la cuenta bancaria para esta venta de contado.'
+        )
 
     fecha = parsed.get('fecha_emision_cfdi') or timezone.now().date()
     moneda = parsed.get('moneda_venta') or 'MXN'
@@ -493,7 +497,7 @@ def _crear_venta(parsed, cliente, producto, sucursal, cuenta, *, es_servicio=Fal
             Ventas.TipoRegistro.SERVICIO
             if es_servicio else Ventas.TipoRegistro.VENTA
         ),
-        modalidad_pago=parsed.get('modalidad_pago') or 'Contado',
+        modalidad_pago=modalidad,
         monto=Money(Decimal(str(monto)), moneda),
         moneda_venta=moneda,
         tipo_cambio=parsed.get('tipo_cambio') or Decimal('1.0000'),
@@ -508,9 +512,8 @@ def _crear_venta(parsed, cliente, producto, sucursal, cuenta, *, es_servicio=Fal
 
 
 def _crear_anticipo(parsed, cliente, cuenta):
-    from gastos.models import Cuenta
-
-    cuenta = cuenta or Cuenta.objects.order_by('id').first()
+    if cuenta is None:
+        raise ValueError('Selecciona la cuenta bancaria para este anticipo.')
     moneda = parsed.get('moneda_venta') or 'MXN'
     monto = parsed.get('monto') or Decimal('0')
 
@@ -533,9 +536,6 @@ def _crear_anticipo(parsed, cliente, cuenta):
 
 
 def _crear_recibo_pago(parsed, cliente, cuenta, archivo_pdf=None, archivo_xml=None):
-    from gastos.models import Cuenta
-
-    cuenta = cuenta or Cuenta.objects.order_by('id').first()
     venta = resolver_venta(parsed)
 
     # Fallback: buscar venta por los doctos del complemento de pagos
@@ -582,11 +582,16 @@ def _crear_recibo_pago(parsed, cliente, cuenta, archivo_pdf=None, archivo_xml=No
                     primer_pago = parsed['pagos'][0]
                     num_operacion = primer_pago.get('num_operacion') or ''
                     fecha_pago = primer_pago.get('fecha') or fecha_pago
+                cuenta_destino = cuenta or venta.cuenta
+                if cuenta_destino is None:
+                    raise ValueError(
+                        'Selecciona la cuenta bancaria para registrar este pago.'
+                    )
                 pago = PagoVenta.objects.create(
                     venta=venta,
                     fecha_pago=fecha_pago,
                     monto_pago=Money(monto_pago, moneda),
-                    cuenta_destino=cuenta or venta.cuenta,
+                    cuenta_destino=cuenta_destino,
                     metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
                     referencia=num_operacion,
                     folio_rep=parsed.get('folio_num') or None,

@@ -484,7 +484,7 @@ class Ventas(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     fecha_registro = models.DateTimeField(auto_now_add=True)
     sucursal_id = models.ForeignKey(Sucursal, on_delete=models.CASCADE)
-    cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE, null=True, blank=True, default=2)
+    cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE, null=True, blank=True)
     anticipo = models.ForeignKey(Anticipo, on_delete=models.SET_NULL, null=True, blank=True)
     
     class TipoVenta(models.TextChoices):

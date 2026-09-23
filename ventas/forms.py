@@ -2,7 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 from .models import Anticipo, Ventas, Cliente, PagoVenta, Agente, TerminoCredito
-from catalogo.models import Producto, Sucursal
+from catalogo.models import Producto, Sucursal, Pais
 from gastos.models import Cuenta
 
 
@@ -216,6 +216,7 @@ class CFDIConfirmForm(forms.Form):
     # ── Client & product (pre-selected from match, editable) ──────────────
     cliente = forms.ModelChoiceField(
         queryset=Cliente.objects.filter(activo=True).order_by('nombre'),
+        required=False,
         label='Cliente',
         widget=forms.Select(attrs={'class': 'form-control'}),
     )
@@ -224,6 +225,28 @@ class CFDIConfirmForm(forms.Form):
         required=False,
         label='Producto',
         widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+
+    # ── Creación en línea de cliente / producto ────────────────────────────
+    crear_cliente = forms.BooleanField(
+        required=False,
+        label='Crear cliente con los datos del CFDI',
+        widget=forms.CheckboxInput(attrs={'class': 'create-toggle-checkbox'}),
+    )
+    pais_cliente = forms.ModelChoiceField(
+        queryset=Pais.objects.all().order_by('nombre'),
+        required=False,
+        label='País del cliente',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+    crear_producto = forms.BooleanField(
+        required=False,
+        label='Crear producto con los datos del CFDI',
+        widget=forms.CheckboxInput(attrs={'class': 'create-toggle-checkbox'}),
+    )
+    parsed_json = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput(),
     )
 
     # ── Manual-only fields ─────────────────────────────────────────────────
@@ -274,11 +297,24 @@ class CFDIConfirmForm(forms.Form):
         cleaned_data['tipo_registro'] = cleaned_data.get('tipo_registro') or Ventas.TipoRegistro.VENTA
         if cleaned_data['tipo_registro'] == Ventas.TipoRegistro.SERVICIO:
             cleaned_data['producto'] = None
-        elif not cleaned_data.get('producto'):
+            cleaned_data['crear_producto'] = False
+        elif not cleaned_data.get('producto') and not cleaned_data.get('crear_producto'):
             self.add_error(
                 'producto',
-                'Selecciona un producto para importar esta venta.',
+                'Selecciona un producto o marca la opción para crearlo.',
             )
+
+        if not cleaned_data.get('cliente') and not cleaned_data.get('crear_cliente'):
+            self.add_error(
+                'cliente',
+                'Selecciona un cliente o marca la opción para crearlo.',
+            )
+        if cleaned_data.get('crear_cliente') and not cleaned_data.get('pais_cliente'):
+            self.add_error(
+                'pais_cliente',
+                'Selecciona el país del cliente antes de crearlo.',
+            )
+
         if cleaned_data.get('tipo_venta') == Ventas.TipoVenta.NACIONAL:
             cleaned_data['agente_id'] = None
             cleaned_data['PO'] = ''

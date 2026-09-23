@@ -251,7 +251,9 @@ class BalanceAnalysisService(BaseReportServiceWithCategories):
             'periodo': request.GET.get('periodo', 'diario'),
             'dia': request.GET.get('dia', datetime.now().strftime('%Y-%m-%d')),
             'fecha_inicio': request.GET.get('fecha_inicio', ''),
-            'fecha_fin': request.GET.get('fecha_fin', '')
+            'fecha_fin': request.GET.get('fecha_fin', ''),
+            'mes_inicio': request.GET.get('mes_inicio', ''),
+            'mes_fin': request.GET.get('mes_fin', '')
         }
         
         # Manejar múltiples meses
@@ -296,6 +298,8 @@ class BalanceAnalysisService(BaseReportServiceWithCategories):
             dia=params['dia'],
             fecha_inicio=params['fecha_inicio'],
             fecha_fin=params['fecha_fin'],
+            mes_inicio=params['mes_inicio'],
+            mes_fin=params['mes_fin'],
             sucursal_id=params['sucursal_id']
         )
         
@@ -327,6 +331,8 @@ class BalanceAnalysisService(BaseReportServiceWithCategories):
             'selected_dia': params['dia'],
             'selected_fecha_inicio': params['fecha_inicio'],
             'selected_fecha_fin': params['fecha_fin'],
+            'selected_mes_inicio': params['mes_inicio'],
+            'selected_mes_fin': params['mes_fin'],
         })
         
         return context

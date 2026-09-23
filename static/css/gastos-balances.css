@@ -95,7 +95,7 @@ html body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link i {
   font-size: 0.55rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   color: #586f7c;
   margin-bottom: 0.15rem;
   white-space: nowrap;
@@ -104,10 +104,12 @@ html body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link i {
 }
 
 .kpi-value {
-  font-size: 0.8rem;
-  font-weight: 800;
+  font-size: 0.72rem;
+  font-weight: 700;
   color: #2f4550;
-  line-height: 1.15;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.02em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -225,7 +227,7 @@ html body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link i {
     font-size: 0.7rem;
   }
   .kpi-value {
-    font-size: 0.75rem;
+    font-size: 0.68rem;
   }
   .kpi-label {
     font-size: 0.5rem;
@@ -234,7 +236,7 @@ html body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link i {
   /* ── Mobile: full-width buttons ── */
   .filter-card .flex.items-center.gap-2 button,
   .filter-card button#apply-months,
-  .filter-card button#clear-months {
+  .filter-card button#clear-filters {
     flex: 1;
     min-width: 0;
     justify-content: center;
@@ -298,7 +300,7 @@ html body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link i {
 
   /* ── Mobile: botones aplicar/limpiar full width ── */
   #apply-months,
-  #clear-months {
+  #clear-filters {
     width: 100%;
   }
 }
@@ -315,7 +317,7 @@ html body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link i {
     font-size: 0.7rem;
   }
   .kpi-value {
-    font-size: 0.7rem;
+    font-size: 0.64rem;
   }
   .kpi-body {
     min-width: 0;

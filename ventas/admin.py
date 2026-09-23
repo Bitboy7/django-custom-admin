@@ -739,6 +739,39 @@ class VentasAdmin(ModelAdmin):
             if form.is_valid():
                 cd = form.cleaned_data
                 try:
+                    from .services.cfdi_import_service import (
+                        crear_cliente_desde_cfdi,
+                        crear_producto_desde_cfdi,
+                        parsed_from_json,
+                    )
+
+                    cliente = cd.get('cliente')
+                    producto = cd.get('producto')
+
+                    parsed = None
+                    if cd.get('parsed_json'):
+                        parsed = parsed_from_json(cd['parsed_json'])
+
+                    if cd.get('crear_cliente'):
+                        if not request.user.has_perm('ventas.add_cliente'):
+                            raise PermissionError('No tienes permiso para crear clientes.')
+                        if parsed is None:
+                            raise ValueError(
+                                'No se pudo recuperar los datos del CFDI para crear el cliente.'
+                            )
+                        cliente, _creado = crear_cliente_desde_cfdi(
+                            parsed, pais=cd.get('pais_cliente'),
+                        )
+
+                    if cd.get('crear_producto'):
+                        if not request.user.has_perm('catalogo.add_producto'):
+                            raise PermissionError('No tienes permiso para crear productos.')
+                        if parsed is None:
+                            raise ValueError(
+                                'No se pudo recuperar los datos del CFDI para crear el producto.'
+                            )
+                        producto, _creado = crear_producto_desde_cfdi(parsed)
+
                     venta = Ventas(
                         monto=Money(cd['monto'], cd['moneda_venta']),
                         moneda_venta=cd['moneda_venta'],
@@ -749,8 +782,8 @@ class VentasAdmin(ModelAdmin):
                         cantidad=cd['cantidad'],
                         descripcion=cd['descripcion'],
                         PO=cd['PO'],
-                        cliente=cd['cliente'],
-                        producto=cd.get('producto'),
+                        cliente=cliente,
+                        producto=producto,
                         fecha_salida_manifiesto=cd['fecha_salida_manifiesto'],
                         fecha_deposito=cd['fecha_deposito'],
                         agente_id=cd.get('agente_id'),
@@ -773,7 +806,7 @@ class VentasAdmin(ModelAdmin):
                             else DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL
                         )
                     DocumentoCFDI.objects.create(
-                        cliente=cd['cliente'],
+                        cliente=cliente,
                         tipo=DocumentoCFDI.TipoDocumento.INGRESO,
                         subtipo=subtipo,
                         folio=cd['folio_factura'] or None,
@@ -823,6 +856,22 @@ class VentasAdmin(ModelAdmin):
                         opts=opts,
                     )
                     return TemplateResponse(request, 'admin/ventas/importar_cfdi.html', context)
+
+                uuid = (parsed.get('uuid') or '').strip()
+                if uuid and DocumentoCFDI.objects.filter(uuid__iexact=uuid).exists():
+                    messages.error(
+                        request,
+                        f'El CFDI con UUID {uuid} ya fue importado anteriormente.',
+                    )
+                    return TemplateResponse(
+                        request,
+                        'admin/ventas/importar_cfdi.html',
+                        dict(
+                            self.admin_site.each_context(request),
+                            form=CFDIUploadForm(), step='upload',
+                            title='Importar venta desde CFDI (XML)', opts=opts,
+                        ),
+                    )
 
                 subtipo = classify_subtipo(parsed)
                 if subtipo == 'ingreso_mixto':
@@ -904,6 +953,9 @@ class VentasAdmin(ModelAdmin):
                     producto_inicial = Producto.objects.filter(nombre__icontains='Mango').first()
 
                 fecha_cfdi = parsed.get('fecha_emision_cfdi') or timezone.now().date()
+                from .services.cfdi_import_service import (
+                    parsed_to_json, sugerir_pais,
+                )
                 initial = {
                     'folio_factura': parsed.get('folio_factura', ''),
                     'fecha_emision_cfdi': parsed.get('fecha_emision_cfdi'),
@@ -918,6 +970,8 @@ class VentasAdmin(ModelAdmin):
                     'PO': parsed.get('PO', ''),
                     'cliente': cliente_inicial,
                     'producto': producto_inicial,
+                    'pais_cliente': sugerir_pais(parsed),
+                    'parsed_json': parsed_to_json(parsed),
                     'tipo_registro': (
                         Ventas.TipoRegistro.SERVICIO
                         if es_servicio else Ventas.TipoRegistro.VENTA
@@ -936,6 +990,11 @@ class VentasAdmin(ModelAdmin):
                     parsed=parsed,
                     cliente_sugerido_nombre=cliente_sugerido_nombre,
                     es_servicio=es_servicio,
+                    cliente_no_encontrado=cliente_inicial is None,
+                    producto_no_encontrado=producto_inicial is None and not es_servicio,
+                    paises=Pais.objects.order_by('nombre'),
+                    puede_crear_cliente=request.user.has_perm('ventas.add_cliente'),
+                    puede_crear_producto=request.user.has_perm('catalogo.add_producto'),
                 )
                 return TemplateResponse(request, 'admin/ventas/importar_cfdi.html', context)
 
@@ -999,6 +1058,8 @@ class VentasAdmin(ModelAdmin):
                         'crear_cliente': bool(request.POST.get(f'crear_cliente_{i}')),
                         'crear_producto': bool(request.POST.get(f'crear_producto_{i}')),
                         'pais_id': request.POST.get(f'pais_cliente_{i}') or None,
+                        'sucursal_id': request.POST.get(f'sucursal_{i}') or None,
+                        'cuenta_id': request.POST.get(f'cuenta_{i}') or None,
                     }
                     filas.append(fila)
                 except Exception as exc:
@@ -1102,6 +1163,14 @@ class VentasAdmin(ModelAdmin):
                         Producto.objects.get(pk=fila['producto_id'], disponible=True)
                         if fila['producto_id'] else None
                     )
+                    sucursal = (
+                        Sucursal.objects.get(pk=fila['sucursal_id'])
+                        if fila['sucursal_id'] else None
+                    )
+                    cuenta = (
+                        Cuenta.objects.get(pk=fila['cuenta_id'])
+                        if fila['cuenta_id'] else None
+                    )
 
                     from django.core.files.base import File
                     uuid_lower = (parsed.get('uuid') or '').strip().lower()
@@ -1120,6 +1189,7 @@ class VentasAdmin(ModelAdmin):
 
                     _obj, doc, subtipo = importar_cfdi(
                         parsed, cliente=cliente, producto=producto,
+                        sucursal=sucursal, cuenta=cuenta,
                         archivo_pdf=archivo_pdf, archivo_xml=archivo_xml,
                     )
                     resultados.append({
@@ -1277,6 +1347,8 @@ class VentasAdmin(ModelAdmin):
                     clientes=Cliente.objects.filter(activo=True).order_by('nombre'),
                     paises=Pais.objects.order_by('nombre'),
                     productos=Producto.objects.filter(disponible=True).order_by('variedad'),
+                    sucursales=Sucursal.objects.all().order_by('nombre'),
+                    cuentas=Cuenta.objects.select_related('id_banco').all().order_by('numero_cuenta'),
                     puede_crear_cliente=request.user.has_perm('ventas.add_cliente'),
                     puede_crear_producto=request.user.has_perm('catalogo.add_producto'),
                     title='Confirmar importación masiva de CFDI',

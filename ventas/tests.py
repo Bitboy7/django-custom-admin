@@ -58,6 +58,7 @@ from ventas.admin import (
     _pdf_response,
     _validar_archivo_cfdi,
 )
+from ventas.forms import CFDIConfirmForm
 
 
 class VentasAdminDisplayTest(SimpleTestCase):
@@ -691,7 +692,9 @@ class CFDIImportServiceTest(ReporteCobranzaBaseTest):
         parsed = parse_cfdi(XML_INGRESO_SERVICIO.encode())
         productos_antes = Producto.objects.count()
 
-        venta, documento, subtipo = importar_cfdi(parsed, cliente=cliente)
+        venta, documento, subtipo = importar_cfdi(
+            parsed, cliente=cliente, sucursal=self.sucursal, cuenta=self.cuenta,
+        )
 
         self.assertEqual(subtipo, 'ingreso_servicio')
         self.assertEqual(documento.subtipo, 'ingreso_servicio')
@@ -852,6 +855,7 @@ class CFDIImportServiceTest(ReporteCobranzaBaseTest):
 
         venta, doc, subtipo = importar_cfdi(
             parsed, cliente=cliente, producto=self.producto,
+            sucursal=self.sucursal, cuenta=self.cuenta,
         )
 
         self.assertEqual(subtipo, 'venta_nacional')
@@ -864,10 +868,59 @@ class CFDIImportServiceTest(ReporteCobranzaBaseTest):
         self.assertEqual(cliente.residencia_fiscal, 'CAN')
         self.assertEqual(cliente.numero_registro_fiscal, '834911224')
 
+    def test_importar_venta_contado_sin_cuenta_muestra_error(self):
+        cliente = self._cliente('Cliente Contado sin cuenta')
+        parsed = parse_cfdi(XML_40_INGRESO.encode())
+        parsed['uuid'] = 'AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA'
+        parsed['folio_factura'] = 'B 2991 | AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA'
+
+        with self.assertRaisesMessage(
+            ValueError,
+            'Selecciona la cuenta bancaria para esta venta de contado.',
+        ):
+            importar_cfdi(
+                parsed, cliente=cliente, producto=self.producto,
+                sucursal=self.sucursal,
+            )
+
+    def test_importar_venta_credito_sin_cuenta_se_crea_con_cuenta_nula(self):
+        cliente = self._cliente('Cliente Credito sin cuenta')
+        parsed = parse_cfdi(XML_40_INGRESO.encode())
+        parsed['uuid'] = 'BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB'
+        parsed['folio_factura'] = 'B 2992 | BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB'
+        parsed['modalidad_pago'] = 'Credito'
+
+        venta, doc, subtipo = importar_cfdi(
+            parsed, cliente=cliente, producto=self.producto,
+            sucursal=self.sucursal,
+        )
+
+        self.assertEqual(subtipo, 'venta_nacional')
+        self.assertIsNone(venta.cuenta_id)
+        self.assertEqual(venta.modalidad_pago, Ventas.ModalidadPago.CREDITO)
+
+    def test_importar_venta_sin_sucursal_muestra_error(self):
+        cliente = self._cliente('Cliente sin sucursal')
+        parsed = parse_cfdi(XML_40_INGRESO.encode())
+        parsed['uuid'] = 'CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC'
+        parsed['folio_factura'] = 'B 2993 | CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC'
+
+        with self.assertRaisesMessage(
+            ValueError,
+            'Selecciona la sucursal para importar esta venta.',
+        ):
+            importar_cfdi(
+                parsed, cliente=cliente, producto=self.producto,
+                cuenta=self.cuenta,
+            )
+
     def test_uuid_duplicado_no_crea_una_segunda_venta(self):
         cliente = self._cliente('Cliente UUID Duplicado')
         parsed = parse_cfdi(XML_40_INGRESO.encode())
-        importar_cfdi(parsed, cliente=cliente, producto=self.producto)
+        importar_cfdi(
+            parsed, cliente=cliente, producto=self.producto,
+            sucursal=self.sucursal, cuenta=self.cuenta,
+        )
         ventas_antes = Ventas.objects.count()
 
         with self.assertRaisesMessage(ValueError, 'ya fue importado'):
@@ -949,6 +1002,8 @@ class CFDIImportServiceTest(ReporteCobranzaBaseTest):
                 parsed,
                 cliente=cliente,
                 producto=self.producto,
+                sucursal=self.sucursal,
+                cuenta=self.cuenta,
                 archivo_pdf=ContentFile(
                     b'%PDF-1.4 fake',
                     name='66666666-6666-6666-6666-666666666666.pdf',
@@ -996,3 +1051,49 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
 
         # 10000 producto + 1000 servicio + 500 - 200 - 3000 - 1000 = 7300
         self.assertAlmostEqual(cliente.saldo_conciliado(), 7300.00)
+
+
+# =============================================================================
+# Formulario de confirmación de importación individual
+# =============================================================================
+
+class CFDIConfirmFormTest(ReporteCobranzaBaseTest):
+
+    def _payload(self, **overrides):
+        data = {
+            'monto': '1000.00',
+            'moneda_venta': 'MXN',
+            'tipo_cambio': '1.0000',
+            'tipo_venta': 'Nacional',
+            'modalidad_pago': 'Contado',
+            'cantidad': '10.000',
+            'fecha_salida_manifiesto': '2026-01-01',
+            'fecha_deposito': '2026-01-01',
+            'sucursal_id': self.sucursal.pk,
+            'tipo_registro': 'VENTA',
+            'producto': self.producto.pk,
+            'cliente': self._cliente('Cliente Confirm Form').pk,
+        }
+        data.update(overrides)
+        return data
+
+    def test_requiere_cliente_o_crear_cliente(self):
+        form = CFDIConfirmForm(self._payload(cliente=None))
+        self.assertFalse(form.is_valid())
+        self.assertIn('cliente', form.errors)
+
+    def test_crear_cliente_requiere_pais(self):
+        form = CFDIConfirmForm(self._payload(
+            cliente=None,
+            crear_cliente='on',
+        ))
+        self.assertFalse(form.is_valid())
+        self.assertIn('pais_cliente', form.errors)
+
+    def test_acepta_crear_cliente_con_pais(self):
+        form = CFDIConfirmForm(self._payload(
+            cliente=None,
+            crear_cliente='on',
+            pais_cliente=self.pais.pk,
+        ))
+        self.assertTrue(form.is_valid(), form.errors)

@@ -251,6 +251,7 @@
                 <th scope="col">Monto</th>
                 <th scope="col">Cliente</th>
                 <th scope="col">Producto / concepto</th>
+                <th scope="col">Sucursal / Cuenta</th>
               </tr>
             </thead>
             <tbody>
@@ -258,7 +259,7 @@
                 <tr class="{% if p.error %}is-error{% elif p.duplicado %}is-duplicate{% endif %}" data-import-row>
                   {% if p.error %}
                     <td>—</td>
-                    <td colspan="6">
+                    <td colspan="7">
                       <div class="row-error">
                         <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
                         <span><strong>{{ p.nombre }}</strong><br>{{ p.error }}</span>
@@ -392,10 +393,49 @@
                         <span class="not-applicable"><i class="fas fa-minus" aria-hidden="true"></i> No aplica</span>
                       {% endif %}
                     </td>
+                    <td>
+                      {% if p.subtipo == 'venta_nacional' or p.subtipo == 'venta_exportacion' or p.subtipo == 'ingreso_servicio' %}
+                        <select name="sucursal_{{ forloop.counter0 }}" class="bulk-select"
+                                {% if p.duplicado %}disabled{% else %}required aria-required="true"{% endif %}>
+                          <option value="">— sucursal —</option>
+                          {% for sucursal in sucursales %}
+                            <option value="{{ sucursal.pk }}">{{ sucursal.nombre }}</option>
+                          {% endfor %}
+                        </select>
+                        {% if p.parsed.modalidad_pago == 'Credito' %}
+                          <span class="not-applicable"><i class="fas fa-minus" aria-hidden="true"></i> Cuenta: no aplica (crédito)</span>
+                        {% else %}
+                          <select name="cuenta_{{ forloop.counter0 }}" class="bulk-select"
+                                  {% if p.duplicado %}disabled{% else %}required aria-required="true"{% endif %}>
+                            <option value="">— cuenta —</option>
+                            {% for cuenta in cuentas %}
+                              <option value="{{ cuenta.pk }}">{{ cuenta.numero_cuenta }} · {{ cuenta.id_banco.nombre }}</option>
+                            {% endfor %}
+                          </select>
+                        {% endif %}
+                      {% elif p.subtipo == 'recibo_pago' %}
+                        <select name="cuenta_{{ forloop.counter0 }}" class="bulk-select" {% if p.duplicado %}disabled{% endif %}>
+                          <option value="">— cuenta —</option>
+                          {% for cuenta in cuentas %}
+                            <option value="{{ cuenta.pk }}">{{ cuenta.numero_cuenta }} · {{ cuenta.id_banco.nombre }}</option>
+                          {% endfor %}
+                        </select>
+                      {% elif p.subtipo == 'remanente_anticipo' and p.parsed.monto > 0 %}
+                        <select name="cuenta_{{ forloop.counter0 }}" class="bulk-select"
+                                {% if p.duplicado %}disabled{% else %}required aria-required="true"{% endif %}>
+                          <option value="">— cuenta —</option>
+                          {% for cuenta in cuentas %}
+                            <option value="{{ cuenta.pk }}">{{ cuenta.numero_cuenta }} · {{ cuenta.id_banco.nombre }}</option>
+                          {% endfor %}
+                        </select>
+                      {% else %}
+                        <span class="not-applicable"><i class="fas fa-minus" aria-hidden="true"></i> No aplica</span>
+                      {% endif %}
+                    </td>
                   {% endif %}
                 </tr>
               {% empty %}
-                <tr><td colspan="7">No se encontraron XML para procesar.</td></tr>
+                <tr><td colspan="8">No se encontraron XML para procesar.</td></tr>
               {% endfor %}
             </tbody>
           </table>
