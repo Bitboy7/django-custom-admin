@@ -92,6 +92,7 @@
     {% csrf_token %}
     <input type="hidden" name="_step" value="confirm">
     {{ form.tipo_registro }}
+    {{ form.parsed_json }}
 
     <div class="cfdi-confirm-layout">
       <div class="cfdi-confirm-primary">
@@ -164,20 +165,55 @@
       </div>
 
       <div class="cfdi-confirm-secondary">
-        <!-- Cliente y Producto -->
+        <!-- Cliente y concepto operativo -->
         <div class="cfdi-card">
-          <h2><i class="fas fa-user-tie"></i> Cliente y Producto</h2>
+          <h2><i class="fas fa-user-tie"></i> Cliente y concepto</h2>
           <div class="field-row field-row--two">
             <div class="field-group">
               <label>Cliente <span class="badge-xml">XML (sugerido)</span></label>
               {{ form.cliente }}
               {{ form.cliente.errors }}
+              {% if cliente_no_encontrado %}
+                {% if puede_crear_cliente %}
+                  <label class="create-toggle">
+                    {{ form.crear_cliente }}
+                    <span>Crear cliente con los datos del CFDI</span>
+                  </label>
+                  <div class="create-fields" id="pais-cliente-fields" hidden>
+                    <label>País del cliente</label>
+                    {{ form.pais_cliente }}
+                    {{ form.pais_cliente.errors }}
+                  </div>
+                {% else %}
+                  <p class="permission-note"><i class="fas fa-lock"></i> No tienes permiso para crear clientes.</p>
+                {% endif %}
+              {% endif %}
             </div>
-            <div class="field-group">
-              <label>Producto <span class="badge-xml">XML (sugerido)</span></label>
-              {{ form.producto }}
-              {{ form.producto.errors }}
-            </div>
+            {% if form.tipo_registro.value == 'SERVICIO' %}
+              <div class="field-group">
+                <label>Clasificación operativa <span class="badge-xml">XML</span></label>
+                <div class="warn-box" style="margin:0">
+                  <i class="fas fa-screwdriver-wrench"></i>
+                  <span><strong>Ingreso por servicio</strong><br>No se creará ni asignará un producto físico.</span>
+                </div>
+              </div>
+            {% else %}
+              <div class="field-group">
+                <label>Producto <span class="badge-xml">XML (sugerido)</span></label>
+                {{ form.producto }}
+                {{ form.producto.errors }}
+                {% if producto_no_encontrado %}
+                  {% if puede_crear_producto %}
+                    <label class="create-toggle">
+                      {{ form.crear_producto }}
+                      <span>Crear producto con los datos del CFDI</span>
+                    </label>
+                  {% else %}
+                    <p class="permission-note"><i class="fas fa-lock"></i> No tienes permiso para crear productos.</p>
+                  {% endif %}
+                {% endif %}
+              </div>
+            {% endif %}
           </div>
         </div>
 

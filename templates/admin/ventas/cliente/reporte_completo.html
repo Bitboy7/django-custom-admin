@@ -170,7 +170,7 @@
                     <tr>
                         <th>Fecha</th>
                         <th>Carga</th>
-                        <th>Producto</th>
+                        <th>Producto / Servicio</th>
                         <th>Monto</th>
                         <th>Modalidad</th>
                         <th>Estado</th>
@@ -183,7 +183,7 @@
                     <tr>
                         <td>{{ venta.fecha_salida_manifiesto|date:"d/m/Y" }}</td>
                         <td><strong>{{ venta.carga }}</strong></td>
-                        <td>{{ venta.producto.variedad }}</td>
+                        <td>{% if venta.producto %}{{ venta.producto.variedad }}{% else %}{{ venta.descripcion|default:"Servicio" }}{% endif %}</td>
                         <td>${{ venta.monto|floatformat:0|intcomma }}</td>
                         <td>
                             {% if venta.modalidad_pago == 'Contado' %}

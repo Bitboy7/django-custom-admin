@@ -4,7 +4,8 @@ Utilidades para manejo de filtros en reportes
 Este módulo proporciona funciones reutilizables para construir filtros
 de consulta a partir de parámetros de request en diferentes módulos.
 """
-from datetime import datetime
+import calendar
+from datetime import date, datetime
 from typing import Dict, List, Optional, Any
 
 
@@ -110,6 +111,61 @@ class FilterBuilder:
         return filters
     
     @staticmethod
+    def build_month_range_filters(
+        mes_inicio: Optional[Any] = None,
+        mes_fin: Optional[Any] = None
+    ) -> Dict[str, Any]:
+        """
+        Construye un filtro de rango de meses (`fecha__range`) a partir de
+        valores en formato `YYYY-MM`.
+
+        Permite consultas mensuales que cruzan años (p.ej. 2025-10 → 2026-09).
+
+        Args:
+            mes_inicio: Mes inicial en formato `YYYY-MM`.
+            mes_fin: Mes final en formato `YYYY-MM`.
+
+        Returns:
+            Diccionario con `fecha__range` si ambos valores son válidos,
+            o diccionario vacío en caso contrario.
+        """
+        def _parse_month(value):
+            if not value:
+                return None
+            try:
+                year_str, month_str = str(value).strip().split('-', 1)
+                year = int(year_str)
+                month = int(month_str)
+                if not (1 <= month <= 12):
+                    return None
+                return year, month
+            except (ValueError, TypeError):
+                return None
+
+        inicio = _parse_month(mes_inicio)
+        fin = _parse_month(mes_fin)
+
+        if not inicio or not fin:
+            return {}
+
+        start_year, start_month = inicio
+        end_year, end_month = fin
+
+        start_date = date(start_year, start_month, 1)
+        last_day = calendar.monthrange(end_year, end_month)[1]
+        end_date = date(end_year, end_month, last_day)
+
+        # Acotar al día actual si el mes final es el mes en curso
+        today = date.today()
+        if end_date > today:
+            end_date = today
+
+        if start_date > end_date:
+            return {}
+
+        return {'fecha__range': [start_date, end_date]}
+
+    @staticmethod
     def build_standard_filters(
         year: Any = None,
         month: Any = None,
@@ -122,6 +178,8 @@ class FilterBuilder:
         dia: Any = None,
         fecha_inicio: Any = None,
         fecha_fin: Any = None,
+        mes_inicio: Any = None,
+        mes_fin: Any = None,
         use_default_year: bool = True
     ) -> Dict[str, Any]:
         """
@@ -146,13 +204,36 @@ class FilterBuilder:
         """
         filters = {}
         
-        # Filtro de año
-        validated_year = FilterBuilder.validate_year(
-            year, 
-            default=datetime.now().year if use_default_year else None
+        # Rango de meses (multi-año): si está presente, sustituye a los
+        # filtros de año y mes para permitir consultas que cruzan años.
+        month_range_filters = FilterBuilder.build_month_range_filters(
+            mes_inicio, mes_fin
         )
-        if validated_year:
-            filters['fecha__year'] = validated_year
+        
+        if month_range_filters:
+            filters.update(month_range_filters)
+        else:
+            # Filtro de año
+            validated_year = FilterBuilder.validate_year(
+                year, 
+                default=datetime.now().year if use_default_year else None
+            )
+            if validated_year:
+                filters['fecha__year'] = validated_year
+            
+            # Filtros de mes
+            if selected_months and isinstance(selected_months, list) and len(selected_months) > 0:
+                # Validar cada mes de la lista
+                valid_months = [
+                    m for m in selected_months 
+                    if FilterBuilder.validate_month(m) is not None
+                ]
+                if valid_months:
+                    filters['fecha__month__in'] = valid_months
+            elif month:
+                validated_month = FilterBuilder.validate_month(month)
+                if validated_month:
+                    filters['fecha__month'] = validated_month
         
         # Filtro de cuenta bancaria
         validated_cuenta = FilterBuilder.validate_id(cuenta_id)
@@ -173,20 +254,6 @@ class FilterBuilder:
         validated_cliente = FilterBuilder.validate_id(cliente_id)
         if validated_cliente:
             filters['id_cliente_id'] = validated_cliente
-        
-        # Filtros de mes
-        if selected_months and isinstance(selected_months, list) and len(selected_months) > 0:
-            # Validar cada mes de la lista
-            valid_months = [
-                m for m in selected_months 
-                if FilterBuilder.validate_month(m) is not None
-            ]
-            if valid_months:
-                filters['fecha__month__in'] = valid_months
-        elif month:
-            validated_month = FilterBuilder.validate_month(month)
-            if validated_month:
-                filters['fecha__month'] = validated_month
         
         # Filtros de fecha específicos por período
         date_filters = FilterBuilder.build_date_filters(

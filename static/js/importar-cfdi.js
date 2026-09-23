@@ -282,9 +282,21 @@
     bindCuentaDropdown(wrapper, select);
   }
 
+  function toggleCreateClienteFields() {
+    var checkbox = document.getElementById("id_crear_cliente");
+    var fields = document.getElementById("pais-cliente-fields");
+
+    if (!checkbox || !fields) {
+      return;
+    }
+
+    fields.hidden = !checkbox.checked;
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     var modalidad = document.getElementById("id_modalidad_pago");
     var tipoVenta = document.getElementById("id_tipo_venta");
+    var crearCliente = document.getElementById("id_crear_cliente");
 
     if (modalidad) {
       modalidad.addEventListener("change", toggleTerminoCredito);
@@ -294,6 +306,11 @@
     if (tipoVenta) {
       tipoVenta.addEventListener("change", toggleExportFields);
       toggleExportFields();
+    }
+
+    if (crearCliente) {
+      crearCliente.addEventListener("change", toggleCreateClienteFields);
+      toggleCreateClienteFields();
     }
 
     initUploadDropzone();

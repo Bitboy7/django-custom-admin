@@ -2,7 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 from .models import Anticipo, Ventas, Cliente, PagoVenta, Agente, TerminoCredito
-from catalogo.models import Producto, Sucursal
+from catalogo.models import Producto, Sucursal, Pais
 from gastos.models import Cuenta
 
 
@@ -25,12 +25,7 @@ class VentasAdminForm(forms.ModelForm):
             'incoterm': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'FOB, CIF, EXW...'}),
             'moneda_venta': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'MXN'}),
             'tipo_cambio': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001', 'placeholder': '17.5000'}),
-            'folio_factura': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: B 1996'}),
-            'cfdi_cancelado': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'UUID del CFDI cancelado'}),
-            'nota_credito': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: NC-001'}),
-            'nota_cargo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: NCG-001'}),
             'numero_carga_comprador': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'PANORAMA LOAD 12345'}),
-            'ajuste': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -87,6 +82,16 @@ class VentasAdminForm(forms.ModelForm):
         cliente = cleaned_data.get('cliente')
         tipo_venta = cleaned_data.get('tipo_venta')
         anticipo = cleaned_data.get('anticipo')
+        tipo_registro = cleaned_data.get('tipo_registro')
+        producto = cleaned_data.get('producto')
+
+        if tipo_registro == Ventas.TipoRegistro.SERVICIO:
+            cleaned_data['producto'] = None
+        elif not producto:
+            self.add_error(
+                'producto',
+                'Selecciona un producto para una venta o maquila.',
+            )
 
         # Validar término de crédito
         if modalidad == Ventas.ModalidadPago.CREDITO and not termino:
@@ -211,13 +216,37 @@ class CFDIConfirmForm(forms.Form):
     # ── Client & product (pre-selected from match, editable) ──────────────
     cliente = forms.ModelChoiceField(
         queryset=Cliente.objects.filter(activo=True).order_by('nombre'),
+        required=False,
         label='Cliente',
         widget=forms.Select(attrs={'class': 'form-control'}),
     )
     producto = forms.ModelChoiceField(
         queryset=Producto.objects.filter(disponible=True).order_by('variedad'),
+        required=False,
         label='Producto',
         widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+
+    # ── Creación en línea de cliente / producto ────────────────────────────
+    crear_cliente = forms.BooleanField(
+        required=False,
+        label='Crear cliente con los datos del CFDI',
+        widget=forms.CheckboxInput(attrs={'class': 'create-toggle-checkbox'}),
+    )
+    pais_cliente = forms.ModelChoiceField(
+        queryset=Pais.objects.all().order_by('nombre'),
+        required=False,
+        label='País del cliente',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+    crear_producto = forms.BooleanField(
+        required=False,
+        label='Crear producto con los datos del CFDI',
+        widget=forms.CheckboxInput(attrs={'class': 'create-toggle-checkbox'}),
+    )
+    parsed_json = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput(),
     )
 
     # ── Manual-only fields ─────────────────────────────────────────────────
@@ -266,6 +295,26 @@ class CFDIConfirmForm(forms.Form):
     def clean(self):
         cleaned_data = super().clean()
         cleaned_data['tipo_registro'] = cleaned_data.get('tipo_registro') or Ventas.TipoRegistro.VENTA
+        if cleaned_data['tipo_registro'] == Ventas.TipoRegistro.SERVICIO:
+            cleaned_data['producto'] = None
+            cleaned_data['crear_producto'] = False
+        elif not cleaned_data.get('producto') and not cleaned_data.get('crear_producto'):
+            self.add_error(
+                'producto',
+                'Selecciona un producto o marca la opción para crearlo.',
+            )
+
+        if not cleaned_data.get('cliente') and not cleaned_data.get('crear_cliente'):
+            self.add_error(
+                'cliente',
+                'Selecciona un cliente o marca la opción para crearlo.',
+            )
+        if cleaned_data.get('crear_cliente') and not cleaned_data.get('pais_cliente'):
+            self.add_error(
+                'pais_cliente',
+                'Selecciona el país del cliente antes de crearlo.',
+            )
+
         if cleaned_data.get('tipo_venta') == Ventas.TipoVenta.NACIONAL:
             cleaned_data['agente_id'] = None
             cleaned_data['PO'] = ''

@@ -438,13 +438,10 @@ VENTAS_DATA += [
         cliente=PANORAMA, sucursal_id=TAPACHULA, cuenta=CTA_SNTD_TAP,
         tipo_venta='Exportación', modalidad_pago='Contado',
         tipo_registro='VENTA',
-        # ── Nuevos campos fiscales ──
-        fecha_emision_cfdi=date(2025, 4, 3),
-        folio_factura='B 1996',
         numero_carga_comprador='LOAD-PANO-2025-041',
     ),
 
-    # Agromod — Ataulfo SLL — CONTADO — con folio_factura + ajuste negativo (descuento)
+    # Agromod — Ataulfo SLL — CONTADO
     dict(
         fecha_salida_manifiesto=date(2025, 4,  7),
         fecha_deposito=date(2025, 4,  9),
@@ -457,14 +454,9 @@ VENTAS_DATA += [
         cliente=AGROMOD, sucursal_id=SLL, cuenta=CTA_MONEX,
         tipo_venta='Exportación', modalidad_pago='Contado',
         tipo_registro='VENTA',
-        # ── Nuevos campos fiscales ──
-        fecha_emision_cfdi=date(2025, 4, 8),
-        folio_factura='B 1997',
-        nota_credito='NC-001-2025',
-        ajuste=Decimal('-520.00'),   # descuento por merma de calidad
     ),
 
-    # GM Produce — Tommy Nayarit — CRÉDITO Net 60 — PENDIENTE — con CFDI cancelado + nota cargo
+    # GM Produce — Tommy Nayarit — CRÉDITO Net 60 — PENDIENTE
     dict(
         fecha_salida_manifiesto=date(2025, 4, 11),
         fecha_deposito=date(2025, 4, 14),
@@ -480,15 +472,10 @@ VENTAS_DATA += [
         monto_pagado=Money(Decimal('0.00'), 'USD'),
         estado_cobranza='Pendiente',
         tipo_registro='VENTA',
-        # ── Nuevos campos fiscales ──
-        fecha_emision_cfdi=date(2025, 4, 13),
-        folio_factura='B 2001',
-        cfdi_cancelado='B 1999',
-        nota_cargo='NCG-002-2025',
         numero_carga_comprador='LOAD-GM-2025-044',
     ),
 
-    # Marabella — Haden Nayarit — CRÉDITO Net 60 — PARCIAL — folio + ajuste positivo (flete extra)
+    # Marabella — Haden Nayarit — CRÉDITO Net 60 — PARCIAL
     dict(
         fecha_salida_manifiesto=date(2025, 4, 16),
         fecha_deposito=date(2025, 4, 18),
@@ -504,14 +491,10 @@ VENTAS_DATA += [
         monto_pagado=Money(Decimal('3000.00'), 'USD'),
         estado_cobranza='Parcial',
         tipo_registro='VENTA',
-        # ── Nuevos campos fiscales ──
-        fecha_emision_cfdi=date(2025, 4, 17),
-        folio_factura='B 2005',
         numero_carga_comprador='LOAD-MAR-2025-046',
-        ajuste=Decimal('250.00'),    # cargo por flete adicional
     ),
 
-    # Frutas 5 hermanos — Keitt nacional — CONTADO — folio con nota de crédito
+    # Frutas 5 hermanos — Keitt nacional — CONTADO
     dict(
         fecha_salida_manifiesto=date(2025, 4, 22),
         fecha_deposito=date(2025, 4, 23),
@@ -524,10 +507,6 @@ VENTAS_DATA += [
         cliente=FRUTAS5, sucursal_id=TAPACHULA, cuenta=CTA_SNTD_TAP,
         tipo_venta='Nacional', modalidad_pago='Contado',
         tipo_registro='VENTA',
-        # ── Nuevos campos fiscales ──
-        fecha_emision_cfdi=date(2025, 4, 23),
-        folio_factura='A 0452',
-        nota_credito='NC-002-2025',
     ),
 ]
 
@@ -538,41 +517,33 @@ ANTICIPOS_DATA = [
     dict(
         fecha=date(2025, 1, 5),
         cliente=PANORAMA,
-        sucursal=TAPACHULA,
         cuenta=CTA_SNTD_TAP,
         monto=Money(Decimal('5000.00'), 'USD'),
         descripcion='Anticipo temporada Manila Ene-25',
-        folio_factura_anticipo='B 1980',
         estado_anticipo='Pendiente',
     ),
     dict(
         fecha=date(2025, 2,  1),
         cliente=AGROMOD,
-        sucursal=NAYARIT,
         cuenta=CTA_SNTD_NAY,
         monto=Money(Decimal('7000.00'), 'USD'),
         descripcion='Anticipo Ataulfo peak season Feb-25',
-        folio_factura_anticipo='B 1985',
         estado_anticipo='Aplicado',
     ),
     dict(
         fecha=date(2025, 3, 10),
         cliente=GM_PRODUCE,
-        sucursal=ESCUINAPA,
         cuenta=CTA_SNTD_NAY,
         monto=Money(Decimal('3500.00'), 'USD'),
         descripcion='Anticipo Tommy/Haden Mar-25',
-        folio_factura_anticipo='B 1992',
         estado_anticipo='Pendiente',
     ),
     dict(
         fecha=date(2025, 4, 5),
         cliente=MARABELLA,
-        sucursal=NAYARIT_HAD,
         cuenta=CTA_SNTD_HAD,
         monto=Money(Decimal('50000.00'), 'MXN'),
         descripcion='Anticipo Haden Nayarit Abr-25 MXN',
-        folio_factura_anticipo='A 0440',
         estado_anticipo='Pendiente',
     ),
 ]
@@ -641,7 +612,7 @@ def insertar_anticipos():
         ).exists()
 
         if existe:
-            print(f"  ⏭  Anticipo {d['folio_factura_anticipo']} {d['cliente'].nombre[:20]:<20}  →  ya existe, omitido")
+            print(f"  ⏭  Anticipo {d['cliente'].nombre[:20]:<20}  →  ya existe, omitido")
             omitidos += 1
             continue
 
@@ -649,7 +620,7 @@ def insertar_anticipos():
         anticipo.save()
 
         monto_str = f"{float(anticipo.monto.amount):>10,.2f} {anticipo.monto.currency}"
-        print(f"  ✅ Anticipo  {d['folio_factura_anticipo']:<10} {d['cliente'].nombre[:22]:<22}  {monto_str}")
+        print(f"  ✅ Anticipo  {d['cliente'].nombre[:22]:<22}  {monto_str}")
         creados += 1
 
     print()

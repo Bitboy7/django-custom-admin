@@ -109,7 +109,7 @@ Este sistema proporciona una plataforma completa para la gestión administrativa
 ## ⚙️ Configuración
 
 1. **Configurar variables de entorno**:
-   - Copia `.env.example` a `.env`
+   - Copia `.env-example` a `.env`
    - Actualiza las variables según tu entorno:
 
    ```env
@@ -127,6 +127,20 @@ Este sistema proporciona una plataforma completa para la gestión administrativa
    # IA (Opcional)
    GOOGLE_API_KEY=tu_api_key_gemini
    ```
+
+   Cuando `DEBUG=False`, también debes configurar Cloudflare R2. El bucket se
+   mantiene privado y las URLs generadas por Django son firmadas:
+
+   ```env
+   R2_ACCOUNT_ID=tu_account_id_de_cloudflare
+   R2_ACCESS_KEY_ID=tu_access_key_de_r2
+   R2_SECRET_ACCESS_KEY=tu_secret_key_de_r2
+   R2_BUCKET_NAME=agricola-media
+   R2_SIGNED_URL_EXPIRE=3600
+   ```
+
+   En localhost usa `DEBUG=True`; R2 se ignora y los archivos se guardan en
+   `media/`.
 
 2. **Configurar base de datos**:
 

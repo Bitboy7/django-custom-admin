@@ -41,7 +41,19 @@ DB_ROOT_PASSWORD=root_password_seguro
 SECURE_SSL_REDIRECT=True
 SESSION_COOKIE_SECURE=True
 CSRF_COOKIE_SECURE=True
+
+# Cloudflare R2 (archivos subidos)
+R2_ACCOUNT_ID=tu_account_id_de_cloudflare
+R2_ACCESS_KEY_ID=tu_access_key_de_r2
+R2_SECRET_ACCESS_KEY=tu_secret_key_de_r2
+R2_BUCKET_NAME=agricola-media
+R2_SIGNED_URL_EXPIRE=3600
 ```
+
+El token de R2 debe tener permisos de lectura y escritura sobre el bucket. Los
+PDF, XML, comprobantes e imágenes se almacenan como objetos privados; Django
+genera URLs firmadas temporales. Para un endpoint jurisdiccional de R2, define
+`R2_ENDPOINT_URL` y este reemplazará al endpoint construido con `R2_ACCOUNT_ID`.
 
 ### 2. Configurar Dominio y DNS
 

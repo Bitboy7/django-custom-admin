@@ -55,31 +55,6 @@ python manage.py collectstatic --noinput --clear || echo "⚠️ Error al recopi
 echo "Compilando mensajes de traducción..."
 python manage.py compilemessages || echo "⚠️ Error al compilar traducciones, continuando..."
 
-# Crear directorios de media necesarios
-echo "Creando directorios de media... 📁 "
-python manage.py shell -c "
-import os
-from django.conf import settings
-try:
-    media_dirs = [
-        'avatars', 'site',
-        'bancos', 'bancos/logos',
-        'catalogo', 'catalogo/productos',
-        'clientes',
-        'paises', 'paises/banderas',
-        'productores', 'productores/imagenes',
-        'capital_inversiones', 'capital_inversiones/documentos',
-        'comprobantes_pagos', 'estados_cuenta',
-        'temp_documents', 'temp_invoices'
-    ]
-    for dir_name in media_dirs:
-        dir_path = os.path.join(settings.MEDIA_ROOT, dir_name)
-        os.makedirs(dir_path, exist_ok=True)
-        print(f'Directorio creado: {dir_path}')
-except Exception as e:
-    print(f'Error al crear directorios: {e}')
-" || echo "Error al crear directorios de media"
-
 echo "Configuración completada"
 
 # El OCR se ejecuta en el mismo contenedor por defecto, por lo que la imagen se

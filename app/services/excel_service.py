@@ -179,7 +179,7 @@ class ExcelReportService:
         """Crea la hoja de ventas con datos y formateo"""
         headers = [
             "ID", "Fecha Salida", "Agente", "Fecha Depósito", "Carga", "PO",
-            "Producto", "Cantidad", "Monto", "Cliente", "Sucursal", "Cuenta"
+            "Producto / Servicio", "Cantidad", "Monto", "Cliente", "Sucursal", "Cuenta"
         ]
         ws.append(headers)
         
@@ -196,7 +196,7 @@ class ExcelReportService:
                 self.remove_timezone(venta.fecha_deposito),
                 venta.carga,
                 venta.PO,
-                venta.producto.nombre,
+                venta.producto.nombre if venta.producto_id else (venta.descripcion or 'Servicio'),
                 venta.cantidad,
                 self.convert_money_to_float(venta.monto),
                 venta.cliente.nombre if hasattr(venta.cliente, 'nombre') else str(venta.cliente),

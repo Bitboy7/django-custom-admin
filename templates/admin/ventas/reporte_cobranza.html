@@ -184,7 +184,7 @@
         Reporte global de cobranza
       </h1>
       <p style="color:#586f7c; font-size:0.875rem; margin:4px 0 0;">
-        Ventas x cobrar &bull; Maquila x cobrar &bull; Obligaciones fiscales
+        Ventas x cobrar &bull; Maquila y servicios x cobrar &bull; Obligaciones fiscales
       </p>
     </div>
     <div class="rc-export-buttons" style="display:flex; gap:0.5rem;">
@@ -239,7 +239,7 @@
           <tr>
             <th class="rc-header-section" colspan="{{ sucursales|length|add:3 }}">
               TEMPORADA {{ fecha_inicio_str }} — {{ fecha_fin_str }}<br>
-              MAQUILA Y VENTAS X COBRAR
+              MAQUILA, SERVICIOS Y VENTAS X COBRAR
             </th>
             {% if total_anticipos > 0 %}
             <th class="rc-header-section" style="background-color:rgba(184,219,217,.3);">
@@ -380,7 +380,7 @@
   </div>
 
   <!-- ============================================================
-       SECCIÓN 2 — MAQUILA X COBRAR
+       SECCIÓN 2 — MAQUILA Y SERVICIOS X COBRAR
        ============================================================ -->
   <div class="rc-card">
     <div class="rc-scroll">
@@ -389,7 +389,7 @@
           <tr>
             <th class="rc-header-section" colspan="{{ sucursales|length|add:2 }}">
               TEMPORADA {{ fecha_inicio_str }} — {{ fecha_fin_str }}<br>
-              MAQUILA X COBRAR
+              MAQUILA Y SERVICIOS X COBRAR
             </th>
           </tr>
           <tr>
@@ -418,14 +418,14 @@
           {% empty %}
           <tr>
             <td colspan="{{ sucursales|length|add:2 }}" style="text-align:center; color:#b8dbd9; padding:1rem; font-style:italic;">
-              Sin maquila pendiente en el período seleccionado.
+              Sin maquila ni servicios pendientes en el período seleccionado.
             </td>
           </tr>
           {% endfor %}
         </tbody>
         <tfoot>
           <tr class="rc-total">
-            <td>TOTAL MAQUILA X COBRAR</td>
+            <td>TOTAL MAQUILA Y SERVICIOS X COBRAR</td>
             <td class="rc-num">$</td>
             {% for suc in sucursales %}
               {% with monto=totales_maquila.por_sucursal|get_item:suc.id %}

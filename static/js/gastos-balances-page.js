@@ -141,6 +141,12 @@
       } else {
         $("#filtro-diario-opciones").slideUp(300);
       }
+
+      if ($(this).val() === "mensual") {
+        $("#filtro-mensual-opciones").slideDown(300);
+      } else {
+        $("#filtro-mensual-opciones").slideUp(300);
+      }
     });
 
     $('input[name="tipo_fecha"]').on("change", function () {
@@ -160,6 +166,54 @@
       $("#filtro-diario-opciones").show();
     } else {
       $("#filtro-diario-opciones").hide();
+    }
+
+    if ($("#periodo").val() === "mensual") {
+      $("#filtro-mensual-opciones").show();
+    } else {
+      $("#filtro-mensual-opciones").hide();
+    }
+  }
+
+  function clearMonthSelection() {
+    var $months = $("#months");
+    if ($months.length) {
+      $months.val("");
+    }
+    if (window.jQuery) {
+      jQuery(".month-checkbox").prop("checked", false);
+      var $monthAll = jQuery("#month-all");
+      if ($monthAll.length) {
+        $monthAll.prop("checked", true);
+      }
+    }
+    var monthText = document.getElementById("month-selector-text");
+    if (monthText) {
+      monthText.textContent = "Todos los meses";
+    }
+  }
+
+  function initMonthlyFilters() {
+    if (!window.jQuery) return;
+
+    var $ = window.jQuery;
+
+    $('input[name="tipo_mes"]').on("change", function () {
+      if ($(this).val() === "rango") {
+        $("#campos-rango-meses").slideDown(300);
+        clearMonthSelection();
+      } else {
+        $("#campos-rango-meses").slideUp(300);
+        $("#mes_inicio").val("");
+        $("#mes_fin").val("");
+      }
+    });
+
+    var $rangeRadios = $('input[name="tipo_mes"]');
+    if ($rangeRadios.filter(":checked").val() === "rango") {
+      $("#campos-rango-meses").show();
+    } else {
+      $("#campos-rango-meses").hide();
     }
   }
 
@@ -252,8 +306,29 @@
     });
   }
 
+  function initClearFilters() {
+    var clearBtn = document.getElementById("clear-filters");
+    if (!clearBtn) return;
+
+    clearBtn.addEventListener("click", function () {
+      try {
+        localStorage.removeItem("balances_filters");
+      } catch (e) {}
+
+      var monthsInput = document.getElementById("months");
+      if (monthsInput) {
+        monthsInput.value = "";
+      }
+
+      var ajaxUrl = getAjaxUrl();
+      window.location.href = ajaxUrl || window.location.pathname;
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initDailyFilters();
+    initMonthlyFilters();
+    initClearFilters();
     initToastDismiss();
     bindChartsDataUpdates();
     initLegacyAjaxFallback();

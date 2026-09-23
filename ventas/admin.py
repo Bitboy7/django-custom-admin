@@ -1,14 +1,16 @@
+import re
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 from django.contrib.admin.filters import SimpleListFilter
 from django.contrib.admin.views.main import ChangeList
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.utils import unquote
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from .models import (
     Cliente, Agente, Ventas, Anticipo, TerminoCredito, MercadoDestino, PagoVenta,
     SaldoCliente, AntigüedadSaldo, EstadoCuentaCliente, ConfiguracionCuentasPorCobrar,
-    ObligacionFiscal
+    ObligacionFiscal, DocumentoCFDI
 )
 from .forms import (
     VentasAdminForm,
@@ -27,7 +29,9 @@ from import_export.forms import ExportForm, ImportForm
 from app.widgets import MoneyWidget
 from django.utils.html import format_html
 from app.media_utils import safe_file_url
-from django.http import HttpResponse, JsonResponse
+from django.http import (
+    FileResponse, Http404, HttpResponse, JsonResponse,
+)
 from django.shortcuts import render, redirect
 from django.urls import path, reverse
 from django.utils.safestring import mark_safe
@@ -35,6 +39,7 @@ from django.db import models
 from django.db.models import Sum, Count, Avg, Q, F, Case, When, Value
 from django.db.models.functions import Extract, TruncMonth, TruncDay, Coalesce
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from datetime import datetime, timedelta, date
 from decimal import Decimal
 from djmoney.money import Money
@@ -44,6 +49,100 @@ from django.template.response import TemplateResponse
 from .services.metrics_service import CuentasPorCobrarMetrics
 from .services.cache_service import CuentasPorCobrarCache
 from django.utils.html import format_html
+
+
+CFDI_UPLOAD_LIMITS = {
+    'xml': (1 * 1024 * 1024, '1 MB'),
+    'pdf': (1 * 1024 * 1024, '1 MB'),
+    'zip': (5 * 1024 * 1024, '5 MB'),
+}
+
+
+def _validar_archivo_cfdi(archivo):
+    """Devuelve un mensaje de error si el archivo no cumple tipo o tamaño."""
+    extension = (
+        archivo.name.lower().rsplit('.', 1)[-1]
+        if '.' in archivo.name else ''
+    )
+    limite = CFDI_UPLOAD_LIMITS.get(extension)
+    if limite is None:
+        return f'"{archivo.name}" no es .xml, .zip ni .pdf.'
+
+    limite_bytes, limite_etiqueta = limite
+    if archivo.size > limite_bytes:
+        return f'"{archivo.name}" supera {limite_etiqueta}.'
+    return None
+
+
+def _extraer_archivos(archivos):
+    """
+    Extrae una lista de (nombre, bytes, ext) a partir de archivos subidos,
+    soportando .xml y .pdf individuales y .zip que contenga ambos tipos.
+    """
+    import io
+    import zipfile
+
+    extraidos = []
+    for f in archivos:
+        nombre = f.name.lower()
+        if nombre.endswith('.zip'):
+            with zipfile.ZipFile(io.BytesIO(f.read())) as zf:
+                for info in zf.infolist():
+                    if info.is_dir():
+                        continue
+                    ext = info.filename.lower().rsplit('.', 1)[-1] if '.' in info.filename else ''
+                    if ext in ('xml', 'pdf'):
+                        extraidos.append((info.filename, zf.read(info), ext))
+        else:
+            ext = nombre.rsplit('.', 1)[-1] if '.' in nombre else ''
+            if ext in ('xml', 'pdf'):
+                extraidos.append((f.name, f.read(), ext))
+    return extraidos
+
+
+def _pdf_response(file_field):
+    """Serve an authorized PDF through Django from local storage or R2."""
+    try:
+        pdf_file = file_field.open('rb')
+    except (FileNotFoundError, OSError):
+        raise Http404(_('No fue posible encontrar el archivo PDF.'))
+
+    filename = file_field.name.rsplit('/', 1)[-1]
+    response = FileResponse(
+        pdf_file,
+        content_type='application/pdf',
+        as_attachment=False,
+        filename=filename,
+    )
+
+    # XFrameOptionsMiddleware no reemplaza cabeceras ya definidas. La vista se
+    # puede incrustar únicamente dentro del mismo sistema administrativo.
+    response['X-Frame-Options'] = 'SAMEORIGIN'
+    response['Content-Security-Policy'] = "frame-ancestors 'self'"
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
+def _pdf_preview_button(pdf_url, title, identifier):
+    aria_label = _('Visualizar PDF %(identifier)s') % {
+        'identifier': identifier,
+    }
+    return format_html(
+        '<button type="button" class="cfdi-pdf-trigger js-cfdi-pdf-preview" '
+        'data-pdf-url="{}" data-pdf-title="{}" aria-label="{}">'
+        '<i class="fas fa-file-pdf" aria-hidden="true"></i>'
+        '<span>{}</span></button>',
+        pdf_url,
+        title,
+        aria_label,
+        _('Ver PDF'),
+    )
+
+
+_UUID_RE = re.compile(
+    r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+)
+
 
 # =============================================================================
 # FILTROS PERSONALIZADOS AVANZADOS
@@ -200,7 +299,12 @@ class ClienteResource(resources.ModelResource):
     
     class Meta:
         model = Cliente
-        fields = ('id', 'nombre', 'telefono', 'correo', 'direccion', 'pais', 'fecha_registro')
+        fields = (
+            'id', 'nombre', 'rfc', 'residencia_fiscal',
+            'numero_registro_fiscal', 'codigo_postal_fiscal',
+            'regimen_fiscal', 'telefono', 'correo', 'direccion', 'pais',
+            'fecha_registro',
+        )
     
     def dehydrate_pais(self, cliente):
         return cliente.pais.nombre
@@ -220,17 +324,23 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
     export_form_class = ExportForm
     
     list_display = (
-        'nombre', 'get_pais', 'tipo_cliente', 'limite_credito', 
-        'calificacion_credito', 'get_credito_disponible', 'activo'
+        'nombre', 'rfc', 'get_pais', 'tipo_cliente', 'limite_credito',
+        'calificacion_credito', 'get_credito_disponible', 'get_saldo_conciliado', 'activo'
     )
     
     list_filter = ('tipo_cliente', 'calificacion_credito', 'mercado_destino', 'activo', 'pais', RangoCreditoFilter)
-    search_fields = ('nombre', 'correo')
+    search_fields = ('nombre', 'rfc', 'numero_registro_fiscal', 'correo')
     list_per_page = 20
     
     fieldsets = (
         ('Información Básica', {
             'fields': ('nombre', 'telefono', 'correo', 'direccion', 'imagen')
+        }),
+        ('Información Fiscal', {
+            'fields': (
+                'rfc', 'residencia_fiscal', 'numero_registro_fiscal',
+                'codigo_postal_fiscal', 'regimen_fiscal',
+            )
         }),
         ('Ubicación y Mercado', {
             'fields': ('pais', 'mercado_destino')
@@ -264,7 +374,16 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
             color, f"{float(disponible):,.2f}"
         )
     get_credito_disponible.short_description = 'Crédito Disponible'
-    
+
+    def get_saldo_conciliado(self, obj):
+        saldo = obj.saldo_conciliado()
+        color = 'red' if saldo > 0 else 'green'
+        return format_html(
+            '<span style="color: {}">${}</span>',
+            color, f"{saldo:,.2f}"
+        )
+    get_saldo_conciliado.short_description = 'Saldo CFDI (conciliado)'
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
@@ -273,8 +392,25 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
                 self.admin_site.admin_view(self.reporte_cliente_completo),
                 name='%s_%s_reporte_completo' % (self.model._meta.app_label, self.model._meta.model_name),
             ),
+            path(
+                'conciliacion/',
+                self.admin_site.admin_view(self.conciliacion_view),
+                name='%s_%s_conciliacion' % (self.model._meta.app_label, self.model._meta.model_name),
+            ),
         ]
         return custom_urls + urls
+
+    def conciliacion_view(self, request):
+        """Vista de conciliación de CFDI por cliente."""
+        from .services.conciliacion_service import conciliacion_global
+        filas = conciliacion_global()
+        context = dict(
+            self.admin_site.each_context(request),
+            filas=filas,
+            title='Conciliación de CFDI por cliente',
+            opts=self.model._meta,
+        )
+        return TemplateResponse(request, 'admin/ventas/conciliacion.html', context)
     
     def reporte_cliente_completo(self, request, client_id):
         """Genera un reporte completo del cliente con todas sus transacciones."""
@@ -311,6 +447,16 @@ class PagoVentaInline(admin.TabularInline):
     extra = 0
     readonly_fields = ('fecha_registro',)
     fields = ('fecha_pago', 'monto_pago', 'cuenta_destino', 'metodo_pago', 'referencia', 'notas')
+
+# Inline para DocumentoCFDI - debe definirse antes de VentasAdmin
+class DocumentoCFDIInline(admin.TabularInline):
+    model = DocumentoCFDI
+    fk_name = 'venta'
+    extra = 0
+    fields = ('subtipo', 'folio', 'uuid', 'fecha_emision', 'monto', 'estado')
+    readonly_fields = ('subtipo', 'folio', 'uuid', 'fecha_emision', 'monto', 'estado')
+    can_delete = False
+    show_change_link = True
 
 @admin.register(Agente)
 class AgenteAdmin(ModelAdmin):
@@ -350,14 +496,14 @@ class VentasResource(resources.ModelResource):
 
     class Meta:
         model = Ventas
-        fields = ('id', 'fecha_salida_manifiesto', 'agente', 'fecha_deposito', 'carga', 'PO', 'producto', 'cantidad', 'monto', 'descripcion', 'cliente', 'fecha_registro', 'sucursal','cuenta')
+        fields = ('id', 'fecha_salida_manifiesto', 'agente', 'fecha_deposito', 'carga', 'PO', 'producto', 'cantidad', 'monto', 'descripcion', 'tipo_registro', 'cliente', 'fecha_registro', 'sucursal','cuenta')
         import_id_fields = ('id',)
         
     def dehydrate_agente(self, ventas):
         return ventas.agente_id.nombre if ventas.agente_id else ''
     
     def dehydrate_producto(self, ventas):
-        return ventas.producto.variedad
+        return ventas.producto.variedad if ventas.producto_id else ''
     
     def dehydrate_cliente(self, ventas):
         return ventas.cliente.nombre
@@ -379,6 +525,7 @@ class VentasResource(resources.ModelResource):
 class VentasAdmin(ModelAdmin):
     form = VentasAdminForm
     change_list_template = 'admin/ventas/ventas/change_list.html'
+    list_select_related = ('cliente', 'cliente__pais', 'mercado_destino')
 
     class Media:
         js = ('js/ventas_form_logic.js',)
@@ -395,12 +542,16 @@ class VentasAdmin(ModelAdmin):
         'cliente__calificacion_credito', 'cliente__tipo_cliente'
     )
     
-    search_fields = ('carga', 'cliente__nombre', 'producto__variedad', 'PO', 'pedimento')
+    search_fields = (
+        'carga', 'cliente__nombre', 'producto__variedad', 'descripcion',
+        'PO', 'pedimento',
+    )
+    search_help_text = 'Buscar por carga, cliente, producto/servicio, PO o pedimento'
     
     list_per_page = 30
     date_hierarchy = 'fecha_salida_manifiesto'
     
-    inlines = [PagoVentaInline]
+    inlines = [PagoVentaInline, DocumentoCFDIInline]
     
     actions = [
         'generar_reporte_cliente', 
@@ -416,11 +567,7 @@ class VentasAdmin(ModelAdmin):
             'fields': ('fecha_salida_manifiesto', 'agente_id', 'fecha_deposito',
                        'carga', 'PO', 'pedimento')
         }),
-        ('Documentación Fiscal', {
-            'fields': ('fecha_emision_cfdi', 'folio_factura', 'cfdi_cancelado',
-                       'nota_credito', 'nota_cargo'),
-        }),
-        ('Producto y Cliente', {
+        ('Concepto y Cliente', {
             'fields': ('producto', 'cantidad', 'monto', 'cliente',
                        'sucursal_id', 'descripcion')
         }),
@@ -434,11 +581,11 @@ class VentasAdmin(ModelAdmin):
                        'moneda_venta', 'tipo_cambio', 'numero_carga_comprador'),
         }),
         ('Contabilidad', {
-            'fields': ('cuenta', 'anticipo', 'ajuste'),
+            'fields': ('cuenta', 'anticipo'),
         }),
         ('Tipo de Registro', {
             'fields': ('tipo_registro',),
-            'description': 'Indica si este registro es una Venta normal o una Maquila.'
+            'description': 'Indica si el ingreso corresponde a una venta, maquila o servicio.'
         }),
     )
     
@@ -524,6 +671,11 @@ class VentasAdmin(ModelAdmin):
                 self.admin_site.admin_view(self.importar_desde_cfdi),
                 name='ventas_importar_cfdi',
             ),
+            path(
+                'importar-cfdi-masivo/',
+                self.admin_site.admin_view(self.importar_cfdi_masivo),
+                name='ventas_importar_cfdi_masivo',
+            ),
         ]
         return custom_urls + urls
 
@@ -575,7 +727,7 @@ class VentasAdmin(ModelAdmin):
         POST step=upload  → parse XML, show confirmation form (step 2)
         POST step=confirm → validate and create Ventas, redirect to change view
         """
-        from .cfdi_parser import parse_cfdi
+        from .cfdi_parser import classify_subtipo, parse_cfdi
         from djmoney.money import Money
 
         opts = self.model._meta
@@ -587,9 +739,40 @@ class VentasAdmin(ModelAdmin):
             if form.is_valid():
                 cd = form.cleaned_data
                 try:
+                    from .services.cfdi_import_service import (
+                        crear_cliente_desde_cfdi,
+                        crear_producto_desde_cfdi,
+                        parsed_from_json,
+                    )
+
+                    cliente = cd.get('cliente')
+                    producto = cd.get('producto')
+
+                    parsed = None
+                    if cd.get('parsed_json'):
+                        parsed = parsed_from_json(cd['parsed_json'])
+
+                    if cd.get('crear_cliente'):
+                        if not request.user.has_perm('ventas.add_cliente'):
+                            raise PermissionError('No tienes permiso para crear clientes.')
+                        if parsed is None:
+                            raise ValueError(
+                                'No se pudo recuperar los datos del CFDI para crear el cliente.'
+                            )
+                        cliente, _creado = crear_cliente_desde_cfdi(
+                            parsed, pais=cd.get('pais_cliente'),
+                        )
+
+                    if cd.get('crear_producto'):
+                        if not request.user.has_perm('catalogo.add_producto'):
+                            raise PermissionError('No tienes permiso para crear productos.')
+                        if parsed is None:
+                            raise ValueError(
+                                'No se pudo recuperar los datos del CFDI para crear el producto.'
+                            )
+                        producto, _creado = crear_producto_desde_cfdi(parsed)
+
                     venta = Ventas(
-                        folio_factura=cd['folio_factura'],
-                        fecha_emision_cfdi=cd['fecha_emision_cfdi'],
                         monto=Money(cd['monto'], cd['moneda_venta']),
                         moneda_venta=cd['moneda_venta'],
                         tipo_cambio=cd['tipo_cambio'],
@@ -599,8 +782,8 @@ class VentasAdmin(ModelAdmin):
                         cantidad=cd['cantidad'],
                         descripcion=cd['descripcion'],
                         PO=cd['PO'],
-                        cliente=cd['cliente'],
-                        producto=cd['producto'],
+                        cliente=cliente,
+                        producto=producto,
                         fecha_salida_manifiesto=cd['fecha_salida_manifiesto'],
                         fecha_deposito=cd['fecha_deposito'],
                         agente_id=cd.get('agente_id'),
@@ -613,10 +796,30 @@ class VentasAdmin(ModelAdmin):
                     )
                     venta.full_clean()
                     venta.save()
+
+                    if cd['tipo_registro'] == Ventas.TipoRegistro.SERVICIO:
+                        subtipo = DocumentoCFDI.SubtipoDocumento.INGRESO_SERVICIO
+                    else:
+                        subtipo = (
+                            DocumentoCFDI.SubtipoDocumento.VENTA_EXPORTACION
+                            if cd['tipo_venta'] == Ventas.TipoVenta.EXPORTACION
+                            else DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL
+                        )
+                    DocumentoCFDI.objects.create(
+                        cliente=cliente,
+                        tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+                        subtipo=subtipo,
+                        folio=cd['folio_factura'] or None,
+                        fecha_emision=cd['fecha_emision_cfdi'],
+                        monto=Money(cd['monto'], cd['moneda_venta']),
+                        moneda=cd['moneda_venta'],
+                        tipo_cambio=cd['tipo_cambio'],
+                        venta=venta,
+                    )
+
                     messages.success(
                         request,
-                        f'Venta importada correctamente desde CFDI — '
-                        f'folio {venta.folio_factura or venta.pk}.'
+                        f'Venta importada correctamente desde CFDI — venta #{venta.pk}.'
                     )
                     change_url = reverse(
                         'admin:%s_%s_change' % (opts.app_label, opts.model_name),
@@ -654,6 +857,58 @@ class VentasAdmin(ModelAdmin):
                     )
                     return TemplateResponse(request, 'admin/ventas/importar_cfdi.html', context)
 
+                uuid = (parsed.get('uuid') or '').strip()
+                if uuid and DocumentoCFDI.objects.filter(uuid__iexact=uuid).exists():
+                    messages.error(
+                        request,
+                        f'El CFDI con UUID {uuid} ya fue importado anteriormente.',
+                    )
+                    return TemplateResponse(
+                        request,
+                        'admin/ventas/importar_cfdi.html',
+                        dict(
+                            self.admin_site.each_context(request),
+                            form=CFDIUploadForm(), step='upload',
+                            title='Importar venta desde CFDI (XML)', opts=opts,
+                        ),
+                    )
+
+                subtipo = classify_subtipo(parsed)
+                if subtipo == 'ingreso_mixto':
+                    messages.error(
+                        request,
+                        'El CFDI mezcla productos y servicios. No se puede '
+                        'convertir automáticamente en una sola operación.',
+                    )
+                    return TemplateResponse(
+                        request,
+                        'admin/ventas/importar_cfdi.html',
+                        dict(
+                            self.admin_site.each_context(request),
+                            form=CFDIUploadForm(), step='upload',
+                            title='Importar venta desde CFDI (XML)', opts=opts,
+                        ),
+                    )
+                if subtipo not in (
+                    'venta_nacional', 'venta_exportacion', 'ingreso_servicio',
+                ):
+                    messages.error(
+                        request,
+                        'Este documento no es una factura de venta o servicio. '
+                        'Utiliza la importación masiva para procesarlo.',
+                    )
+                    return TemplateResponse(
+                        request,
+                        'admin/ventas/importar_cfdi.html',
+                        dict(
+                            self.admin_site.each_context(request),
+                            form=CFDIUploadForm(), step='upload',
+                            title='Importar venta desde CFDI (XML)', opts=opts,
+                        ),
+                    )
+
+                es_servicio = subtipo == 'ingreso_servicio'
+
                 # Try to find best client match against receptor nombre
                 receptor_nombre = parsed.get('_receptor_nombre', '')
                 cliente_inicial = None
@@ -682,22 +937,25 @@ class VentasAdmin(ModelAdmin):
                 fraccion = parsed.get('_fraccion_arancelaria', '')
                 producto_inicial = None
                 # 1) Match any Producto.variedad found inside the CFDI description text
-                if descripcion_cfdi:
+                if descripcion_cfdi and not es_servicio:
                     for p in Producto.objects.filter(disponible=True).order_by('variedad'):
                         if p.variedad and p.variedad.strip().lower() in descripcion_cfdi.lower():
                             producto_inicial = p
                             break
                 # 2) Fallback: match by NoIdentificacion field
-                if not producto_inicial and no_id:
+                if not es_servicio and not producto_inicial and no_id:
                     producto_inicial = (
                         Producto.objects.filter(variedad__icontains=no_id).first()
                         or Producto.objects.filter(descripcion__icontains=no_id).first()
                     )
                 # 3) Fallback: match by nombre (e.g. "Mango") when fraccion arancelaria present
-                if not producto_inicial and fraccion:
+                if not es_servicio and not producto_inicial and fraccion:
                     producto_inicial = Producto.objects.filter(nombre__icontains='Mango').first()
 
                 fecha_cfdi = parsed.get('fecha_emision_cfdi') or timezone.now().date()
+                from .services.cfdi_import_service import (
+                    parsed_to_json, sugerir_pais,
+                )
                 initial = {
                     'folio_factura': parsed.get('folio_factura', ''),
                     'fecha_emision_cfdi': parsed.get('fecha_emision_cfdi'),
@@ -712,6 +970,12 @@ class VentasAdmin(ModelAdmin):
                     'PO': parsed.get('PO', ''),
                     'cliente': cliente_inicial,
                     'producto': producto_inicial,
+                    'pais_cliente': sugerir_pais(parsed),
+                    'parsed_json': parsed_to_json(parsed),
+                    'tipo_registro': (
+                        Ventas.TipoRegistro.SERVICIO
+                        if es_servicio else Ventas.TipoRegistro.VENTA
+                    ),
                     'fecha_salida_manifiesto': fecha_cfdi,
                     'fecha_deposito': fecha_cfdi,
                 }
@@ -725,6 +989,12 @@ class VentasAdmin(ModelAdmin):
                     opts=opts,
                     parsed=parsed,
                     cliente_sugerido_nombre=cliente_sugerido_nombre,
+                    es_servicio=es_servicio,
+                    cliente_no_encontrado=cliente_inicial is None,
+                    producto_no_encontrado=producto_inicial is None and not es_servicio,
+                    paises=Pais.objects.order_by('nombre'),
+                    puede_crear_cliente=request.user.has_perm('ventas.add_cliente'),
+                    puede_crear_producto=request.user.has_perm('catalogo.add_producto'),
                 )
                 return TemplateResponse(request, 'admin/ventas/importar_cfdi.html', context)
 
@@ -739,9 +1009,406 @@ class VentasAdmin(ModelAdmin):
         )
         return TemplateResponse(request, 'admin/ventas/importar_cfdi.html', context)
 
+    def importar_cfdi_masivo(self, request):
+        """
+        Importación masiva de CFDI (ventas, notas, anticipos y recibos de pago)
+        a partir de múltiples XML o un ZIP descargado de Blikon.
+        """
+        from .cfdi_parser import parse_cfdi, classify_subtipo
+        from .services.cfdi_import_service import (
+            crear_cliente_desde_cfdi, crear_producto_desde_cfdi, importar_cfdi,
+            match_cliente, match_producto, parsed_to_json, parsed_from_json,
+            sugerir_pais, sugerir_producto_desde_cfdi,
+        )
+
+        opts = self.model._meta
+
+        # ── Step 2 → confirm & import ─────────────────────────────────────
+        if request.method == 'POST' and request.POST.get('_step') == 'confirm':
+            total = 0
+            try:
+                total = int(request.POST.get('total', '0'))
+            except (TypeError, ValueError):
+                total = 0
+
+            upload_token = request.POST.get('upload_token') or ''
+            archivos_map = (
+                request.session.pop(f'cfdi_archivos_{upload_token}', None)
+                if upload_token else None
+            ) or {}
+            archivos_xml = archivos_map.get('xml', {})
+            archivos_pdf = archivos_map.get('pdf', {})
+            tempdir = archivos_map.get('dir')
+
+            filas = []
+            errores_preparacion = {}
+            for i in range(total):
+                if not request.POST.get(f'include_{i}'):
+                    continue
+                raw = request.POST.get(f'row_{i}', '')
+                if not raw:
+                    continue
+                try:
+                    parsed = parsed_from_json(raw)
+                    fila = {
+                        'i': i,
+                        'parsed': parsed,
+                        'cliente_id': request.POST.get(f'cliente_{i}') or None,
+                        'producto_id': request.POST.get(f'producto_{i}') or None,
+                        'crear_cliente': bool(request.POST.get(f'crear_cliente_{i}')),
+                        'crear_producto': bool(request.POST.get(f'crear_producto_{i}')),
+                        'pais_id': request.POST.get(f'pais_cliente_{i}') or None,
+                        'sucursal_id': request.POST.get(f'sucursal_{i}') or None,
+                        'cuenta_id': request.POST.get(f'cuenta_{i}') or None,
+                    }
+                    filas.append(fila)
+                except Exception as exc:
+                    errores_preparacion[i] = str(exc)
+
+            prioridad_cfdi = {
+                'venta_nacional': 0,
+                'venta_exportacion': 0,
+                'ingreso_servicio': 0,
+                'ingreso_mixto': 0,
+                'remanente_anticipo': 1,
+                'nota_cargo': 2,
+                'nota_credito': 2,
+                'recibo_pago': 3,
+            }
+            filas.sort(key=lambda fila: prioridad_cfdi.get(
+                classify_subtipo(fila['parsed']), 99
+            ))
+
+            # Crea primero los receptores elegidos para que una sola alta se
+            # aplique a todos los CFDI con la misma identidad fiscal del lote.
+            clientes_creados = set()
+            for fila in filas:
+                if fila['i'] in errores_preparacion:
+                    continue
+                if fila['cliente_id'] or not fila['crear_cliente']:
+                    continue
+                try:
+                    if not request.user.has_perm('ventas.add_cliente'):
+                        raise PermissionError('No tienes permiso para crear clientes.')
+                    pais = Pais.objects.get(pk=fila['pais_id']) if fila['pais_id'] else None
+                    cliente, creado = crear_cliente_desde_cfdi(
+                        fila['parsed'], pais=pais,
+                    )
+                    fila['cliente_id'] = cliente.pk
+                    if creado:
+                        clientes_creados.add(cliente.pk)
+                except Exception as exc:
+                    errores_preparacion[fila['i']] = str(exc)
+
+            # Crea primero los productos solicitados. Después vuelve a ejecutar
+            # el matching para reutilizarlos en los demás CFDI del mismo lote.
+            productos_creados = set()
+            for fila in filas:
+                if fila['i'] in errores_preparacion:
+                    continue
+                subtipo = classify_subtipo(fila['parsed'])
+                if (
+                    subtipo not in ('venta_nacional', 'venta_exportacion')
+                    or fila['producto_id']
+                    or not fila['crear_producto']
+                ):
+                    continue
+                try:
+                    if not request.user.has_perm('catalogo.add_producto'):
+                        raise PermissionError('No tienes permiso para crear productos.')
+                    producto, creado = crear_producto_desde_cfdi(fila['parsed'])
+                    fila['producto_id'] = producto.pk
+                    if creado:
+                        productos_creados.add(producto.pk)
+                except Exception as exc:
+                    errores_preparacion[fila['i']] = str(exc)
+
+            for fila in filas:
+                if fila['i'] in errores_preparacion:
+                    continue
+                subtipo = classify_subtipo(fila['parsed'])
+                if (
+                    subtipo in ('venta_nacional', 'venta_exportacion')
+                    and not fila['producto_id']
+                ):
+                    producto = match_producto(fila['parsed'])
+                    if producto:
+                        fila['producto_id'] = producto.pk
+                    else:
+                        errores_preparacion[fila['i']] = (
+                            'Selecciona un producto o créalo con los datos del CFDI.'
+                        )
+
+            resultados = []
+            errores = 0
+            for fila in filas:
+                i = fila['i']
+                parsed = fila['parsed']
+                subtipo = classify_subtipo(parsed)
+                if i in errores_preparacion:
+                    errores += 1
+                    resultados.append({
+                        'ok': False,
+                        'folio': parsed.get('folio_factura') or parsed.get('uuid'),
+                        'subtipo': subtipo,
+                        'error': errores_preparacion[i],
+                    })
+                    continue
+                try:
+                    cliente = (
+                        Cliente.objects.get(pk=fila['cliente_id'], activo=True)
+                        if fila['cliente_id'] else None
+                    )
+                    producto = (
+                        Producto.objects.get(pk=fila['producto_id'], disponible=True)
+                        if fila['producto_id'] else None
+                    )
+                    sucursal = (
+                        Sucursal.objects.get(pk=fila['sucursal_id'])
+                        if fila['sucursal_id'] else None
+                    )
+                    cuenta = (
+                        Cuenta.objects.get(pk=fila['cuenta_id'])
+                        if fila['cuenta_id'] else None
+                    )
+
+                    from django.core.files.base import File
+                    uuid_lower = (parsed.get('uuid') or '').strip().lower()
+                    archivo_xml = None
+                    archivo_pdf = None
+                    if uuid_lower and archivos_xml.get(uuid_lower):
+                        archivo_xml = File(
+                            open(archivos_xml[uuid_lower], 'rb'),
+                            name=f'{uuid_lower}.xml',
+                        )
+                    if uuid_lower and archivos_pdf.get(uuid_lower):
+                        archivo_pdf = File(
+                            open(archivos_pdf[uuid_lower], 'rb'),
+                            name=f'{uuid_lower}.pdf',
+                        )
+
+                    _obj, doc, subtipo = importar_cfdi(
+                        parsed, cliente=cliente, producto=producto,
+                        sucursal=sucursal, cuenta=cuenta,
+                        archivo_pdf=archivo_pdf, archivo_xml=archivo_xml,
+                    )
+                    resultados.append({
+                        'ok': True,
+                        'folio': parsed.get('folio_factura') or parsed.get('uuid') or doc.pk,
+                        'subtipo': subtipo,
+                        'doc_id': doc.pk,
+                        'cliente_creado': doc.cliente_id in clientes_creados,
+                        'producto_creado': (
+                            getattr(_obj, 'producto_id', None) in productos_creados
+                        ),
+                    })
+                except Exception as exc:
+                    errores += 1
+                    resultados.append({
+                        'ok': False,
+                        'folio': parsed.get('folio_factura') or parsed.get('uuid'),
+                        'subtipo': subtipo,
+                        'error': str(exc),
+                    })
+
+            if tempdir:
+                import shutil
+                shutil.rmtree(tempdir, ignore_errors=True)
+
+
+            context = dict(
+                self.admin_site.each_context(request),
+                step='done',
+                resultados=resultados,
+                errores=errores,
+                importados=sum(1 for resultado in resultados if resultado.get('ok')),
+                clientes_creados=len(clientes_creados),
+                productos_creados=len(productos_creados),
+                title='Resultado de importación masiva',
+                opts=opts,
+            )
+            return TemplateResponse(request, 'admin/ventas/importar_cfdi_masivo.html', context)
+
+        # ── Step 1 → parse XMLs ───────────────────────────────────────────
+        if request.method == 'POST' and request.POST.get('_step') == 'upload':
+            import os
+            import tempfile
+            import uuid as uuid_mod
+
+            archivos = request.FILES.getlist('archivos')
+            errores_upload = []
+            archivos_validos = []
+            for f in archivos:
+                error = _validar_archivo_cfdi(f)
+                if error:
+                    errores_upload.append(error)
+                else:
+                    archivos_validos.append(f)
+
+            if not archivos_validos and not errores_upload:
+                errores_upload.append('Debes seleccionar al menos un archivo.')
+
+            if not errores_upload and archivos_validos:
+                extraidos = _extraer_archivos(archivos_validos)
+                xmls = [(n, b) for n, b, e in extraidos if e == 'xml']
+                pdfs = [(n, b) for n, b, e in extraidos if e == 'pdf']
+
+                # UUID de cada PDF, extraído del nombre del archivo (Blikon).
+                pdfs_por_uuid = {}
+                for nombre, contenido in pdfs:
+                    m = _UUID_RE.search(nombre)
+                    if m:
+                        pdfs_por_uuid[m.group(0).lower()] = contenido
+
+                tempdir = tempfile.mkdtemp(prefix='cfdi_import_')
+                archivos_map = {'xml': {}, 'pdf': {}, 'dir': tempdir}
+
+                previews = []
+                uuids_lote = set()
+                for nombre, xml_bytes in xmls:
+                    item = {'nombre': nombre}
+                    try:
+                        parsed = parse_cfdi(xml_bytes)
+                        subtipo = classify_subtipo(parsed)
+                        uuid = (parsed.get('uuid') or '').strip()
+                        uuid_lower = uuid.lower()
+                        duplicado = None
+                        if uuid and uuid in uuids_lote:
+                            duplicado = 'El UUID está repetido dentro de este lote.'
+                        elif uuid and DocumentoCFDI.objects.filter(uuid__iexact=uuid).exists():
+                            duplicado = 'Este UUID ya fue importado anteriormente.'
+                        if uuid:
+                            uuids_lote.add(uuid)
+
+                        tiene_pdf = False
+                        if uuid_lower:
+                            xml_path = os.path.join(tempdir, f'{uuid_lower}.xml')
+                            with open(xml_path, 'wb') as fh:
+                                fh.write(xml_bytes)
+                            archivos_map['xml'][uuid_lower] = xml_path
+
+                            if uuid_lower in pdfs_por_uuid:
+                                pdf_path = os.path.join(tempdir, f'{uuid_lower}.pdf')
+                                with open(pdf_path, 'wb') as fh:
+                                    fh.write(pdfs_por_uuid[uuid_lower])
+                                archivos_map['pdf'][uuid_lower] = pdf_path
+                                tiene_pdf = True
+
+                        item.update({
+                            'parsed': parsed,
+                            'subtipo': subtipo,
+                            'subtipo_label': DocumentoCFDI.SubtipoDocumento(subtipo).label,
+                            'cliente': match_cliente(parsed),
+                            'pais_sugerido': sugerir_pais(parsed),
+                            'producto': match_producto(parsed),
+                            'producto_sugerido': sugerir_producto_desde_cfdi(parsed),
+                            'receptor_nombre': parsed.get('_receptor_nombre') or '',
+                            'receptor_rfc': parsed.get('_receptor_rfc') or '',
+                            'receptor_residencia': (
+                                parsed.get('_receptor_residencia_fiscal') or ''
+                            ),
+                            'receptor_registro_fiscal': (
+                                parsed.get('_receptor_num_reg_id_trib') or ''
+                            ),
+                            'json': parsed_to_json(parsed),
+                            'duplicado': duplicado,
+                            'tiene_pdf': tiene_pdf,
+                        })
+                        if subtipo == 'ingreso_mixto':
+                            item['error'] = (
+                                'El CFDI mezcla productos y servicios. Requiere '
+                                'revisión manual y no se importará como una sola venta.'
+                            )
+                    except Exception as exc:
+                        item['error'] = str(exc)
+                    previews.append(item)
+
+                token = uuid_mod.uuid4().hex
+                request.session[f'cfdi_archivos_{token}'] = archivos_map
+
+                context = dict(
+                    self.admin_site.each_context(request),
+                    step='confirm',
+                    upload_token=token,
+                    previews=previews,
+                    total_archivos=len(previews),
+                    total_listos=sum(
+                        1 for item in previews
+                        if not item.get('error') and not item.get('duplicado')
+                    ),
+                    total_sin_cliente=sum(
+                        1 for item in previews
+                        if not item.get('error') and not item.get('duplicado')
+                        and not item.get('cliente')
+                    ),
+                    total_duplicados=sum(
+                        1 for item in previews if item.get('duplicado')
+                    ),
+                    clientes=Cliente.objects.filter(activo=True).order_by('nombre'),
+                    paises=Pais.objects.order_by('nombre'),
+                    productos=Producto.objects.filter(disponible=True).order_by('variedad'),
+                    sucursales=Sucursal.objects.all().order_by('nombre'),
+                    cuentas=Cuenta.objects.select_related('id_banco').all().order_by('numero_cuenta'),
+                    puede_crear_cliente=request.user.has_perm('ventas.add_cliente'),
+                    puede_crear_producto=request.user.has_perm('catalogo.add_producto'),
+                    title='Confirmar importación masiva de CFDI',
+                    opts=opts,
+                )
+                return TemplateResponse(request, 'admin/ventas/importar_cfdi_masivo.html', context)
+
+            context = dict(
+                self.admin_site.each_context(request),
+                errores_upload=errores_upload,
+                step='upload',
+                title='Importar CFDI masivo',
+                opts=opts,
+            )
+            return TemplateResponse(request, 'admin/ventas/importar_cfdi_masivo.html', context)
+
+        # ── Step 0 → upload form ──────────────────────────────────────────
+        context = dict(
+            self.admin_site.each_context(request),
+            step='upload',
+            title='Importar CFDI masivo',
+            opts=opts,
+        )
+        return TemplateResponse(request, 'admin/ventas/importar_cfdi_masivo.html', context)
+
     def get_cliente_info(self, obj):
         """Información del cliente con indicador de riesgo"""
         cliente = obj.cliente
+        pais = getattr(cliente, 'pais', None)
+        pais_nombre = getattr(pais, 'nombre', '')
+        bandera = getattr(pais, 'bandera', None)
+        bandera_url = ''
+        if bandera and getattr(bandera, 'name', ''):
+            try:
+                bandera_url = bandera.url
+            except (AttributeError, ValueError):
+                bandera_url = ''
+
+        if bandera_url:
+            pais_html = format_html(
+                '<span class="sales-country sales-country--flag" '
+                'aria-label="País: {}" title="{}">'
+                '<img class="sales-country__flag" src="{}" alt="" '
+                'width="18" height="12" loading="lazy">'
+                '</span>',
+                pais_nombre,
+                pais_nombre,
+                bandera_url,
+            )
+        elif pais_nombre:
+            pais_html = format_html(
+                '<span class="sales-country sales-country--fallback">'
+                '<i class="fas fa-map-marker-alt" aria-hidden="true"></i>'
+                '<span>{}</span>'
+                '</span>',
+                pais_nombre,
+            )
+        else:
+            pais_html = mark_safe('<span class="sales-muted">—</span>')
+
         risk_class = {
             'A+': 'sales-risk--a-plus',
             'A': 'sales-risk--a',
@@ -750,13 +1417,16 @@ class VentasAdmin(ModelAdmin):
         }.get(cliente.calificacion_credito, '')
         
         return format_html(
-            '<strong>{}</strong><br>'
-            '<small class="sales-risk {}">📊 {}</small><br>'
-            '<small class="sales-muted">🌍 {}</small>',
+            '<strong class="sales-client-name">{}</strong><br>'
+            '<span class="sales-client-meta sales-risk {}">'
+            '<i class="fas fa-chart-line" aria-hidden="true"></i>'
+            '<span>{}</span>'
+            '</span><br>'
+            '{}',
             cliente.nombre,
             risk_class,
             cliente.get_calificacion_credito_display(),
-            cliente.pais.nombre
+            pais_html,
         )
     get_cliente_info.short_description = 'Cliente & Riesgo'
     
@@ -776,11 +1446,19 @@ class VentasAdmin(ModelAdmin):
     def get_saldo_pendiente(self, obj):
         """Saldo pendiente con formato visual"""
         if obj.modalidad_pago == 'Contado':
-            return mark_safe('<span class="sales-badge sales-badge--paid">✓ Pagado</span>')
+            return mark_safe(
+                '<span class="sales-badge sales-badge--paid">'
+                '<i class="fas fa-check" aria-hidden="true"></i>Pagado'
+                '</span>'
+            )
         
         saldo = obj.saldo_pendiente()
         if saldo <= 0:
-            return mark_safe('<span class="sales-badge sales-badge--paid">✓ $0.00</span>')
+            return mark_safe(
+                '<span class="sales-badge sales-badge--paid">'
+                '<i class="fas fa-check" aria-hidden="true"></i>$0.00'
+                '</span>'
+            )
         
         balance_class = 'sales-balance--overdue' if obj.esta_vencida() else 'sales-balance--open'
         return format_html(
@@ -991,13 +1669,13 @@ class VentasAdmin(ModelAdmin):
             ("Fecha",          lambda v: v.fecha_salida_manifiesto,                     13, "DD/MM/YYYY"),
             ("Cliente",        lambda v: v.cliente.nombre,                              28, "@"),
             ("Carga",          lambda v: v.carga or "",                                 16, "@"),
-            ("Producto",       lambda v: v.producto.variedad if hasattr(v.producto, 'variedad') else str(v.producto), 22, "@"),
+            ("Producto / Servicio", lambda v: v.producto.variedad if v.producto_id else (v.descripcion or "Servicio"), 28, "@"),
             ("Sucursal",       lambda v: v.sucursal_id.nombre,                          18, "@"),
             ("Tipo",           lambda v: v.tipo_venta,                                  14, "@"),
             ("Modalidad",      lambda v: v.modalidad_pago,                              14, "@"),
             ("Monto",          lambda v: float(v.monto.amount),                         16, MONEY),
             ("Monto Pagado",   lambda v: float(v.monto_pagado.amount),                  16, MONEY),
-            ("Saldo Pendiente",lambda v: round(float(v.monto.amount) - float(v.monto_pagado.amount), 2), 16, MONEY),
+            ("Saldo Pendiente",lambda v: round(v.saldo_por_cobrar(), 2), 16, MONEY),
             ("Estado",         lambda v: v.estado_cobranza,                             14, "@"),
             ("Vencimiento",    lambda v: v.fecha_vencimiento,                           13, "DD/MM/YYYY"),
         ]
@@ -1052,15 +1730,15 @@ class VentasAdmin(ModelAdmin):
         else:
             total_monto     = sum(float(v.monto.amount) for v in data)
             total_pagado    = sum(float(v.monto_pagado.amount) for v in data)
-            total_pendiente = round(total_monto - total_pagado, 2)
+            total_pendiente = round(sum(v.saldo_por_cobrar() for v in data), 2)
 
             credito  = [v for v in data if v.modalidad_pago == 'Credito']
             vencidas = [v for v in credito if v.fecha_vencimiento and v.fecha_vencimiento < hoy
                         and v.estado_cobranza in ('Pendiente', 'Parcial')]
             pendientes = [v for v in credito if v.estado_cobranza in ('Pendiente', 'Parcial')]
 
-            monto_vencido   = sum(float(v.monto.amount) - float(v.monto_pagado.amount) for v in vencidas)
-            monto_pendiente_cxc = sum(float(v.monto.amount) - float(v.monto_pagado.amount) for v in pendientes)
+            monto_vencido   = sum(v.saldo_por_cobrar() for v in vencidas)
+            monto_pendiente_cxc = sum(v.saldo_por_cobrar() for v in pendientes)
 
             by_estado   = defaultdict(lambda: {'count': 0, 'monto': 0.0, 'pendiente': 0.0})
             by_cliente  = defaultdict(lambda: {'count': 0, 'monto': 0.0, 'pendiente': 0.0})
@@ -1068,7 +1746,7 @@ class VentasAdmin(ModelAdmin):
 
             for v in data:
                 amt  = float(v.monto.amount)
-                pend = round(amt - float(v.monto_pagado.amount), 2)
+                pend = round(v.saldo_por_cobrar(), 2)
                 est  = v.estado_cobranza
                 cli  = v.cliente.nombre
 
@@ -1416,7 +2094,7 @@ class VentasAdmin(ModelAdmin):
         row = 1
         ws_ventas.merge_cells(f'A{row}:' + get_column_letter(len(sucursales) + 3) + f'{row}')
         cell = ws_ventas[f'A{row}']
-        cell.value = f'TEMPORADA {fecha_inicio} — {fecha_fin}\nMAQUILA Y VENTAS X COBRAR'
+        cell.value = f'TEMPORADA {fecha_inicio} — {fecha_fin}\nMAQUILA, SERVICIOS Y VENTAS X COBRAR'
         cell.fill = header_fill
         cell.font = header_font
         cell.alignment = center_align
@@ -1540,14 +2218,14 @@ class VentasAdmin(ModelAdmin):
         for i in range(3, len(sucursales) + 4):
             ws_ventas.column_dimensions[get_column_letter(i)].width = 18
 
-        # ============== SHEET 2: MAQUILA X COBRAR ==============
-        ws_maquila = wb.create_sheet('Maquila x Cobrar', 1)
+        # ============== SHEET 2: MAQUILA Y SERVICIOS X COBRAR ==============
+        ws_maquila = wb.create_sheet('Maquila y servicios', 1)
         
         # Header
         row = 1
         ws_maquila.merge_cells(f'A{row}:' + get_column_letter(len(sucursales) + 2) + f'{row}')
         cell = ws_maquila[f'A{row}']
-        cell.value = f'TEMPORADA {fecha_inicio} — {fecha_fin}\nMAQUILA X COBRAR'
+        cell.value = f'TEMPORADA {fecha_inicio} — {fecha_fin}\nMAQUILA Y SERVICIOS X COBRAR'
         cell.fill = header_fill
         cell.font = header_font
         cell.alignment = center_align
@@ -1599,7 +2277,7 @@ class VentasAdmin(ModelAdmin):
 
         # Totales
         row += 1
-        ws_maquila[f'A{row}'] = 'TOTAL MAQUILA X COBRAR'
+        ws_maquila[f'A{row}'] = 'TOTAL MAQUILA Y SERVICIOS X COBRAR'
         ws_maquila[f'B{row}'] = '$'
         col_idx = 3
         for suc in sucursales:
@@ -1773,7 +2451,7 @@ class VentasAdmin(ModelAdmin):
         elements.append(Paragraph(f'REPORTE GLOBAL DE COBRANZA', title_style))
         elements.append(Paragraph(f'Período: {fecha_inicio} — {fecha_fin}', section_style))
         elements.append(Spacer(1, 0.2*inch))
-        elements.append(Paragraph('MAQUILA Y VENTAS X COBRAR', section_style))
+        elements.append(Paragraph('MAQUILA, SERVICIOS Y VENTAS X COBRAR', section_style))
         
         # Tabla ventas
         ventas_data = [['CLIENTE', 'MON.'] + [s.nombre.upper() for s in sucursales] + ['TOTAL']]
@@ -1827,8 +2505,8 @@ class VentasAdmin(ModelAdmin):
         elements.append(ventas_table)
         elements.append(PageBreak())
 
-        # ============== SECCIÓN 2: MAQUILA X COBRAR ==============
-        elements.append(Paragraph(f'MAQUILA X COBRAR', section_style))
+        # ============== SECCIÓN 2: MAQUILA Y SERVICIOS X COBRAR ==============
+        elements.append(Paragraph('MAQUILA Y SERVICIOS X COBRAR', section_style))
         elements.append(Spacer(1, 0.1*inch))
         
         maquila_data = [['CLIENTE', ''] + [s.nombre.upper() for s in sucursales] + ['TOTAL']]
@@ -1841,7 +2519,7 @@ class VentasAdmin(ModelAdmin):
             row.append(f"${fila['total']:,.2f}")
             maquila_data.append(row)
 
-        total_maq = ['TOTAL MAQUILA', '$'] + [''] * len(sucursales) + [f"${datos['totales_maquila']['total']:,.2f}"]
+        total_maq = ['TOTAL MAQUILA/SERVICIOS', '$'] + [''] * len(sucursales) + [f"${datos['totales_maquila']['total']:,.2f}"]
         maquila_data.append(total_maq)
         tc_maq = [f'TIPO CAMBIO {hoy}', f"{datos['tipo_cambio']:.4f}"] + [''] * len(sucursales) + ['']
         maquila_data.append(tc_maq)
@@ -2068,15 +2746,59 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
     Implementa RF01, RF02, RF03: validaciones de nivel financiero.
     """
     resource_class = PagoVentaResource
-    list_display = ('fecha_pago', 'get_venta_info', 'monto_pago', 'metodo_pago', 'get_saldo_pendiente', 'get_comprobante', 'referencia', 'fecha_registro')
+    change_list_template = 'admin/ventas/pagoventa/change_list.html'
+    list_display = ('fecha_pago', 'get_venta_info', 'monto_pago', 'metodo_pago', 'get_saldo_pendiente', 'folio_rep', 'get_comprobante', 'referencia', 'fecha_registro')
+    list_select_related = ('venta', 'venta__cliente', 'documento_cfdi')
     list_filter = ('fecha_pago', 'metodo_pago', 'venta__cliente', 'venta__estado_cobranza')
-    search_fields = ('venta__carga', 'venta__cliente__nombre', 'referencia', 'notas')
+    search_fields = ('venta__carga', 'venta__cliente__nombre', 'referencia', 'notas', 'folio_rep', 'uuid_rep')
     date_hierarchy = 'fecha_pago'
     readonly_fields = ('fecha_registro', 'get_saldo_venta', 'preview_comprobante')
     
     # Usar formulario personalizado con validaciones bancarias
     from .forms_banking import PagoVentaForm
     form = PagoVentaForm
+
+    def get_urls(self):
+        custom_urls = [
+            path(
+                '<path:object_id>/pdf/',
+                self.admin_site.admin_view(self.pdf_view),
+                name='ventas_pagoventa_pdf',
+            ),
+        ]
+        return custom_urls + super().get_urls()
+
+    @staticmethod
+    def _linked_document(obj):
+        try:
+            return obj.documento_cfdi
+        except DocumentoCFDI.DoesNotExist:
+            return None
+
+    def _pdf_source(self, obj):
+        documento = self._linked_document(obj)
+        if documento and documento.archivo_pdf:
+            return documento.archivo_pdf, documento
+
+        comprobante = obj.comprobante_pago
+        if (
+            comprobante
+            and comprobante.name.lower().rsplit('.', 1)[-1] == 'pdf'
+        ):
+            return comprobante, None
+        return None, documento
+
+    def pdf_view(self, request, object_id):
+        pago = self.get_object(request, unquote(object_id))
+        if pago is None:
+            raise Http404(_('No se encontró el pago solicitado.'))
+        if not self.has_view_permission(request, pago):
+            raise PermissionDenied
+
+        pdf_file, _documento = self._pdf_source(pago)
+        if not pdf_file:
+            raise Http404(_('Este pago no tiene un PDF asociado.'))
+        return _pdf_response(pdf_file)
     
     fieldsets = (
         ('Información del Pago', {
@@ -2088,6 +2810,13 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
         }),
         ('Detalles Transaccionales', {
             'fields': ('metodo_pago', 'referencia', 'cuenta_destino', 'comprobante_pago', 'preview_comprobante'),
+        }),
+        ('Recibo Electrónico de Pago (REP)', {
+            'fields': ('folio_rep', 'uuid_rep', 'banco_origen'),
+            'description': mark_safe(
+                'Folio y UUID del Recibo Electrónico de Pago (complemento de pago) '
+                'que respalda el depósito del cliente.'
+            ),
         }),
         ('Notas y Auditoría', {
             'fields': ('notas', 'fecha_registro'),
@@ -2132,16 +2861,30 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
     get_saldo_pendiente.short_description = 'Saldo Restante'
     
     def get_comprobante(self, obj):
-        """Muestra ícono de comprobante si existe con link para preview"""
+        """Prioriza el PDF del REP y conserva el comprobante manual."""
+        pdf_file, documento = self._pdf_source(obj)
+        if pdf_file:
+            identifier = (
+                (documento.folio or documento.uuid or str(documento.pk))
+                if documento
+                else (obj.folio_rep or obj.uuid_rep or str(obj.pk))
+            )
+            pdf_url = reverse('admin:ventas_pagoventa_pdf', args=[obj.pk])
+            title = (
+                _('REP %(identifier)s') % {'identifier': identifier}
+                if documento
+                else _('Comprobante del pago %(identifier)s') % {
+                    'identifier': identifier,
+                }
+            )
+            return _pdf_preview_button(pdf_url, title, identifier)
+
         comprobante_url = safe_file_url(obj.comprobante_pago)
         if comprobante_url:
             file_ext = obj.comprobante_pago.name.split('.')[-1].lower()
             if file_ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
                 icon = '🖼️'
                 file_type = 'Imagen'
-            elif file_ext == 'pdf':
-                icon = '📄'
-                file_type = 'PDF'
             else:
                 icon = '📎'
                 file_type = 'Archivo'
@@ -2160,7 +2903,13 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
                 icon,
                 file_type
             )
-        return mark_safe('<span style="color:#b8dbd9;">Sin comprobante</span>')
+        return format_html(
+            '<span class="cfdi-pdf-missing" title="{}">'
+            '<i class="far fa-file" aria-hidden="true"></i>'
+            '<span>{}</span></span>',
+            _('Este pago no tiene un comprobante asociado.'),
+            _('Sin archivo'),
+        )
     get_comprobante.short_description = 'Comprobante'
     
     def preview_comprobante(self, obj):
@@ -2289,7 +3038,8 @@ class AnticipoAdmin(ImportExportModelAdmin, ModelAdmin):
         'cuenta',
         'monto',
         'get_saldo_disponible',
-        'folio_factura_anticipo',
+        'uuid_cfdi',
+        'es_remanente',
         'descripcion',
         'estado_anticipo',
     )
@@ -2301,7 +3051,8 @@ class AnticipoAdmin(ImportExportModelAdmin, ModelAdmin):
         'cuenta',
         'monto',
         'monto_aplicado',
-        'folio_factura_anticipo',
+        'uuid_cfdi',
+        'es_remanente',
         'descripcion',
         'estado_anticipo',
     )
@@ -2433,11 +3184,22 @@ class AnticipoAdmin(ImportExportModelAdmin, ModelAdmin):
                         cuenta=cd['cuenta'],
                         monto=Money(cd['monto'], 'MXN'),
                         descripcion=cd['descripcion'],
-                        folio_factura_anticipo=cd['folio_factura_anticipo'],
                         estado_anticipo=Anticipo.Estado_anticipo.Pendiente,
                     )
                     anticipo.full_clean()
                     anticipo.save()
+
+                    DocumentoCFDI.objects.create(
+                        cliente=cd['cliente'],
+                        tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+                        subtipo=DocumentoCFDI.SubtipoDocumento.REMANENTE_ANTICIPO,
+                        folio=cd['folio_factura_anticipo'] or None,
+                        fecha_emision=cd['fecha'],
+                        monto=Money(cd['monto'], 'MXN'),
+                        moneda='MXN',
+                        anticipo=anticipo,
+                    )
+
                     messages.success(
                         request,
                         f'Anticipo importado correctamente desde CFDI: #{anticipo.pk}.',
@@ -3009,3 +3771,88 @@ class ObligacionFiscalAdmin(ModelAdmin):
         total = float(obj.total_impuestos())
         return format_html('<strong>${}</strong>', f'{total:,.2f}')
     get_total.short_description = 'Total Impuestos'
+
+
+# =============================================================================
+# DOCUMENTOS CFDI
+# =============================================================================
+
+@admin.register(DocumentoCFDI)
+class DocumentoCFDIAdmin(ModelAdmin):
+    change_list_template = 'admin/ventas/documentocfdi/change_list.html'
+    list_display = (
+        'subtipo', 'folio', 'uuid', 'get_cliente', 'fecha_emision', 'monto',
+        'estado', 'pdf_preview',
+    )
+    list_filter = ('tipo', 'subtipo', 'estado', 'fecha_emision')
+    search_fields = ('folio', 'uuid', 'cliente__nombre', 'venta__carga')
+    date_hierarchy = 'fecha_emision'
+    list_per_page = 30
+    list_select_related = ('cliente',)
+    readonly_fields = ('creado_en', 'actualizado_en')
+
+    def get_urls(self):
+        custom_urls = [
+            path(
+                '<path:object_id>/pdf/',
+                self.admin_site.admin_view(self.pdf_view),
+                name='ventas_documentocfdi_pdf',
+            ),
+        ]
+        return custom_urls + super().get_urls()
+
+    def pdf_view(self, request, object_id):
+        """Redirect an authorized user to a fresh local or R2 PDF URL."""
+        documento = self.get_object(request, unquote(object_id))
+        if documento is None or not documento.archivo_pdf:
+            raise Http404(_('Este CFDI no tiene un PDF asociado.'))
+        if not self.has_view_permission(request, documento):
+            raise PermissionDenied
+        return _pdf_response(documento.archivo_pdf)
+
+    def pdf_preview(self, obj):
+        if not obj.archivo_pdf:
+            return format_html(
+                '<span class="cfdi-pdf-missing" title="{}">'
+                '<i class="far fa-file-pdf" aria-hidden="true"></i>'
+                '<span>{}</span></span>',
+                _('Este CFDI no tiene un PDF asociado.'),
+                _('Sin PDF'),
+            )
+
+        identifier = obj.folio or obj.uuid or str(obj.pk)
+        pdf_url = reverse('admin:ventas_documentocfdi_pdf', args=[obj.pk])
+        return _pdf_preview_button(
+            pdf_url,
+            _('CFDI %(identifier)s') % {'identifier': identifier},
+            identifier,
+        )
+    pdf_preview.short_description = _('Documento')
+
+    fieldsets = (
+        ('Clasificación', {
+            'fields': ('tipo', 'subtipo', 'estado')
+        }),
+        ('Identificación SAT', {
+            'fields': ('serie', 'folio', 'uuid', 'fecha_emision', 'fecha_timbrado')
+        }),
+        ('Montos', {
+            'fields': ('monto', 'moneda', 'tipo_cambio')
+        }),
+        ('Relaciones de negocio', {
+            'fields': ('cliente', 'venta', 'anticipo', 'pago_venta')
+        }),
+        ('Relación fiscal', {
+            'fields': ('cfdi_relacionado', 'tipo_relacion')
+        }),
+        ('Archivos', {
+            'fields': ('archivo_xml', 'archivo_pdf')
+        }),
+        ('Auditoría', {
+            'fields': ('creado_en', 'actualizado_en')
+        }),
+    )
+
+    def get_cliente(self, obj):
+        return obj.cliente.nombre
+    get_cliente.short_description = 'Cliente'

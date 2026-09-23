@@ -1,0 +1,13 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/cfdi-pdf-preview.css' %}">
+  <script defer src="{% static 'js/cfdi-pdf-preview.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+  {{ block.super }}
+  {% include "admin/ventas/includes/cfdi_pdf_modal.html" %}
+{% endblock %}

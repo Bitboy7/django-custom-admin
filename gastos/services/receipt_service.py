@@ -1,5 +1,8 @@
 import hashlib
 import logging
+import shutil
+import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 
 from django.db import transaction
@@ -9,6 +12,22 @@ from gastos.models import ComprobanteGasto
 from gastos.services.receipt_ocr_service import extract_receipt_fields, read_receipt
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _local_copy(field_file):
+    """Expose a FileField as a local path for OCR engines that require one."""
+    suffix = Path(field_file.name).suffix
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp_file:
+            temp_path = Path(temp_file.name)
+            with field_file.open('rb') as source:
+                shutil.copyfileobj(source, temp_file)
+        yield temp_path
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
 
 def create_receipt(upload, user):
     digest = hashlib.sha256()
@@ -31,7 +50,10 @@ def process_next_receipt():
         receipt.error_procesamiento = ''
         receipt.save(update_fields=['estado', 'error_procesamiento'])
     try:
-        text = read_receipt(Path(receipt.archivo.path))
+        # PaddleOCR necesita una ruta local. Esto funciona tanto con disco local
+        # como con Cloudflare R2, cuyo FileField no implementa `.path`.
+        with _local_copy(receipt.archivo) as local_path:
+            text = read_receipt(local_path)
         fields = extract_receipt_fields(text)
         receipt.texto_ocr, receipt.datos_extraidos, receipt.confianza = text, fields, fields['confianza']
         receipt.estado, receipt.procesado_en = ComprobanteGasto.Estado.REVISION, timezone.now()

@@ -178,6 +178,8 @@ class BaseReportService(ABC):
         fecha_inicio: Any = None,
         fecha_fin: Any = None,
         sucursal_id: Any = None,
+        mes_inicio: Any = None,
+        mes_fin: Any = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -208,6 +210,8 @@ class BaseReportService(ABC):
             dia=dia,
             fecha_inicio=fecha_inicio,
             fecha_fin=fecha_fin,
+            mes_inicio=mes_inicio,
+            mes_fin=mes_fin,
             use_default_year=self.should_use_default_year(),
             **kwargs
         )

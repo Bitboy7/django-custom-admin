@@ -17,6 +17,7 @@ reportlab = "^4.2.5"
 django-import-export = "^4.3.3"
 pandas = "^2.2.3"
 pillow = "^11.1.0"
+django-storages = {version = "^1.14.6", extras = ["s3"]}
 django-unfold = "^0.62.0"
 numpy = "*"
 # Comentamos temporalmente las dependencias de IA hasta resolver el problema de compilación

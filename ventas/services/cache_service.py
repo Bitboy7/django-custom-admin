@@ -522,7 +522,7 @@ class CuentasPorCobrarCache:
         
         aging = {'corriente': 0.0, 'vencida_30': 0.0, 'vencida_60': 0.0, 'vencida_90': 0.0}
         for v in credito_qs:
-            saldo = float(v.monto.amount) - float(v.monto_pagado.amount)
+            saldo = v.saldo_por_cobrar()
             if saldo <= 0 or not v.fecha_vencimiento:
                 continue
             dias = (hoy - v.fecha_vencimiento).days
