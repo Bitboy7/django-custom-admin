@@ -252,6 +252,7 @@
                 <th scope="col">Cliente</th>
                 <th scope="col">Producto / concepto</th>
                 <th scope="col">Sucursal / Cuenta</th>
+                <th scope="col">Término crédito</th>
               </tr>
             </thead>
             <tbody>
@@ -259,7 +260,7 @@
                 <tr class="{% if p.error %}is-error{% elif p.duplicado %}is-duplicate{% endif %}" data-import-row>
                   {% if p.error %}
                     <td>—</td>
-                    <td colspan="7">
+                    <td colspan="8">
                       <div class="row-error">
                         <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
                         <span><strong>{{ p.nombre }}</strong><br>{{ p.error }}</span>
@@ -294,7 +295,9 @@
                       <select name="cliente_{{ forloop.counter0 }}" data-cliente-select="{{ forloop.counter0 }}" class="bulk-select" {% if p.duplicado %}disabled{% endif %}>
                         <option value="">— sin cliente —</option>
                         {% for cliente in clientes %}
-                          <option value="{{ cliente.pk }}" {% if p.cliente and p.cliente.pk == cliente.pk %}selected{% endif %}>{{ cliente.nombre }}</option>
+                          <option value="{{ cliente.pk }}"
+                                  data-termino-default="{{ cliente.termino_credito_predeterminado_id }}"
+                                  {% if p.cliente and p.cliente.pk == cliente.pk %}selected{% endif %}>{{ cliente.nombre }}</option>
                         {% endfor %}
                       </select>
 
@@ -432,10 +435,31 @@
                         <span class="not-applicable"><i class="fas fa-minus" aria-hidden="true"></i> No aplica</span>
                       {% endif %}
                     </td>
+                    <td>
+                      {% if p.subtipo == 'venta_nacional' or p.subtipo == 'venta_exportacion' or p.subtipo == 'ingreso_servicio' %}
+                        {% if p.parsed.modalidad_pago == 'Credito' %}
+                          <select name="termino_credito_{{ forloop.counter0 }}" class="bulk-select"
+                                  data-termino-select="{{ forloop.counter0 }}"
+                                  {% if p.duplicado %}disabled{% else %}required aria-required="true"{% endif %}>
+                            <option value="">— término —</option>
+                            {% for termino in terminos_credito %}
+                              <option value="{{ termino.pk }}"
+                                      {% if p.termino_sugerido == termino.pk %}selected{% endif %}>
+                                {{ termino.nombre }} ({{ termino.dias_credito }} días)
+                              </option>
+                            {% endfor %}
+                          </select>
+                        {% else %}
+                          <span class="not-applicable"><i class="fas fa-minus" aria-hidden="true"></i> Contado</span>
+                        {% endif %}
+                      {% else %}
+                        <span class="not-applicable"><i class="fas fa-minus" aria-hidden="true"></i> No aplica</span>
+                      {% endif %}
+                    </td>
                   {% endif %}
                 </tr>
               {% empty %}
-                <tr><td colspan="8">No se encontraron XML para procesar.</td></tr>
+                <tr><td colspan="9">No se encontraron XML para procesar.</td></tr>
               {% endfor %}
             </tbody>
           </table>

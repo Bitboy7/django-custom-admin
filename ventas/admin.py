@@ -1060,6 +1060,7 @@ class VentasAdmin(ModelAdmin):
                         'pais_id': request.POST.get(f'pais_cliente_{i}') or None,
                         'sucursal_id': request.POST.get(f'sucursal_{i}') or None,
                         'cuenta_id': request.POST.get(f'cuenta_{i}') or None,
+                        'termino_credito_id': request.POST.get(f'termino_credito_{i}') or None,
                     }
                     filas.append(fila)
                 except Exception as exc:
@@ -1171,6 +1172,10 @@ class VentasAdmin(ModelAdmin):
                         Cuenta.objects.get(pk=fila['cuenta_id'])
                         if fila['cuenta_id'] else None
                     )
+                    termino_credito = (
+                        TerminoCredito.objects.get(pk=fila['termino_credito_id'])
+                        if fila.get('termino_credito_id') else None
+                    )
 
                     from django.core.files.base import File
                     uuid_lower = (parsed.get('uuid') or '').strip().lower()
@@ -1190,6 +1195,7 @@ class VentasAdmin(ModelAdmin):
                     _obj, doc, subtipo = importar_cfdi(
                         parsed, cliente=cliente, producto=producto,
                         sucursal=sucursal, cuenta=cuenta,
+                        termino_credito=termino_credito,
                         archivo_pdf=archivo_pdf, archivo_xml=archivo_xml,
                     )
                     resultados.append({
@@ -1294,11 +1300,16 @@ class VentasAdmin(ModelAdmin):
                                 archivos_map['pdf'][uuid_lower] = pdf_path
                                 tiene_pdf = True
 
+                        cliente_match = match_cliente(parsed)
                         item.update({
                             'parsed': parsed,
                             'subtipo': subtipo,
                             'subtipo_label': DocumentoCFDI.SubtipoDocumento(subtipo).label,
-                            'cliente': match_cliente(parsed),
+                            'cliente': cliente_match,
+                            'termino_sugerido': (
+                                cliente_match.termino_credito_predeterminado_id
+                                if cliente_match else None
+                            ),
                             'pais_sugerido': sugerir_pais(parsed),
                             'producto': match_producto(parsed),
                             'producto_sugerido': sugerir_producto_desde_cfdi(parsed),
@@ -1349,6 +1360,7 @@ class VentasAdmin(ModelAdmin):
                     productos=Producto.objects.filter(disponible=True).order_by('variedad'),
                     sucursales=Sucursal.objects.all().order_by('nombre'),
                     cuentas=Cuenta.objects.select_related('id_banco').all().order_by('numero_cuenta'),
+                    terminos_credito=TerminoCredito.objects.filter(activo=True).order_by('dias_credito'),
                     puede_crear_cliente=request.user.has_perm('ventas.add_cliente'),
                     puede_crear_producto=request.user.has_perm('catalogo.add_producto'),
                     title='Confirmar importación masiva de CFDI',

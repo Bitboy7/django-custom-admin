@@ -32,6 +32,7 @@ from ventas.models import (
     Cliente,
     ConfiguracionCuentasPorCobrar,
     DocumentoCFDI,
+    TerminoCredito,
     Ventas,
 )
 from ventas.services.reporte_cobranza_service import generar_reporte_cobranza
@@ -898,6 +899,25 @@ class CFDIImportServiceTest(ReporteCobranzaBaseTest):
         self.assertEqual(subtipo, 'venta_nacional')
         self.assertIsNone(venta.cuenta_id)
         self.assertEqual(venta.modalidad_pago, Ventas.ModalidadPago.CREDITO)
+
+    def test_importar_venta_credito_con_termino_calcula_fecha_vencimiento(self):
+        cliente = self._cliente('Cliente Credito con termino')
+        termino = TerminoCredito.objects.create(
+            nombre='RC Net 30', dias_credito=30, activo=True,
+        )
+        parsed = parse_cfdi(XML_40_INGRESO.encode())
+        parsed['uuid'] = 'BBBBBBBB-CCCC-DDDD-EEEE-BBBBBBBBBBBB'
+        parsed['folio_factura'] = 'B 2994 | BBBBBBBB-CCCC-DDDD-EEEE-BBBBBBBBBBBB'
+        parsed['modalidad_pago'] = 'Credito'
+        parsed['fecha_emision_cfdi'] = date(2026, 2, 1)
+
+        venta, doc, subtipo = importar_cfdi(
+            parsed, cliente=cliente, producto=self.producto,
+            sucursal=self.sucursal, termino_credito=termino,
+        )
+
+        self.assertEqual(venta.termino_credito_id, termino.id)
+        self.assertEqual(venta.fecha_vencimiento, date(2026, 3, 3))
 
     def test_importar_venta_sin_sucursal_muestra_error(self):
         cliente = self._cliente('Cliente sin sucursal')

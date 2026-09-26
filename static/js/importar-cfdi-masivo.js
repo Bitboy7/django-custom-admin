@@ -329,6 +329,15 @@
     if (fields) fields.hidden = !enabled;
   }
 
+  function syncDefaultTerm(index) {
+    var select = document.querySelector('[data-cliente-select="' + index + '"]');
+    var term = document.querySelector('[data-termino-select="' + index + '"]');
+    if (!select || !term) return;
+    var option = select.options[select.selectedIndex];
+    var defaultValue = option ? (option.dataset.terminoDefault || "") : "";
+    term.value = defaultValue;
+  }
+
   function initClientCreation() {
     document.querySelectorAll("[data-crear-cliente]").forEach(function (toggle) {
       var index = toggle.dataset.crearCliente;
@@ -344,9 +353,19 @@
             toggle.checked = false;
             setCreateMode(index, false);
           }
+          syncDefaultTerm(index);
         });
       }
       setCreateMode(index, toggle.checked);
+    });
+  }
+
+  function initTermSyncing() {
+    document.querySelectorAll("[data-cliente-select]").forEach(function (select) {
+      var index = select.dataset.clienteSelect;
+      select.addEventListener("change", function () {
+        syncDefaultTerm(index);
+      });
     });
   }
 
@@ -384,6 +403,7 @@
     initSubmitState();
     initSelectionControls();
     initClientCreation();
+    initTermSyncing();
     initProductCreation();
   });
 })();

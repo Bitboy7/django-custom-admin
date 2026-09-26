@@ -463,7 +463,8 @@ def crear_documento(parsed, *, cliente, subtipo=None, venta=None,
     )
 
 
-def _crear_venta(parsed, cliente, producto, sucursal, cuenta, *, es_servicio=False):
+def _crear_venta(parsed, cliente, producto, sucursal, cuenta, *,
+                 es_servicio=False, termino_credito=None):
     if es_servicio:
         producto = None
     else:
@@ -482,6 +483,10 @@ def _crear_venta(parsed, cliente, producto, sucursal, cuenta, *, es_servicio=Fal
             'Selecciona la cuenta bancaria para esta venta de contado.'
         )
 
+    # El término de crédito solo aplica a ventas a crédito.
+    if modalidad != 'Credito':
+        termino_credito = None
+
     fecha = parsed.get('fecha_emision_cfdi') or timezone.now().date()
     moneda = parsed.get('moneda_venta') or 'MXN'
     monto = parsed.get('monto') or Decimal('0')
@@ -498,6 +503,7 @@ def _crear_venta(parsed, cliente, producto, sucursal, cuenta, *, es_servicio=Fal
             if es_servicio else Ventas.TipoRegistro.VENTA
         ),
         modalidad_pago=modalidad,
+        termino_credito=termino_credito,
         monto=Money(Decimal(str(monto)), moneda),
         moneda_venta=moneda,
         tipo_cambio=parsed.get('tipo_cambio') or Decimal('1.0000'),
@@ -606,7 +612,7 @@ def _crear_recibo_pago(parsed, cliente, cuenta, archivo_pdf=None, archivo_xml=No
 
 @transaction.atomic
 def importar_cfdi(parsed, *, cliente=None, producto=None, sucursal=None, cuenta=None,
-                  archivo_pdf=None, archivo_xml=None):
+                  archivo_pdf=None, archivo_xml=None, termino_credito=None):
     """
     Importa un CFDI ya parseado y clasificado.
 
@@ -649,6 +655,7 @@ def importar_cfdi(parsed, *, cliente=None, producto=None, sucursal=None, cuenta=
         venta = _crear_venta(
             parsed, cliente, producto, sucursal, cuenta,
             es_servicio=subtipo == 'ingreso_servicio',
+            termino_credito=termino_credito,
         )
         doc = crear_documento(parsed, cliente=cliente, venta=venta, subtipo=subtipo, **kwargs_doc)
         return venta, doc, subtipo
