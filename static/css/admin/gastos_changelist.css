@@ -446,6 +446,96 @@ html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-sea
   color: var(--text-primary, #f4f4f9) !important;
 }
 
+/* ── Rango de meses: fila 2 del grid, ancho completo ──────────────────────
+   La clave: grid-row:2 + grid-column:1/-1 mueve el componente a una fila
+   propia debajo de los filtros/búsqueda (que siguen en la fila 1).
+   Se necesita #changelist-search para superar la especificidad de Jazzmin. */
+body.app-gastos.model-gastos.change-list #changelist-search .rango-meses-grupo {
+  align-items: center;
+  background: #f4f7fa;
+  border: 1px solid #d4dde6;
+  border-radius: 10px;
+  display: flex;
+  gap: 10px;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin: 0;
+  padding: 7px 14px;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .rango-meses-titulo {
+  color: #586f7c;
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .rango-meses-input {
+  border: 1px solid #c5d1da !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  font-size: 0.82rem !important;
+  height: 34px !important;
+  line-height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 8px !important;
+  width: 170px !important;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .rango-meses-input:focus {
+  border-color: #18b7a7 !important;
+  box-shadow: 0 0 0 3px rgba(24, 183, 167, 0.14) !important;
+  outline: none !important;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .rango-meses-separador {
+  color: #8fa6b3;
+  flex: 0 0 auto;
+  font-size: 0.85rem;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .rango-meses-limpiar {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #d8dce6;
+  border-radius: 8px;
+  color: #586f7c;
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  height: 34px;
+  justify-content: center;
+  padding: 0;
+  transition: background .14s, color .14s;
+  width: 34px;
+}
+
+body.app-gastos.model-gastos.change-list #changelist-search .rango-meses-limpiar:hover {
+  background: #f0f3f6;
+  border-color: #b0bdca;
+  color: #2f4550;
+}
+
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-search .rango-meses-grupo {
+  background: var(--surface-hover, #242b32);
+  border-color: var(--border-default, #3d4a52);
+}
+
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-search .rango-meses-titulo,
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-search .rango-meses-separador {
+  color: var(--text-muted, #aab4bf);
+}
+
+html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-search .rango-meses-limpiar {
+  background: var(--surface-bg, #1a1f24);
+  border-color: var(--border-default, #3d4a52);
+  color: var(--text-primary, #f4f4f9);
+}
+
 @media (max-width: 1500px) {
   body.app-gastos.model-gastos.change-list #change-list-filters > .d-flex {
     align-items: stretch !important;
@@ -467,6 +557,11 @@ html[data-theme="dark"] body.app-gastos.model-gastos.change-list #changelist-sea
 
   body.app-gastos.model-gastos.change-list #changelist-search {
     grid-template-columns: 1fr;
+  }
+
+  body.app-gastos.model-gastos.change-list #changelist-search .rango-meses-input {
+    flex: 1 1 0;
+    width: auto !important;
   }
 
   body.app-gastos.model-gastos.change-list #changelist-search > .btn,

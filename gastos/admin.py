@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
-from django.contrib.admin import SimpleListFilter
+from django.contrib.admin import SimpleListFilter, ListFilter
 from django.template.response import TemplateResponse
 from django.urls import path
 from django.http import HttpResponse, HttpResponseRedirect
@@ -89,6 +89,73 @@ class MontoGastoFilter(SimpleListFilter):
             return queryset.filter(monto__amount__range=[10000, 50000])
         if value == '50000+':
             return queryset.filter(monto__amount__gte=50000)
+        return queryset
+
+
+class RangoMesesGastoFilter(ListFilter):
+    """Filtro de rango de meses (formato YYYY-MM) para el changelist.
+
+    Permite consultas que cruzan años (p. ej. 2025-09 a 2026-09) usando
+    los mismos parámetros ``mes_inicio``/``mes_fin`` del Acumulado de Gastos.
+    Si solo se indica un mes, se filtra ese mes en concreto.
+    """
+    title = 'Rango de meses'
+    parameter_name = 'mes_inicio'
+    template = 'admin/gastos/filters/rango_meses.html'
+
+    def __init__(self, request, params, model, model_admin):
+        super().__init__(request, params, model, model_admin)
+        self.used_parameters['mes_inicio'] = self._pop_last(params, 'mes_inicio')
+        self.used_parameters['mes_fin'] = self._pop_last(params, 'mes_fin')
+
+    @staticmethod
+    def _pop_last(params, key):
+        """Extrae el último valor de un parámetro (QueryDict.pop devuelve lista)."""
+        value = params.pop(key, None)
+        if isinstance(value, (list, tuple)):
+            return value[-1] if value else None
+        return value
+
+    def has_output(self):
+        return True
+
+    def expected_parameters(self):
+        return ['mes_inicio', 'mes_fin']
+
+    def choices(self, changelist):
+        return []
+
+    @staticmethod
+    def _month_filter(value):
+        """Convierte 'YYYY-MM' en filtros fecha__year/fecha__month válidos."""
+        if not value:
+            return None
+        try:
+            year_str, month_str = str(value).strip().split('-', 1)
+            year = int(year_str)
+            month = int(month_str)
+            if not (1 <= month <= 12):
+                return None
+            return {'fecha__year': year, 'fecha__month': month}
+        except (ValueError, TypeError):
+            return None
+
+    def queryset(self, request, queryset):
+        inicio = self.used_parameters.get('mes_inicio')
+        fin = self.used_parameters.get('mes_fin')
+
+        # Un solo mes (inicio o fin) filtra ese mes en concreto.
+        if inicio and not fin:
+            single = self._month_filter(inicio)
+            return queryset.filter(**single) if single else queryset
+        if fin and not inicio:
+            single = self._month_filter(fin)
+            return queryset.filter(**single) if single else queryset
+
+        from app.services.filter_utils import FilterBuilder
+        filters = FilterBuilder.build_month_range_filters(inicio, fin)
+        if filters:
+            return queryset.filter(**filters)
         return queryset
 
 
@@ -209,9 +276,11 @@ class GastosAdmin(ModelAdmin):
     list_display = ('id', 'id_sucursal', 'id_cat_gastos',
                     'id_cuenta_banco', 'monto', 'descripcion', 'fecha', 'fecha_registro')
     search_fields = ('descripcion', 'id_sucursal__nombre', 'id_cat_gastos__nombre', 'id_cuenta_banco__numero_cuenta', 'id_cuenta_banco__id_banco__nombre')
-    # La cuenta ya identifica el banco; la fecha del gasto se filtra desde
-    # date_hierarchy. Evitamos duplicar controles que confunden al usuario.
-    list_filter = (SucursalGastoFilter, CategoriaGastoFilter, CuentaGastoFilter, MontoGastoFilter)
+    # RangoMesesGastoFilter permite seleccionar un periodo (varios meses,
+    # incluso cruzando años) en la parte superior de los filtros. La cuenta ya
+    # identifica el banco; la fecha del gasto también se filtra desde
+    # date_hierarchy para consultas de un solo día.
+    list_filter = (RangoMesesGastoFilter, SucursalGastoFilter, CategoriaGastoFilter, CuentaGastoFilter, MontoGastoFilter)
     date_hierarchy = 'fecha'
     ordering = ('fecha', 'fecha_registro', 'id')
     list_select_related = ('id_sucursal', 'id_cat_gastos', 'id_cuenta_banco', 'id_cuenta_banco__id_banco')
@@ -244,6 +313,14 @@ class GastosAdmin(ModelAdmin):
             if day:
                 date_parts.append(day.zfill(2))
             parts.append(f"fecha-{'-'.join(date_parts)}")
+
+        mes_inicio = request.GET.get('mes_inicio')
+        mes_fin = request.GET.get('mes_fin')
+        if mes_inicio or mes_fin:
+            if mes_inicio and mes_fin:
+                parts.append(f"meses-{mes_inicio}-a-{mes_fin}")
+            else:
+                parts.append(f"mes-{mes_inicio or mes_fin}")
 
         sucursal_id = request.GET.get('sucursal')
         if sucursal_id:

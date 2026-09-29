@@ -1,0 +1,39 @@
+{% load i18n %}
+<div class="form-group rango-meses-grupo" title="Filtrar por rango de meses (YYYY-MM)">
+  <span class="rango-meses-titulo">{{ title }}</span>
+  <input type="month" name="mes_inicio" class="form-control rango-meses-input"
+         value="{{ spec.used_parameters.mes_inicio }}" aria-label="Mes inicial">
+  <span class="rango-meses-separador">&ndash;</span>
+  <input type="month" name="mes_fin" class="form-control rango-meses-input"
+         value="{{ spec.used_parameters.mes_fin }}" aria-label="Mes final">
+  <button type="button" class="rango-meses-limpiar" title="{% trans 'Quitar el rango de meses' %}">
+    <i class="fas fa-times"></i>
+  </button>
+</div>
+<script>
+(function () {
+  var grupo = document.querySelector('.rango-meses-grupo');
+  if (!grupo) return;
+  var inputs = grupo.querySelectorAll('input[type="month"]');
+  var limpiar = grupo.querySelector('.rango-meses-limpiar');
+  function navegar() {
+    var params = new URLSearchParams(window.location.search);
+    var inicio = inputs[0].value;
+    var fin = inputs[1].value;
+    if (inicio) { params.set('mes_inicio', inicio); } else { params.delete('mes_inicio'); }
+    if (fin) { params.set('mes_fin', fin); } else { params.delete('mes_fin'); }
+    window.location.search = params.toString();
+  }
+  inputs.forEach(function (inp) {
+    inp.addEventListener('change', navegar);
+  });
+  if (limpiar) {
+    limpiar.addEventListener('click', function () {
+      var params = new URLSearchParams(window.location.search);
+      params.delete('mes_inicio');
+      params.delete('mes_fin');
+      window.location.search = params.toString();
+    });
+  }
+})();
+</script>
