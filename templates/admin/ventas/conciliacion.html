@@ -14,77 +14,161 @@
 
 {% block extrahead %}
 {{ block.super }}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+<link rel="stylesheet" href="{% static 'css/conciliacion.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="p-6 max-w-7xl mx-auto">
+<div class="conciliacion-page">
+  <div class="conc-card">
 
-  <div class="bg-white rounded-lg shadow p-6">
-    <h2 class="text-xl font-semibold mb-2">Conciliación de CFDI por cliente</h2>
-    <p class="text-sm text-gray-600 mb-4">
-      Saldo por cobrar conciliado desde los CFDI (facturado + notas de cargo − notas de crédito − pagos (REP) − cobros de contado − anticipos).
-      Solo se consideran documentos <strong>vigentes</strong>.
-    </p>
+    <header class="conc-head">
+      <div class="conc-head-ico" aria-hidden="true"><i class="fas fa-scale-balanced"></i></div>
+      <div>
+        <h1 class="conc-title">Conciliación de CFDI por cliente</h1>
+        <p class="conc-sub">
+          Saldo por cobrar conciliado desde los CFDI
+          (facturado + notas de cargo − notas de crédito − pagos (REP) − cobros de contado − anticipos).
+          Solo se consideran documentos <strong>vigentes</strong>.
+        </p>
+      </div>
+    </header>
 
-    <p class="text-xs text-gray-500 mb-4 border-l-4 border-yellow-300 bg-yellow-50 px-3 py-2">
-      <strong>Columna "Sin vincular":</strong> número de notas de cargo/crédito o recibos de pago que
-      <strong>no</strong> se pudieron asociar a una venta (su factura padre no se encontró por UUID).
-      No afectan el saldo por venta, pero sí se cuentan en la conciliación por cliente.
-      Pasa el cursor sobre el número para ver el desglose.
-    </p>
+    <div class="conc-note conc-note--warn" role="note">
+      <span class="conc-note-ico" aria-hidden="true"><i class="fas fa-circle-exclamation"></i></span>
+      <p>
+        <strong>Columna “Sin vincular”:</strong> número de notas de cargo/crédito o recibos de pago que
+        <strong>no</strong> pudieron asociarse a una venta (su factura padre no se encontró por UUID).
+        No afectan el saldo por venta, pero sí se cuentan en la conciliación por cliente.
+        Pasa el cursor, enfoca o pulsa el número para ver el desglose y abrir cada documento.
+      </p>
+    </div>
 
-    <table class="w-full text-sm border-collapse">
-      <thead>
-        <tr class="bg-gray-50 text-left text-gray-600 uppercase text-xs">
-          <th class="p-2">Cliente</th>
-          <th class="p-2 text-right">Facturado</th>
-          <th class="p-2 text-right">+ Notas cargo</th>
-          <th class="p-2 text-right">− Notas crédito</th>
-          <th class="p-2 text-right">− Pagos (REP)</th>
-          <th class="p-2 text-right">− Cobros contado</th>
-          <th class="p-2 text-right">− Anticipos</th>
-          <th class="p-2 text-right">Saldo conciliado</th>
-          <th class="p-2 text-center">Sin vincular</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for f in filas %}
-        <tr class="border-t">
-          <td class="p-2 font-semibold">{{ f.cliente.nombre }}</td>
+    {% if filas %}
+    <div class="conc-tablewrap">
+      <table class="conc-table">
+        <thead>
+          <tr>
+            <th class="cliente">Cliente</th>
+            <th class="num">Facturado</th>
+            <th class="num">+ Notas cargo</th>
+            <th class="num">− Notas crédito</th>
+            <th class="num">− Pagos (REP)</th>
+            <th class="num">− Cobros contado</th>
+            <th class="num">− Anticipos</th>
+            <th class="num">Saldo conciliado</th>
+            <th class="center">Sin vincular</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in filas %}
+          <tr>
+            <td class="cliente">
+              <span class="cliente-nombre">{{ f.cliente.nombre }}</span>
+              <span class="cliente-amt">{{ f.total_documentos }} CFDI vigente{{ f.total_documentos|pluralize }}</span>
+            </td>
 
-          <td class="p-2 text-right">{% for m, v in f.detalle.facturado.items %}{{ v|floatformat:2 }} {{ m }}<br>{% empty %}—{% endfor %}</td>
-          <td class="p-2 text-right">{% for m, v in f.detalle.notas_cargo.items %}{{ v|floatformat:2 }} {{ m }}<br>{% empty %}—{% endfor %}</td>
-          <td class="p-2 text-right">{% for m, v in f.detalle.notas_credito.items %}{{ v|floatformat:2 }} {{ m }}<br>{% empty %}—{% endfor %}</td>
-          <td class="p-2 text-right">{% for m, v in f.detalle.recibos_pago.items %}{{ v|floatformat:2 }} {{ m }}<br>{% empty %}—{% endfor %}</td>
-          <td class="p-2 text-right">{% for m, v in f.detalle.cobros_contado.items %}{{ v|floatformat:2 }} {{ m }}<br>{% empty %}—{% endfor %}</td>
-          <td class="p-2 text-right">{% for m, v in f.detalle.anticipos_disponibles.items %}{{ v|floatformat:2 }} {{ m }}<br>{% empty %}—{% endfor %}</td>
+            <td class="num">
+              {% for m, v in f.detalle.facturado.items %}<span class="conc-amt">{{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span></span>{% empty %}<span class="conc-empty">—</span>{% endfor %}
+            </td>
+            <td class="num">
+              {% for m, v in f.detalle.notas_cargo.items %}<span class="conc-amt">{{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span></span>{% empty %}<span class="conc-empty">—</span>{% endfor %}
+            </td>
+            <td class="num">
+              {% for m, v in f.detalle.notas_credito.items %}<span class="conc-amt">{{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span></span>{% empty %}<span class="conc-empty">—</span>{% endfor %}
+            </td>
+            <td class="num">
+              {% for m, v in f.detalle.recibos_pago.items %}<span class="conc-amt">{{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span></span>{% empty %}<span class="conc-empty">—</span>{% endfor %}
+            </td>
+            <td class="num">
+              {% for m, v in f.detalle.cobros_contado.items %}<span class="conc-amt">{{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span></span>{% empty %}<span class="conc-empty">—</span>{% endfor %}
+            </td>
+            <td class="num">
+              {% for m, v in f.detalle.anticipos_disponibles.items %}<span class="conc-amt">{{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span></span>{% empty %}<span class="conc-empty">—</span>{% endfor %}
+            </td>
 
-          <td class="p-2 text-right">
-            {% for m, v in f.saldo_por_moneda.items %}
-            <span class="{% if v > 0 %}text-red-600{% else %}text-green-600{% endif %} font-semibold">
-              {{ v|floatformat:2 }} {{ m }}
-            </span><br>
-            {% empty %}<span class="text-gray-400">—</span>{% endfor %}
-          </td>
+            <td class="num">
+              {% for m, v in f.saldo_por_moneda.items %}
+                <span class="conc-saldo {% if v > 0 %}is-due{% elif v < 0 %}is-credit{% else %}is-zero{% endif %}">{{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span></span>
+              {% empty %}<span class="conc-empty">—</span>{% endfor %}
+            </td>
 
-          <td class="p-2 text-center">
-            {% if f.documentos_sin_venta %}
-            <span class="px-2 py-1 rounded bg-yellow-100 text-yellow-700 text-xs cursor-help"
-                  title="{% for s in f.sin_venta_detalle %}{{ s.label }}: {{ s.total }}{% if not forloop.last %} — {% endif %}{% endfor %}">
-              {{ f.documentos_sin_venta }}
-            </span>
-            {% else %}
-            <span class="text-gray-400">0</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="9" class="p-4 text-center text-gray-500">No hay clientes activos.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+            <td class="center">
+              {% if f.documentos_sin_venta %}
+              <span class="conc-unlinked">
+                <button type="button" class="conc-badge"
+                        data-conc-trigger
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        aria-controls="sin-vincular-{{ f.cliente.id }}"
+                        title="Ver desglose de documentos sin vincular">
+                  <span>{{ f.documentos_sin_venta }}</span>
+                  <i class="fas fa-chevron-down conc-badge-caret" aria-hidden="true"></i>
+                </button>
+
+                <div class="conc-pop" id="sin-vincular-{{ f.cliente.id }}"
+                     aria-label="Desglose de documentos sin vincular de {{ f.cliente.nombre }}" hidden>
+                  <div class="conc-pop-head">
+                    <span class="conc-pop-title">{{ f.cliente.nombre }}</span>
+                    <span class="conc-pop-sub">{{ f.documentos_sin_venta }} documento{{ f.documentos_sin_venta|pluralize }} sin venta asociada</span>
+                  </div>
+
+                  <div class="conc-pop-body">
+                    {% for grupo in f.sin_venta_detalle %}
+                    <section class="conc-group">
+                      <div class="conc-group-head">
+                        <span class="conc-group-title">{{ grupo.label }}</span>
+                        <span class="conc-group-total">{{ grupo.total }}</span>
+                      </div>
+                      <ul class="conc-doc-list">
+                        {% for d in grupo.documentos %}
+                        <li class="conc-doc">
+                          <a class="conc-doc-link" href="{% url 'admin:ventas_documentocfdi_change' d.id %}">
+                            <span class="conc-doc-id">{{ d.folio|default:d.uuid|default:d.id|truncatechars:16 }}</span>
+                            <span class="conc-doc-amt">{{ d.monto|floatformat:2 }}<span class="conc-cur">{{ d.moneda }}</span></span>
+                          </a>
+                          <div class="conc-doc-meta">
+                            {% if d.fecha %}<span>{{ d.fecha|date:"d/m/Y" }}</span>{% endif %}
+                            {% if d.uuid %}<span class="conc-doc-uuid" title="{{ d.uuid }}">{{ d.uuid|truncatechars:13 }}</span>{% endif %}
+                            {% if d.relacionado_id %}
+                            <a class="conc-doc-rel" href="{% url 'admin:ventas_documentocfdi_change' d.relacionado_id %}" title="{{ d.relacionado_label }}">→ {{ d.relacionado_label|truncatechars:28 }}</a>
+                            {% endif %}
+                          </div>
+                        </li>
+                        {% endfor %}
+                      </ul>
+                    </section>
+                    {% endfor %}
+                  </div>
+
+                  <div class="conc-pop-foot">
+                    <a class="conc-pop-all" href="{% url 'admin:ventas_documentocfdi_changelist' %}?q={{ f.cliente.nombre|urlencode }}">
+                      Ver documentos CFDI del cliente <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                  </div>
+                </div>
+              </span>
+              {% else %}
+              <span class="conc-zero">0</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="conc-empty-state">
+      <i class="fas fa-inbox" aria-hidden="true"></i>
+      <strong>No hay clientes activos</strong>
+      <span>Activa un cliente para comenzar a conciliar sus CFDI.</span>
+    </div>
+    {% endif %}
+
   </div>
-
 </div>
+{% endblock %}
+
+{% block extrajs %}
+{{ block.super }}
+<script src="{% static 'js/conciliacion.js' %}"></script>
 {% endblock %}

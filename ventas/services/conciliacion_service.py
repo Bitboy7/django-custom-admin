@@ -12,8 +12,6 @@ los modelos operativos (Ventas/PagoVenta/Anticipo) y produce, por cliente:
 """
 from collections import defaultdict
 
-from django.db.models import Count
-
 from ..models import DocumentoCFDI
 
 INGRESOS_VENTA = [
@@ -99,17 +97,37 @@ def conciliacion_cliente(cliente):
     # Documentos que no pudieron vincularse a una venta (posible deriva):
     # son notas de cargo/crédito o recibos de pago cuyo CFDI padre no fue
     # encontrado por UUID (p. ej. la factura aún no se importa o no coincide).
-    sin_venta_qs = docs.filter(
-        venta__isnull=True
-    ).exclude(subtipo__in=INGRESOS_VENTA + ['remanente_anticipo'])
+    # Se materializan los propios documentos para poder desglosarlos y enlazar
+    # cada uno a su ficha en el admin.
+    sin_venta_qs = (
+        docs.filter(venta__isnull=True)
+        .exclude(subtipo__in=INGRESOS_VENTA + ['remanente_anticipo'])
+        .select_related('cfdi_relacionado')
+        .order_by('subtipo', '-fecha_emision')
+    )
+
+    por_subtipo = defaultdict(list)
+    for doc in sin_venta_qs:
+        por_subtipo[doc.subtipo].append({
+            'id': doc.id,
+            'folio': doc.folio or '',
+            'uuid': doc.uuid or '',
+            'fecha': doc.fecha_emision,
+            'monto': doc.monto.amount,
+            'moneda': doc.moneda or 'MXN',
+            'relacionado_id': doc.cfdi_relacionado_id,
+            'relacionado_label': str(doc.cfdi_relacionado) if doc.cfdi_relacionado_id else '',
+            'tipo_relacion': doc.tipo_relacion or '',
+        })
 
     sin_venta_detalle = [
         {
-            'subtipo': item['subtipo'],
-            'total': item['total'],
-            'label': DocumentoCFDI.SubtipoDocumento(item['subtipo']).label,
+            'subtipo': subtipo,
+            'total': len(documentos),
+            'label': DocumentoCFDI.SubtipoDocumento(subtipo).label,
+            'documentos': documentos,
         }
-        for item in sin_venta_qs.values('subtipo').annotate(total=Count('id')).order_by('subtipo')
+        for subtipo, documentos in sorted(por_subtipo.items())
     ]
 
     return {
@@ -117,7 +135,7 @@ def conciliacion_cliente(cliente):
         'detalle': detalle,
         'saldo_por_moneda': saldo,
         'total_documentos': docs.count(),
-        'documentos_sin_venta': sin_venta_qs.count(),
+        'documentos_sin_venta': sum(item['total'] for item in sin_venta_detalle),
         'sin_venta_detalle': sin_venta_detalle,
     }
 
