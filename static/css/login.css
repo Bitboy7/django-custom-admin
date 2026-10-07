@@ -1,7 +1,7 @@
 /* Login de Costa ERP: superficie de producto directa y legible. */
-:root { --login-ink: oklch(28% 0.025 235); --login-muted: oklch(47% 0.03 235); --login-border: oklch(86% 0.012 235); --login-surface: oklch(99% 0.004 210); --login-ground: oklch(96% 0.012 195); --login-accent: oklch(42% 0.065 205); --login-accent-hover: oklch(35% 0.055 205); --login-focus: oklch(78% 0.06 195 / 0.48); --login-danger: oklch(49% 0.12 28); --login-danger-bg: oklch(96% 0.025 28); --login-radius: 12px; --login-ease: cubic-bezier(0.25, 1, 0.5, 1); }
+:root { --login-ink: #1f2f38; --login-muted: #586f7c; --login-border: #d8dce6; --login-surface: #ffffff; --login-ground: #f4f4f9; --login-accent: #2f4550; --login-accent-hover: #586f7c; --login-focus: rgba(184, 219, 217, 0.6); --login-danger: #b85450; --login-danger-bg: rgba(184, 84, 80, 0.08); --login-radius: 12px; --login-ease: cubic-bezier(0.25, 1, 0.5, 1); }
 body.auth-login-page, body.auth-login-page * { box-sizing: border-box; }
-body.auth-login-page { min-height: 100vh; min-height: 100dvh; margin: 0; background: var(--login-ground); color: var(--login-ink); font-family: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif; }
+body.auth-login-page { min-height: 100vh; min-height: 100dvh; margin: 0; background: var(--login-ground); color: var(--login-ink); font-family: "Inter", "Segoe UI", system-ui, sans-serif; }
 .auth-login-page .l-brand { display: none; }
 .auth-login-page .l-form { display: flex; min-height: 100vh; min-height: 100dvh; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 32px 20px; }
 .auth-login-page .mobile-brand { display: flex; align-items: center; gap: 12px; width: min(100%, 420px); }

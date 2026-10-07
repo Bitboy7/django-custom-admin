@@ -102,7 +102,7 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
                 'Administrador': '#dc3545',  # Rojo
                 'Gerente': '#fd7e14',       # Naranja
                 'Contador': '#198754',      # Verde
-                'Vendedor': '#0d6efd',      # Azul
+                'Vendedor': '#586f7c',      # Azul pizarra
                 'Operador': '#6c757d',      # Gris
             }
             color = color_map.get(role, '#6c757d')

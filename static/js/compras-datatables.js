@@ -493,7 +493,7 @@ document.addEventListener("DOMContentLoaded", function () {
           extend: "print",
           text: '<i class="fas fa-print"></i> Imprimir',
           className:
-            "bg-purple-600 hover:bg-purple-700 text-[#f4f4f9] px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
+            "bg-[#2f4550] hover:bg-[#586f7c] text-[#f4f4f9] px-4 py-2 rounded-md text-sm shadow-md transition-colors duration-200",
           title: function () {
             return getReportTitle();
           },

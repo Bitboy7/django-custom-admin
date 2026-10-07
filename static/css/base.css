@@ -57,7 +57,7 @@ a:hover { color: var(--brand-teal-dark); }
 
 /* ── Selection ─────────────────────────────────────────────────── */
 ::selection {
-  background: rgba(13, 148, 136, 0.18);
+  background: rgba(88, 111, 124, 0.18);
   color: var(--text-primary);
 }
 

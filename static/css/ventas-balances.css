@@ -485,7 +485,7 @@ html[data-theme="dark"] td.text-right {
   color: var(--text-primary, #f4f4f9) !important;
 }
 html[data-theme="dark"] td.text-purple-700 {
-  color: #1c1a22 !important;
+  color: var(--text-primary, #f4f4f9) !important;
 }
 html[data-theme="dark"] .bg-\[rgba\(184\,219\,217\,\.2\)\] {
   background-color: var(--surface-hover, #2f3840) !important;

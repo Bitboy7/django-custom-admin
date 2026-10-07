@@ -93,10 +93,10 @@
 .money-tooltip .tooltip-text {
   visibility: hidden;
   width: 200px;
-  background-color: #1f2937;
-  color: #f4f4f9;
+  background-color: var(--brand-navy-dark, #071b22);
+  color: var(--ghost-white, #f4f4f9);
   text-align: center;
-  border-radius: 6px;
+  border-radius: var(--radius-sm, 6px);
   padding: 8px;
   position: absolute;
   z-index: 1;

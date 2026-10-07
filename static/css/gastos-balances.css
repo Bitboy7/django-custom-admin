@@ -369,7 +369,7 @@ html body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link i {
 .filter-select:focus {
   outline: none;
   border-color: #a1b3cf;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 3px rgba(88, 111, 124, 0.15);
 }
 
 .filter-label {
@@ -667,7 +667,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: "Libre Baskerville", "Georgia", "Times New Roman", serif !important;
+  font-family: var(--font-display, "Inter", -apple-system, "Segoe UI", sans-serif) !important;
 }
 
 .btn-export-pdf {

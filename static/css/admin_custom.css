@@ -1,44 +1,47 @@
 /*
- * â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
- *  admin_custom.css â€” Entry Point for AgrÃ­cola de la Costa ERP
+ * ================================================================
+ *  admin_custom.css - Entry Point for Agricola de la Costa ERP
  *
- *  Este archivo importa todos los mÃ³dulos CSS del sistema de diseÃ±o.
- *  Jazzmin carga este archivo como custom_css en la configuraciÃ³n.
+ *  Este archivo importa todos los modulos CSS del sistema de diseno.
+ *  Jazzmin carga este archivo como custom_css en la configuracion.
  *
- *  Arquitectura: Modular, 8 archivos independientes.
+ *  Arquitectura: Modular, un archivo por responsabilidad.
  *  Skills: frontend-design, ui-ux-pro-max, tailwindcss
  *
  *  Para desarrollo: editar los archivos individuales en static/css/
- *  Para producciÃ³n: concatenar o mantener imports (WhiteNoise los sirve)
- * â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+ *  Para produccion: concatenar o mantener imports (WhiteNoise los sirve)
+ * ================================================================
  */
 
-/* â”€â”€ 1. Design Tokens (variables CSS, tema claro/oscuro) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- 1. Design Tokens (variables CSS, tema claro/oscuro) ---------- */
 @import url('tokens.css');
 
-/* â”€â”€ 2. Base (reset, tipografÃ­a Playfair+Jakarta+JetBrains) â”€â”€â”€â”€â”€â”€â”€ */
+/* -- 2. Base (reset, tipografia Inter + JetBrains Mono) ---------- */
 @import url('base.css');
 
-/* â”€â”€ 3. Layout (navbar, sidebar, breadcrumbs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- 3. Layout (navbar, sidebar, breadcrumbs) --------------------- */
 @import url('layout.css');
 
-/* â”€â”€ 4. Components (botones, cards, badges, toasts, tooltips) â”€â”€â”€â”€â”€â”€ */
+/* -- 4. Components (botones, cards, badges, toasts, tooltips) ---- */
 @import url('components.css');
 
-/* â”€â”€ 5. Forms (inputs, selects, fieldsets, validaciÃ³n) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- 5. Forms (inputs, selects, fieldsets, validacion) ----------- */
 @import url('forms.css');
 
-/* â”€â”€ 6. Tables (admin tables, DataTables, paginaciÃ³n) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- 6. Tables (admin tables, DataTables, paginacion) ------------ */
 @import url('tables.css');
 
-/* â”€â”€ 7. Dashboard (KPI cards, charts, activity) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- 7. Dashboard (KPI cards, charts, activity) ------------------ */
 @import url('dashboard.css');
 
-/* â”€â”€ 8. Login (editorial agricultural brutalism) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- 8. Login (editorial agricultural brutalism) ----------------- */
 @import url('login.css');
 
-/* â”€â”€ Money widget compat (consolidado en forms.css) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Money widget compat (consolidado en forms.css) -------------- */
 @import url('money_widget.css');
 
-/* â”€â”€ DataTables buttons compat (consolidado en tables.css) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- DataTables buttons compat (consolidado en tables.css) ------- */
 @import url('datatables-buttons.css');
+
+/* -- 9. Polish (transiciones de pagina + relieve de botones) ----- */
+@import url('polish.css');

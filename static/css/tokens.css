@@ -3,7 +3,7 @@
  *  DESIGN TOKENS — Agrícola de la Costa ERP
  *
  *  Dirección estética: Terrostral Costera
- *  - Tipografía: Playfair Display (display) + Plus Jakarta Sans (UI)
+ *  - Tipografía: Inter (display y UI) + JetBrains Mono (código)
  *  - Paleta oficial: charcoal-blue #2f4550 + blue-slate #586f7c
  *    + light-blue #b8dbd9 + ghost-white #f4f4f9 + black #000000
  *  - Inspiración: tierra húmeda de Sinaloa, pizarra costera,
@@ -19,11 +19,10 @@
  */
 
 /* ── Google Fonts (cargadas desde el HTML head o @import) ───── */
-/* Playfair Display: 400, 600, 700 (display / headings) */
-/* Plus Jakarta Sans: 300, 400, 500, 600, 700, 800 (body / UI) */
-/* JetBrains Mono: 400, 500 (código / datos) */
+/* Inter: 300, 400, 500, 600, 700, 800 (UI, body y datos numéricos) */
+/* JetBrains Mono: 400, 500 (código / identificadores técnicos) */
 
-@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap");
 
 /* ── THEME: LIGHT (default) ──────────────────────────────────── */
 :root {
@@ -65,6 +64,14 @@
   --accent-red-bg: rgba(184, 84, 80, 0.08);
   --accent-blue: var(--blue-slate);
   --accent-blue-bg: rgba(88, 111, 124, 0.08);
+
+  /* Action — color único de acciones primarias en toda la interfaz.
+     Fijo en ambos temas para garantizar contraste AA con texto blanco. */
+  --action-primary: #2f4550; /* charcoal-blue */
+  --action-primary-hover: #586f7c; /* blue-slate */
+  --action-primary-active: #1f2f38; /* charcoal-blue-dark */
+  --action-primary-contrast: #ffffff;
+  --action-primary-ring: rgba(47, 69, 80, 0.22);
 
   /* Surface — fondo frío con tinte azul pálido */
   --surface-bg: var(--ghost-white);
@@ -116,9 +123,11 @@
   --duration-normal: 220ms;
   --duration-slow: 350ms;
 
-  /* Typography */
-  --font-display: "Roboto", -apple-system, "Segoe UI", sans-serif;
-  --font-body: "Roboto", -apple-system, "Segoe UI", sans-serif;
+  /* Typography — una sola familia de UI (Inter) para texto y números.
+     JetBrains Mono queda reservado para código e identificadores técnicos. */
+  --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-numeric: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "Cascadia Code", "Consolas", monospace;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.8125rem;

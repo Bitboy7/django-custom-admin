@@ -238,7 +238,7 @@
 .btn-open-new:focus {
   background: #586f7c;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(88, 111, 124, 0.3);
 }
 
 /* Botones específicos para PDFs - colores de la app */
@@ -259,14 +259,14 @@
 .btn-pdf-secondary {
   background: #586f7c !important;
   color: white !important;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 2px 8px rgba(88, 111, 124, 0.2);
 }
 
 .btn-pdf-secondary:hover,
 .btn-pdf-secondary:focus {
   background: #586f7c !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+  box-shadow: 0 4px 14px rgba(88, 111, 124, 0.35);
   outline: none;
 }
 

@@ -83,24 +83,35 @@
   .upload-area:hover { border-color: #586f7c; background: rgba(184,219,217,.1); }
   .upload-area input[type=file] { display: none; }
   .btn-primary {
-    background: #586f7c;
+    background: var(--action-primary, #2f4550);
     color: #fff;
-    border: none;
+    border: 1px solid var(--action-primary, #2f4550);
     padding: .625rem 1.5rem;
     border-radius: .375rem;
     font-weight: 600;
     font-size: .875rem;
     cursor: pointer;
+    transition: background .18s cubic-bezier(.25,1,.5,1), border-color .18s cubic-bezier(.25,1,.5,1);
+  }
+  .btn-primary:hover {
+    background: var(--action-primary-hover, #586f7c);
+    border-color: var(--action-primary-hover, #586f7c);
   }
   .btn-secondary {
-    background: #586f7c;
-    color: #fff;
-    border: none;
+    background: #fff;
+    color: var(--action-primary, #2f4550);
+    border: 1px solid var(--border-strong, #b8c0cc);
     padding: .625rem 1.5rem;
     border-radius: .375rem;
     font-weight: 600;
     font-size: .875rem;
     cursor: pointer;
+    text-decoration: none;
+    transition: background .18s cubic-bezier(.25,1,.5,1), border-color .18s cubic-bezier(.25,1,.5,1);
+  }
+  .btn-secondary:hover {
+    background: var(--surface-hover, rgba(184,219,217,.1));
+    border-color: var(--action-primary, #2f4550);
   }
   .info-box {
     background: rgba(184,219,217,.1);

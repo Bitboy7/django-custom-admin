@@ -221,7 +221,15 @@ class Cliente(models.Model):
             for a in self.anticipo_set.exclude(estado_anticipo='Cancelado')
         )
 
-        return ingresos + notas_cargo - notas_credito - recibos_pago - anticipos
+        # Cobros de contado (facturas PUE) que no generan REP y por lo tanto no
+        # aparecen como recibo_pago en el ledger fiscal.
+        from .services.conciliacion_service import cobros_no_rep
+        cobros_contado = sum(cobros_no_rep(self).values())
+
+        return (
+            ingresos + notas_cargo - notas_credito - recibos_pago
+            - cobros_contado - anticipos
+        )
 
     class Meta:
         verbose_name = 'Cliente'

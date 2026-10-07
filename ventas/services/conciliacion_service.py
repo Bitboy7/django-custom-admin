@@ -28,6 +28,36 @@ def _sum_por_moneda(docs, subtipos):
     return dict(resultado)
 
 
+def cobros_no_rep(cliente):
+    """Cobros de ventas que no están respaldados por un recibo de pago (REP).
+
+    Las facturas de contado (MetodoPago PUE) se pagan al emitirse y no generan
+    Recibo Electrónico de Pago, por lo que su cobro vive en ``Ventas.monto_pagado``
+    y no en un ``DocumentoCFDI`` de tipo recibo_pago. Sin este ajuste, la
+    conciliación mostraría la factura completa como saldo por cobrar, como si
+    fuera a crédito.
+
+    Solo se descuenta la parte del pago que no está ya representada por un REP
+    vigente, para no restar dos veces en las ventas a crédito.
+    """
+    rep_por_venta = defaultdict(float)
+    for doc in cliente.documentos_cfdi.filter(
+        estado='VIGENTE', subtipo='recibo_pago', venta__isnull=False
+    ):
+        rep_por_venta[doc.venta_id] += float(doc.monto.amount)
+
+    cobros = defaultdict(float)
+    for venta in cliente.ventas_set.all():
+        pagado = float(venta.monto_pagado.amount)
+        if pagado <= 0:
+            continue
+        sin_rep = pagado - rep_por_venta.get(venta.id, 0.0)
+        if sin_rep > 0:
+            moneda = str(venta.monto_pagado.currency) or venta.moneda_venta or 'MXN'
+            cobros[moneda] += sin_rep
+    return dict(cobros)
+
+
 def conciliacion_cliente(cliente):
     """Calcula la conciliación fiscal completa de un cliente."""
     docs = cliente.documentos_cfdi.filter(estado='VIGENTE')
@@ -40,10 +70,14 @@ def conciliacion_cliente(cliente):
         'remanentes_anticipo': _sum_por_moneda(docs, ['remanente_anticipo']),
     }
 
+    # Cobros de contado / sin REP: descuentan el pago ya recibido que no tiene
+    # un recibo electrónico de pago asociado (típicamente facturas PUE).
+    detalle['cobros_contado'] = cobros_no_rep(cliente)
+
     # Anticipos pendientes de aplicar (saldo a favor del cliente)
     anticipo_por_moneda = defaultdict(float)
     for a in cliente.anticipo_set.exclude(estado_anticipo='Cancelado'):
-        anticipo_por_moneda[a.monto.currency] += a.saldo_disponible()
+        anticipo_por_moneda[str(a.monto.currency)] += a.saldo_disponible()
     detalle['anticipos_disponibles'] = dict(anticipo_por_moneda)
 
     # Saldo por cobrar conciliado, por moneda
@@ -58,6 +92,7 @@ def conciliacion_cliente(cliente):
             + detalle['notas_cargo'].get(mon, 0.0)
             - detalle['notas_credito'].get(mon, 0.0)
             - detalle['recibos_pago'].get(mon, 0.0)
+            - detalle['cobros_contado'].get(mon, 0.0)
             - detalle['anticipos_disponibles'].get(mon, 0.0)
         )
 

@@ -207,7 +207,7 @@ class InversionAdmin(ImportExportModelAdmin, ModelAdmin):
         count = obj.rendimientos.count()
         if count > 0:
             return format_html(
-                '<span style="background-color: #007bff; color: white; padding: 2px 6px; border-radius: 10px;">{}</span>',
+                '<span style="background-color: #2f4550; color: white; padding: 2px 6px; border-radius: 10px;">{}</span>',
                 count
             )
         return '-'

@@ -36,3 +36,6 @@
 
 /* DataTables Buttons */
 @import url("datatables-buttons.css");
+
+/* Polish (page transitions + button relief) */
+@import url("polish.css");

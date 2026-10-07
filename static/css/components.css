@@ -33,21 +33,21 @@
 input[type="submit"]:not([name="_addanother"]):not([name="_continue"]),
 .submit-row input[type="submit"]:not([name="_addanother"]):not([name="_continue"]),
 .submit-row button:not([name="_addanother"]):not([name="_continue"]) {
-  background: var(--brand-teal) !important;
-  border-color: var(--brand-teal) !important;
-  color: #fff !important;
+  background: var(--action-primary) !important;
+  border-color: var(--action-primary) !important;
+  color: var(--action-primary-contrast) !important;
   box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
 .btn-primary:hover,
 .btn.btn-primary:hover,
 input[type="submit"]:hover {
-  background: var(--brand-teal-dark) !important;
-  border-color: var(--brand-teal-dark) !important;
+  background: var(--action-primary-hover) !important;
+  border-color: var(--action-primary-hover) !important;
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
-.btn-primary:active { transform: translateY(0) !important; }
+.btn-primary:active { background: var(--action-primary-active) !important; border-color: var(--action-primary-active) !important; transform: translateY(0) !important; }
 
 /* Secondary */
 .btn-secondary,
@@ -64,8 +64,8 @@ input[type="submit"]:hover {
 .btn-default:hover,
 .btn.btn-default:hover {
   background: var(--surface-hover) !important;
-  border-color: var(--brand-teal) !important;
-  color: var(--brand-teal-dark) !important;
+  border-color: var(--action-primary) !important;
+  color: var(--action-primary) !important;
 }
 
 /* Danger */
@@ -105,6 +105,19 @@ input[type="submit"]:hover {
 .btn-warning:hover,
 .btn.btn-warning:hover { filter: brightness(1.1); }
 
+/* Info — azul pizarra de la paleta (AdminLTE por defecto lo pinta cian) */
+.btn-info,
+.btn.btn-info {
+  background: var(--accent-blue) !important;
+  border-color: var(--accent-blue) !important;
+  color: #fff !important;
+}
+.btn-info:hover,
+.btn.btn-info:hover {
+  background: var(--action-primary) !important;
+  border-color: var(--action-primary) !important;
+}
+
 /* Ghost */
 .btn-ghost {
   background: transparent;
@@ -139,7 +152,7 @@ body .submit-row button[name="_addanother"],
 body .submit-row button[name="_continue"] {
   background: var(--surface-card) !important;
   border: 1px solid var(--border-strong) !important;
-  color: var(--brand-teal-dark) !important;
+  color: var(--action-primary) !important;
   font-size: var(--font-size-xs) !important;
   font-weight: 500 !important;
   box-shadow: none !important;
@@ -147,8 +160,8 @@ body .submit-row button[name="_continue"] {
 }
 body .submit-row input[name="_addanother"]:hover,
 body .submit-row input[name="_continue"]:hover {
-  background: rgba(13,148,136,0.08) !important;
-  border-color: var(--brand-teal) !important;
+  background: var(--surface-hover) !important;
+  border-color: var(--action-primary) !important;
 }
 
 /* ── Cards ─────────────────────────────────────────────────────── */
@@ -218,7 +231,7 @@ body .module caption {
 .status-danger,  .badge--danger  { background: var(--accent-red-bg); color: var(--accent-red); }
 .status-info,    .badge--info    { background: var(--accent-blue-bg); color: var(--accent-blue); }
 .badge--neutral { background: var(--surface-hover); color: var(--text-secondary); }
-.badge--accent  { background: rgba(13,148,136,0.12); color: var(--brand-teal-dark); }
+.badge--accent  { background: rgba(88,111,124,0.12); color: var(--action-primary); }
 
 /* ── Toasts ─────────────────────────────────────────────────────── */
 .toast-container {
@@ -445,4 +458,79 @@ body .module caption {
 }
 .theme-toggle:active svg {
   transform: scale(0.85) rotate(15deg);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AdminLTE / Bootstrap accent → paleta de marca
+   Jazzmin usa el acento "primary" de AdminLTE (#007bff) en enlaces,
+   controles y utilidades. Se remapea todo a la paleta para que no
+   quede ningún azul genérico en la interfaz.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Enlaces del área de contenido (sidebar/navbar conservan su color) */
+.content-wrapper a:not(.btn):not(.page-link):not(.dropdown-item):not(.nav-link),
+.content-wrapper .btn-link {
+  color: var(--accent-blue) !important;
+}
+.content-wrapper a:not(.btn):not(.page-link):not(.dropdown-item):not(.nav-link):hover,
+.content-wrapper a:not(.btn):not(.page-link):not(.dropdown-item):not(.nav-link):focus,
+.content-wrapper .btn-link:hover,
+.content-wrapper .btn-link:focus {
+  color: var(--action-primary) !important;
+}
+
+/* Casillas, radios y switches */
+.custom-control-input:checked ~ .custom-control-label::before {
+  background-color: var(--action-primary) !important;
+  border-color: var(--action-primary) !important;
+}
+.custom-control-input:focus:not(:checked) ~ .custom-control-label::before {
+  border-color: var(--border-focus) !important;
+}
+.custom-control-input:focus ~ .custom-control-label::before {
+  box-shadow: 0 0 0 0.2rem var(--action-primary-ring) !important;
+}
+.custom-range::-webkit-slider-thumb { background-color: var(--action-primary); }
+.custom-range::-moz-range-thumb { background-color: var(--action-primary); }
+
+/* Paginación */
+.page-link { color: var(--action-primary) !important; }
+.page-item.active .page-link {
+  background-color: var(--action-primary) !important;
+  border-color: var(--action-primary) !important;
+  color: #fff !important;
+}
+.page-item.disabled .page-link { color: var(--text-muted) !important; }
+
+/* Menús, pestañas y listas activas */
+.dropdown-item.active,
+.dropdown-item:active { background-color: var(--action-primary) !important; }
+.nav-pills .nav-link.active {
+  background-color: var(--action-primary) !important;
+  color: #fff !important;
+}
+.list-group-item.active {
+  background-color: var(--action-primary) !important;
+  border-color: var(--action-primary) !important;
+}
+.progress-bar { background-color: var(--action-primary); }
+
+/* Utilidades Bootstrap con el primary por defecto */
+.text-primary { color: var(--action-primary) !important; }
+.bg-primary { background-color: var(--action-primary) !important; }
+.border-primary { border-color: var(--action-primary) !important; }
+.badge-primary { background-color: var(--action-primary) !important; color: #fff !important; }
+.badge-info { background-color: var(--accent-blue) !important; color: #fff !important; }
+.alert-primary { background-color: var(--accent-blue-bg); border-color: var(--border-default); color: var(--action-primary); }
+.alert-info { background-color: var(--accent-blue-bg); border-color: var(--border-default); color: var(--action-primary); }
+.table-primary, .table-primary > th, .table-primary > td { background-color: var(--accent-blue-bg); }
+.link-primary { color: var(--action-primary) !important; }
+
+/* Select2 (Jazzmin) */
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+  background-color: var(--action-primary) !important;
+}
+.select2-container--default.select2-container--focus .select2-selection--multiple,
+.select2-container--default .select2-selection--single:focus {
+  border-color: var(--border-focus) !important;
 }
