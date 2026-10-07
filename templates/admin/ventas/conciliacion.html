@@ -23,7 +23,7 @@
   <div class="bg-white rounded-lg shadow p-6">
     <h2 class="text-xl font-semibold mb-2">Conciliación de CFDI por cliente</h2>
     <p class="text-sm text-gray-600 mb-4">
-      Saldo por cobrar conciliado desde los CFDI (facturado + notas de cargo − notas de crédito − pagos − anticipos).
+      Saldo por cobrar conciliado desde los CFDI (facturado + notas de cargo − notas de crédito − pagos (REP) − cobros de contado − anticipos).
       Solo se consideran documentos <strong>vigentes</strong>.
     </p>
 
@@ -42,6 +42,7 @@
           <th class="p-2 text-right">+ Notas cargo</th>
           <th class="p-2 text-right">− Notas crédito</th>
           <th class="p-2 text-right">− Pagos (REP)</th>
+          <th class="p-2 text-right">− Cobros contado</th>
           <th class="p-2 text-right">− Anticipos</th>
           <th class="p-2 text-right">Saldo conciliado</th>
           <th class="p-2 text-center">Sin vincular</th>
@@ -56,6 +57,7 @@
           <td class="p-2 text-right">{% for m, v in f.detalle.notas_cargo.items %}{{ v|floatformat:2 }} {{ m }}<br>{% empty %}—{% endfor %}</td>
           <td class="p-2 text-right">{% for m, v in f.detalle.notas_credito.items %}{{ v|floatformat:2 }} {{ m }}<br>{% empty %}—{% endfor %}</td>
           <td class="p-2 text-right">{% for m, v in f.detalle.recibos_pago.items %}{{ v|floatformat:2 }} {{ m }}<br>{% empty %}—{% endfor %}</td>
+          <td class="p-2 text-right">{% for m, v in f.detalle.cobros_contado.items %}{{ v|floatformat:2 }} {{ m }}<br>{% empty %}—{% endfor %}</td>
           <td class="p-2 text-right">{% for m, v in f.detalle.anticipos_disponibles.items %}{{ v|floatformat:2 }} {{ m }}<br>{% empty %}—{% endfor %}</td>
 
           <td class="p-2 text-right">
@@ -78,7 +80,7 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="8" class="p-4 text-center text-gray-500">No hay clientes activos.</td></tr>
+        <tr><td colspan="9" class="p-4 text-center text-gray-500">No hay clientes activos.</td></tr>
         {% endfor %}
       </tbody>
     </table>

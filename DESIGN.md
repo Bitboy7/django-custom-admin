@@ -41,9 +41,12 @@ Una paleta terrostra y orgánica inspirada en la costa de Sinaloa: el carbón az
 
 | Rol | Fuente | Fallback | Uso |
 |-----|--------|----------|-----|
-| Display | Playfair Display | Georgia, serif | Títulos de página, headers de sección (admin) |
-| Body | Plus Jakarta Sans | system-ui, sans-serif | Todo el texto de UI, tablas, formularios |
-| Mono | JetBrains Mono | Consolas, monospace | Números, IDs, fechas técnicas, tablas financieras |
+| Display | Inter | system-ui, sans-serif | Títulos de página, headers de sección |
+| Body | Inter | system-ui, sans-serif | Todo el texto de UI, tablas, formularios |
+| Numérico | Inter (`tabular-nums`) | system-ui, sans-serif | Montos, cantidades, KPIs, tablas financieras |
+| Mono | JetBrains Mono | Consolas, monospace | Código e identificadores técnicos (UUID, folios) |
+
+> **Nota:** los números financieros usan Inter con cifras tabulares (`font-variant-numeric: tabular-nums`), no una monoespaciada. JetBrains Mono se reserva para código e identificadores.
 
 ### Scale
 - Page title: 1.5rem (24px), weight 700
@@ -77,12 +80,12 @@ Base: 0.25rem (4px). Escalado Tailwind estándar.
 
 ### Inputs & Selects
 - `border: 1px solid #d1d5db`, `border-radius: 0.375rem`
-- Focus: `border-color: #3b82f6`, `box-shadow: 0 0 0 3px rgba(59,130,246,.15)`
+- Focus: `border-color: #b8dbd9` (light-blue), `box-shadow: 0 0 0 3px rgba(47,69,80,.22)`
 - Selects custom: `appearance-none` con flecha SVG absoluta a la derecha.
 - Estados de error: borde rojo, fondo rojo-50, texto rojo-600.
 
 ### Buttons
-- Primario: `bg-charcoal-blue (#2f4550)`, hover `bg-blue-slate (#586f7c)`, texto blanco.
+- Primario: token `--action-primary` (`#2f4550`), hover `--action-primary-hover` (`#586f7c`), texto blanco. **Toda acción primaria** (guardar, filtrar, generar) usa este token; AdminLTE/`accent-primary` se remapea a la paleta.
 - Éxito/Guardar: `bg-charcoal-blue`, hover `bg-blue-slate`, con acento `light-blue` en iconos.
 - Peligro: `bg-danger (#b85450)`, hover oscurecer 10%.
 - Ghost: borde `blue-slate`, fondo `ghost-white`, hover `light-blue` tint.
@@ -119,7 +122,7 @@ Base: 0.25rem (4px). Escalado Tailwind estándar.
 ## Layout
 
 ### Admin (Jazzmin)
-- Sidebar navy (`#1e3a8a`), contenido con padding 1.25rem.
+- Sidebar charcoal-blue (`#2f4550` en claro / `#1f2f38` en oscuro), contenido con padding 1.25rem.
 - Navbar sticky top, z-30.
 - Dashboard: grid de KPIs (6 cols en xl), 2 cols para gráficos, 1 col para tabla.
 

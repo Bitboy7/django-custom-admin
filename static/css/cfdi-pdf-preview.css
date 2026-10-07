@@ -35,7 +35,7 @@ body.app-ventas.model-pagoventa.change-list .field-get_comprobante {
 
 .cfdi-pdf-trigger:hover {
   background: rgba(24, 183, 167, 0.17);
-  border-color: var(--brand-teal, #18b7a7);
+  border-color: var(--brand-teal, #577c65);
   box-shadow: 0 4px 12px rgba(15, 31, 53, 0.1);
   color: var(--brand-teal-dark, #285b52);
   transform: translateY(-1px);
@@ -43,7 +43,7 @@ body.app-ventas.model-pagoventa.change-list .field-get_comprobante {
 
 .cfdi-pdf-trigger:focus-visible {
   box-shadow: 0 0 0 3px rgba(24, 183, 167, 0.22);
-  outline: 2px solid var(--brand-teal, #18b7a7);
+  outline: 2px solid var(--brand-teal, #577c65);
   outline-offset: 2px;
 }
 

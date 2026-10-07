@@ -550,7 +550,7 @@
 
         <!-- Opciones de filtro diario -->
         <div id="filtro-diario-opciones" class="mb-4" style="{% if selected_periodo != 'diario' %}display: none;{% endif %}">
-          <div class="bg-gradient-to-r from-cyan-50 to-emerald-50 rounded-lg p-4 border border-[rgba(184,219,217,.3)] shadow-sm">
+          <div class="bg-gradient-to-r from-[#f4f4f9] to-[#e6f2f1] rounded-lg p-4 border border-[rgba(184,219,217,.3)] shadow-sm">
             <label class="block font-medium mb-3 text-[#586f7c] flex items-center">
               <i class="fas fa-calendar text-[#2f4550] mr-2"></i> 
               Tipo de consulta diaria
@@ -579,7 +579,7 @@
                   <i class="fas fa-calendar-check text-[#2f4550] mr-1"></i> Seleccionar día:
                 </label>
                 <input type="date" name="dia" id="dia" value="{{ selected_dia }}"
-                  class="block w-full bg-[#f4f4f9] border border-gray-400 hover:border-cyan-500 px-4 py-2 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#b8dbd9] focus:border-transparent">
+                  class="block w-full bg-[#f4f4f9] border border-gray-400 hover:border-[#586f7c] px-4 py-2 rounded-md shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#b8dbd9] focus:border-transparent">
               </div>
             </div>
 
@@ -631,7 +631,7 @@
       </div>
 
       <!-- Total pagado -->
-      <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-lg p-5 border border-[rgba(184,219,217,.3)] transform transition-transform duration-300 hover:scale-[1.02] overflow-hidden relative">
+      <div class="bg-gradient-to-br from-[#f4f4f9] to-[#e6f2f1] rounded-lg shadow-lg p-5 border border-[rgba(184,219,217,.3)] transform transition-transform duration-300 hover:scale-[1.02] overflow-hidden relative">
         <div class="absolute top-0 right-0 -mt-4 -mr-4 bg-[#586f7c] rounded-full w-20 h-20 opacity-20"></div>
         <div class="flex justify-between items-center">
           <h2 class="text-xl font-semibold text-[#2f4550] flex items-center">
@@ -661,17 +661,17 @@
       </div>
 
       <!-- Número de transacciones -->
-      <div class="bg-gradient-to-br from-purple-50 to-white rounded-lg shadow-lg p-5 border border-purple-200 transform transition-transform duration-300 hover:scale-[1.02] overflow-hidden relative">
-        <div class="absolute top-0 right-0 -mt-4 -mr-4 bg-purple-500 rounded-full w-20 h-20 opacity-20"></div>
+      <div class="bg-gradient-to-br from-[#f4f4f9] to-white rounded-lg shadow-lg p-5 border border-[#b8dbd9] transform transition-transform duration-300 hover:scale-[1.02] overflow-hidden relative">
+        <div class="absolute top-0 right-0 -mt-4 -mr-4 bg-[#586f7c] rounded-full w-20 h-20 opacity-20"></div>
         <div class="flex justify-between items-center">
           <h2 class="text-xl font-semibold text-[#2f4550] flex items-center">
-            <i class="fas fa-receipt text-purple-600 mr-2 text-3xl"></i>
+            <i class="fas fa-receipt text-[#586f7c] mr-2 text-3xl"></i>
             <span>Transacciones</span>
           </h2>
-          <span class="text-xl font-bold text-purple-900">{{ numero_transacciones }}</span>
+          <span class="text-xl font-bold text-[#2f4550]">{{ numero_transacciones }}</span>
         </div>
         <div class="mt-4 h-1 w-full bg-[#d8dce6] rounded-full overflow-hidden">
-          <div class="bg-purple-900 h-1 rounded-full" style="width: 100%"></div>
+          <div class="bg-[#2f4550] h-1 rounded-full" style="width: 100%"></div>
         </div>
       </div>
     </div>
@@ -801,7 +801,7 @@
                 </div>
               </td>
               
-              <td class="px-4 py-3 text-right font-medium text-purple-600" data-order="{{ balance.acumulado }}">
+              <td class="px-4 py-3 text-right font-medium text-[#586f7c]" data-order="{{ balance.acumulado }}">
                 ${{ balance.acumulado|us_currency:2 }}
               </td>
             </tr>

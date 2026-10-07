@@ -48,7 +48,7 @@
   }
 
   .rc-subtotal td {
-    background-color: #a5f3fc;
+    background-color: #9ac5c3;
     font-weight: 600;
   }
 
@@ -138,7 +138,7 @@
   }
 
   .rc-btn-primary {
-    background-color: #586f7c;
+    background-color: var(--action-primary, #2f4550);
     color: #fff;
     border: none;
     border-radius: 4px;
@@ -146,10 +146,11 @@
     font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
+    transition: background-color .18s;
   }
 
   .rc-btn-primary:hover {
-    background-color: #586f7c;
+    background-color: var(--action-primary-hover, #586f7c);
   }
 
   .rc-btn-secondary {

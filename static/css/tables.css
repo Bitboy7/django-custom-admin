@@ -61,7 +61,7 @@ body .results table tr:nth-child(even) td {
 /* Hover */
 body #result_list tr:hover td,
 body .results table tr:hover td {
-  background: rgba(13, 148, 136, 0.05) !important;
+  background: rgba(88, 111, 124, 0.05) !important;
 }
 
 /* Checkbox column */
@@ -69,7 +69,7 @@ body #result_list tr td.action-checkbox input[type="checkbox"],
 body #result_list tr th.action-checkbox-column input[type="checkbox"] {
   width: 18px;
   height: 18px;
-  accent-color: var(--brand-teal);
+  accent-color: var(--action-primary);
 }
 
 /* Numeric columns */
@@ -82,8 +82,9 @@ body #result_list td[class*="limite"],
 body #result_list td[class*="credito"],
 body .results table td.numeric {
   text-align: right;
-  font-family: var(--font-mono);
+  font-family: var(--font-numeric);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
   font-size: var(--font-size-sm);
 }
 
@@ -104,8 +105,8 @@ body .paginator a {
   transition: background var(--duration-fast) var(--ease-default);
 }
 body .paginator a:hover {
-  background: rgba(13, 148, 136, 0.08) !important;
-  color: var(--brand-teal-dark) !important;
+  background: var(--surface-hover) !important;
+  color: var(--action-primary) !important;
 }
 body .paginator .this-page {
   background: var(--brand-teal) !important;
@@ -156,13 +157,13 @@ body #changelist-filter li a {
   transition: all var(--duration-fast) var(--ease-default);
 }
 body #changelist-filter li a:hover {
-  background: rgba(13, 148, 136, 0.08) !important;
+  background: rgba(88, 111, 124, 0.08) !important;
   color: var(--brand-teal-dark) !important;
 }
 body #changelist-filter li.selected a {
   color: var(--brand-teal-dark) !important;
   font-weight: 700;
-  background: rgba(13, 148, 136, 0.06);
+  background: rgba(88, 111, 124, 0.06);
 }
 
 /* ── Changelist controls ──────────────────────────────────────────
@@ -544,7 +545,7 @@ body.change-list #result_list tbody textarea:focus {
   text-decoration: none !important;
 }
 .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-  background: rgba(13, 148, 136, 0.08) !important;
+  background: rgba(88, 111, 124, 0.08) !important;
   border-color: var(--brand-teal) !important;
   color: var(--brand-teal-dark) !important;
 }
@@ -594,7 +595,7 @@ body.change-list #result_list tbody textarea:focus {
 }
 .dataTables_wrapper .dataTables_filter input:focus {
   border-color: var(--border-focus) !important;
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15) !important;
+  box-shadow: 0 0 0 3px rgba(88, 111, 124, 0.15) !important;
   outline: none !important;
 }
 

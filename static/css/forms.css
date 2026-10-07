@@ -40,7 +40,7 @@ input:focus,
 textarea:focus,
 select:focus {
   border-color: var(--border-focus) !important;
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+  box-shadow: 0 0 0 3px var(--action-primary-ring);
   outline: none !important;
 }
 
@@ -81,7 +81,7 @@ textarea[disabled],
   border-color: var(--border-default) !important;
 }
 .calculation-highlight {
-  background: rgba(13, 148, 136, 0.06) !important;
+  background: var(--accent-blue-bg) !important;
   transition: background var(--duration-fast) var(--ease-default);
 }
 @keyframes valueChange {
@@ -95,7 +95,7 @@ input[type="checkbox"],
 input[type="radio"] {
   width: 18px;
   height: 18px;
-  accent-color: var(--brand-teal);
+  accent-color: var(--action-primary);
   cursor: pointer;
   min-height: auto;
   border: none !important;
@@ -222,8 +222,9 @@ fieldset.module > h2 {
 }
 .money-field-wrapper .amount-input {
   flex: 1;
-  font-family: var(--font-mono);
+  font-family: var(--font-numeric);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
   font-size: var(--font-size-sm);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-strong);
@@ -235,7 +236,7 @@ fieldset.module > h2 {
 }
 .money-field-wrapper .amount-input:focus {
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+  box-shadow: 0 0 0 3px var(--action-primary-ring);
   outline: none;
 }
 .money-field-wrapper .currency-select {

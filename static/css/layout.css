@@ -104,7 +104,7 @@ body .form-control-navbar::placeholder {
 body .form-control-navbar:focus {
   background: rgba(255, 255, 255, 0.12) !important;
   border-color: var(--brand-teal) !important;
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.25) !important;
+  box-shadow: 0 0 0 3px rgba(88, 111, 124, 0.25) !important;
 }
 
 /* ── Avatar pill in navbar ────────────────────────────────────── */
@@ -122,8 +122,8 @@ body .jaz-avatar-btn {
 }
 body .jaz-avatar-btn:hover,
 body .jaz-avatar-btn:focus-visible {
-  background: rgba(13, 148, 136, 0.18) !important;
-  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.4) !important;
+  background: rgba(88, 111, 124, 0.18) !important;
+  box-shadow: 0 0 0 2px rgba(88, 111, 124, 0.4) !important;
   outline: none;
 }
 body .jaz-avatar-img {
@@ -131,7 +131,7 @@ body .jaz-avatar-img {
   height: 30px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(13, 148, 136, 0.7);
+  border: 2px solid rgba(88, 111, 124, 0.7);
   flex-shrink: 0;
 }
 body .jaz-avatar-initials {

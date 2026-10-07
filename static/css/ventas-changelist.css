@@ -297,14 +297,14 @@ body.app-ventas.model-ventas.change-list .sales-quick-action--secondary:hover {
 }
 
 body.app-ventas.model-ventas.change-list .sales-quick-action--primary {
-  background: var(--brand-navy);
-  border: 1px solid var(--brand-navy);
+  background: var(--action-primary, var(--brand-navy));
+  border: 1px solid var(--action-primary, var(--brand-navy));
   color: #fff !important;
 }
 
 body.app-ventas.model-ventas.change-list .sales-quick-action--primary:hover {
-  background: var(--brand-navy-light);
-  border-color: var(--brand-navy-light);
+  background: var(--action-primary-hover, var(--brand-navy-light));
+  border-color: var(--action-primary-hover, var(--brand-navy-light));
   box-shadow: var(--shadow-sm);
   color: #fff !important;
 }
@@ -418,7 +418,7 @@ body.app-ventas.model-ventas.change-list #changelist #result_list tbody tr:hover
 body.app-ventas.model-ventas.change-list #changelist #result_list td.field-fecha_salida_manifiesto {
   background: var(--sales-table-key-bg, rgba(184, 219, 217, 0.22)) !important;
   color: var(--sales-table-key-text, var(--brand-navy)) !important;
-  font-family: var(--font-body, "Roboto", "Segoe UI", sans-serif) !important;
+  font-family: var(--font-body, "Inter", "Segoe UI", sans-serif) !important;
   font-feature-settings: "lnum" 1, "tnum" 1;
   font-variant-numeric: lining-nums tabular-nums;
   font-weight: 700 !important;
@@ -432,7 +432,7 @@ body.app-ventas.model-ventas.change-list #changelist #result_list tbody tr:hover
 .sales-money,
 .sales-balance {
   color: var(--sales-money, var(--brand-navy-light)) !important;
-  font-family: var(--font-body, "Roboto", "Segoe UI", sans-serif) !important;
+  font-family: var(--font-body, "Inter", "Segoe UI", sans-serif) !important;
   font-feature-settings: "lnum" 1, "tnum" 1;
   font-size: 0.84rem;
   font-variant-numeric: lining-nums tabular-nums;
@@ -443,7 +443,7 @@ body.app-ventas.model-ventas.change-list #changelist #result_list tbody tr:hover
 
 body.app-ventas.model-ventas.change-list #changelist #result_list td.field-get_monto_formateado,
 body.app-ventas.model-ventas.change-list #changelist #result_list td.field-get_saldo_pendiente {
-  font-family: var(--font-body, "Roboto", "Segoe UI", sans-serif) !important;
+  font-family: var(--font-body, "Inter", "Segoe UI", sans-serif) !important;
 }
 
 .sales-money--cash,
@@ -462,13 +462,13 @@ body.app-ventas.model-ventas.change-list #changelist #result_list td.field-get_s
 
 .sales-muted {
   color: var(--text-muted) !important;
-  font-family: var(--font-body, "Roboto", "Segoe UI", sans-serif) !important;
+  font-family: var(--font-body, "Inter", "Segoe UI", sans-serif) !important;
   font-size: 0.72rem;
 }
 
 .sales-client-name {
   color: var(--text-primary);
-  font-family: var(--font-body, "Roboto", "Segoe UI", sans-serif);
+  font-family: var(--font-body, "Inter", "Segoe UI", sans-serif);
   font-weight: 700;
 }
 
@@ -518,7 +518,7 @@ body.app-ventas.model-ventas.change-list #result_list .sales-country__flag {
 
 .sales-country--fallback {
   color: var(--text-muted);
-  font-family: var(--font-body, "Roboto", "Segoe UI", sans-serif);
+  font-family: var(--font-body, "Inter", "Segoe UI", sans-serif);
   font-size: 0.72rem;
 }
 
@@ -562,7 +562,7 @@ body.app-ventas.model-ventas.change-list #result_list .sales-country__flag {
 
 .sales-risk {
   color: var(--text-muted) !important;
-  font-family: var(--font-body, "Roboto", "Segoe UI", sans-serif);
+  font-family: var(--font-body, "Inter", "Segoe UI", sans-serif);
   font-size: 0.72rem;
 }
 

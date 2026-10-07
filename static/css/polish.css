@@ -1,0 +1,241 @@
+/*
+ * ═══════════════════════════════════════════════════════════════
+ *  POLISH — Page transitions + tactile button relief
+ *
+ *  Dirección: micro-detalles que hacen la interfaz más amigable.
+ *   - 1. Transiciones suaves entre páginas (View Transitions +
+ *        fallback de entrada de contenido).
+ *   - 2. Relieve táctil en botones (highlight superior + sombra
+ *        inferior + sombra de contacto suave). Nada de botones planos.
+ *
+ *  Se carga al final de admin_custom.css y en _base.html para cubrir
+ *  tanto el admin (Jazzmin) como las vistas corporativas y el login.
+ *  Usa variables con fallback literal: funciona aunque tokens.css no
+ *  esté presente.
+ *  Respeta prefers-reduced-motion.
+ * ═══════════════════════════════════════════════════════════════
+ */
+
+/* ═══════════════════════════════════════════════════════════════
+   1. TRANSICIONES ENTRE PÁGINAS
+   ═══════════════════════════════════════════════════════════════ */
+
+/*
+ * Cross-document View Transitions: deja que el navegador anime el
+ * cambio de documento completo. Es aditivo y solo no se aplica si el
+ * navegador no lo soporta (p.ej. Firefox aún no).
+ */
+@view-transition {
+  navigation: auto;
+}
+
+@keyframes vt-page-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes vt-page-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.998); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Salida más rápida que la entrada: confianza al llegar. */
+::view-transition-old(root) {
+  animation: vt-page-out 150ms var(--ease-default, ease) both;
+}
+::view-transition-new(root) {
+  animation: vt-page-in 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/*
+ * La navbar y el sidebar del admin no deben desplazarse entre páginas:
+ * se nombran para que se crucen en su sitio, mientras solo el
+ * contenido raíz hace la entrada con desplazamiento.
+ */
+html body #jazzy-navbar { view-transition-name: app-navbar; }
+html body aside#jazzy-sidebar { view-transition-name: app-sidebar; }
+
+/*
+ * Fallback de entrada de contenido cuando View Transitions no existe.
+ * Una sola vez, al montar la página, la superficie principal aparece
+ * con un desplazamiento mínimo. Nunca se aplica encima de la
+ * transición nativa para no duplicar el movimiento.
+ */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@supports not (view-transition-name: none) {
+  body .content-wrapper > .content,
+  .page-content {
+    animation: page-enter 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   2. RELIEVE TÁCTIL EN BOTONES
+   ═══════════════════════════════════════════════════════════════ */
+
+/*
+ * El degradado es translúcido (blanco arriba, sombra abajo) para
+ * funcionar sobre cualquier color base y en ambos temas, sin
+ * reemplazar el color de marca que ya fija cada variante. Los valores
+ * del relieve se exponen como variables para que el tema oscuro solo
+ * redefina las sombras, sin pelearse con los estados hover/active.
+ */
+.btn:not(.btn-secondary):not(.btn-default):not(.btn-danger):not(.btn-outline),
+input[type="submit"],
+input[type="button"],
+body .button,
+body .actions .button,
+.btn-export-pdf,
+.btn-submit {
+  --relief-hi: rgba(255, 255, 255, 0.28);
+  --relief-shade: rgba(0, 0, 0, 0.08);
+  --relief-raise-1: rgba(15, 31, 53, 0.20);
+  --relief-raise-2: rgba(15, 31, 53, 0.10);
+  --relief-hover-hi: rgba(255, 255, 255, 0.34);
+  --relief-hover-1: rgba(15, 31, 53, 0.20);
+  --relief-hover-2: rgba(15, 31, 53, 0.16);
+  --relief-press: rgba(10, 20, 30, 0.28);
+  --relief-press-shade: rgba(0, 0, 0, 0.10);
+
+  position: relative;
+  transition:
+    transform var(--duration-fast, 150ms) var(--ease-default, ease),
+    box-shadow var(--duration-fast, 150ms) var(--ease-default, ease),
+    background-color var(--duration-fast, 150ms) var(--ease-default, ease),
+    border-color var(--duration-fast, 150ms) var(--ease-default, ease),
+    filter var(--duration-fast, 150ms) var(--ease-default, ease);
+}
+
+/* Relieve en reposo: highlight superior + sombra inferior + alzado.
+   Se excluyen las variantes planas/borde (secondary, default, danger,
+   outline) y los botones DataTables, que definen su propio acabado. */
+.btn:not(.btn-secondary):not(.btn-default):not(.btn-danger):not(.btn-outline),
+input[type="submit"],
+input[type="button"],
+body .button,
+body .actions .button,
+.btn-export-pdf,
+.btn-submit {
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.20) 0%,
+    rgba(255, 255, 255, 0.05) 48%,
+    rgba(13, 24, 34, 0.10) 100%
+  ) !important;
+  box-shadow:
+    inset 0 1px 0 var(--relief-hi),
+    inset 0 -1px 0 var(--relief-shade),
+    0 1px 2px var(--relief-raise-1),
+    0 3px 7px var(--relief-raise-2) !important;
+}
+
+/* Hover: se eleva 1px y la sombra se abre. */
+.btn:not(.btn-secondary):not(.btn-default):not(.btn-danger):not(.btn-outline):hover,
+input[type="submit"]:hover,
+input[type="button"]:hover,
+body .button:hover,
+body .actions .button:hover,
+.btn-export-pdf:hover,
+.btn-submit:hover {
+  transform: translateY(-1px) !important;
+  box-shadow:
+    inset 0 1px 0 var(--relief-hover-hi),
+    inset 0 -1px 0 var(--relief-shade),
+    0 2px 4px var(--relief-hover-1),
+    0 7px 16px var(--relief-hover-2) !important;
+}
+
+/* Activo: se hunde — el relieve se invierte. */
+.btn:not(.btn-secondary):not(.btn-default):not(.btn-danger):not(.btn-outline):active,
+input[type="submit"]:active,
+input[type="button"]:active,
+body .button:active,
+body .actions .button:active,
+.btn-export-pdf:active,
+.btn-submit:active {
+  transform: translateY(0) !important;
+  box-shadow:
+    inset 0 2px 4px var(--relief-press),
+    inset 0 1px 0 var(--relief-press-shade) !important;
+}
+
+/*
+ * Tema oscuro: todo el relieve se recalcula. Al tocar solo las
+ * variables, hover y active siguen funcionando sin conflictos de
+ * especificidad.
+ */
+html[data-theme="dark"] .btn:not(.btn-secondary):not(.btn-default):not(.btn-danger):not(.btn-outline),
+html[data-theme="dark"] input[type="submit"],
+html[data-theme="dark"] input[type="button"],
+html[data-theme="dark"] body .button,
+html[data-theme="dark"] body .actions .button,
+html[data-theme="dark"] .btn-export-pdf,
+html[data-theme="dark"] .btn-submit {
+  --relief-hi: rgba(255, 255, 255, 0.14);
+  --relief-shade: rgba(0, 0, 0, 0.28);
+  --relief-raise-1: rgba(0, 0, 0, 0.45);
+  --relief-raise-2: rgba(0, 0, 0, 0.30);
+  --relief-hover-hi: rgba(255, 255, 255, 0.20);
+  --relief-hover-1: rgba(0, 0, 0, 0.45);
+  --relief-hover-2: rgba(0, 0, 0, 0.40);
+  --relief-press: rgba(0, 0, 0, 0.50);
+  --relief-press-shade: rgba(0, 0, 0, 0.35);
+}
+
+/* Botones fantasma / enlace: planos a propósito, sin relieve. */
+.btn-ghost,
+.btn-link,
+.btn.btn-ghost,
+.btn.btn-link {
+  background-image: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Deshabilitados: sin relieve ni elevación. */
+.btn:disabled,
+.btn.disabled,
+input[type="submit"]:disabled,
+input[type="button"]:disabled,
+body .button:disabled,
+.dt-buttons .dt-button.disabled {
+  box-shadow: none !important;
+  background-image: none !important;
+  transform: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   3. REDUCED MOTION — menos movimiento, no menos significado
+   ═══════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+
+  body .content-wrapper > .content,
+  .page-content {
+    animation: none !important;
+  }
+
+  .btn:hover,
+  input[type="submit"]:hover,
+  input[type="button"]:hover,
+  body .button:hover,
+  body .actions .button:hover,
+  .btn-export-pdf:hover,
+  .btn-submit:hover,
+  .btn:active,
+  input[type="submit"]:active,
+  input[type="button"]:active,
+  body .button:active,
+  body .actions .button:active,
+  .btn-export-pdf:active,
+  .btn-submit:active {
+    transform: none !important;
+  }
+}

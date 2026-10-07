@@ -7,6 +7,10 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}AgrÃ­cola de la Costa{% endblock %}</title>
+  <!-- Google Fonts: Inter (UI + datos) + JetBrains Mono (código) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
   <!-- DataTables CSS -->
   <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css">
   <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
@@ -215,6 +219,9 @@
   <!-- HTMX Utilities CSS -->
   <link rel="stylesheet" href="{% static 'css/htmx-utils.css' %}">
 
+  <!-- Polish: transiciones de página + relieve de botones -->
+  <link rel="stylesheet" href="{% static 'css/polish.css' %}">
+
   <!-- Bloque para CSS adicional -->
   {% block extra_css %}{% endblock %}
 </head>
@@ -305,7 +312,7 @@
   </nav>
 
   <!-- Contenido principal -->
-  <div class="w-full px-4">
+  <div class="w-full px-4 page-content">
     {% block content %}
 
     {% endblock %}

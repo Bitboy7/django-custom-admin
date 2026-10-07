@@ -105,7 +105,8 @@
 .kpi-card .kpi-trend--up   { color: var(--accent-green); background: var(--accent-green-bg); }
 .kpi-card .kpi-trend--down { color: var(--accent-red);   background: var(--accent-red-bg); }
 .kpi-card .kpi-value {
-  font-family: var(--font-display);
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
   font-size: var(--font-size-3xl);
   font-weight: 600;
   color: var(--text-primary);
@@ -186,7 +187,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(13, 148, 136, 0.12);
+  background: rgba(88, 111, 124, 0.12);
   color: var(--brand-teal-dark);
   font-weight: 600;
   font-size: var(--font-size-xs);
@@ -353,7 +354,8 @@
 
 #tw-dashboard .dashboard-kpi-item .text-xl,
 #tw-dashboard .dashboard-kpi-item [class*="text-xl"] {
-  font-family: var(--font-mono);
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: clamp(1.05rem, 1.2vw, 1.32rem) !important;
   letter-spacing: 0;
   line-height: 1.15;

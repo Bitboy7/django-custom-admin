@@ -1,7 +1,7 @@
 /*
  * datatables-buttons.css
  * Estilos de botones de exportación de DataTables
- * Usa los tokens del sistema de diseño definidos en admin_custom.css
+ * Usa los tokens del sistema de diseño definidos en tokens.css
  */
 
 /* Contenedor */
@@ -15,19 +15,23 @@
 
 /* Base unificada para botones DataTables */
 .dt-buttons .dt-button {
-  --export-accent: var(--brand-teal, #18b7a7);
+  --export-accent: var(--brand-teal, #577c65);
   min-height: 42px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 7px !important;
   padding: 0.62rem 0.95rem !important;
-  border: 1px solid rgba(88, 111, 124, 0.22) !important;
+  border: 1px solid color-mix(in srgb, var(--blue-slate, #586f7c) 22%, transparent) !important;
   border-left: 4px solid var(--export-accent) !important;
-  border-radius: 10px !important;
-  background: linear-gradient(180deg, #ffffff 0%, #f7faf9 100%) !important;
+  border-radius: var(--radius-md, 8px) !important;
+  background: linear-gradient(
+    180deg,
+    var(--surface-card, #ffffff) 0%,
+    var(--surface-bg, #f4f4f9) 100%
+  ) !important;
   color: var(--brand-navy, #173844) !important;
-  box-shadow: 0 2px 6px rgba(47, 69, 80, 0.08) !important;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(47, 69, 80, 0.06)) !important;
   cursor: pointer !important;
   font-family: var(--font-body, inherit) !important;
   font-size: 0.82rem !important;
@@ -46,31 +50,31 @@
 
 .dt-buttons .dt-button:hover:not(.disabled),
 .dt-buttons .dt-button:focus:not(.disabled) {
-  border-color: rgba(88, 111, 124, 0.34) !important;
-  background: #ffffff !important;
-  box-shadow: 0 6px 16px rgba(47, 69, 80, 0.14) !important;
+  border-color: color-mix(in srgb, var(--blue-slate, #586f7c) 34%, transparent) !important;
+  background: var(--surface-card, #ffffff) !important;
+  box-shadow: var(--shadow-md, 0 4px 14px rgba(47, 69, 80, 0.08)) !important;
   color: var(--brand-navy-dark, #071b22) !important;
   transform: translateY(-1px) !important;
 }
 
 .dt-buttons .dt-button:focus-visible {
-  outline: 3px solid rgba(24, 183, 167, 0.22) !important;
+  outline: 3px solid var(--action-primary-ring, rgba(47, 69, 80, 0.22)) !important;
   outline-offset: 2px !important;
 }
 
 .dt-buttons .dt-button:active:not(.disabled) {
-  box-shadow: 0 2px 6px rgba(47, 69, 80, 0.1) !important;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(47, 69, 80, 0.06)) !important;
   transform: translateY(0) !important;
 }
 
 .dt-buttons .dt-button.disabled,
 .dt-buttons .dt-button:disabled {
-  --export-accent: #b8c0cc;
-  border-color: #d8dce6 !important;
-  border-left-color: #b8c0cc !important;
-  background: #f4f4f9 !important;
+  --export-accent: var(--border-strong, #b8c0cc);
+  border-color: var(--border-default, #d8dce6) !important;
+  border-left-color: var(--border-strong, #b8c0cc) !important;
+  background: var(--surface-bg, #f4f4f9) !important;
   box-shadow: none !important;
-  color: #9aa8b3 !important;
+  color: var(--border-strong, #9aa8b3) !important;
   cursor: not-allowed !important;
   opacity: 1 !important;
   transform: none !important;
@@ -78,7 +82,7 @@
 
 .dt-buttons .dt-button.disabled i,
 .dt-buttons .dt-button:disabled i {
-  color: #9aa8b3 !important;
+  color: var(--border-strong, #9aa8b3) !important;
 }
 
 /* Variantes: misma estructura, solo cambia el acento */
@@ -97,7 +101,7 @@
 .dt-buttons .dt-button.btn-export-print,
 .dt-buttons .dt-button.btn-print,
 .dt-buttons .dt-button.buttons-print {
-  --export-accent: var(--brand-teal, #18b7a7);
+  --export-accent: var(--brand-teal, #577c65);
 }
 
 .dt-buttons .dt-button.btn-copy,

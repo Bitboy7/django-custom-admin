@@ -11,7 +11,7 @@
 
   /* ── Hero header ── */
   .rg-hero {
-    background: linear-gradient(135deg, #1a3a5c 0%, #2563a8 100%);
+    background: linear-gradient(135deg, #173844 0%, #2f4550 100%);
     border-radius: 10px 10px 0 0;
     padding: 28px 32px 24px;
     color: #fff;
@@ -118,8 +118,8 @@
   }
   .rg-date-grid input[type="date"]:focus {
     outline: none;
-    border-color: #2563a8;
-    box-shadow: 0 0 0 3px rgba(37,99,168,.12);
+    border-color: #2f4550;
+    box-shadow: 0 0 0 3px rgba(47,69,80,.14);
     background: #fff;
   }
 
@@ -158,7 +158,7 @@
   .rg-recipient-pill .pill-avatar {
     width: 22px;
     height: 22px;
-    background: #2563a8;
+    background: #2f4550;
     color: #fff;
     border-radius: 50%;
     display: flex;
@@ -232,13 +232,13 @@
   }
   .rg-btn:active { transform: scale(.97); }
   .rg-btn-primary {
-    background: #2563a8;
+    background: var(--action-primary, #2f4550);
     color: #fff;
-    box-shadow: 0 2px 8px rgba(37,99,168,.3);
+    box-shadow: 0 2px 8px rgba(47,69,80,.28);
   }
   .rg-btn-primary:hover {
-    background: #586f7c;
-    box-shadow: 0 4px 14px rgba(37,99,168,.4);
+    background: var(--action-primary-hover, #586f7c);
+    box-shadow: 0 4px 14px rgba(47,69,80,.36);
     color: #fff;
   }
   .rg-btn-secondary {
@@ -286,7 +286,7 @@
     width: 48px;
     height: 48px;
     border: 4px solid #d8dce6;
-    border-top-color: #2563a8;
+    border-top-color: #2f4550;
     border-radius: 50%;
     animation: rg-spin .8s linear infinite;
     margin: 0 auto 16px;
@@ -336,12 +336,12 @@
         </div>
         <div class="rg-date-grid">
           <div>
-            <label for="fecha_inicio"><i class="fas fa-calendar-day" style="color:#2563a8;margin-right:4px;"></i>Fecha de inicio</label>
+            <label for="fecha_inicio"><i class="fas fa-calendar-day" style="color:#2f4550;margin-right:4px;"></i>Fecha de inicio</label>
             <input type="date" name="fecha_inicio" id="fecha_inicio"
                    value="{{ fecha_inicio|date:'Y-m-d' }}" required>
           </div>
           <div>
-            <label for="fecha_fin"><i class="fas fa-calendar-check" style="color:#2563a8;margin-right:4px;"></i>Fecha de fin</label>
+            <label for="fecha_fin"><i class="fas fa-calendar-check" style="color:#2f4550;margin-right:4px;"></i>Fecha de fin</label>
             <input type="date" name="fecha_fin" id="fecha_fin"
                    value="{{ fecha_fin|date:'Y-m-d' }}" required>
           </div>

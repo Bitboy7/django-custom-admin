@@ -32,6 +32,7 @@ from ventas.models import (
     Cliente,
     ConfiguracionCuentasPorCobrar,
     DocumentoCFDI,
+    PagoVenta,
     TerminoCredito,
     Ventas,
 )
@@ -1071,6 +1072,67 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
 
         # 10000 producto + 1000 servicio + 500 - 200 - 3000 - 1000 = 7300
         self.assertAlmostEqual(cliente.saldo_conciliado(), 7300.00)
+
+    def _venta_contado(self, cliente, monto, moneda='MXN',
+                       fecha=date(2026, 2, 1)):
+        """Venta de contado (PUE): queda pagada al crearse, sin REP."""
+        return Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=self.sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Nacional',
+            tipo_registro='VENTA',
+            modalidad_pago='Contado',
+            monto=Money(monto, moneda),
+            cantidad=Decimal('100.000'),
+            fecha_salida_manifiesto=fecha,
+            fecha_deposito=fecha,
+        )
+
+    def test_venta_contado_facturada_no_genera_saldo(self):
+        """Una factura de contado (PUE) no debe aparecer como saldo por cobrar."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente Contado')
+        venta = self._venta_contado(cliente, '5000.00', moneda='USD')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_exportacion',
+            monto=Money('5000.00', 'USD'), moneda='USD', venta=venta,
+        )
+
+        self.assertAlmostEqual(cliente.saldo_conciliado(), 0.0)
+        fila = conciliacion_cliente(cliente)
+        self.assertAlmostEqual(fila['saldo_por_moneda'].get('USD', 0.0), 0.0)
+
+    def test_venta_credito_pagada_por_rep_no_resta_doble(self):
+        """El pago registrado por REP no debe descontarse dos veces."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente REP')
+        venta = self._venta_credito(cliente, '8000.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            monto=Money('8000.00', 'MXN'), venta=venta,
+        )
+        pago = PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 3, 1),
+            monto_pago=Money('8000.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='P', subtipo='recibo_pago',
+            monto=Money('8000.00', 'MXN'), venta=venta, pago_venta=pago,
+        )
+        venta.actualizar_estado_cobranza()
+        venta.refresh_from_db()
+
+        self.assertAlmostEqual(cliente.saldo_conciliado(), 0.0)
+        fila = conciliacion_cliente(cliente)
+        self.assertAlmostEqual(fila['saldo_por_moneda'].get('MXN', 0.0), 0.0)
 
 
 # =============================================================================

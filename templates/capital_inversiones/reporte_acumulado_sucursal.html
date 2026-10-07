@@ -93,7 +93,7 @@
     <!-- Resumen Rápido -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         {% for item in balance_sucursales %}
-        <div class="bg-gradient-to-br from-blue-500 to-[#586f7c] rounded-lg shadow-lg p-6 text-[#f4f4f9]">
+        <div class="bg-gradient-to-br from-[#2f4550] to-[#586f7c] rounded-lg shadow-lg p-6 text-[#f4f4f9]">
             <h4 class="text-sm font-medium mb-2 opacity-90">{{ item.id_sucursal__nombre|default:"Total" }}</h4>
             <div class="space-y-1">
                 <p class="text-xs opacity-75">Entradas: 
@@ -205,7 +205,7 @@
             <i class="fas fa-chart-line mr-2"></i> Dashboard
         </a>
         <a href="{% url 'capital_inversiones:reporte_categoria' %}" 
-           class="inline-flex items-center px-6 py-3 bg-purple-600 text-[#f4f4f9] font-semibold rounded-lg hover:bg-purple-700 transition shadow-md">
+           class="inline-flex items-center px-6 py-3 bg-[#2f4550] text-[#f4f4f9] font-semibold rounded-lg hover:bg-[#586f7c] transition shadow-md">
             <i class="fas fa-tags mr-2"></i> Reporte por Categoría
         </a>
         <a href="{% url 'capital_inversiones:reporte_rendimientos' %}" 

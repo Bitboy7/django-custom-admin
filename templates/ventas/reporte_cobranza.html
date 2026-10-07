@@ -45,15 +45,15 @@
     background-color: #fff;
   }
 
-  /* Fila de totales (cyan) */
+  /* Fila de totales */
   .rc-total td {
-    background-color: #b8dbd9;   /* cyan-300 */
+    background-color: #b8dbd9;   /* light-blue */
     font-weight: 700;
   }
 
   /* Fila de maquila TIPO CAMBIO / PESOS MX */
   .rc-subtotal td {
-    background-color: #a5f3fc;   /* cyan-200 */
+    background-color: #9ac5c3;   /* light-blue-dark */
     font-weight: 600;
   }
 
@@ -161,12 +161,12 @@
       <div>
         <label class="block text-xs font-semibold text-[#586f7c] mb-1">Fecha Inicio</label>
         <input type="date" name="fecha_inicio" value="{{ fecha_inicio_str }}"
-          class="border border-[#d8dce6] rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          class="border border-[#d8dce6] rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#b8dbd9]">
       </div>
       <div>
         <label class="block text-xs font-semibold text-[#586f7c] mb-1">Fecha Fin</label>
         <input type="date" name="fecha_fin" value="{{ fecha_fin_str }}"
-          class="border border-[#d8dce6] rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          class="border border-[#d8dce6] rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#b8dbd9]">
       </div>
       <div>
         <label class="block text-xs font-semibold text-[#586f7c] mb-1">
@@ -174,10 +174,10 @@
         </label>
         <input type="number" name="tipo_cambio" value="{{ tipo_cambio_input }}"
           step="0.0001" min="0" placeholder="Ej: 17.5990"
-          class="border border-[#d8dce6] rounded px-3 py-1.5 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          class="border border-[#d8dce6] rounded px-3 py-1.5 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-[#b8dbd9]">
       </div>
       <button type="submit"
-        class="bg-[#2f4550] hover:bg-[#2f4550] text-[#f4f4f9] text-sm font-semibold px-5 py-2 rounded shadow">
+        class="bg-[#2f4550] hover:bg-[#586f7c] text-[#f4f4f9] text-sm font-semibold px-5 py-2 rounded shadow">
         <i class="fas fa-search mr-1"></i> Generar
       </button>
       <a href="{% url 'ventas:reporte_cobranza' %}"

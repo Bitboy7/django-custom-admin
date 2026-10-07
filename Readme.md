@@ -1,436 +1,406 @@
-# Sistema de Gestión Empresarial - Agrícola de la Costa
+# Sistema de Gestión Empresarial — Agrícola de la Costa
 
 <div align="center">
-  <img src="static/img/logo-sm.png" alt="Logo Agrícola de la Costa" width="250">
-  <p><i>Sistema integral de gestión administrativa y financiera con IA</i></p>
+  <img src="static/img/logo-sm.png" alt="Logo Agrícola de la Costa" width="200">
+  <p><em>ERP administrativo y financiero con inteligencia artificial para operaciones agrícolas</em></p>
 </div>
 
-## 📋 Descripción General
-
-Este sistema proporciona una plataforma completa para la gestión administrativa y financiera de **Agrícola de la Costa San Luis S.P.R. de R.L.** Desarrollado con Django y tecnologías modernas, incluye procesamiento de documentos con inteligencia artificial, interfaz responsive y un completo sistema de auditoría.
-
-[![Django](https://img.shields.io/badge/Django-5.1.3-green.svg)](https://www.djangoproject.com/)
-[![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0-orange.svg)](https://www.mysql.com/)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC.svg)](https://tailwindcss.com/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
-
-## 🚀 Características Principales
-
-- **Panel de Administración Personalizado**: Interfaz moderna con Django Unfold
-- **Procesamiento con IA**: Reconocimiento automático de facturas y estados de cuenta usando Google Gemini
-- **Sistema de Roles y Permisos**: Control granular de acceso para usuarios (5 roles predefinidos)
-- **Gestión de Catálogos**: Productos, proveedores, clientes y más
-- **Control Financiero**: Seguimiento de gastos, ventas e inventario
-- **Reportes y Balances**: Análisis de datos y exportación a Excel/PDF
-- **Auditoría Completa**: Registro detallado de todas las acciones de usuarios
-- **Interfaz Responsive**: Diseño moderno con TailwindCSS y Flowbite
-- **Containerización**: Deployment listo con Docker y docker-compose
-
-## 📋 Tabla de Contenidos
-
-- [Requisitos del Sistema](#requisitos-del-sistema)
-- [Instalación](#instalación)
-- [Configuración](#configuración)
-- [Deployment con Docker](#deployment-con-docker)
-- [Uso](#uso)
-- [Módulos del Sistema](#módulos-del-sistema)
-- [Estructura del Proyecto](#estructura-del-proyecto)
-- [Gestión de Roles](#gestión-de-roles)
-- [Funciones de IA](#funciones-de-ia)
-- [Mantenimiento](#mantenimiento)
-- [Colaboradores](#colaboradores)
-
-## 💻 Requisitos del Sistema
-
-### Requisitos Base
-
-- Python 3.12 o superior
-- MySQL 8.0 o superior
-- Node.js 16+ y npm (para assets frontend)
-- Poetry (recomendado para gestión de dependencias)
-
-### Para Funciones de IA (Opcional)
-
-- Cuenta de Google Cloud con acceso a Gemini API
-- Variables de entorno configuradas para servicios de IA
-
-## 🔧 Instalación
-
-### Con Poetry (Recomendado)
-
-1. **Clonar el repositorio**:
-
-   ```bash
-   git clone https://github.com/Bitboy7/django-custom-admin.git
-   cd django-custom-admin
-   ```
-
-2. **Instalar dependencias con Poetry**:
-
-   ```bash
-   poetry install
-   ```
-
-3. **Instalar dependencias frontend**:
-
-   ```bash
-   npm install
-   ```
-
-4. **Compilar assets CSS con Tailwind**:
-   ```bash
-   npx tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch
-   ```
-
-### Con Pip
-
-1. **Crear y activar un entorno virtual**:
-
-   ```bash
-   python -m venv venv
-   # En Windows
-   venv\Scripts\activate
-   # En Linux/Mac
-   source venv/bin/activate
-   ```
-
-2. **Instalar dependencias**:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Instalar dependencias frontend**:
-   ```bash
-   npm install
-   ```
-
-## ⚙️ Configuración
-
-1. **Configurar variables de entorno**:
-   - Copia `.env-example` a `.env`
-   - Actualiza las variables según tu entorno:
-
-   ```env
-   # Base de datos
-   DB_NAME=tu_base_datos
-   DB_USER=tu_usuario
-   DB_PASSWORD=tu_contraseña
-   DB_HOST=localhost
-
-   # Django
-   SECRET_KEY=tu_clave_secreta
-   DEBUG=True
-   ALLOWED_HOSTS=localhost,127.0.0.1
-
-   # IA (Opcional)
-   GOOGLE_API_KEY=tu_api_key_gemini
-   ```
-
-   Cuando `DEBUG=False`, también debes configurar Cloudflare R2. El bucket se
-   mantiene privado y las URLs generadas por Django son firmadas:
-
-   ```env
-   R2_ACCOUNT_ID=tu_account_id_de_cloudflare
-   R2_ACCESS_KEY_ID=tu_access_key_de_r2
-   R2_SECRET_ACCESS_KEY=tu_secret_key_de_r2
-   R2_BUCKET_NAME=agricola-media
-   R2_SIGNED_URL_EXPIRE=3600
-   ```
-
-   En localhost usa `DEBUG=True`; R2 se ignora y los archivos se guardan en
-   `media/`.
-
-2. **Configurar base de datos**:
-
-   ```bash
-   # Aplicar migraciones
-   python manage.py migrate
-   ```
-
-3. **Crear superusuario**:
-
-   ```bash
-   python manage.py createsuperuser
-   ```
-
-4. **Configurar roles iniciales**:
-   ```bash
-   python manage.py setup_roles --create-roles
-   ```
-
-## 🐳 Deployment con Docker
-
-### Desarrollo Local
-
-1. **Crear archivo .env** con las variables necesarias
-
-2. **Iniciar servicios**:
-
-   ```bash
-   docker-compose up -d
-   ```
-
-3. **Aplicar migraciones**:
-
-   ```bash
-   docker-compose exec web python manage.py migrate
-   ```
-
-4. **Crear superusuario**:
-   ```bash
-   docker-compose exec web python manage.py createsuperuser
-   ```
-
-### Producción
-
-Para deployment en producción, modifica las variables de entorno en `.env` y ajusta la configuración de `docker-compose.yml` según tus necesidades.
-
-## 🏃‍♂️ Uso
-
-### Iniciar el servidor
-
-```bash
-# Con Poetry
-poetry shell
-python manage.py runserver
-
-# Con venv activado
-python manage.py runserver
-
-# Con Script de inicio rápido (Windows)
-runserver.bat
-
-# Con Docker
-docker-compose up
-```
-
-Accede a la aplicación en tu navegador: http://localhost:8000/admin
-
-### Comandos útiles
-
-```bash
-# Asignar rol a un usuario
-python manage.py setup_roles --assign-role <username> <rol>
-
-# Listar usuarios y sus roles
-python manage.py shell -c "from django.contrib.auth.models import User; from app.permissions import RoleManager; [print(f'{user.username}: {RoleManager.get_user_role(user) or \"Sin rol\"}') for user in User.objects.all()]"
-
-# Compilar assets en producción
-python manage.py collectstatic
-
-# Compilar CSS con Tailwind (desarrollo)
-npx tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch
-```
-
-## 🏗️ Módulos del Sistema
-
-### Core (app/)
-
-- **Configuración principal**: Settings, URLs, middleware
-- **Servicios compartidos**: Balances, exportación, utilidades
-- **Sistema de permisos**: Gestión de roles y permisos granulares
-
-### Auditoría (auditoria/)
-
-- **Registro de actividad**: Tracking de acciones de usuarios
-- **Middleware de auditoría**: Captura automática de eventos
-- **Reportes de seguridad**: Análisis de accesos y cambios
-
-### Catálogo (catalogo/)
-
-- **Gestión de productos**: CRUD completo con categorías
-- **Proveedores**: Información de contactos y productos
-- **Clientes**: Base de datos de clientes y historial
-
-### Gastos (gastos/)
-
-- **Control de gastos**: Registro y categorización
-- **Reconocimiento con IA**: Procesamiento automático de facturas
-- **Estados de cuenta**: Análisis de movimientos bancarios
-- **Reportes financieros**: Balances y análisis de gastos
-
-### Ventas (ventas/)
-
-- **Gestión de ventas**: Facturas y cotizaciones
-- **Control de inventario**: Stock y movimientos
-- **Análisis de ventas**: Reportes de rendimiento
-
-## 📁 Estructura del Proyecto
-
-```
-django-custom-admin/
-├── app/                  # Configuración principal y servicios core
-│   ├── management/       # Comandos personalizados (setup_roles, etc.)
-│   ├── permissions.py    # Sistema de gestión de roles
-│   └── services/         # Servicios compartidos (balances, etc.)
-├── auditoria/            # Sistema de registro de actividad
-├── catalogo/             # Gestión de productos y proveedores
-├── gastos/               # Control de gastos y compras
-├── ventas/               # Gestión de ventas y clientes
-├── static/               # Archivos estáticos
-│   ├── css/              # Estilos personalizados y Tailwind
-│   ├── js/               # JavaScript y componentes
-│   └── img/              # Imágenes y recursos gráficos
-├── templates/            # Plantillas HTML con componentes Tailwind
-├── media/                # Archivos subidos por usuarios
-├── logs/                 # Archivos de registro de la aplicación
-├── Docs/                 # Documentación del proyecto
-│   ├── AI_INVOICE_MODULE.md    # Documentación del módulo de IA
-│   ├── ROLES_GUIDE.md          # Guía de roles y permisos
-│   └── SISTEMA_CATEGORIAS_IA.md # Sistema de categorización
-├── docker-compose.yml    # Configuración de contenedores
-├── Dockerfile           # Imagen de la aplicación
-├── manage.py            # Script de gestión de Django
-├── pyproject.toml       # Configuración de Poetry
-├── package.json         # Dependencias frontend (Tailwind, Flowbite)
-├── tailwind.config.js   # Configuración de TailwindCSS
-└── requirements.txt     # Dependencias del proyecto
-```
-
-## 👥 Gestión de Roles
-
-El sistema incluye cinco roles predefinidos:
-
-1. **Administrador**: Acceso completo al sistema
-2. **Gerente**: Acceso a reportes y gestión general
-3. **Contador**: Gestión completa de finanzas
-4. **Vendedor**: Gestión de ventas y clientes
-5. **Operador**: Acceso de solo lectura
-
-Para más detalles sobre los permisos y configuración de roles, consulta [ROLES_GUIDE.md](Docs/ROLES_GUIDE.md).
-
-## 🤖 Funciones de IA
-
-El sistema incluye un módulo avanzado de reconocimiento de documentos:
-
-### Características de IA
-
-- **Motor**: LangChain + Google Gemini 2.0 Flash Experimental
-- **Tipos de documento**: Facturas individuales y estados de cuenta bancarios
-- **Extracción estructurada**: Datos validados con modelos Pydantic
-- **Interfaz guiada**: Proceso paso a paso con confirmación de datos
-
-### Configuración de IA
-
-1. **Obtener API Key de Google Gemini**
-2. **Configurar variable de entorno**:
-   ```env
-   GOOGLE_API_KEY=tu_api_key_aqui
-   ```
-3. **Instalar dependencias de IA** (descomentarlas en `pyproject.toml`)
-
-Para documentación completa, consulta [AI_INVOICE_MODULE.md](Docs/AI_INVOICE_MODULE.md).
-
-## 🧩 Extensión del Sistema
-
-### Añadir Nuevos Módulos
-
-1. **Crear nueva app Django**:
-
-   ```bash
-   python manage.py startapp nueva_app
-   ```
-
-2. **Configurar permisos** en `app/permissions.py`
-3. **Registrar en admin** con Django Unfold
-4. **Añadir a INSTALLED_APPS** en settings
-
-### Personalización del Admin
-
-- **Temas**: Configuración en Django Unfold
-- **Componentes**: TailwindCSS + Flowbite
-- **Menús**: Personalización en cada app/admin.py
-
-### Integración con Servicios Externos
-
-- **APIs**: Estructura preparada en services/
-- **Webhooks**: Middleware personalizable
-- **Exportación**: Excel, PDF, CSV integrados
-
-## 🛠️ Mantenimiento
-
-### Respaldo de base de datos
-
-```bash
-# Exportar la base de datos
-python manage.py dumpdata > backup_$(Get-Date -Format "yyyyMMdd").json
-
-# Con Docker
-docker-compose exec web python manage.py dumpdata > backup_$(Get-Date -Format "yyyyMMdd").json
-```
-
-### Actualización del sistema
-
-```bash
-# Actualizar dependencias Python
-poetry update
-# o con pip
-pip install -r requirements.txt --upgrade
-
-# Actualizar dependencias frontend
-npm update
-
-# Aplicar migraciones pendientes
-python manage.py migrate
-
-# Recompilar assets estáticos
-python manage.py collectstatic --noinput
-```
-
-### Logs y Monitoreo
-
-```bash
-# Ver logs de la aplicación
-tail -f logs/app.log
-
-# Con Docker
-docker-compose logs -f web
-```
-
-### Limpieza de archivos temporales
-
-```bash
-# Limpiar archivos temporales de media
-python manage.py shell -c "
-import os
-temp_dirs = ['media/temp_documents/', 'media/temp_invoices/']
-for temp_dir in temp_dirs:
-    if os.path.exists(temp_dir):
-        for file in os.listdir(temp_dir):
-            os.remove(os.path.join(temp_dir, file))
-"
-```
-
-## 👨‍💻 Colaboradores
-
-- **Dev Y** - _Desarrollador principal_ - [Bitboy7](https://github.com/Bitboy7)
+<p align="center">
+  <a href="https://www.djangoproject.com/"><img src="https://img.shields.io/badge/Django-5.1-green.svg" alt="Django"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.12+-blue.svg" alt="Python"></a>
+  <a href="https://www.mysql.com/"><img src="https://img.shields.io/badge/MySQL-8.0-orange.svg" alt="MySQL"></a>
+  <a href="https://redis.io/"><img src="https://img.shields.io/badge/Redis-7.2-red.svg" alt="Redis"></a>
+  <img src="https://img.shields.io/badge/Docker-Ready-2496ED.svg" alt="Docker">
+  <img src="https://img.shields.io/badge/2FA-Required-critical.svg" alt="2FA Required">
+</p>
 
 ---
 
-## 📄 Licencia
+## Tabla de Contenidos
 
-Este proyecto es propietario de **Agrícola de la Costa San Luis S.P.R. de R.L.**
+- [Descripción General](#descripción-general)
+- [Stack Tecnológico](#stack-tecnológico)
+- [Arquitectura](#arquitectura)
+- [Requisitos](#requisitos)
+- [Instalación Local](#instalación-local)
+- [Configuración](#configuración)
+- [Entorno con Docker](#entorno-con-docker)
+- [Comandos de Desarrollo](#comandos-de-desarrollo)
+- [Testing](#testing)
+- [Módulos del Sistema](#módulos-del-sistema)
+- [Seguridad](#seguridad)
+- [Mantenimiento](#mantenimiento)
+- [Documentación Adicional](#documentación-adicional)
+- [Colaboradores](#colaboradores)
 
-## 🆘 Soporte
+---
 
-Para reportar bugs o solicitar nuevas características:
+## Descripción General
 
-1. **Issues**: Usa el sistema de issues de GitHub
-2. **Documentación**: Consulta la carpeta `Docs/` para guías detalladas
-3. **Contacto**: A través del repositorio en GitHub
+Sistema ERP completo para **Agrícola de la Costa San Luis S.P.R. de R.L.** (Sinaloa, México). Gestiona operaciones financieras, ventas nacionales/exportación, gastos, compras, cuentas por cobrar, capital e inversiones, con soporte multiidioma (es-MX / en) y auditoría completa de actividad.
 
-## 🏷️ Versiones
+### Capacidades clave
 
-- **v1.2** (Actual): Módulo de IA, TailwindCSS, Docker
-- **v1.1**: Sistema de auditoría, roles mejorados
-- **v1.0**: Sistema base con Django Unfold
+- **Panel administrativo con Jazzmin**: Tema personalizado con dashboard integrado, menús configurables y soporte UI builder.
+- **Autenticación reforzada**: 2FA obligatorio (TOTP) para acceso al admin + protección contra fuerza bruta (`django-axes`).
+- **Procesamiento con IA**: Reconocimiento automático de facturas CFDI y estados de cuenta vía Google Gemini + LangChain.
+- **Cuentas por cobrar**: Aging automático, estados de cuenta, alertas de vencimiento, cálculo de intereses moratorios.
+- **Reportes ejecutivos**: Generación con IA y envío por correo de resúmenes financieros.
+- **Multi-moneda**: `django-money` con MXN por defecto, conversión automática vía OpenExchangeRates.
+- **Caché distribuido**: Redis con 3 DBs lógicas (default, sesiones, estáticos), fallback a LocMemCache.
 
-## 🔗 Enlaces Útiles
+---
 
-- [Django Documentation](https://docs.djangoproject.com/)
-- [Django Unfold](https://github.com/unfoldadmin/django-unfold)
-- [TailwindCSS](https://tailwindcss.com/)
-- [Flowbite Components](https://flowbite.com/)
-- [Google Gemini API](https://ai.google.dev/)
+## Stack Tecnológico
+
+| Capa | Tecnología |
+|------|-----------|
+| Framework | Django 5.1 |
+| Lenguaje | Python 3.12+ |
+| Base de datos | MySQL 8.0 (utf8mb4) |
+| Caché | Redis 7.2 (3 DBs lógicos) |
+| Admin UI | Django Jazzmin |
+| Auth | django-two-factor-auth + django-otp + django-axes |
+| Money | django-money + openpyxl |
+| IA | LangChain + Google Gemini + PyPDF |
+| Static | WhiteNoise + TailwindCSS + Flowbite |
+| i18n | django-i18n (es-MX default) |
+| Contenedores | Docker + docker-compose |
+
+---
+
+## Arquitectura
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Cliente                               │
+│              (Navegador / Nginx en prod)                     │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────────┐
+│                    Django App                                │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌───────────────────┐ │
+│  │  app/   │ │ auditoria│ │ catalogo│ │     gastos/       │ │
+│  │(core)   │ │(audit)  │ │(master) │ │ (expenses)        │ │
+│  └─────────┘ └─────────┘ └─────────┘ └───────────────────┘ │
+│  ┌─────────┐ ┌─────────────────┐ ┌───────────────────────┐ │
+│  │ ventas/ │ │capital_inversiones│ │      reportes/       │ │
+│  │(sales)  │ │  (investments)  │ │  (AI reports)        │ │
+│  └─────────┘ └─────────────────┘ └───────────────────────┘ │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+        ┌──────────────┼──────────────┐
+        │              │              │
+┌───────▼──────┐ ┌────▼─────┐ ┌──────▼──────┐
+│   MySQL 8.0  │ │  Redis   │ │  Media/     │
+│  (Principal) │ │  (Cache) │ │  Static     │
+└──────────────┘ └──────────┘ └─────────────┘
+```
+
+### Middleware (orden crítico)
+
+1. `SecurityMiddleware`
+2. `WhiteNoiseMiddleware`
+3. `SessionMiddleware`
+4. `LocaleMiddleware` (i18n)
+5. `CommonMiddleware`
+6. `CsrfViewMiddleware`
+7. `AuthenticationMiddleware`
+8. `OTPMiddleware` (2FA)
+9. `MessageMiddleware`
+10. `XFrameOptionsMiddleware`
+11. `CacheMiddleware`
+12. `DatabaseCacheInvalidationMiddleware`
+13. `AuthAuditMiddleware`
+14. `AdminAuditMiddleware`
+15. `AxesMiddleware` (brute-force, siempre al final)
+
+---
+
+## Requisitos
+
+### Base
+
+- Python 3.12+
+- MySQL 8.0+
+- Redis 7.2+ (opcional en dev, usa LocMemCache fallback)
+- Node.js 16+ y npm (solo para assets frontend)
+
+### Opcionales (IA y email)
+
+- Cuenta Google Cloud con API Key de Gemini
+- Servidor SMTP o cuenta Resend para notificaciones
+- App ID de OpenExchangeRates para conversión de divisas
+
+---
+
+## Instalación Local
+
+### Opción A: Con Poetry
+
+```bash
+git clone https://github.com/Bitboy7/django-custom-admin.git
+cd django-custom-admin
+
+# Python deps
+poetry install
+
+# Frontend deps
+npm install
+```
+
+### Opción B: Con pip + venv
+
+```bash
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+# Linux/Mac
+source venv/bin/activate
+
+pip install -r requirements.txt
+npm install
+```
+
+> **Nota**: Las dependencias de IA están activas en `requirements.txt` pero comentadas en `pyproject.toml`. Usa `requirements.txt` para instalación completa.
+
+---
+
+## Configuración
+
+1. **Variables de entorno**:
+
+```bash
+cp .env-example .env
+```
+
+Variables mínimas requeridas:
+
+```env
+# Base de datos
+DB_NAME=agricola_costa_db
+DB_USER=agricola_user
+DB_PASSWORD=secure_password
+DB_HOST=localhost
+DB_PORT=3306
+DB_ROOT_PASSWORD=root_password
+
+# Django
+SECRET_KEY=change-me-in-production
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# Redis (opcional en dev)
+# REDIS_URL=redis://localhost:6379/1
+
+# IA (opcional)
+GOOGLE_API_KEY=tu_api_key_gemini
+GOOGLE_API_MODEL=gemini-2.5-flash
+
+# Email (opcional)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=tu-email@gmail.com
+EMAIL_HOST_PASSWORD=tu-app-password
+```
+
+2. **Base de datos y datos iniciales**:
+
+```bash
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py setup_roles --create-roles
+python manage.py compilemessages
+python manage.py collectstatic --noinput --clear
+```
+
+3. **Acceso**:
+
+- Admin: `http://localhost:8000/es/admin/` (requiere 2FA)
+- Login 2FA: `http://localhost:8000/account/login/`
+
+---
+
+## Entorno con Docker
+
+### Desarrollo (MySQL en puerto 3307, Redis en 6379)
+
+```bash
+# Iniciar servicios
+make dev-up
+
+# Migraciones, superusuario y shell
+make migrate-dev
+make superuser-dev
+make shell-dev
+```
+
+### Producción
+
+```bash
+make up
+make migrate
+make setup-roles
+make collectstatic
+```
+
+Ver `Makefile` para todos los comandos disponibles (`make help`).
+
+---
+
+## Comandos de Desarrollo
+
+```bash
+# Servidor de desarrollo
+python manage.py runserver
+
+# Windows shortcut
+runserver.bat
+
+# Gestión de roles
+python manage.py setup_roles --create-roles
+python manage.py setup_roles --assign-role <username> Administrador
+python manage.py setup_roles --list-roles
+
+# Optimización
+python manage.py optimize_database
+python manage.py setup_media_dirs
+
+# Compilación de traducciones
+python manage.py compilemessages
+
+# Recopilación de estáticos
+python manage.py collectstatic --noinput --clear
+```
+
+---
+
+## Testing
+
+```bash
+# Todos los tests
+pytest
+
+# Tests específicos
+pytest app/tests/test_security.py          # OWASP / seguridad
+pytest app/tests/test_cache_service.py     # Cache unitario
+pytest app/tests/test_cache_integration.py # Cache + Redis
+pytest app/tests/test_integration.py       # Cross-app
+pytest app/tests/test_money_widget.py      # Widgets
+
+# Tests por app (requieren DB)
+pytest gastos/tests.py ventas/tests.py
+
+# Tests de integración por app
+pytest gastos/tests_integration.py
+pytest ventas/tests_integration.py
+pytest capital_inversiones/tests_integration.py
+
+# Scripts standalone (no pytest)
+python app/tests/test_normalizacion.py
+python app/tests/test_categoria_seleccion.py
+python app/tests/test_ai_system.py
+```
+
+### Marcadores de pytest
+
+- `slow` — tests de larga duración
+- `performance` — stress tests
+
+---
+
+## Módulos del Sistema
+
+| Módulo | Ruta | Propósito |
+|--------|------|-----------|
+| **Core** | `app/` | Settings, URLs, WSGI, middleware, servicios compartidos (cache, reportes, Excel), admin site customizado |
+| **Auditoría** | `auditoria/` | LogActividad, UserProfile, SiteConfiguration, middleware de login/logout y admin CRUD |
+| **Catálogo** | `catalogo/` | Productos, productores, países, estados, sucursales |
+| **Gastos** | `gastos/` | Gastos, compras, bancos, cuentas, saldos mensuales, reconocimiento de facturas con IA |
+| **Ventas** | `ventas/` | Ventas nacionales/exportación, clientes, agentes aduanales, anticipos, pagos, cuentas por cobrar, estados de cuenta, reporte de cobranza |
+| **Capital** | `capital_inversiones/` | Capital e inversiones |
+| **Reportes** | `reportes/` | Reportes ejecutivos con IA, configuración de envío por email, historial de reportes |
+
+---
+
+## Seguridad
+
+- **2FA obligatorio**: Todos los usuarios del admin deben configurar TOTP antes del primer acceso.
+- **Bloqueo por fuerza bruta**: `django-axes` — 5 intentos fallidos = bloqueo 1 hora (por usuario + IP).
+- **Contraseñas**: Mínimo 12 caracteres, validación NIST SP 800-63B.
+- **Headers de seguridad**: HSTS, XSS Filter, Content-Type nosniff, X-Frame DENY (en producción).
+- **Sesiones**: 8 horas de duración, expiran al cerrar navegador.
+- **Auditoría**: Cada login/logout y CRUD en admin se registra en `LogActividad` con IP, navegador y campos modificados.
+
+---
+
+## Mantenimiento
+
+### Backup
+
+```bash
+# JSON dump
+python manage.py dumpdata > backup_$(date +%Y%m%d).json
+
+# SQL dump (Docker)
+docker-compose exec db mysqldump -u root -p$DB_ROOT_PASSWORD $DB_NAME > backup_$(date +%Y%m%d).sql
+```
+
+### Logs
+
+```bash
+# Local
+tail -f logs/app.log
+
+# Docker
+make logs
+```
+
+### Actualización de dependencias
+
+```bash
+# Python
+pip install -r requirements.txt --upgrade
+
+# Frontend
+npm update
+
+# Migraciones y estáticos
+python manage.py migrate
+python manage.py collectstatic --noinput
+```
+
+---
+
+## Documentación Adicional
+
+| Documento | Contenido |
+|-----------|-----------|
+| [`AGENTS.md`](AGENTS.md) | Guía rápida para desarrolladores y sesiones de IA |
+| [`Docs/ROLES_GUIDE.md`](Docs/ROLES_GUIDE.md) | Matriz de permisos por rol |
+| [`Docs/AI_INVOICE_MODULE.md`](Docs/AI_INVOICE_MODULE.md) | Arquitectura del módulo de IA para facturas |
+| [`Docs/DEPLOYMENT_GUIDE.md`](Docs/DEPLOYMENT_GUIDE.md) | Guía de despliegue en producción |
+| [`Docs/SECURITY_AUDIT_REPORT.md`](Docs/SECURITY_AUDIT_REPORT.md) | Reporte de auditoría de seguridad |
+| [`Docs/BACKEND_SERVICES_ARCHITECTURE.md`](Docs/BACKEND_SERVICES_ARCHITECTURE.md) | Documentación de la capa de servicios |
+
+> La carpeta `Docs/` contiene más de 30 documentos técnicos organizados por módulo.
+
+---
+
+## Colaboradores
+
+- **Dev Y** — Desarrollador principal — [@Bitboy7](https://github.com/Bitboy7)
+
+---
+
+## Licencia
+
+Este proyecto es propiedad de **Agrícola de la Costa San Luis S.P.R. de R.L.**
+
+---
+
+<p align="center">
+  <sub>Construido con Django 5.1 · Python 3.12 · MySQL 8.0 · Redis · Docker</sub>
+</p>
