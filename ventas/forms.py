@@ -6,6 +6,20 @@ from catalogo.models import Producto, Sucursal, Pais
 from gastos.models import Cuenta
 
 
+class TerminoCreditoSelect(forms.Select):
+    """Select de términos que expone los días en ``data-dias`` (para el JS)."""
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(
+            name, value, label, selected, index, subindex=subindex, attrs=attrs
+        )
+        inst = getattr(value, 'instance', None)
+        dias = getattr(inst, 'dias_credito', None)
+        if dias is not None:
+            option['attrs']['data-dias'] = str(dias)
+        return option
+
+
 class VentasAdminForm(forms.ModelForm):
     """
     Form for Ventas admin with smart validation rules and auto-population.
@@ -62,25 +76,99 @@ class VentasAdminForm(forms.ModelForm):
                     '<em>Seleccione un cliente primero para ver anticipos disponibles.</em>'
                 )
         
-        # Si estamos editando una venta existente, pre-poblar basado en cliente
+        # Reglas de UI (el modelo y clean() son la fuente de verdad).
+        self._aplicar_reglas_modalidad(self._modalidad_actual())
+        self._aplicar_reglas_moneda(self._moneda_actual())
+
+        # Exponer los días del término en las opciones (data-dias) y usar fecha
+        # nativa para el vencimiento, para que el JS lo calcule en tiempo real.
+        if 'termino_credito' in self.fields:
+            widget = self.fields['termino_credito'].widget
+            inner = getattr(widget, 'widget', None)
+            if inner is not None:
+                widget.widget = TerminoCreditoSelect(attrs=inner.attrs)
+            else:
+                self.fields['termino_credito'].widget = TerminoCreditoSelect(
+                    attrs=widget.attrs
+                )
+        if 'fecha_vencimiento' in self.fields:
+            self.fields['fecha_vencimiento'].widget = forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={'type': 'date', 'class': 'form-control'},
+            )
+
+        # En edición, reflejar exportación/mercado del cliente.
         if self.instance and self.instance.pk and self.instance.cliente:
             cliente = self.instance.cliente
-            # Auto-establecer tipo de venta basado en país
-            if cliente.pais.nombre != 'México':
-                self.initial['tipo_venta'] = Ventas.TipoVenta.EXPORTACION
-            else:
-                self.initial['tipo_venta'] = Ventas.TipoVenta.NACIONAL
-            
-            # Auto-establecer mercado destino si el cliente lo tiene
-            if cliente.mercado_destino:
+            self.initial['tipo_venta'] = (
+                Ventas.TipoVenta.EXPORTACION if cliente.es_extranjero
+                else Ventas.TipoVenta.NACIONAL
+            )
+            if cliente.mercado_destino_id:
                 self.initial['mercado_destino'] = cliente.mercado_destino
+
+    # ── Helpers de estado inicial ──────────────────────────────────────
+    def _modalidad_actual(self):
+        if self.instance and self.instance.pk:
+            return self.instance.modalidad_pago
+        if self.is_bound:
+            return (
+                self.data.get(self.add_prefix('modalidad_pago'))
+                or Ventas.ModalidadPago.CONTADO
+            )
+        return self.initial.get('modalidad_pago') or Ventas.ModalidadPago.CONTADO
+
+    def _moneda_actual(self):
+        if self.is_bound:
+            enviada = self.data.get(self.add_prefix('monto_1'))
+            if enviada:
+                return str(enviada).upper()
+        if self.instance and self.instance.pk:
+            return str(self.instance.monto.currency).upper()
+        return 'MXN'
+
+    def _aplicar_reglas_modalidad(self, modalidad):
+        es_contado = modalidad == Ventas.ModalidadPago.CONTADO
+        # No se usa `disabled` en término/fecha: Select2 no reacciona a cambios
+        # dinámicos de disabled y el campo quedaba bloqueado hasta guardar. Se
+        # deja siempre seleccionable (required solo a crédito); clean() limpia y
+        # valida según la modalidad, y el JS bloquea visualmente en contado.
+        if 'termino_credito' in self.fields:
+            self.fields['termino_credito'].required = not es_contado
+        if 'estado_cobranza' in self.fields:
+            # El estado de cobranza siempre se deriva (pagos / modalidad).
+            self.fields['estado_cobranza'].disabled = True
+            if es_contado:
+                self.initial['estado_cobranza'] = Ventas.EstadoCobranza.PAGADO
+            elif not (self.instance and self.instance.pk):
+                self.initial['estado_cobranza'] = Ventas.EstadoCobranza.PENDIENTE
+
+    def _aplicar_reglas_moneda(self, moneda):
+        moneda = (moneda or 'MXN').upper()
+        if 'moneda_venta' in self.fields:
+            self.fields['moneda_venta'].disabled = True
+            self.fields['moneda_venta'].help_text = (
+                'Se toma automáticamente de la moneda del campo Monto.'
+            )
+        if 'tipo_cambio' in self.fields:
+            if moneda == 'MXN':
+                self.fields['tipo_cambio'].disabled = True
+                self.fields['tipo_cambio'].required = False
+                self.initial['tipo_cambio'] = Decimal('1.0000')
+            else:
+                self.fields['tipo_cambio'].disabled = False
+                self.fields['tipo_cambio'].required = True
+                self.fields['tipo_cambio'].help_text = (
+                    'Tipo de cambio aplicado en esta venta en moneda extranjera.'
+                )
 
     def clean(self):
         cleaned_data = super().clean()
         modalidad = cleaned_data.get('modalidad_pago')
-        termino = cleaned_data.get('termino_credito')
         cliente = cleaned_data.get('cliente')
-        tipo_venta = cleaned_data.get('tipo_venta')
+        monto = cleaned_data.get('monto')
+        termino = cleaned_data.get('termino_credito')
+        tipo_cambio = cleaned_data.get('tipo_cambio')
         anticipo = cleaned_data.get('anticipo')
         tipo_registro = cleaned_data.get('tipo_registro')
         producto = cleaned_data.get('producto')
@@ -93,13 +181,42 @@ class VentasAdminForm(forms.ModelForm):
                 'Selecciona un producto para una venta o maquila.',
             )
 
-        # Validar término de crédito
-        if modalidad == Ventas.ModalidadPago.CREDITO and not termino:
+        # ── Moneda derivada del campo Monto ────────────────────────────
+        moneda = str(monto.currency).upper() if monto is not None else 'MXN'
+        cleaned_data['moneda_venta'] = moneda
+
+        # ── Tipo de cambio según moneda ────────────────────────────────
+        if moneda == 'MXN':
+            cleaned_data['tipo_cambio'] = Decimal('1.0000')
+        elif not tipo_cambio or tipo_cambio <= 0:
             self.add_error(
-                'termino_credito',
-                'El término de crédito es obligatorio para ventas a crédito.'
+                'tipo_cambio',
+                'Indica el tipo de cambio (mayor a cero) para ventas en moneda extranjera.'
             )
-        
+
+        # ── Modalidad de pago ──────────────────────────────────────────
+        if modalidad == Ventas.ModalidadPago.CONTADO:
+            cleaned_data['termino_credito'] = None
+            cleaned_data['fecha_vencimiento'] = None
+            cleaned_data['estado_cobranza'] = Ventas.EstadoCobranza.PAGADO
+        elif modalidad == Ventas.ModalidadPago.CREDITO:
+            if not termino:
+                self.add_error(
+                    'termino_credito',
+                    'El término de crédito es obligatorio para ventas a crédito.'
+                )
+            elif not (self.instance and self.instance.pk):
+                cleaned_data['estado_cobranza'] = Ventas.EstadoCobranza.PENDIENTE
+
+        # ── Cliente extranjero → exportación + mercado destino ─────────
+        if cliente:
+            cleaned_data['tipo_venta'] = (
+                Ventas.TipoVenta.EXPORTACION if cliente.es_extranjero
+                else Ventas.TipoVenta.NACIONAL
+            )
+            if cliente.mercado_destino_id:
+                cleaned_data['mercado_destino'] = cliente.mercado_destino
+
         # RF07: Validar anticipo del mismo cliente
         if anticipo and cliente and anticipo.cliente_id != cliente.id:
             self.add_error(
@@ -107,30 +224,19 @@ class VentasAdminForm(forms.ModelForm):
                 f'❌ El anticipo seleccionado pertenece a {anticipo.cliente.nombre} '
                 f'pero la venta es de {cliente.nombre}. Deben ser del mismo cliente.'
             )
-        
+
         # RF07: No permitir anticipo en venta completada
         if self.instance and self.instance.pk:
             if self.instance.estado_cobranza == Ventas.EstadoCobranza.PAGADO:
                 venta_original = Ventas.objects.get(pk=self.instance.pk)
                 anticipo_original_id = venta_original.anticipo_id if venta_original.anticipo else None
                 anticipo_nuevo_id = anticipo.id if anticipo else None
-                
+
                 if anticipo_original_id != anticipo_nuevo_id:
                     self.add_error(
                         'anticipo',
                         '❌ No se puede cambiar el anticipo de una venta que ya está completamente pagada.'
                     )
-        
-        # Auto-establecer tipo de venta basado en país del cliente
-        if cliente:
-            if cliente.pais.nombre != 'México':
-                cleaned_data['tipo_venta'] = Ventas.TipoVenta.EXPORTACION
-            else:
-                cleaned_data['tipo_venta'] = Ventas.TipoVenta.NACIONAL
-            
-            # Auto-establecer mercado destino si el cliente lo tiene
-            if cliente.mercado_destino:
-                cleaned_data['mercado_destino'] = cliente.mercado_destino
 
         return cleaned_data
 
@@ -153,17 +259,42 @@ class PagoVentaInlineForm(forms.ModelForm):
             attrs={'type': 'date', 'class': 'form-control'},
         ),
     )
+    tipo_cambio = forms.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        required=False,
+        label='Tipo de cambio',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.0001',
+            'placeholder': '17.5000',
+        }),
+    )
 
     class Meta:
         model = PagoVenta
         fields = (
-            'fecha_pago', 'monto_pago', 'cuenta_destino',
+            'fecha_pago', 'monto_pago', 'tipo_cambio', 'cuenta_destino',
             'metodo_pago', 'referencia', 'notas',
         )
         widgets = {
             'referencia': forms.TextInput(attrs={'class': 'form-control'}),
             'notas': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        monto = cleaned_data.get('monto_pago')
+        tipo_cambio = cleaned_data.get('tipo_cambio')
+        moneda = str(monto.currency).upper() if monto is not None else 'MXN'
+        if moneda == 'MXN':
+            cleaned_data['tipo_cambio'] = Decimal('1.0000')
+        elif not tipo_cambio or tipo_cambio <= 0:
+            self.add_error(
+                'tipo_cambio',
+                'Indica el tipo de cambio del pago en moneda extranjera.',
+            )
+        return cleaned_data
 
 
 # =============================================================================

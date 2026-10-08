@@ -31,12 +31,11 @@ def cobros_no_rep(cliente):
 
     Las facturas de contado (MetodoPago PUE) se pagan al emitirse y no generan
     Recibo Electrónico de Pago, por lo que su cobro vive en ``Ventas.monto_pagado``
-    y no en un ``DocumentoCFDI`` de tipo recibo_pago. Sin este ajuste, la
-    conciliación mostraría la factura completa como saldo por cobrar, como si
-    fuera a crédito.
+    (en la moneda de la venta). Las ventas a crédito con pagos manuales usan sus
+    ``PagoVenta``, respetando la moneda real del pago.
 
-    Solo se descuenta la parte del pago que no está ya representada por un REP
-    vigente, para no restar dos veces en las ventas a crédito.
+    Solo cuenta la parte que no está ya representada por un REP vigente, para no
+    restar dos veces.
     """
     rep_por_venta = defaultdict(float)
     for doc in cliente.documentos_cfdi.filter(
@@ -46,14 +45,48 @@ def cobros_no_rep(cliente):
 
     cobros = defaultdict(float)
     for venta in cliente.ventas_set.all():
+        pagos = list(venta.pagos.all())
+        if pagos:
+            total_pagos = sum(float(p.monto_pago.amount) for p in pagos)
+            sin_rep = total_pagos - rep_por_venta.get(venta.id, 0.0)
+            if sin_rep <= 0:
+                continue
+            monedas = {str(p.monto_pago.currency) for p in pagos}
+            moneda = (
+                monedas.pop() if len(monedas) == 1
+                else (venta.moneda_venta or 'MXN')
+            )
+            cobros[moneda] += sin_rep
+            continue
+
+        if venta.modalidad_pago != 'Contado':
+            continue
         pagado = float(venta.monto_pagado.amount)
         if pagado <= 0:
             continue
-        sin_rep = pagado - rep_por_venta.get(venta.id, 0.0)
-        if sin_rep > 0:
-            moneda = str(venta.monto_pagado.currency) or venta.moneda_venta or 'MXN'
-            cobros[moneda] += sin_rep
+        moneda = str(venta.monto_pagado.currency) or venta.moneda_venta or 'MXN'
+        cobros[moneda] += pagado
     return dict(cobros)
+
+
+def pagos_total_mxn(cliente):
+    """Total cobrado en pesos (equivalente MXN) usando el tipo de cambio.
+
+    Suma los ``PagoVenta`` (con su ``monto_pago_mxn``) y, para ventas de contado
+    sin pagos registrados, el ``monto_pagado`` convertido con el tipo de cambio
+    de la venta.
+    """
+    from ..models import PagoVenta
+
+    total = 0.0
+    for pago in PagoVenta.objects.filter(venta__cliente=cliente).select_related('venta'):
+        total += float(pago.monto_pago_mxn)
+
+    for venta in cliente.ventas_set.filter(pagos__isnull=True, modalidad_pago='Contado'):
+        if venta.monto_pagado and venta.monto_pagado.amount > 0:
+            total += float(venta.monto_pagado.amount) * float(venta.tipo_cambio or 1)
+
+    return round(total, 2)
 
 
 def conciliacion_cliente(cliente):
@@ -134,6 +167,7 @@ def conciliacion_cliente(cliente):
         'cliente': cliente,
         'detalle': detalle,
         'saldo_por_moneda': saldo,
+        'pagos_mxn': pagos_total_mxn(cliente),
         'total_documentos': docs.count(),
         'documentos_sin_venta': sum(item['total'] for item in sin_venta_detalle),
         'sin_venta_detalle': sin_venta_detalle,

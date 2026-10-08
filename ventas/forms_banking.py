@@ -8,6 +8,8 @@ Estándares implementados:
 - RF07: No se pueden asignar anticipos a ventas completadas
 - RF08: Validaciones en múltiples niveles (formulario + modelo + BD)
 """
+from decimal import Decimal
+
 from django import forms
 from django.core.exceptions import ValidationError
 from .models import PagoVenta, Anticipo, Ventas
@@ -17,7 +19,22 @@ class PagoVentaForm(forms.ModelForm):
     """
     Formulario para PagoVenta con validaciones estrictas.
     """
-    
+
+    tipo_cambio = forms.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        required=False,
+        label='Tipo de cambio',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.0001',
+            'placeholder': '17.5000',
+        }),
+        help_text=(
+            'MXN por 1 unidad de la moneda del pago. En pagos en pesos queda en 1.0000.'
+        ),
+    )
+
     class Meta:
         model = PagoVenta
         fields = '__all__'
@@ -102,5 +119,16 @@ class PagoVentaForm(forms.ModelForm):
                 'venta',
                 '❌ Solo se pueden registrar pagos para ventas a crédito.'
             )
-        
+
+        # ── Tipo de cambio según la moneda del pago ──
+        moneda = str(monto_pago.currency).upper()
+        tipo_cambio = cleaned_data.get('tipo_cambio')
+        if moneda == 'MXN':
+            cleaned_data['tipo_cambio'] = Decimal('1.0000')
+        elif not tipo_cambio or tipo_cambio <= 0:
+            self.add_error(
+                'tipo_cambio',
+                'Indica el tipo de cambio del pago en moneda extranjera.',
+            )
+
         return cleaned_data

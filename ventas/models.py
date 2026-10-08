@@ -1,4 +1,5 @@
 import re
+import unicodedata
 from datetime import datetime, timedelta
 from decimal import Decimal
 
@@ -190,6 +191,32 @@ class Cliente(models.Model):
         if self.mercado_destino:
             return self.mercado_destino.nombre != 'Nacional'
         return self.pais.nombre != 'México'  # Asumiendo que México es el país base
+
+    @property
+    def es_extranjero(self):
+        """
+        Determina si el cliente es extranjero (origen de venta de exportación).
+
+        Prioridad: residencia fiscal SAT (MEX vs otro), luego el país
+        normalizado (sin acentos/mayúsculas) y, por último, el mercado destino.
+        """
+        if self.residencia_fiscal:
+            return self.residencia_fiscal.strip().upper() != 'MEX'
+
+        pais = getattr(self.pais, 'nombre', '') or ''
+        normalizado = (
+            unicodedata.normalize('NFKD', pais)
+            .encode('ascii', 'ignore')
+            .decode('ascii')
+            .strip()
+            .upper()
+        )
+        if normalizado:
+            return normalizado != 'MEXICO'
+
+        if self.mercado_destino_id and self.mercado_destino:
+            return (self.mercado_destino.nombre or '').strip().lower() != 'nacional'
+        return False
 
     def saldo_conciliado(self):
         """
@@ -632,13 +659,14 @@ class Ventas(models.Model):
                         'anticipo': 'No se puede asignar o cambiar el anticipo de una venta que ya está completamente pagada.'
                     })
         
-        # Validar que montos sean positivos
-        if self.monto.amount <= 0:
+        # Validar que montos sean positivos. Si el valor es None, el formulario
+        # ya reporta el campo requerido; evita reventar en full_clean().
+        if self.monto is not None and self.monto.amount <= 0:
             raise ValidationError({
                 'monto': 'El monto de la venta debe ser mayor a cero.'
             })
         
-        if self.cantidad <= 0:
+        if self.cantidad is not None and self.cantidad <= 0:
             raise ValidationError({
                 'cantidad': 'La cantidad debe ser mayor a cero.'
             })
@@ -657,19 +685,35 @@ class Ventas(models.Model):
     
     def save(self, *args, **kwargs):
         """Override save para calcular automáticamente campos derivados"""
-        # Establecer mercado de destino basado en el cliente
-        if not self.mercado_destino and self.cliente.mercado_destino:
-            self.mercado_destino = self.cliente.mercado_destino
-        
-        # Calcular fecha de vencimiento para créditos
+        # ── Derivados del cliente: exportación y mercado destino ───────
+        if self.cliente_id:
+            self.tipo_venta = (
+                self.TipoVenta.EXPORTACION
+                if self.cliente.es_extranjero
+                else self.TipoVenta.NACIONAL
+            )
+            if not self.mercado_destino_id and self.cliente.mercado_destino_id:
+                self.mercado_destino = self.cliente.mercado_destino
+
+        # ── Moneda de venta derivada del Monto y tipo de cambio ────────
+        moneda = str(self.monto.currency) if self.monto else 'MXN'
+        self.moneda_venta = moneda
+        if moneda == 'MXN':
+            self.tipo_cambio = Decimal('1.0000')
+
+        # Calcular fecha de vencimiento para créditos (siempre, según el término).
         if self.modalidad_pago == self.ModalidadPago.CREDITO and self.termino_credito:
-            if not self.fecha_vencimiento:
-                self.fecha_vencimiento = self.fecha_deposito + timedelta(days=self.termino_credito.dias_credito)
+            self.fecha_vencimiento = (
+                self.fecha_deposito
+                + timedelta(days=self.termino_credito.dias_credito)
+            )
         
         # Establecer estado de cobranza inicial
         if self.modalidad_pago == self.ModalidadPago.CONTADO:
             self.estado_cobranza = self.EstadoCobranza.PAGADO
             self.monto_pagado = self.monto
+            self.termino_credito = None
+            self.fecha_vencimiento = None
         elif self.modalidad_pago == self.ModalidadPago.CREDITO and not self.pk:
             self.estado_cobranza = self.EstadoCobranza.PENDIENTE
 
@@ -894,6 +938,16 @@ class PagoVenta(models.Model):
         decimal_places=2, 
         default_currency='MXN'
     )
+    tipo_cambio = models.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        default=Decimal('1.0000'),
+        verbose_name='Tipo de cambio',
+        help_text=(
+            'MXN por 1 unidad de la moneda del pago. '
+            'En pagos en pesos debe ser 1.0000.'
+        ),
+    )
     cuenta_destino = models.ForeignKey(Cuenta, on_delete=models.CASCADE)
     
     class MetodoPago(models.TextChoices):
@@ -943,7 +997,21 @@ class PagoVenta(models.Model):
 
     def __str__(self):
         return f"Pago {self.monto_pago} - {self.venta.carga} - {self.fecha_pago}"
-    
+
+    @property
+    def es_moneda_extranjera(self):
+        """True si el pago está en una moneda distinta a MXN."""
+        return bool(self.monto_pago) and str(self.monto_pago.currency) != 'MXN'
+
+    @property
+    def monto_pago_mxn(self):
+        """Equivalente en pesos del pago según su tipo de cambio."""
+        if not self.monto_pago:
+            return Decimal('0.00')
+        if str(self.monto_pago.currency) == 'MXN':
+            return self.monto_pago.amount
+        return (self.monto_pago.amount * self.tipo_cambio).quantize(Decimal('0.01'))
+
     def clean(self):
         """
         Validaciones de nivel bancario ANTES de guardar.
@@ -979,7 +1047,16 @@ class PagoVenta(models.Model):
             raise ValidationError({
                 'monto_pago': 'El monto del pago debe ser mayor a cero.'
             })
-        
+
+        # Tipo de cambio obligatorio para pagos en moneda extranjera
+        if (
+            str(self.monto_pago.currency) != 'MXN'
+            and (not self.tipo_cambio or self.tipo_cambio <= 0)
+        ):
+            raise ValidationError({
+                'tipo_cambio': 'Indica el tipo de cambio del pago en moneda extranjera.'
+            })
+
         # Validar fecha de pago no sea futura
         if self.fecha_pago > timezone.now().date():
             raise ValidationError({
@@ -999,7 +1076,11 @@ class PagoVenta(models.Model):
         """
         from django.db import transaction
         from django.core.exceptions import ValidationError
-        
+
+        # Normalizar tipo de cambio: los pagos en pesos siempre van a 1.0.
+        if self.monto_pago and str(self.monto_pago.currency) == 'MXN':
+            self.tipo_cambio = Decimal('1.0000')
+
         # RF04: Ejecutar TODA la operación en transacción atómica
         with transaction.atomic():
             # Control de concurrencia: bloquear la venta para evitar race conditions

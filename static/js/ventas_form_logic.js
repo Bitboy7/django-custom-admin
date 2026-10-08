@@ -57,6 +57,7 @@
   /* ── State ──────────────────────────────────────────────────────── */
   var terminoDias = 0;
   var tipoVentaLocked = false;
+  var clienteTerminoDefault = null;
 
   /* ══════════════════════════════════════════════════════════════════
      SELECT 2 HELPERS
@@ -298,6 +299,19 @@
      DATE CALCULATION
    ══════════════════════════════════════════════════════════════════ */
 
+  function parseFecha(value) {
+    if (!value) return null;
+    if (value.indexOf("-") !== -1) {
+      var iso = value.split("-");
+      if (iso.length === 3) return new Date(+iso[0], +iso[1] - 1, +iso[2]);
+    }
+    if (value.indexOf("/") !== -1) {
+      var dmy = value.split("/");
+      if (dmy.length === 3) return new Date(+dmy[2], +dmy[1] - 1, +dmy[0]);
+    }
+    return null;
+  }
+
   function recalcVencimiento() {
     var modalEl = el(ID.modalidad);
     var depEl = el(ID.fechaDep);
@@ -305,10 +319,8 @@
     if (!modalEl || modalEl.value !== "Credito") return;
     if (!terminoDias || !depEl || !depEl.value) return;
 
-    var parts = depEl.value.split("-");
-    if (parts.length !== 3) return;
-
-    var d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+    var d = parseFecha(depEl.value);
+    if (!d) return;
     d.setDate(d.getDate() + terminoDias);
 
     var y = d.getFullYear();
@@ -329,10 +341,25 @@
     );
   }
 
+  function diasDesdeSelect(selectEl) {
+    if (!selectEl) return 0;
+    var option = selectEl.options[selectEl.selectedIndex];
+    if (!option) return 0;
+    var dias = option.getAttribute("data-dias");
+    return dias ? parseInt(dias, 10) || 0 : 0;
+  }
+
   function fetchDiasAndRecalc(termId) {
     removeBadge("vf-badge-vencimiento");
     if (!termId) {
       terminoDias = 0;
+      return;
+    }
+    /* Preferir data-dias del <option> seleccionado (evita el fetch). */
+    var local = diasDesdeSelect(el(ID.termino));
+    if (local) {
+      terminoDias = local;
+      recalcVencimiento();
       return;
     }
     fetch(apiBase() + "api/termino-credito-info/" + termId + "/")
@@ -356,113 +383,108 @@
     var modalEl = el(ID.modalidad);
     if (!modalEl) return;
     var isCredito = modalEl.value === "Credito";
-
-    /* ─ termino_credito: required marker & attribute ─ */
-    setRequired(ID.termino, isCredito);
+    /* Dejar término/estado como selects nativos (Select2 no respeta cambios
+       dinámicos de disabled). */
+    stripSelect2On([ID.termino, ID.estadoCob]);
     var termEl = el(ID.termino);
+    var venEl = el(ID.fechaVen);
+    var estEl = el(ID.estadoCob);
+
+    /* ─ termino_credito: habilitado solo a crédito ─ */
+    setRequired(ID.termino, isCredito);
     if (termEl) {
+      termEl.disabled = !isCredito;
       if (isCredito) termEl.setAttribute("required", "required");
       else termEl.removeAttribute("required");
     }
+    if (jQ && termEl) jQ(termEl).prop("disabled", !isCredito);
+    s2lock(ID.termino, !isCredito, "Solo para ventas a crédito");
 
-    /* ─ fecha_vencimiento: locked/calculated when credit ─ */
+    /* ─ fecha_vencimiento: calculada a crédito, bloqueada a contado ─ */
+    if (venEl) venEl.disabled = !isCredito;
     setDateReadonly(ID.fechaVen, isCredito);
 
-    if (isCredito) {
-      fetchDiasAndRecalc(termEl ? termEl.value : "");
+    /* ─ estado_cobranza: siempre derivado (no editable) ─ */
+    if (estEl) estEl.disabled = true;
 
-      /* Auto estado_cobranza = Pendiente when switching to Crédito */
-      var estEl = el(ID.estadoCob);
+    if (isCredito) {
+      /* Término por defecto del cliente si aún no se eligió uno. */
+      if (termEl && !termEl.value && clienteTerminoDefault) {
+        s2set(ID.termino, String(clienteTerminoDefault));
+        flash(ID.termino, "rgba(184,219,217,.1)");
+      }
+      fetchDiasAndRecalc(termEl ? termEl.value : "");
       if (estEl && (estEl.value === "Pagado" || estEl.value === "")) {
         s2set(ID.estadoCob, "Pendiente");
       }
-
       tabBadge("Modalidad", "vf-tb-modal", "CRÉDITO", "#b8dbd9");
     } else {
-      /* Contado: clear due date, remove badges */
-      var fvEl = el(ID.fechaVen);
-      if (fvEl) fvEl.value = "";
+      if (venEl) venEl.value = "";
       terminoDias = 0;
       removeBadge("vf-badge-vencimiento");
       removeTabBadge("vf-tb-modal");
-
-      /* Auto estado_cobranza = Pagado when switching to Contado */
-      var estEl2 = el(ID.estadoCob);
-      if (estEl2) s2set(ID.estadoCob, "Pagado");
+      if (estEl) s2set(ID.estadoCob, "Pagado");
     }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     MONEDA DE VENTA + TIPO DE CAMBIO (derivados del campo Monto)
+   ══════════════════════════════════════════════════════════════════ */
+
+  /**
+   * Quita Select2 de un <select> para dejarlo nativo.
+   * Necesario en campos que se bloquean/desbloquean dinámicamente: Select2 no
+   * reacciona a cambios de `disabled`, pero un select nativo sí.
+   */
+  function stripSelect2On(ids) {
+    if (!jQ || !jQ.fn || !jQ.fn.select2) return;
+    ids.forEach(function (id) {
+      var node = el(id);
+      if (node && jQ(node).hasClass("select2-hidden-accessible")) {
+        try {
+          jQ(node).select2("destroy");
+        } catch (e) {
+          /* noop */
+        }
+      }
+    });
+  }
+
+  function syncMoneda(focus) {
+    /* django-money renderiza Monto como monto_0 (importe) + monto_1 (moneda). */
+    var curEl = el("id_monto_1");
+    var monEl = el("id_moneda_venta");
+    var tcEl = el("id_tipo_cambio");
+    if (!curEl) return;
+
+    var moneda = (curEl.value || "MXN").toUpperCase();
+    if (monEl) monEl.value = moneda;
+    if (!tcEl) {
+      if (monEl) flash("id_moneda_venta", "rgba(184,219,217,.12)");
+      return;
+    }
+
+    if (moneda === "MXN") {
+      tcEl.value = "1.0";
+      tcEl.disabled = true;
+      tcEl.style.background = "#f1f5f9";
+    } else {
+      tcEl.disabled = false;
+      tcEl.style.background = "";
+      if (!tcEl.value || parseFloat(tcEl.value) === 1) tcEl.value = "";
+      if (focus) tcEl.focus();
+    }
+    if (jQ) jQ(tcEl).prop("disabled", tcEl.disabled);
+    if (monEl) flash("id_moneda_venta", "rgba(184,219,217,.12)");
   }
 
   /* ══════════════════════════════════════════════════════════════════
      CLIENTE CHANGE  →  FOREIGN CLIENT DETECTION
    ══════════════════════════════════════════════════════════════════ */
 
-  function applyClienteData(data) {
-    console.log("applyClienteData called with:", data);
-    var tipoEl = el(ID.tipoVenta);
-    var mercadoEl = el(ID.mercado);
-
-    if (data.es_extranjero) {
-      console.log("Cliente extranjero detectado:", data.pais_nombre);
-      /* 1. Set tipo_venta = "Exportación" via Select2 */
-      s2set(
-        ID.tipoVenta,
-        "Exportación",
-      ); /* "Exportación" — exact option value */
-
-      /* 2. Lock the Select2 container so user cannot change it */
-      tipoVentaLocked = true;
-      s2lock(
-        ID.tipoVenta,
-        true,
-        "Bloqueado: cliente de " + (data.pais_nombre || "país extranjero"),
-      );
-
-      /* 3. Inline badge next to tipo_venta */
-      placeBadge(
-        ID.tipoVenta,
-        "vf-badge-tipoventa",
-        "🌍 " + (data.pais_nombre || "Extranjero"),
-        "#2f4550",
-      );
-      flash(ID.tipoVenta, "rgba(184,219,217,.15)");
-
-      /* 4. Tab badge on "Mercado y Exportación" */
-      tabBadge("Mercado", "vf-tb-mercado", "AUTO", "#2f4550");
-
-      /* 5. Fill mercado_destino if available */
-      if (data.mercado_destino_id) {
-        s2set(ID.mercado, String(data.mercado_destino_id));
-        flash(ID.mercado, "rgba(184,219,217,.1)");
-        console.log("Cliente nacional detectado:", data.pais_nombre);
-        /* Domestic client: set Nacional and unlock tipo_venta */
-        s2set(ID.tipoVenta, "Nacional");
-      } else {
-        /* Domestic client: unlock tipo_venta */
-        tipoVentaLocked = false;
-        s2lock(ID.tipoVenta, false);
-        removeBadge("vf-badge-tipoventa");
-        removeTabBadge("vf-tb-mercado");
-      }
-
-      /* 6. Pre-fill termino_credito from client's default (only if Crédito & empty) */
-      if (data.termino_credito_id) {
-        var modalEl = el(ID.modalidad);
-        var termEl = el(ID.termino);
-        if (modalEl && modalEl.value === "Credito" && termEl && !termEl.value) {
-          s2set(ID.termino, String(data.termino_credito_id));
-          flash(ID.termino, "rgba(184,219,217,.1)");
-          fetchDiasAndRecalc(data.termino_credito_id);
-        }
-      }
-    }
-    {
-      console.log("onClienteChange: no cliente selected");
-      return;
-    }
-    console.log("onClienteChange: fetching data for cliente", clienteId);
+  function onClienteChange(clienteId) {
+    if (!clienteId) return;
     var apiUrl = apiBase() + "api/cliente-info/" + clienteId + "/";
-    console.log("API URL:", apiUrl);
-
     fetch(apiUrl)
       .then(function (r) {
         if (!r.ok) {
@@ -471,12 +493,60 @@
         return r.json();
       })
       .then(function (data) {
-        console.log("API response:", data);
         applyClienteData(data);
       })
       .catch(function (err) {
         console.error("Error fetching cliente info:", err);
       });
+  }
+
+  function applyClienteData(data) {
+    if (!data) return;
+
+    if (data.es_extranjero) {
+      /* Cliente extranjero → Exportación SIEMPRE (aunque tenga mercado). */
+      s2set(ID.tipoVenta, "Exportación");
+      tipoVentaLocked = true;
+      s2lock(
+        ID.tipoVenta,
+        true,
+        "Bloqueado: cliente de " + (data.pais_nombre || "país extranjero"),
+      );
+      placeBadge(
+        ID.tipoVenta,
+        "vf-badge-tipoventa",
+        "🌍 " + (data.pais_nombre || "Extranjero"),
+        "#2f4550",
+      );
+      flash(ID.tipoVenta, "rgba(184,219,217,.15)");
+      tabBadge("Mercado", "vf-tb-mercado", "AUTO", "#2f4550");
+    } else {
+      /* Cliente nacional → Nacional, editable. */
+      s2set(ID.tipoVenta, "Nacional");
+      tipoVentaLocked = false;
+      s2lock(ID.tipoVenta, false);
+      removeBadge("vf-badge-tipoventa");
+      removeTabBadge("vf-tb-mercado");
+    }
+
+    /* mercado_destino: autocompletar el del cliente (aplica a ambos casos). */
+    if (data.mercado_destino_id) {
+      s2set(ID.mercado, String(data.mercado_destino_id));
+      flash(ID.mercado, "rgba(184,219,217,.1)");
+    }
+
+    /* Guardar término por defecto del cliente (se aplica ahora si es a
+       crédito, o al cambiar a crédito desde syncModalidad). */
+    clienteTerminoDefault = data.termino_credito_id || null;
+    if (clienteTerminoDefault) {
+      var modalEl = el(ID.modalidad);
+      var termEl = el(ID.termino);
+      if (modalEl && modalEl.value === "Credito" && termEl && !termEl.value) {
+        s2set(ID.termino, String(clienteTerminoDefault));
+        flash(ID.termino, "rgba(184,219,217,.1)");
+        fetchDiasAndRecalc(clienteTerminoDefault);
+      }
+    }
   }
 
   /* ══════════════════════════════════════════════════════════════════
@@ -493,6 +563,16 @@
 
     /* ── Initial state ── */
     syncModalidad();
+    syncMoneda(false);
+
+    /* Termino/estado se bloquean y desbloquean; usar selects nativos.
+       Jazzmin aplica Select2 al final, por eso esperamos (timeout + load). */
+    function quitarSelect2Dinamicos() {
+      stripSelect2On([ID.termino, ID.estadoCob]);
+      syncModalidad();
+    }
+    setTimeout(quitarSelect2Dinamicos, 0);
+    window.addEventListener("load", quitarSelect2Dinamicos);
 
     /* ── Guard: prevent user from changing locked selects ──
        Runs in capture phase to intercept before Select2 processes.      */
@@ -518,6 +598,19 @@
     if (modalEl) modalEl.addEventListener("change", syncModalidad);
     if (jQ && el(ID.modalidad)) {
       jQ(el(ID.modalidad)).on("select2:select", syncModalidad);
+    }
+
+    /* ── moneda del Monto → moneda_venta + tipo_cambio ── */
+    var curEl = el("id_monto_1");
+    if (curEl) {
+      curEl.addEventListener("change", function () {
+        syncMoneda(true);
+      });
+      if (jQ) {
+        jQ(curEl).on("select2:select", function () {
+          syncMoneda(true);
+        });
+      }
     }
 
     /* ── termino_credito ── */

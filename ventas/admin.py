@@ -449,7 +449,7 @@ class PagoVentaInline(admin.TabularInline):
     extra = 0
     template = 'admin/ventas/pagoventa/inline_modal.html'
     readonly_fields = ('fecha_registro',)
-    fields = ('fecha_pago', 'monto_pago', 'cuenta_destino', 'metodo_pago', 'referencia', 'notas')
+    fields = ('fecha_pago', 'monto_pago', 'tipo_cambio', 'cuenta_destino', 'metodo_pago', 'referencia', 'notas')
 
 # Inline para DocumentoCFDI - debe definirse antes de VentasAdmin
 class DocumentoCFDIInline(admin.TabularInline):
@@ -2757,7 +2757,7 @@ class PagoVentaResource(resources.ModelResource):
 
     class Meta:
         model = PagoVenta
-        fields = ('id', 'fecha_pago', 'venta', 'monto_pago', 'cuenta_destino', 'metodo_pago', 'referencia')
+        fields = ('id', 'fecha_pago', 'venta', 'monto_pago', 'tipo_cambio', 'cuenta_destino', 'metodo_pago', 'referencia')
         import_id_fields = ('id',)
 
 @admin.register(PagoVenta)
@@ -2768,7 +2768,7 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
     """
     resource_class = PagoVentaResource
     change_list_template = 'admin/ventas/pagoventa/change_list.html'
-    list_display = ('fecha_pago', 'get_venta_info', 'monto_pago', 'metodo_pago', 'get_saldo_pendiente', 'folio_rep', 'get_comprobante', 'referencia', 'fecha_registro')
+    list_display = ('fecha_pago', 'get_venta_info', 'monto_pago', 'tipo_cambio', 'metodo_pago', 'get_saldo_pendiente', 'folio_rep', 'get_comprobante', 'referencia', 'fecha_registro')
     list_select_related = ('venta', 'venta__cliente', 'documento_cfdi')
     list_filter = ('fecha_pago', 'metodo_pago', 'venta__cliente', 'venta__estado_cobranza')
     search_fields = ('venta__carga', 'venta__cliente__nombre', 'referencia', 'notas', 'folio_rep', 'uuid_rep')
@@ -2823,7 +2823,7 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
     
     fieldsets = (
         ('Información del Pago', {
-            'fields': ('venta', 'get_saldo_venta', 'fecha_pago', 'monto_pago'),
+            'fields': ('venta', 'get_saldo_venta', 'fecha_pago', 'monto_pago', 'tipo_cambio'),
             'description': mark_safe(
                 '<strong style="color:#5a7d6b;">⚠️ Controles Bancarios Activos:</strong> '
                 'No se permiten pagos a ventas completadas ni sobrepagos.'

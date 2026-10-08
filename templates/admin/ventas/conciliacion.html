@@ -55,6 +55,7 @@
             <th class="num">− Pagos (REP)</th>
             <th class="num">− Cobros contado</th>
             <th class="num">− Anticipos</th>
+            <th class="num">Cobrado MXN</th>
             <th class="num">Saldo conciliado</th>
             <th class="center">Sin vincular</th>
           </tr>
@@ -84,6 +85,10 @@
             </td>
             <td class="num">
               {% for m, v in f.detalle.anticipos_disponibles.items %}<span class="conc-amt">{{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span></span>{% empty %}<span class="conc-empty">—</span>{% endfor %}
+            </td>
+
+            <td class="num">
+              {% if f.pagos_mxn %}<span class="conc-amt">{{ f.pagos_mxn|floatformat:2 }}<span class="conc-cur">MXN</span></span>{% else %}<span class="conc-empty">—</span>{% endif %}
             </td>
 
             <td class="num">

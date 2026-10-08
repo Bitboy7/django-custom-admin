@@ -119,6 +119,25 @@
       emptyMsg.hidden = visibleRows().length > 0;
     }
 
+    function syncPagoTipoCambio() {
+      var cur = modalBody.querySelector('select[name$="-monto_pago_1"]');
+      var tc = modalBody.querySelector('input[name$="-tipo_cambio"]');
+      if (!tc) return;
+      var moneda = ((cur && cur.value) || "MXN").toUpperCase();
+      if (moneda === "MXN") {
+        tc.value = "1.0";
+        tc.disabled = true;
+        tc.style.background = "#f1f5f9";
+      } else {
+        tc.disabled = false;
+        tc.style.background = "";
+        if (!tc.value || parseFloat(tc.value) === 1) {
+          var ventaTc = document.getElementById("id_tipo_cambio");
+          if (ventaTc && ventaTc.value) tc.value = ventaTc.value;
+        }
+      }
+    }
+
     function openModal(form, row, newFlag) {
       currentForm = form;
       currentRow = row;
@@ -127,6 +146,7 @@
         modalBody.appendChild(field);
       });
       stripSelect2(modalBody);
+      syncPagoTipoCambio();
       modal.hidden = false;
       document.body.classList.add("pv-modal-open");
       var focusable = modalBody.querySelector("input, select, textarea");
@@ -206,6 +226,13 @@
     if (acceptBtn) acceptBtn.addEventListener("click", accept);
     forEach(modal.querySelectorAll("[data-pv-close]"), function (el) {
       el.addEventListener("click", cancel);
+    });
+
+    modalBody.addEventListener("change", function (event) {
+      var t = event.target;
+      if (t && t.name && t.name.indexOf("-monto_pago_1") !== -1) {
+        syncPagoTipoCambio();
+      }
     });
 
     group.addEventListener("click", function (event) {
