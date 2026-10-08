@@ -135,6 +135,37 @@ class VentasAdminForm(forms.ModelForm):
         return cleaned_data
 
 
+class PagoVentaInlineForm(forms.ModelForm):
+    """
+    Formulario del inline de pagos (modal).
+
+    Usa controles nativos: los campos se mueven al modal y los widgets
+    enriquecidos (Select2 y el calendario de Django) se inicializan cuando el
+    formset está oculto, por lo que dejan de abrir dentro del modal. Un
+    ``input[type=date]`` y selects nativos funcionan siempre.
+    """
+
+    fecha_pago = forms.DateField(
+        label='Fecha pago',
+        input_formats=['%Y-%m-%d', '%d/%m/%Y'],
+        widget=forms.DateInput(
+            format='%Y-%m-%d',
+            attrs={'type': 'date', 'class': 'form-control'},
+        ),
+    )
+
+    class Meta:
+        model = PagoVenta
+        fields = (
+            'fecha_pago', 'monto_pago', 'cuenta_destino',
+            'metodo_pago', 'referencia', 'notas',
+        )
+        widgets = {
+            'referencia': forms.TextInput(attrs={'class': 'form-control'}),
+            'notas': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        }
+
+
 # =============================================================================
 # CFDI IMPORT FORMS
 # =============================================================================

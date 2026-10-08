@@ -1,0 +1,179 @@
+/*
+ * Pagos de Ventas — inline compacto con edición en modal.
+ * Reutiliza los design tokens (tokens.css) y el look de cfdi-pdf-modal.
+ */
+
+/* ── Barra de acciones ─────────────────────────────────────────── */
+.pagoventa-modal-group .pv-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-3);
+}
+.pagoventa-modal-group .pv-add {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+}
+
+/* ── Tabla resumen ─────────────────────────────────────────────── */
+.pagoventa-modal-group .pv-summary {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+.pagoventa-modal-group .pv-summary thead th {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-default);
+  white-space: nowrap;
+}
+.pagoventa-modal-group .pv-summary td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-default);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+.pagoventa-modal-group .pv-summary-row:hover td {
+  background: var(--surface-hover);
+}
+.pagoventa-modal-group .pv-summary .pv-monto {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+.pagoventa-modal-group .pv-actions {
+  text-align: right;
+  white-space: nowrap;
+  width: 1%;
+}
+.pagoventa-modal-group .pv-edit,
+.pagoventa-modal-group .pv-delete {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  line-height: 1;
+  padding: var(--space-1) var(--space-2);
+  color: var(--text-secondary);
+}
+.pagoventa-modal-group .pv-edit:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-default);
+}
+.pagoventa-modal-group .pv-delete {
+  color: var(--accent-red);
+}
+.pagoventa-modal-group .pv-delete:hover {
+  background: var(--accent-red-bg);
+}
+.pagoventa-modal-group .pv-empty-msg {
+  margin: var(--space-4) 0 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* ── Modal ─────────────────────────────────────────────────────── */
+.pv-modal[hidden] { display: none; }
+.pv-modal {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal, 1050);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+.pv-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 27, 34, 0.55);
+}
+.pv-modal-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 100%);
+  max-height: calc(100vh - var(--space-8));
+  overflow-y: auto;
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  animation: pvModalIn var(--duration-normal) var(--ease-default);
+}
+@keyframes pvModalIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.pv-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--surface-card);
+}
+.pv-modal-title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: 700;
+}
+.pv-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 0 var(--space-1);
+}
+.pv-modal-close:hover { color: var(--text-primary); }
+.pv-modal-body {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+.pv-modal-body .pv-field {
+  display: grid;
+  gap: var(--space-1);
+}
+.pv-modal-body .pv-field > label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+.pv-modal-body .pv-errors .errorlist {
+  margin: var(--space-1) 0 0;
+}
+.pv-modal-footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-default);
+  background: var(--surface-card);
+}
+.pv-modal-accept {
+  background: var(--action-primary) !important;
+  border-color: var(--action-primary) !important;
+  color: var(--action-primary-contrast) !important;
+  font-weight: 600;
+}
+.pv-modal-accept:hover {
+  background: var(--action-primary-hover) !important;
+  border-color: var(--action-primary-hover) !important;
+}
+body.pv-modal-open { overflow: hidden; }

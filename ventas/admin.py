@@ -14,6 +14,7 @@ from .models import (
 )
 from .forms import (
     VentasAdminForm,
+    PagoVentaInlineForm,
     CFDIUploadForm,
     CFDIConfirmForm,
     AnticipoCFDIUploadForm,
@@ -444,7 +445,9 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
 # Inline para PagoVenta - debe definirse antes de VentasAdmin
 class PagoVentaInline(admin.TabularInline):
     model = PagoVenta
+    form = PagoVentaInlineForm
     extra = 0
+    template = 'admin/ventas/pagoventa/inline_modal.html'
     readonly_fields = ('fecha_registro',)
     fields = ('fecha_pago', 'monto_pago', 'cuenta_destino', 'metodo_pago', 'referencia', 'notas')
 
@@ -528,7 +531,8 @@ class VentasAdmin(ModelAdmin):
     list_select_related = ('cliente', 'cliente__pais', 'mercado_destino')
 
     class Media:
-        js = ('js/ventas_form_logic.js',)
+        js = ('js/ventas_form_logic.js', 'js/pagoventa_modal.js')
+        css = {'all': ('css/pagoventa_modal.css',)}
     
     list_display = (
         'fecha_salida_manifiesto', 'carga', 'get_cliente_info', 'get_monto_formateado', 
@@ -563,29 +567,34 @@ class VentasAdmin(ModelAdmin):
     ]
     
     fieldsets = (
-        ('Información Básica', {
-            'fields': ('fecha_salida_manifiesto', 'agente_id', 'fecha_deposito',
-                       'carga', 'PO', 'pedimento')
+        ('Tipo de Registro', {
+            'fields': ('tipo_registro',),
+            'description': 'Indica si el ingreso corresponde a una venta, maquila o servicio.',
+            'classes': ('ventas-grid',),
         }),
         ('Concepto y Cliente', {
-            'fields': ('producto', 'cantidad', 'monto', 'cliente',
-                       'sucursal_id', 'descripcion')
+            'fields': ('cliente', 'producto', 'cantidad', 'monto',
+                       'sucursal_id', 'descripcion'),
+            'classes': ('ventas-grid',),
         }),
         ('Modalidad de Pago', {
             'fields': ('modalidad_pago', 'termino_credito', 'fecha_vencimiento',
                        'estado_cobranza', 'monto_pagado'),
-            'classes': ('wide',)
+            'classes': ('ventas-grid',),
+        }),
+        ('Información Básica', {
+            'fields': ('fecha_salida_manifiesto', 'agente_id', 'fecha_deposito',
+                       'carga', 'PO', 'pedimento'),
+            'classes': ('ventas-grid',),
         }),
         ('Mercado y Exportación', {
             'fields': ('tipo_venta', 'mercado_destino', 'incoterm',
                        'moneda_venta', 'tipo_cambio', 'numero_carga_comprador'),
+            'classes': ('ventas-grid',),
         }),
         ('Contabilidad', {
             'fields': ('cuenta', 'anticipo'),
-        }),
-        ('Tipo de Registro', {
-            'fields': ('tipo_registro',),
-            'description': 'Indica si el ingreso corresponde a una venta, maquila o servicio.'
+            'classes': ('ventas-grid',),
         }),
     )
     
@@ -3743,13 +3752,6 @@ class PaisInline(admin.TabularInline):
 list_editable = ('activo',)
 inlines = [PaisInline]
 exclude = ('paises',)
-
-# Inline para PagoVenta - debe definirse antes de VentasAdmin
-class PagoVentaInline(admin.TabularInline):
-    model = PagoVenta
-    extra = 0
-    readonly_fields = ('fecha_registro',)
-    fields = ('fecha_pago', 'monto_pago', 'cuenta_destino', 'metodo_pago', 'referencia', 'notas')
 
 
 # =============================================================================

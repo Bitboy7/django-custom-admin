@@ -67,8 +67,8 @@ html body aside#jazzy-sidebar { view-transition-name: app-sidebar; }
 }
 
 @supports not (view-transition-name: none) {
-  body .content-wrapper > .content,
-  .page-content {
+  body .content-wrapper,
+  body .page-content {
     animation: page-enter 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 }
@@ -217,8 +217,8 @@ body .button:disabled,
     animation: none !important;
   }
 
-  body .content-wrapper > .content,
-  .page-content {
+  body .content-wrapper,
+  body .page-content {
     animation: none !important;
   }
 

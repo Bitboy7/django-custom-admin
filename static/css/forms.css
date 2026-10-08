@@ -159,7 +159,32 @@ fieldset.module > h2 {
 
 /* ── Inline formsets ────────────────────────────────────────────── */
 .inline-group { margin-top: var(--space-6); }
-.inline-group .module { margin-bottom: 0 !important; }
+.inline-group .module {
+  margin-bottom: 0 !important;
+  /* Tabular inlines may be wider than the content area (Jazzmin forces
+     `text-nowrap` on the table). `overflow: hidden` on .module clipped the
+     right-hand columns with no way to reach them; allow scrolling instead. */
+  overflow-x: auto;
+}
+
+/* Dejar que los campos compuestos puedan envolver. Jazzmin aplica
+   `text-nowrap` a las tablas inline; widgets multi-control (p. ej. el
+   MoneyField de django-money: monto + moneda) se salían de su celda y
+   se encimaban en la columna siguiente. */
+body .inline-group table.table,
+body .inline-group .tabular table {
+  white-space: normal;
+}
+
+/* Monto (MoneyField): apilar monto y moneda dentro de su celda. */
+body .inline-group .tabular td.field-monto_pago input,
+body .inline-group .tabular td.field-monto_pago select {
+  display: block;
+  width: 100%;
+}
+body .inline-group .tabular td.field-monto_pago select {
+  margin-top: var(--space-1);
+}
 .inline-group h2 {
   background: linear-gradient(90deg, var(--brand-navy-light) 0%, #1a4068 100%) !important;
   border-left: 3px solid var(--brand-teal-light) !important;
@@ -270,5 +295,42 @@ fieldset.module > h2 {
   .form-row .field-monto_total {
     width: 100%;
     margin-bottom: var(--space-2);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VENTAS CHANGE FORM — layout a dos columnas
+   Los fieldsets marcados con `ventas-grid` (ver VentasAdmin) se
+   reparten en 2 columnas para reducir el scroll. Solo aplica al
+   formulario principal; los inlines no llevan la clase.
+   ═══════════════════════════════════════════════════════════════ */
+body.app-ventas.model-ventas.change-form .card.ventas-grid > .card-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--space-5);
+  row-gap: var(--space-2);
+}
+
+body.app-ventas.model-ventas.change-form .card.ventas-grid > .card-body > .form-group {
+  margin-bottom: 0 !important;
+  min-width: 0;
+}
+
+/* Bootstrap .row usa margenes negativos; los neutralizamos en la celda. */
+body.app-ventas.model-ventas.change-form .card.ventas-grid .form-group > .row {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Campos que ocupan toda la fila por su longitud / contenido. */
+body.app-ventas.model-ventas.change-form .card.ventas-grid > .card-body > .form-group.field-descripcion,
+body.app-ventas.model-ventas.change-form .card.ventas-grid > .card-body > .form-group.field-cuenta,
+body.app-ventas.model-ventas.change-form .card.ventas-grid > .card-body > .form-group.field-anticipo {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 991.98px) {
+  body.app-ventas.model-ventas.change-form .card.ventas-grid > .card-body {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
