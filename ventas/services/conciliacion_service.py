@@ -11,6 +11,7 @@ los modelos operativos (Ventas/PagoVenta/Anticipo) y produce, por cliente:
   - Detección de documentos no vinculados a una venta (posible deriva).
 """
 from collections import defaultdict
+from datetime import date
 
 from ..models import DocumentoCFDI
 
@@ -123,12 +124,16 @@ def pagos_total_mxn(cliente, fecha_inicio=None, fecha_fin=None):
     return round(total, 2)
 
 
-def conciliacion_cliente(cliente, fecha_inicio=None, fecha_fin=None):
-    """Calcula la conciliación fiscal completa de un cliente.
+def _calcular(cliente, fecha_inicio=None, fecha_fin=None):
+    """Calcula el desglose y el saldo conciliado de un cliente.
+
+    Fuente única de la fórmula de saldo. Retorna ``(docs, detalle, saldo)``:
+    el queryset de documentos vigentes del periodo, el desglose por
+    concepto/moneda y el saldo por moneda. La usan ``conciliacion_cliente`` y
+    ``saldo_por_moneda`` para no duplicar la regla de cálculo.
 
     ``fecha_inicio``/``fecha_fin`` (date) limitan los documentos (por
-    ``fecha_emision``), pagos (``fecha_pago``) y anticipos (``fecha``) al
-    periodo. Sin fechas, se considera todo el histórico.
+    ``fecha_emision``), pagos (``fecha_pago``) y anticipos (``fecha``).
     """
     docs = _en_rango(
         cliente.documentos_cfdi.filter(estado='VIGENTE'),
@@ -172,6 +177,29 @@ def conciliacion_cliente(cliente, fecha_inicio=None, fecha_fin=None):
             - detalle['cobros_contado'].get(mon, 0.0)
             - detalle['anticipos_disponibles'].get(mon, 0.0)
         )
+
+    return docs, detalle, saldo
+
+
+def saldo_por_moneda(cliente, fecha_inicio=None, fecha_fin=None):
+    """Saldo conciliado del cliente desglosado por moneda.
+
+    Fuente única de la fórmula de saldo: la consumen
+    ``Cliente.saldo_conciliado()`` y la vista de conciliación, de modo que no
+    existan dos implementaciones que puedan desincronizarse.
+    """
+    _docs, _detalle, saldo = _calcular(cliente, fecha_inicio, fecha_fin)
+    return saldo
+
+
+def conciliacion_cliente(cliente, fecha_inicio=None, fecha_fin=None):
+    """Calcula la conciliación fiscal completa de un cliente.
+
+    ``fecha_inicio``/``fecha_fin`` (date) limitan los documentos (por
+    ``fecha_emision``), pagos (``fecha_pago``) y anticipos (``fecha``) al
+    periodo. Sin fechas, se considera todo el histórico.
+    """
+    docs, detalle, saldo = _calcular(cliente, fecha_inicio, fecha_fin)
 
     # Documentos que no pudieron vincularse a una venta (posible deriva):
     # son notas de cargo/crédito o recibos de pago cuyo CFDI padre no fue
@@ -220,10 +248,77 @@ def conciliacion_cliente(cliente, fecha_inicio=None, fecha_fin=None):
     }
 
 
-def conciliacion_global(fecha_inicio=None, fecha_fin=None):
-    """Conciliación de todos los clientes activos (opcionalmente por periodo)."""
-    from ..models import Cliente
-    return [
-        conciliacion_cliente(c, fecha_inicio, fecha_fin)
-        for c in Cliente.objects.filter(activo=True).order_by('nombre')
+def _serializar_fila(fila):
+    """Convierte una fila de conciliación a tipos JSON-serializables.
+
+    El backend de cache de producción usa serializador JSON, que no admite
+    instancias de modelo ni ``Decimal`` anidados: se reemplaza el cliente por
+    su id (no se usa al rehidratar) y se normalizan fechas y montos.
+    """
+    fila = dict(fila)
+    fila['cliente'] = fila['cliente'].pk
+    fila['sin_venta_detalle'] = [
+        {
+            **grupo,
+            'documentos': [
+                {
+                    **doc,
+                    'monto': float(doc['monto']),
+                    'fecha': doc['fecha'].isoformat() if doc['fecha'] else None,
+                }
+                for doc in grupo['documentos']
+            ],
+        }
+        for grupo in fila['sin_venta_detalle']
     ]
+    return fila
+
+
+def _rehidratar_fila(fila, cliente):
+    """Reconstruye una fila cacheada con su cliente y los tipos originales."""
+    fila = dict(fila)
+    fila['cliente'] = cliente
+    fila['sin_venta_detalle'] = [
+        {
+            **grupo,
+            'documentos': [
+                {
+                    **doc,
+                    'monto': float(doc['monto']) if doc.get('monto') is not None else 0.0,
+                    'fecha': date.fromisoformat(doc['fecha']) if doc.get('fecha') else None,
+                }
+                for doc in grupo['documentos']
+            ],
+        }
+        for grupo in fila['sin_venta_detalle']
+    ]
+    return fila
+
+
+def conciliacion_global(fecha_inicio=None, fecha_fin=None):
+    """Conciliación de todos los clientes activos (opcionalmente por periodo).
+
+    El resultado se cachea por rango de fechas (``ConciliacionCache``) para
+    evitar recalcular la conciliación de cada cliente en cada carga. Al leer
+    del cache se rehidrata cada fila con su cliente actual.
+    """
+    from ..models import Cliente
+    from .cache_service import ConciliacionCache
+
+    clientes = list(Cliente.objects.filter(activo=True).order_by('nombre'))
+
+    cacheadas = ConciliacionCache.get(fecha_inicio, fecha_fin)
+    if cacheadas is not None and len(cacheadas) == len(clientes):
+        return [
+            _rehidratar_fila(fila, cliente)
+            for fila, cliente in zip(cacheadas, clientes)
+        ]
+
+    filas = [
+        conciliacion_cliente(c, fecha_inicio, fecha_fin)
+        for c in clientes
+    ]
+    ConciliacionCache.set(
+        fecha_inicio, fecha_fin, [_serializar_fila(f) for f in filas]
+    )
+    return filas

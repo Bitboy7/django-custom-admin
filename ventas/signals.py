@@ -11,10 +11,41 @@ Señales Django para automatizar el ciclo de vida de cuentas por cobrar.
 
 import logging
 
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
+
+
+def _invalidar_cache_conciliacion(sender, **kwargs):
+    """Invalida el cache de conciliación ante cambios en el ledger fiscal,
+    pagos, anticipos o ventas (cualquiera altera el saldo conciliado)."""
+    try:
+        from .services.cache_service import ConciliacionCache
+        ConciliacionCache.invalidar()
+    except Exception:
+        logger.exception('No se pudo invalidar el cache de conciliación.')
+
+
+def _conectar_invalidacion_conciliacion():
+    """Conecta la invalidación del cache de conciliación a los modelos que
+    alimentan el saldo: documentos CFDI, pagos, anticipos y ventas."""
+    from .models import Anticipo, DocumentoCFDI, PagoVenta, Ventas
+
+    for modelo in (DocumentoCFDI, PagoVenta, Anticipo, Ventas):
+        post_save.connect(
+            _invalidar_cache_conciliacion,
+            sender=modelo,
+            dispatch_uid=f'invalidar_conciliacion_save_{modelo.__name__}',
+        )
+        post_delete.connect(
+            _invalidar_cache_conciliacion,
+            sender=modelo,
+            dispatch_uid=f'invalidar_conciliacion_delete_{modelo.__name__}',
+        )
+
+
+_conectar_invalidacion_conciliacion()
 
 
 @receiver(post_save, sender='ventas.Ventas')

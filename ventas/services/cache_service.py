@@ -659,3 +659,67 @@ class VentasBalancesCache:
                 logger.debug('VentasBalancesCache: backend sin delete_pattern, TTL expirará naturalmente')
         except Exception as e:
             logger.warning(f'VentasBalancesCache.invalidar: {e}')
+
+
+class ConciliacionCache:
+    """
+    Cache de la conciliación de CFDI por rango de fechas.
+
+    ``conciliacion_global`` recorre todos los clientes activos y calcula su
+    conciliación (varias consultas por cliente), por lo que cachear el
+    resultado es la optimización de mayor impacto. TTL: 5 minutos.
+
+    Se invalida al guardar/eliminar documentos CFDI, pagos, anticipos o ventas
+    (ver ``ventas/signals.py``) usando ``delete_pattern`` en backends que lo
+    soportan (Redis); con LocMemCache expira por TTL.
+    """
+
+    CACHE_TIMEOUT = 300  # 5 minutos
+    PREFIX = 'conciliacion_cfdi'
+    VERSION_KEY = f'{PREFIX}_version'
+
+    @classmethod
+    def _version(cls) -> int:
+        try:
+            return int(cache.get(cls.VERSION_KEY) or 1)
+        except Exception:
+            return 1
+
+    @classmethod
+    def _make_key(cls, fecha_inicio, fecha_fin) -> str:
+        ini = fecha_inicio.isoformat() if fecha_inicio else 'all'
+        fin = fecha_fin.isoformat() if fecha_fin else 'all'
+        return f'{cls.PREFIX}_v{cls._version()}_{ini}_{fin}'
+
+    @classmethod
+    def get(cls, fecha_inicio, fecha_fin) -> Optional[list]:
+        """Devuelve las filas cacheadas o ``None`` si no hay cache."""
+        try:
+            return cache.get(cls._make_key(fecha_inicio, fecha_fin))
+        except Exception as e:
+            logger.warning(f'ConciliacionCache.get: {e}')
+            return None
+
+    @classmethod
+    def set(cls, fecha_inicio, fecha_fin, data: list):
+        """Guarda las filas de conciliación en cache."""
+        try:
+            cache.set(cls._make_key(fecha_inicio, fecha_fin), data, cls.CACHE_TIMEOUT)
+            logger.debug('ConciliacionCache: resultado cacheado (%s → %s)', fecha_inicio, fecha_fin)
+        except Exception as e:
+            logger.warning(f'ConciliacionCache.set: {e}')
+
+    @classmethod
+    def invalidar(cls):
+        """Invalida el cache de conciliación subiendo su versión (O(1)).
+
+        En lugar de recorrer las claves con ``delete_pattern``/``SCAN`` —costoso
+        al guardar muchos documentos en una importación masiva— cada key incluye
+        la versión; al subirla, todas las keys previas dejan de leerse y expiran
+        solas por TTL.
+        """
+        try:
+            cache.set(cls.VERSION_KEY, cls._version() + 1, None)
+            logger.debug('ConciliacionCache: versión incrementada (cache invalidado)')
+        except Exception as e:
+            logger.warning(f'ConciliacionCache.invalidar: {e}')

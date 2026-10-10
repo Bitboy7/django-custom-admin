@@ -224,40 +224,17 @@ class Cliente(models.Model):
         CFDI (DocumentoCFDI) más los anticipos pendientes de aplicar.
 
         = ventas + notas de cargo - notas de crédito - recibos de pago
-          - anticipos disponibles (saldo a favor).
+          - cobros de contado - anticipos disponibles (saldo a favor).
 
         Este es el número que usa el cliente para conocer cuánto le deben.
+
+        Delega en ``conciliacion_service.saldo_por_moneda`` (fuente única de la
+        fórmula) y devuelve la suma de las monedas. Para clientes multimoneda es
+        un total informativo: no convierte tipos de cambio, por lo que conviene
+        consultar el desglose por moneda en la vista de conciliación.
         """
-        from django.db.models import Sum
-        docs = self.documentos_cfdi.filter(estado='VIGENTE')
-
-        def total(subtipos):
-            return float(
-                docs.filter(subtipo__in=subtipos).aggregate(t=Sum('monto'))['t'] or 0
-            )
-
-        ingresos = total([
-            'venta_nacional', 'venta_exportacion', 'ingreso_servicio',
-            'otros_ingresos',
-        ])
-        notas_cargo = total(['nota_cargo'])
-        notas_credito = total(['nota_credito'])
-        recibos_pago = total(['recibo_pago'])
-
-        anticipos = sum(
-            a.saldo_disponible()
-            for a in self.anticipo_set.exclude(estado_anticipo='Cancelado')
-        )
-
-        # Cobros de contado (facturas PUE) que no generan REP y por lo tanto no
-        # aparecen como recibo_pago en el ledger fiscal.
-        from .services.conciliacion_service import cobros_no_rep
-        cobros_contado = sum(cobros_no_rep(self).values())
-
-        return (
-            ingresos + notas_cargo - notas_credito - recibos_pago
-            - cobros_contado - anticipos
-        )
+        from .services.conciliacion_service import saldo_por_moneda
+        return round(sum(saldo_por_moneda(self).values()), 2)
 
     class Meta:
         verbose_name = 'Cliente'

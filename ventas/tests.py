@@ -1339,6 +1339,107 @@ class PagoVentaFormLabelTest(ReporteCobranzaBaseTest):
         self.assertNotIn('None', etiqueta)
 
 
+class ConciliacionSaldoYCacheTest(ReporteCobranzaBaseTest):
+    """El saldo conciliado del cliente debe venir de una sola fuente
+    (saldo_por_moneda) y la conciliación global debe cachearse por rango."""
+
+    def test_saldo_conciliado_es_la_suma_del_saldo_por_moneda(self):
+        """Cliente multimoneda: el saldo total es la suma del desglose."""
+        from ventas.services.conciliacion_service import saldo_por_moneda
+
+        cliente = self._cliente('Cliente Saldo Unificado')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            monto=Money('1000.00', 'MXN'),
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_exportacion',
+            monto=Money('200.00', 'USD'), moneda='USD',
+        )
+
+        saldos = saldo_por_moneda(cliente)
+
+        self.assertAlmostEqual(saldos.get('MXN'), 1000.00)
+        self.assertAlmostEqual(saldos.get('USD'), 200.00)
+        self.assertAlmostEqual(cliente.saldo_conciliado(), 1200.00)
+
+    def test_saldo_conciliado_coincide_con_conciliacion_cliente(self):
+        """saldo_conciliado() y conciliacion_cliente() no deben divergir."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente Saldo Consistente')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            monto=Money('5000.00', 'MXN'),
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='P', subtipo='recibo_pago',
+            monto=Money('2000.00', 'MXN'),
+        )
+        self._anticipo(cliente, '500.00')
+
+        fila = conciliacion_cliente(cliente)
+        esperado = round(sum(fila['saldo_por_moneda'].values()), 2)
+
+        self.assertAlmostEqual(cliente.saldo_conciliado(), esperado)
+
+    def test_conciliacion_global_cachea_por_rango(self):
+        """La segunda llamada con el mismo rango no recalcula por cliente: solo
+        reevalúa la lista de clientes (1 consulta) y rehidrata desde el cache."""
+        from django.core.cache import cache
+        from django.test import override_settings
+        from ventas.services.conciliacion_service import conciliacion_global
+
+        caches_locmem = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            }
+        }
+        self._cliente('Cliente Cache Conciliacion')
+
+        with override_settings(CACHES=caches_locmem):
+            cache.clear()
+            conciliacion_global()  # primera: calcula y cachea
+            with self.assertNumQueries(1):  # solo la consulta de clientes
+                conciliacion_global()
+
+    def test_conciliacion_global_rehidrata_desde_cache(self):
+        """Al leer del cache, la fila conserva cliente, tipos (fecha/monto) y el
+        desglose de documentos sin vincular."""
+        from django.core.cache import cache
+        from django.test import override_settings
+        from ventas.services.conciliacion_service import conciliacion_global
+
+        caches_locmem = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            }
+        }
+        cliente = self._cliente('Cliente Cache Detalle')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='nota_cargo',
+            monto=Money('300.00', 'MXN'), fecha_emision=date(2026, 3, 10),
+        )
+
+        with override_settings(CACHES=caches_locmem):
+            cache.clear()
+            primera = conciliacion_global()
+            segunda = conciliacion_global()
+
+        calculada = next(f for f in primera if f['cliente'].pk == cliente.pk)
+        cacheada = next(f for f in segunda if f['cliente'].pk == cliente.pk)
+
+        self.assertEqual(cacheada['cliente'].nombre, cliente.nombre)
+        grupos = cacheada['sin_venta_detalle']
+        self.assertEqual(len(grupos), 1)
+        doc = grupos[0]['documentos'][0]
+        self.assertEqual(doc['fecha'], date(2026, 3, 10))
+        self.assertAlmostEqual(doc['monto'], 300.00)
+        self.assertEqual(
+            cacheada['saldo_por_moneda'], calculada['saldo_por_moneda']
+        )
+
+
 # =============================================================================
 # Formulario de confirmación de importación individual
 # =============================================================================
