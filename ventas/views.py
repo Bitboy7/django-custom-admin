@@ -55,6 +55,67 @@ def _parse_selected_months(query_params):
                 selected_months.append(normalized)
     return selected_months
 
+def _agrupar_ventas(ventas_queryset, periodo):
+    """Agrupa las ventas por día/semana/mes y por cliente, con sus métricas.
+
+    Centraliza la única diferencia entre periodos (la función de truncado);
+    el resto del cálculo es idéntico.
+    """
+    if periodo == 'diario':
+        agrupado = ventas_queryset.extra(
+            select={'fecha_grupo': 'DATE(fecha_deposito)'}
+        )
+    elif periodo == 'semanal':
+        agrupado = ventas_queryset.annotate(
+            fecha_grupo=TruncWeek('fecha_deposito')
+        )
+    else:  # mensual
+        agrupado = ventas_queryset.annotate(
+            fecha_grupo=TruncMonth('fecha_deposito')
+        )
+
+    return agrupado.values(
+        'fecha_grupo', 'cliente__nombre', 'cuenta__numero_cuenta',
+        'cuenta__id_banco__nombre', 'sucursal_id__nombre',
+    ).annotate(
+        total_ventas=Sum('monto'),
+        total_pagado=Sum('monto_pagado'),
+        fecha_vencimiento_proxima=Min('fecha_vencimiento'),
+        venta_maxima=Max('monto'),
+        venta_minima=Min('monto'),
+        venta_promedio=Avg('monto'),
+    ).order_by('fecha_grupo', 'cliente__nombre')
+
+
+def _construir_balances(ventas_queryset, periodo):
+    """Construye las filas de la tabla de balances con su acumulado."""
+    balances = []
+    acumulado = 0
+    for idx, grupo in enumerate(_agrupar_ventas(ventas_queryset, periodo)):
+        total = float(grupo['total_ventas'] or 0)
+        acumulado += total
+        pagado = float(grupo['total_pagado'] or 0)
+        vencimiento = grupo.get('fecha_vencimiento_proxima')
+        balances.append({
+            'numero_secuencial': idx + 1,
+            'cliente_nombre': grupo['cliente__nombre'],
+            'cuenta_numero': grupo['cuenta__numero_cuenta'],
+            'banco_nombre': grupo['cuenta__id_banco__nombre'] or 'N/A',
+            'sucursal_nombre': grupo['sucursal_id__nombre'],
+            'fecha': grupo['fecha_grupo'],
+            'total_ventas': total,
+            'total_pagado': pagado,
+            'saldo_pendiente': total - pagado,
+            'estado_cobranza': Ventas.derive_estado_desde_totales(total, pagado, vencimiento),
+            'fecha_vencimiento': vencimiento,
+            'venta_maxima': float(grupo['venta_maxima'] or 0),
+            'venta_minima': float(grupo['venta_minima'] or 0),
+            'venta_promedio': float(grupo['venta_promedio'] or 0),
+            'acumulado': acumulado,
+        })
+    return balances
+
+
 def build_ventas_balances_context(request):
     """Construye y retorna el contexto para la vista de balances de ventas."""    # Obtener parámetros de filtro
     selected_cliente_id = request.GET.get('cliente_id', '')
@@ -179,134 +240,8 @@ def build_ventas_balances_context(request):
     ).prefetch_related('pagos')
     
     # Preparar datos para la tabla según el período
-    balances = []
-    
-    if selected_periodo == 'diario':
-        # Agrupar por día
-        ventas_agrupadas = ventas_queryset.extra(
-            select={'fecha_grupo': 'DATE(fecha_deposito)'}
-        ).values(
-            'fecha_grupo', 'cliente__nombre', 'cuenta__numero_cuenta', 
-            'cuenta__id_banco__nombre', 'sucursal_id__nombre'
-        ).annotate(
-            total_ventas=Sum('monto'),
-            total_pagado=Sum('monto_pagado'),
-            estado_cobranza_principal=Max('estado_cobranza'),
-            fecha_vencimiento_proxima=Min('fecha_vencimiento'),
-            venta_maxima=Max('monto'),
-            venta_minima=Min('monto'),
-            venta_promedio=Avg('monto')
-        ).order_by('fecha_grupo', 'cliente__nombre')
-        
-        acumulado = 0
-        for idx, grupo in enumerate(ventas_agrupadas):
-            total = float(grupo['total_ventas'] or 0)
-            acumulado += total
-            
-            _pagado = float(grupo['total_pagado'] or 0)
-            _venc   = grupo.get('fecha_vencimiento_proxima')
-            balances.append({
-                'numero_secuencial': idx + 1,
-                'cliente_nombre': grupo['cliente__nombre'],
-                'cuenta_numero': grupo['cuenta__numero_cuenta'],
-                'banco_nombre': grupo['cuenta__id_banco__nombre'] or 'N/A',
-                'sucursal_nombre': grupo['sucursal_id__nombre'],
-                'fecha': grupo['fecha_grupo'],
-                'total_ventas': total,
-                'total_pagado': _pagado,
-                'saldo_pendiente': total - _pagado,
-                'estado_cobranza': Ventas.derive_estado_desde_totales(total, _pagado, _venc),
-                'fecha_vencimiento': _venc,
-                'venta_maxima': float(grupo['venta_maxima'] or 0),
-                'venta_minima': float(grupo['venta_minima'] or 0),
-                'venta_promedio': float(grupo['venta_promedio'] or 0),
-                'acumulado': acumulado
-            })
-    
-    elif selected_periodo == 'semanal':
-        # Agrupar por semana
-        ventas_agrupadas = ventas_queryset.annotate(
-            fecha_grupo=TruncWeek('fecha_deposito')
-        ).values(
-            'fecha_grupo', 'cliente__nombre', 'cuenta__numero_cuenta',
-            'cuenta__id_banco__nombre', 'sucursal_id__nombre'
-        ).annotate(
-            total_ventas=Sum('monto'),
-            total_pagado=Sum('monto_pagado'),
-            numero_transacciones=Count('id'),
-            venta_maxima=Max('monto'),
-            venta_minima=Min('monto'),
-            venta_promedio=Avg('monto'),
-            fecha_vencimiento_proxima=Min('fecha_vencimiento')
-        ).order_by('fecha_grupo', 'cliente__nombre')
-        
-        acumulado = 0
-        for idx, grupo in enumerate(ventas_agrupadas):
-            total = float(grupo['total_ventas'] or 0)
-            acumulado += total
-            
-            _pagado = float(grupo['total_pagado'] or 0)
-            _venc   = grupo.get('fecha_vencimiento_proxima')
-            balances.append({
-                'numero_secuencial': idx + 1,
-                'cliente_nombre': grupo['cliente__nombre'],
-                'cuenta_numero': grupo['cuenta__numero_cuenta'],
-                'banco_nombre': grupo['cuenta__id_banco__nombre'] or 'N/A',
-                'sucursal_nombre': grupo['sucursal_id__nombre'],
-                'fecha': grupo['fecha_grupo'],
-                'total_ventas': total,
-                'total_pagado': _pagado,
-                'saldo_pendiente': total - _pagado,
-                'estado_cobranza': Ventas.derive_estado_desde_totales(total, _pagado, _venc),
-                'fecha_vencimiento': _venc,
-                'venta_maxima': float(grupo['venta_maxima'] or 0),
-                'venta_minima': float(grupo['venta_minima'] or 0),
-                'venta_promedio': float(grupo['venta_promedio'] or 0),
-                'acumulado': acumulado
-            })
-    
-    else:  # mensual
-        # Agrupar por mes
-        ventas_agrupadas = ventas_queryset.annotate(
-            fecha_grupo=TruncMonth('fecha_deposito')
-        ).values(
-            'fecha_grupo', 'cliente__nombre', 'cuenta__numero_cuenta',
-            'cuenta__id_banco__nombre', 'sucursal_id__nombre'
-        ).annotate(
-            total_ventas=Sum('monto'),
-            total_pagado=Sum('monto_pagado'),
-            numero_transacciones=Count('id'),
-            venta_maxima=Max('monto'),
-            venta_minima=Min('monto'),
-            venta_promedio=Avg('monto'),
-            fecha_vencimiento_proxima=Min('fecha_vencimiento')
-        ).order_by('fecha_grupo', 'cliente__nombre')
-        
-        acumulado = 0
-        for idx, grupo in enumerate(ventas_agrupadas):
-            total = float(grupo['total_ventas'] or 0)
-            acumulado += total
-            
-            _pagado = float(grupo['total_pagado'] or 0)
-            _venc   = grupo.get('fecha_vencimiento_proxima')
-            balances.append({
-                'numero_secuencial': idx + 1,
-                'cliente_nombre': grupo['cliente__nombre'],
-                'cuenta_numero': grupo['cuenta__numero_cuenta'],
-                'banco_nombre': grupo['cuenta__id_banco__nombre'] or 'N/A',
-                'sucursal_nombre': grupo['sucursal_id__nombre'],
-                'fecha': grupo['fecha_grupo'],
-                'total_ventas': total,
-                'total_pagado': _pagado,
-                'saldo_pendiente': total - _pagado,
-                'estado_cobranza': Ventas.derive_estado_desde_totales(total, _pagado, _venc),
-                'fecha_vencimiento': _venc,
-                'venta_maxima': float(grupo['venta_maxima'] or 0),
-                'venta_minima': float(grupo['venta_minima'] or 0),
-                'venta_promedio': float(grupo['venta_promedio'] or 0),
-                'acumulado': acumulado
-            })
-    
+    balances = _construir_balances(ventas_queryset, selected_periodo)
+
     # Calcular métricas generales
     totales = ventas_queryset.aggregate(
         total_ventas=Sum('monto'),

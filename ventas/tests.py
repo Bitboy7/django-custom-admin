@@ -1495,3 +1495,75 @@ class CFDIConfirmFormTest(ReporteCobranzaBaseTest):
             pais_cliente=self.pais.pk,
         ))
         self.assertTrue(form.is_valid(), form.errors)
+
+
+# =============================================================================
+# Análisis de Ventas (balances) — caracterización para el refactor
+# =============================================================================
+
+class VentasBalancesContextTest(ReporteCobranzaBaseTest):
+    """Fija el comportamiento de ``build_ventas_balances_context`` antes de
+    simplificar la función."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+
+    def _request(self, **params):
+        from django.http import QueryDict
+
+        q = QueryDict('', mutable=True)
+        for key, value in params.items():
+            q[key] = value
+        return SimpleNamespace(GET=q)
+
+    def _context(self, **params):
+        from ventas.views import build_ventas_balances_context
+
+        return build_ventas_balances_context(self._request(**params))
+
+    def test_totales_y_agrupacion_mensual(self):
+        cliente = self._cliente('Cliente Balances Mes')
+        self._venta_credito(cliente, '1000.00', fecha=date(2026, 1, 10))
+        self._venta_credito(cliente, '2000.00', fecha=date(2026, 2, 10))
+
+        ctx = self._context(
+            cliente_id=str(cliente.pk), year='2026', periodo='mensual',
+        )
+
+        self.assertAlmostEqual(ctx['total_ventas'], 3000.00)
+        self.assertEqual(ctx['numero_transacciones'], 2)
+        self.assertEqual(len(ctx['balances']), 2)
+        self.assertAlmostEqual(ctx['balances'][0]['total_ventas'], 1000.00)
+        self.assertAlmostEqual(ctx['balances'][1]['total_ventas'], 2000.00)
+        self.assertAlmostEqual(ctx['balances'][1]['acumulado'], 3000.00)
+
+    def test_filtra_por_cliente(self):
+        cliente_a = self._cliente('Cliente Balances A')
+        cliente_b = self._cliente('Cliente Balances B')
+        self._venta_credito(cliente_a, '1000.00', fecha=date(2026, 1, 5))
+        self._venta_credito(cliente_b, '9999.00', fecha=date(2026, 1, 5))
+
+        ctx = self._context(
+            cliente_id=str(cliente_a.pk), year='2026', periodo='mensual',
+        )
+
+        self.assertAlmostEqual(ctx['total_ventas'], 1000.00)
+        self.assertEqual(
+            [b['cliente_nombre'] for b in ctx['balances']],
+            ['Cliente Balances A'],
+        )
+
+    def test_agrupacion_diaria(self):
+        cliente = self._cliente('Cliente Balances Dia')
+        self._venta_credito(cliente, '500.00', fecha=date(2026, 3, 5))
+        self._venta_credito(cliente, '700.00', fecha=date(2026, 3, 5))
+
+        ctx = self._context(
+            cliente_id=str(cliente.pk), periodo='diario', tipo_fecha='rango',
+            fecha_inicio='2026-03-01', fecha_fin='2026-03-31',
+        )
+
+        self.assertAlmostEqual(ctx['total_ventas'], 1200.00)
+        self.assertEqual(len(ctx['balances']), 1)
+        self.assertAlmostEqual(ctx['balances'][0]['total_ventas'], 1200.00)
