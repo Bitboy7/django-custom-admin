@@ -220,7 +220,7 @@ class ReporteCobranzaBaseTest(TestCase):
         )
 
     def _venta_credito(self, cliente, monto, anticipo=None,
-                       fecha=date(2026, 2, 1)):
+                       fecha=date(2026, 2, 1), moneda='MXN'):
         """
         Crea una Venta a crédito que queda en estado 'Pendiente'
         (ESTADOS_CON_DEUDA) sin invocar full_clean.
@@ -234,8 +234,8 @@ class ReporteCobranzaBaseTest(TestCase):
             tipo_venta='Nacional',
             tipo_registro='VENTA',
             modalidad_pago='Credito',
-            monto=Money(monto, 'MXN'),
-            monto_pagado=Money('0.00', 'MXN'),
+            monto=Money(monto, moneda),
+            monto_pagado=Money('0.00', moneda),
             cantidad=Decimal('100.000'),
             fecha_salida_manifiesto=fecha,
             fecha_deposito=fecha,
@@ -675,6 +675,44 @@ class CFDIImportServiceTest(ReporteCobranzaBaseTest):
         self.assertEqual(
             DocumentoCFDI.objects.filter(uuid=parsed['uuid']).count(), 1
         )
+
+    def test_recibo_pago_usd_conserva_tipo_cambio_del_complemento(self):
+        """Un REP en USD debe guardar su TipoCambioP para no subvaluar el
+        equivalente en pesos (monto_pago_mxn)."""
+        cliente = self._cliente('Cliente REP USD')
+        venta = self._venta_credito(cliente, '2000.00', moneda='USD')
+        uuid_factura = 'AA000000-0000-0000-0000-000000000001'
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_EXPORTACION,
+            uuid=uuid_factura,
+            monto=Money('2000.00', 'USD'),
+            moneda='USD',
+            venta=venta,
+        )
+        xml = (
+            XML_RECIBO_PAGO_20
+            .replace('MonedaP="MXN"', 'MonedaP="USD"')
+            .replace('TipoCambioP="1"', 'TipoCambioP="17.50"')
+            .replace('Monto="162480.00"', 'Monto="2000.00"')
+            .replace('ImpSaldoAnt="162480.00" ImpPagado="162480.00"',
+                     'ImpSaldoAnt="2000.00" ImpPagado="2000.00"')
+            .replace('IdDocumento="28C06FD3-D87D-45C5-8C4D-D4927FCD3A64"',
+                     f'IdDocumento="{uuid_factura}"')
+            .replace('UUID="10BEF933-60EF-45B5-AB78-40C7D9A6246D"',
+                     'UUID="BB000000-0000-0000-0000-000000000002"')
+        )
+        parsed = parse_cfdi(xml.encode())
+
+        pago, _documento, subtipo = importar_cfdi(
+            parsed, cliente=cliente, cuenta=self.cuenta,
+        )
+
+        self.assertEqual(subtipo, 'recibo_pago')
+        self.assertEqual(pago.monto_pago, Money('2000.00', 'USD'))
+        self.assertEqual(pago.tipo_cambio, Decimal('17.5000'))
+        self.assertEqual(pago.monto_pago_mxn, Decimal('35000.00'))
 
     def test_match_producto_usa_conceptos_del_cfdi(self):
         parsed = parse_cfdi(XML_MULTI_CONCEPTOS.encode())
@@ -1133,6 +1171,121 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
         self.assertAlmostEqual(cliente.saldo_conciliado(), 0.0)
         fila = conciliacion_cliente(cliente)
         self.assertAlmostEqual(fila['saldo_por_moneda'].get('MXN', 0.0), 0.0)
+
+
+class CobradoMxnOrigenTest(ReporteCobranzaBaseTest):
+    """
+    Documenta el origen de la columna «Cobrado MXN» y por qué no tiene por qué
+    coincidir con «Pagos (REP)».
+
+    «Cobrado MXN» (= ``pagos_mxn``) NO sale del CFDI. Es el total de dinero
+    realmente cobrado, expresado en pesos:
+      - ``PagoVenta.monto_pago_mxn`` (pagos operativos, convertidos con su
+        tipo de cambio), y
+      - el ``monto_pagado`` de ventas de contado sin pago registrado (PUE),
+        convertido con el tipo de cambio de la venta.
+
+    «Pagos (REP)» (= ``detalle['recibos_pago']``) sale del ledger fiscal: suma
+    los DocumentoCFDI con subtipo ``recibo_pago``, en su moneda, por el monto
+    completo del comprobante. Por eso ambas pueden divergir.
+    """
+
+    def _venta_contado_usd(self, cliente, monto, tipo_cambio,
+                           fecha=date(2026, 2, 1)):
+        venta = Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=self.sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Nacional',
+            tipo_registro='VENTA',
+            modalidad_pago='Contado',
+            monto=Money(monto, 'USD'),
+            cantidad=Decimal('100.000'),
+            fecha_salida_manifiesto=fecha,
+            fecha_deposito=fecha,
+        )
+        Ventas.objects.filter(pk=venta.pk).update(
+            tipo_cambio=Decimal(tipo_cambio)
+        )
+        venta.refresh_from_db()
+        return venta
+
+    def test_cobrado_mxn_de_contado_usd_es_equivalencia_fx(self):
+        """Caso WORLD PRODUCE: contado en USD -> Cobrado MXN es el equivalente
+        en pesos al tipo de cambio de la venta, no un dato del CFDI."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente Contado USD')
+        venta = self._venta_contado_usd(cliente, '434000.00', '17.8260')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_exportacion',
+            monto=Money('434000.00', 'USD'), moneda='USD', venta=venta,
+        )
+
+        fila = conciliacion_cliente(cliente)
+
+        # 434,000 USD x 17.8260 = 7,736,484.00 (aprox. lo visto en pantalla)
+        self.assertAlmostEqual(fila['pagos_mxn'], 7736484.00, places=2)
+        # No hay ningún recibo de pago (REP) en el ledger fiscal...
+        self.assertEqual(fila['detalle']['recibos_pago'], {})
+        # ...el cobro de contado vive en dólares, no en pesos.
+        self.assertAlmostEqual(
+            fila['detalle']['cobros_contado'].get('USD', 0.0), 434000.00
+        )
+
+    def test_rep_sin_pagoventa_aparece_en_rep_pero_no_en_cobrado_mxn(self):
+        """Un REP importado sin PagoVenta suma en «Pagos (REP)» pero no en
+        «Cobrado MXN»: así se explica que la columna REP sea mayor."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente REP Huérfano')
+        venta = self._venta_credito(cliente, '9000.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            monto=Money('9000.00', 'MXN'), venta=venta,
+        )
+        # Complemento de pago importado pero sin PagoVenta asociado
+        # (importación legacy o venta que ya no está en cobro).
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='P', subtipo='recibo_pago',
+            monto=Money('4000.00', 'MXN'), venta=venta,
+        )
+
+        fila = conciliacion_cliente(cliente)
+
+        self.assertAlmostEqual(fila['detalle']['recibos_pago']['MXN'], 4000.00)
+        self.assertEqual(fila['pagos_mxn'], 0.0)
+
+    def test_pagoventa_topado_al_saldo_deja_cobrado_mxn_bajo_el_rep(self):
+        """Si el PagoVenta se topó al saldo (como hace la importación de REP),
+        «Cobrado MXN» queda por debajo del monto del comprobante."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente REP Tope')
+        venta = self._venta_credito(cliente, '5000.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            monto=Money('5000.00', 'MXN'), venta=venta,
+        )
+        pago = PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 3, 1),
+            monto_pago=Money('5000.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+        )
+        # El CFDI (REP) declara 8,000 pero el pago operativo quedó en 5,000.
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='P', subtipo='recibo_pago',
+            monto=Money('8000.00', 'MXN'), venta=venta, pago_venta=pago,
+        )
+
+        fila = conciliacion_cliente(cliente)
+
+        self.assertAlmostEqual(fila['detalle']['recibos_pago']['MXN'], 8000.00)
+        self.assertAlmostEqual(fila['pagos_mxn'], 5000.00)
 
 
 # =============================================================================

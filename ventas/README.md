@@ -90,6 +90,75 @@ Acceso por defecto:
 - `GET /admin/ventas/ventas/api/cliente-info/<id>/`
 - `GET /admin/ventas/ventas/api/termino-credito-info/<id>/`
 
+## Conciliacion de CFDI por cliente
+
+Vista: `/es/admin/ventas/cliente/conciliacion/` — servicio
+`ventas/services/conciliacion_service.py`.
+
+Cruza el ledger fiscal (`DocumentoCFDI`, solo documentos **vigentes**) contra los
+registros operativos (`Ventas`, `PagoVenta`, `Anticipo`) y produce, por cliente,
+un desglose por moneda y un saldo conciliado. `fecha_inicio`/`fecha_fin` filtran
+por fecha de emision (CFDI), fecha de pago (`PagoVenta`) y fecha del anticipo.
+
+### Formula del saldo conciliado
+
+Por cada moneda:
+
+```
+saldo = facturado + notas_cargo - notas_credito
+        - recibos_pago - cobros_contado - anticipos_disponibles
+```
+
+| Columna | Fuente | Origen del dato |
+| --- | --- | --- |
+| **Facturado** | `detalle['facturado']` | Suma de `DocumentoCFDI` vigentes subtipo `venta_nacional`, `venta_exportacion`, `ingreso_servicio`, por moneda. |
+| **+ Notas de cargo** | `detalle['notas_cargo']` | `DocumentoCFDI` vigentes subtipo `nota_cargo`. |
+| **− Notas de credito** | `detalle['notas_credito']` | `DocumentoCFDI` vigentes subtipo `nota_credito`. |
+| **− Pagos (REP)** | `detalle['recibos_pago']` | `DocumentoCFDI` vigentes subtipo `recibo_pago` (monto completo del comprobante, en su moneda). |
+| **− Cobros de contado** | `detalle['cobros_contado']` | `cobros_no_rep()`: pagos (`PagoVenta`) sin REP asociado + ventas de contado (PUE) sin pago registrado. |
+| **− Anticipos** | `detalle['anticipos_disponibles']` | `Anticipo.saldo_disponible()` (monto − aplicado), excluyendo cancelados. |
+| **Cobrado en pesos (equiv.)** | `pagos_mxn` | `pagos_total_mxn()` — **no es un dato del CFDI**. |
+| **Sin vincular** | `documentos_sin_venta` | `DocumentoCFDI` sin `venta` cuyo subtipo no es de ingreso/remanente; desglose interactivo. |
+
+### De donde sale «Cobrado en pesos (equiv.)»
+
+`pagos_total_mxn()` (no participa en la formula del saldo; es un dato operativo):
+
+```
+pagos_mxn = Σ PagoVenta.monto_pago_mxn        # pagos registrados, convertidos a MXN con tipo_cambio
+          + Σ (Venta.monto_pagado × Venta.tipo_cambio)   # ventas de contado sin PagoVenta
+```
+
+- `PagoVenta.monto_pago_mxn` = `monto_pago.amount × tipo_cambio` (o el monto si es MXN).
+- En `PagoVenta`, `tipo_cambio` = MXN por 1 unidad de la moneda del pago; en pesos es `1.0000`.
+- Un mismo total en **MXN** no es comparable directo con «Pagos (REP)», que se
+  agrupa **por moneda**. Por eso una fila de exportacion (p. ej. USD) muestra en
+  «Cobrado en pesos» su equivalente cambiario, y no un importe que exista en el
+  CFDI.
+
+### Por que «Pagos (REP)» y «Cobrado en pesos» pueden no coincidir
+
+Son dos fuentes distintas: el primero es fiscal (comprobantes), el segundo es
+operativo (pagos capturados). Divergen cuando:
+
+1. Un REP fue importado **sin `PagoVenta`** asociado (importacion legacy, o venta
+   que ya no estaba en `Pendiente/Parcial/Vencido`), o
+2. El `PagoVenta` quedo **topado al saldo** de la venta al importar el REP
+   (`monto_pago = min(monto_rep, saldo)`, en `cfdi_import_service._crear_recibo_pago`).
+
+La diferencia es, intencionalmente, un indicador de deriva entre lo fiscal y lo
+operativo.
+
+### Pruebas
+
+`ventas/tests.py`:
+
+- `ConciliacionCFDITest` — formula base del saldo.
+- `CobradoMxnOrigenTest` — origen de «Cobrado en pesos» y divergencias con REP
+  (casos World Produce y Sergio Ramon).
+- `CFDIImportServiceTest.test_recibo_pago_usd_conserva_tipo_cambio_del_complemento`
+  — un REP en USD conserva `TipoCambioP` al crear su `PagoVenta`.
+
 ## Documentacion complementaria
 
 - Especificacion XP: [Docs/VENTAS_XP_SPEC.md](../Docs/VENTAS_XP_SPEC.md)
