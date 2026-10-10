@@ -16,6 +16,7 @@ from ..models import DocumentoCFDI
 
 INGRESOS_VENTA = [
     'venta_nacional', 'venta_exportacion', 'ingreso_servicio',
+    'otros_ingresos',
 ]
 
 

@@ -423,6 +423,7 @@ SUBIPO_TO_TIPO = {
     'venta_nacional': 'I',
     'venta_exportacion': 'I',
     'ingreso_servicio': 'I',
+    'otros_ingresos': 'I',
     'ingreso_mixto': 'I',
     'nota_cargo': 'I',
     'remanente_anticipo': 'I',

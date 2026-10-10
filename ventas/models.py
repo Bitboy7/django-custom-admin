@@ -238,6 +238,7 @@ class Cliente(models.Model):
 
         ingresos = total([
             'venta_nacional', 'venta_exportacion', 'ingreso_servicio',
+            'otros_ingresos',
         ])
         notas_cargo = total(['nota_cargo'])
         notas_credito = total(['nota_credito'])
@@ -1750,6 +1751,7 @@ class DocumentoCFDI(models.Model):
         VENTA_NACIONAL = 'venta_nacional', 'Venta Nacional'
         VENTA_EXPORTACION = 'venta_exportacion', 'Venta Exportación'
         INGRESO_SERVICIO = 'ingreso_servicio', 'Ingreso por Servicio'
+        OTROS_INGRESOS = 'otros_ingresos', 'Otros Ingresos (sin CFDI)'
         INGRESO_MIXTO = 'ingreso_mixto', 'Ingreso Mixto (revisión)'
         NOTA_CARGO = 'nota_cargo', 'Nota de Cargo'
         REMANENTE_ANTICIPO = 'remanente_anticipo', 'Remanente de Anticipo'

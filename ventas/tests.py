@@ -1111,6 +1111,24 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
         # 10000 producto + 1000 servicio + 500 - 200 - 3000 - 1000 = 7300
         self.assertAlmostEqual(cliente.saldo_conciliado(), 7300.00)
 
+    def test_otros_ingresos_sin_cfdi_suma_al_facturado_y_al_saldo(self):
+        """Un ingreso capturado sin CFDI ('otros_ingresos') se comporta como una
+        factura: suma al facturado y al saldo conciliado del cliente."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente Otros Ingresos')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='otros_ingresos',
+            monto=Money('1500.00', 'MXN'),
+        )
+
+        self.assertAlmostEqual(cliente.saldo_conciliado(), 1500.00)
+        fila = conciliacion_cliente(cliente)
+        self.assertAlmostEqual(
+            fila['detalle']['facturado'].get('MXN', 0.0), 1500.00
+        )
+        self.assertAlmostEqual(fila['saldo_por_moneda'].get('MXN', 0.0), 1500.00)
+
     def _venta_contado(self, cliente, monto, moneda='MXN',
                        fecha=date(2026, 2, 1)):
         """Venta de contado (PUE): queda pagada al crearse, sin REP."""
