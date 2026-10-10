@@ -627,6 +627,15 @@ class Ventas(models.Model):
             if self.producto_id else (self.descripcion or 'Servicio')
         )
         return f"-{self.carga} - {self.fecha_salida_manifiesto} - {self.monto} - {self.cliente.nombre}- {concepto}"
+
+    @property
+    def referencia(self):
+        """Identificador legible de la venta.
+
+        Usa la carga, el pedimento o el PO cuando existen; si no, un folio
+        interno ``V-<pk>`` para no mostrar «None» en etiquetas y búsquedas.
+        """
+        return self.carga or self.pedimento or self.PO or f'V-{self.pk}'
     
     def clean(self):
         """

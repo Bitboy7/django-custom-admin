@@ -1306,6 +1306,39 @@ class CobradoMxnOrigenTest(ReporteCobranzaBaseTest):
         self.assertAlmostEqual(fila['pagos_mxn'], 5000.00)
 
 
+class PagoVentaFormLabelTest(ReporteCobranzaBaseTest):
+    """El selector de «Venta» en el admin de Pagos de Ventas no debe mostrar
+    «None» cuando la venta no tiene número de carga."""
+
+    def _etiqueta(self, venta):
+        from ventas.forms_banking import PagoVentaForm
+
+        form = PagoVentaForm()
+        return dict(form.fields['venta'].choices)[venta.pk]
+
+    def test_venta_sin_carga_usa_folio_interno_en_la_etiqueta(self):
+        cliente = self._cliente('Cliente Sin Carga')
+        venta = self._venta_credito(cliente, '1000.00')
+
+        etiqueta = self._etiqueta(venta)
+
+        self.assertNotIn('None', etiqueta)
+        self.assertIn(cliente.nombre, etiqueta)
+        self.assertIn(f'V-{venta.pk}', etiqueta)
+        self.assertIn('Saldo:', etiqueta)
+
+    def test_venta_con_carga_conserva_la_referencia(self):
+        cliente = self._cliente('Cliente Con Carga')
+        venta = self._venta_credito(cliente, '1000.00')
+        Ventas.objects.filter(pk=venta.pk).update(carga='CARGA-123')
+        venta.refresh_from_db()
+
+        etiqueta = self._etiqueta(venta)
+
+        self.assertIn('CARGA-123', etiqueta)
+        self.assertNotIn('None', etiqueta)
+
+
 # =============================================================================
 # Formulario de confirmación de importación individual
 # =============================================================================

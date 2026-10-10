@@ -55,7 +55,7 @@ class PagoVentaForm(forms.ModelForm):
             ).select_related('cliente').order_by('-fecha_registro')
             
             self.fields['venta'].label_from_instance = lambda obj: (
-                f"{obj.carga} - {obj.cliente.nombre} - "
+                f"{obj.referencia} - {obj.cliente.nombre} - "
                 f"Saldo: ${obj.saldo_pendiente():,.2f}"
             )
             
