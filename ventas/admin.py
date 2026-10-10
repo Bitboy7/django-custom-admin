@@ -402,7 +402,7 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
         return custom_urls + urls
 
     def conciliacion_view(self, request):
-        """Vista de conciliación de CFDI por cliente (con filtro por fechas)."""
+        """Vista de conciliación de CFDI por cliente (filtros de fecha y cliente)."""
         from datetime import date
         from .services.conciliacion_service import conciliacion_global
 
@@ -414,11 +414,19 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
             except (ValueError, TypeError):
                 return None
 
+        def _parse_id(valor):
+            try:
+                return int(valor)
+            except (ValueError, TypeError):
+                return None
+
         inicio_raw = request.GET.get('fecha_inicio', '')
         fin_raw = request.GET.get('fecha_fin', '')
+        cliente_raw = request.GET.get('cliente_id', '')
         filas = conciliacion_global(
             fecha_inicio=_parse(inicio_raw),
             fecha_fin=_parse(fin_raw),
+            cliente_id=_parse_id(cliente_raw),
         )
         context = dict(
             self.admin_site.each_context(request),
@@ -427,6 +435,8 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
             opts=self.model._meta,
             fecha_inicio=inicio_raw,
             fecha_fin=fin_raw,
+            clientes=Cliente.objects.filter(activo=True).order_by('nombre'),
+            selected_cliente_id=cliente_raw,
         )
         return TemplateResponse(request, 'admin/ventas/conciliacion.html', context)
     

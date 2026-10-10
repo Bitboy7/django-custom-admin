@@ -686,26 +686,30 @@ class ConciliacionCache:
             return 1
 
     @classmethod
-    def _make_key(cls, fecha_inicio, fecha_fin) -> str:
+    def _make_key(cls, fecha_inicio, fecha_fin, cliente_id=None) -> str:
         ini = fecha_inicio.isoformat() if fecha_inicio else 'all'
         fin = fecha_fin.isoformat() if fecha_fin else 'all'
-        return f'{cls.PREFIX}_v{cls._version()}_{ini}_{fin}'
+        cli = cliente_id or 'all'
+        return f'{cls.PREFIX}_v{cls._version()}_{ini}_{fin}_{cli}'
 
     @classmethod
-    def get(cls, fecha_inicio, fecha_fin) -> Optional[list]:
+    def get(cls, fecha_inicio, fecha_fin, cliente_id=None) -> Optional[list]:
         """Devuelve las filas cacheadas o ``None`` si no hay cache."""
         try:
-            return cache.get(cls._make_key(fecha_inicio, fecha_fin))
+            return cache.get(cls._make_key(fecha_inicio, fecha_fin, cliente_id))
         except Exception as e:
             logger.warning(f'ConciliacionCache.get: {e}')
             return None
 
     @classmethod
-    def set(cls, fecha_inicio, fecha_fin, data: list):
+    def set(cls, fecha_inicio, fecha_fin, cliente_id, data: list):
         """Guarda las filas de conciliación en cache."""
         try:
-            cache.set(cls._make_key(fecha_inicio, fecha_fin), data, cls.CACHE_TIMEOUT)
-            logger.debug('ConciliacionCache: resultado cacheado (%s → %s)', fecha_inicio, fecha_fin)
+            cache.set(
+                cls._make_key(fecha_inicio, fecha_fin, cliente_id),
+                data, cls.CACHE_TIMEOUT,
+            )
+            logger.debug('ConciliacionCache: resultado cacheado (%s → %s, cliente=%s)', fecha_inicio, fecha_fin, cliente_id)
         except Exception as e:
             logger.warning(f'ConciliacionCache.set: {e}')
 

@@ -442,13 +442,18 @@ html[data-theme="dark"] .conc-head-ico { color: var(--light-blue); }
   color: var(--text-secondary);
   font-weight: 600;
 }
-.conc-filter input[type="date"] {
+.conc-filter input[type="date"],
+.conc-filter-select {
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   padding: var(--space-2) var(--space-3);
   background: var(--surface-card);
   color: var(--text-primary);
   min-height: 40px;
+}
+.conc-filter-select {
+  min-width: 180px;
+  max-width: 260px;
 }
 .conc-filter-btn {
   border: 1px solid var(--action-primary);
@@ -471,3 +476,24 @@ html[data-theme="dark"] .conc-head-ico { color: var(--light-blue); }
   text-decoration: none;
 }
 .conc-filter-clear:hover { color: var(--accent-red); text-decoration: underline; }
+
+/* ── Enlace cruzado a Análisis de Ventas ───────────────────────── */
+.conc-crosslink {
+  margin-left: auto;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.conc-crosslink:hover {
+  border-color: var(--action-primary);
+  color: var(--action-primary);
+}

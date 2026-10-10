@@ -295,19 +295,23 @@ def _rehidratar_fila(fila, cliente):
     return fila
 
 
-def conciliacion_global(fecha_inicio=None, fecha_fin=None):
-    """Conciliación de todos los clientes activos (opcionalmente por periodo).
+def conciliacion_global(fecha_inicio=None, fecha_fin=None, cliente_id=None):
+    """Conciliación de los clientes activos (opcionalmente por periodo).
 
-    El resultado se cachea por rango de fechas (``ConciliacionCache``) para
-    evitar recalcular la conciliación de cada cliente en cada carga. Al leer
-    del cache se rehidrata cada fila con su cliente actual.
+    ``cliente_id`` limita el resultado a un cliente. El resultado se cachea por
+    rango de fechas y cliente (``ConciliacionCache``) para evitar recalcular la
+    conciliación de cada cliente en cada carga. Al leer del cache se rehidrata
+    cada fila con su cliente actual.
     """
     from ..models import Cliente
     from .cache_service import ConciliacionCache
 
-    clientes = list(Cliente.objects.filter(activo=True).order_by('nombre'))
+    qs = Cliente.objects.filter(activo=True)
+    if cliente_id:
+        qs = qs.filter(pk=cliente_id)
+    clientes = list(qs.order_by('nombre'))
 
-    cacheadas = ConciliacionCache.get(fecha_inicio, fecha_fin)
+    cacheadas = ConciliacionCache.get(fecha_inicio, fecha_fin, cliente_id)
     if cacheadas is not None and len(cacheadas) == len(clientes):
         return [
             _rehidratar_fila(fila, cliente)
@@ -319,6 +323,7 @@ def conciliacion_global(fecha_inicio=None, fecha_fin=None):
         for c in clientes
     ]
     ConciliacionCache.set(
-        fecha_inicio, fecha_fin, [_serializar_fila(f) for f in filas]
+        fecha_inicio, fecha_fin, cliente_id,
+        [_serializar_fila(f) for f in filas],
     )
     return filas

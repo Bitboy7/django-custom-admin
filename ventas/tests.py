@@ -1383,6 +1383,17 @@ class ConciliacionSaldoYCacheTest(ReporteCobranzaBaseTest):
 
         self.assertAlmostEqual(cliente.saldo_conciliado(), esperado)
 
+    def test_conciliacion_global_filtra_por_cliente(self):
+        """``conciliacion_global`` puede limitarse a un cliente (filtro)."""
+        from ventas.services.conciliacion_service import conciliacion_global
+
+        cliente_a = self._cliente('Cliente Filtro A')
+        self._cliente('Cliente Filtro B')
+
+        filas = conciliacion_global(cliente_id=cliente_a.pk)
+
+        self.assertEqual([f['cliente'].pk for f in filas], [cliente_a.pk])
+
     def test_conciliacion_global_cachea_por_rango(self):
         """La segunda llamada con el mismo rango no recalcula por cliente: solo
         reevalúa la lista de clientes (1 consulta) y rehidrata desde el cache."""

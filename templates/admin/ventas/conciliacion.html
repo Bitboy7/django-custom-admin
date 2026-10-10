@@ -26,11 +26,14 @@
       <div>
         <h1 class="conc-title">Conciliación de CFDI por cliente</h1>
         <p class="conc-sub">
-          Saldo por cobrar conciliado desde los CFDI
+          Saldo por cobrar <strong>conciliado desde los CFDI</strong>
           (facturado + notas de cargo − notas de crédito − pagos (REP) − cobros de contado − anticipos).
           Solo se consideran documentos <strong>vigentes</strong>.
         </p>
       </div>
+      <a class="conc-crosslink" href="{% url 'admin:ventas_ventas_balances' %}">
+        <i class="fas fa-chart-line" aria-hidden="true"></i> Ver Análisis de Ventas
+      </a>
     </header>
 
     <div class="conc-note conc-note--warn" role="note">
@@ -64,6 +67,15 @@
 
     <form class="conc-filters" method="get">
       <label class="conc-filter">
+        <span>Cliente</span>
+        <select name="cliente_id" class="conc-filter-select">
+          <option value="">Todos los clientes</option>
+          {% for c in clientes %}
+          <option value="{{ c.id }}" {% if c.id|stringformat:"s" == selected_cliente_id %}selected{% endif %}>{{ c.nombre }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="conc-filter">
         <span>Desde</span>
         <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}">
       </label>
@@ -72,7 +84,7 @@
         <input type="date" name="fecha_fin" value="{{ fecha_fin }}">
       </label>
       <button type="submit" class="conc-filter-btn">Filtrar</button>
-      {% if fecha_inicio or fecha_fin %}
+      {% if fecha_inicio or fecha_fin or selected_cliente_id %}
       <a class="conc-filter-clear" href="?">Limpiar</a>
       {% endif %}
     </form>
