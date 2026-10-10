@@ -26,7 +26,26 @@ def _sum_por_moneda(docs, subtipos):
     return dict(resultado)
 
 
-def cobros_no_rep(cliente):
+def _en_rango(queryset, campo, fecha_inicio, fecha_fin):
+    """Aplica filtro de rango de fechas (inclusive) sobre ``campo``."""
+    if fecha_inicio:
+        queryset = queryset.filter(**{f'{campo}__gte': fecha_inicio})
+    if fecha_fin:
+        queryset = queryset.filter(**{f'{campo}__lte': fecha_fin})
+    return queryset
+
+
+def _fecha_en_rango(fecha, fecha_inicio, fecha_fin):
+    if fecha is None:
+        return not (fecha_inicio or fecha_fin)
+    if fecha_inicio and fecha < fecha_inicio:
+        return False
+    if fecha_fin and fecha > fecha_fin:
+        return False
+    return True
+
+
+def cobros_no_rep(cliente, fecha_inicio=None, fecha_fin=None):
     """Cobros de ventas que no están respaldados por un recibo de pago (REP).
 
     Las facturas de contado (MetodoPago PUE) se pagan al emitirse y no generan
@@ -35,17 +54,23 @@ def cobros_no_rep(cliente):
     ``PagoVenta``, respetando la moneda real del pago.
 
     Solo cuenta la parte que no está ya representada por un REP vigente, para no
-    restar dos veces.
+    restar dos veces. Con rango de fechas, considera los pagos del periodo.
     """
     rep_por_venta = defaultdict(float)
-    for doc in cliente.documentos_cfdi.filter(
-        estado='VIGENTE', subtipo='recibo_pago', venta__isnull=False
-    ):
+    rep_docs = _en_rango(
+        cliente.documentos_cfdi.filter(
+            estado='VIGENTE', subtipo='recibo_pago', venta__isnull=False
+        ),
+        'fecha_emision', fecha_inicio, fecha_fin,
+    )
+    for doc in rep_docs:
         rep_por_venta[doc.venta_id] += float(doc.monto.amount)
 
     cobros = defaultdict(float)
     for venta in cliente.ventas_set.all():
-        pagos = list(venta.pagos.all())
+        pagos = list(_en_rango(
+            venta.pagos.all(), 'fecha_pago', fecha_inicio, fecha_fin
+        ))
         if pagos:
             total_pagos = sum(float(p.monto_pago.amount) for p in pagos)
             sin_rep = total_pagos - rep_por_venta.get(venta.id, 0.0)
@@ -61,6 +86,8 @@ def cobros_no_rep(cliente):
 
         if venta.modalidad_pago != 'Contado':
             continue
+        if not _fecha_en_rango(venta.fecha_deposito, fecha_inicio, fecha_fin):
+            continue
         pagado = float(venta.monto_pagado.amount)
         if pagado <= 0:
             continue
@@ -69,7 +96,7 @@ def cobros_no_rep(cliente):
     return dict(cobros)
 
 
-def pagos_total_mxn(cliente):
+def pagos_total_mxn(cliente, fecha_inicio=None, fecha_fin=None):
     """Total cobrado en pesos (equivalente MXN) usando el tipo de cambio.
 
     Suma los ``PagoVenta`` (con su ``monto_pago_mxn``) y, para ventas de contado
@@ -79,19 +106,33 @@ def pagos_total_mxn(cliente):
     from ..models import PagoVenta
 
     total = 0.0
-    for pago in PagoVenta.objects.filter(venta__cliente=cliente).select_related('venta'):
+    pagos = _en_rango(
+        PagoVenta.objects.filter(venta__cliente=cliente).select_related('venta'),
+        'fecha_pago', fecha_inicio, fecha_fin,
+    )
+    for pago in pagos:
         total += float(pago.monto_pago_mxn)
 
     for venta in cliente.ventas_set.filter(pagos__isnull=True, modalidad_pago='Contado'):
+        if not _fecha_en_rango(venta.fecha_deposito, fecha_inicio, fecha_fin):
+            continue
         if venta.monto_pagado and venta.monto_pagado.amount > 0:
             total += float(venta.monto_pagado.amount) * float(venta.tipo_cambio or 1)
 
     return round(total, 2)
 
 
-def conciliacion_cliente(cliente):
-    """Calcula la conciliación fiscal completa de un cliente."""
-    docs = cliente.documentos_cfdi.filter(estado='VIGENTE')
+def conciliacion_cliente(cliente, fecha_inicio=None, fecha_fin=None):
+    """Calcula la conciliación fiscal completa de un cliente.
+
+    ``fecha_inicio``/``fecha_fin`` (date) limitan los documentos (por
+    ``fecha_emision``), pagos (``fecha_pago``) y anticipos (``fecha``) al
+    periodo. Sin fechas, se considera todo el histórico.
+    """
+    docs = _en_rango(
+        cliente.documentos_cfdi.filter(estado='VIGENTE'),
+        'fecha_emision', fecha_inicio, fecha_fin,
+    )
 
     detalle = {
         'facturado': _sum_por_moneda(docs, INGRESOS_VENTA),
@@ -103,11 +144,15 @@ def conciliacion_cliente(cliente):
 
     # Cobros de contado / sin REP: descuentan el pago ya recibido que no tiene
     # un recibo electrónico de pago asociado (típicamente facturas PUE).
-    detalle['cobros_contado'] = cobros_no_rep(cliente)
+    detalle['cobros_contado'] = cobros_no_rep(cliente, fecha_inicio, fecha_fin)
 
     # Anticipos pendientes de aplicar (saldo a favor del cliente)
     anticipo_por_moneda = defaultdict(float)
-    for a in cliente.anticipo_set.exclude(estado_anticipo='Cancelado'):
+    anticipos = _en_rango(
+        cliente.anticipo_set.exclude(estado_anticipo='Cancelado'),
+        'fecha', fecha_inicio, fecha_fin,
+    )
+    for a in anticipos:
         anticipo_por_moneda[str(a.monto.currency)] += a.saldo_disponible()
     detalle['anticipos_disponibles'] = dict(anticipo_por_moneda)
 
@@ -167,17 +212,17 @@ def conciliacion_cliente(cliente):
         'cliente': cliente,
         'detalle': detalle,
         'saldo_por_moneda': saldo,
-        'pagos_mxn': pagos_total_mxn(cliente),
+        'pagos_mxn': pagos_total_mxn(cliente, fecha_inicio, fecha_fin),
         'total_documentos': docs.count(),
         'documentos_sin_venta': sum(item['total'] for item in sin_venta_detalle),
         'sin_venta_detalle': sin_venta_detalle,
     }
 
 
-def conciliacion_global():
-    """Conciliación de todos los clientes activos."""
+def conciliacion_global(fecha_inicio=None, fecha_fin=None):
+    """Conciliación de todos los clientes activos (opcionalmente por periodo)."""
     from ..models import Cliente
     return [
-        conciliacion_cliente(c)
+        conciliacion_cliente(c, fecha_inicio, fecha_fin)
         for c in Cliente.objects.filter(activo=True).order_by('nombre')
     ]

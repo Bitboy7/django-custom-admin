@@ -427,3 +427,47 @@ html[data-theme="dark"] .conc-head-ico { color: var(--light-blue); }
   .conc-table tbody th,
   .conc-table tbody td { padding: var(--space-2) var(--space-3); }
 }
+
+/* ── Filtros por fecha ─────────────────────────────────────────── */
+.conc-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin: 0 var(--space-5) var(--space-4);
+}
+.conc-filter { display: grid; gap: 2px; }
+.conc-filter > span {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.conc-filter input[type="date"] {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  min-height: 40px;
+}
+.conc-filter-btn {
+  border: 1px solid var(--action-primary);
+  background: var(--action-primary);
+  color: var(--action-primary-contrast);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-5);
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 40px;
+}
+.conc-filter-btn:hover {
+  background: var(--action-primary-hover);
+  border-color: var(--action-primary-hover);
+}
+.conc-filter-clear {
+  align-self: center;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.conc-filter-clear:hover { color: var(--accent-red); text-decoration: underline; }

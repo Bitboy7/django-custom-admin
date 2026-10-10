@@ -43,6 +43,40 @@
       </p>
     </div>
 
+    <div class="conc-note" role="note">
+      <span class="conc-note-ico" aria-hidden="true"><i class="fas fa-circle-info"></i></span>
+      <p>
+        <strong>Cómo se calcula:</strong> el <em>Saldo conciliado</em> =
+        <strong>Facturado</strong> + <strong>Notas de cargo</strong> − <strong>Notas de crédito</strong>
+        − <strong>Pagos (REP)</strong> − <strong>Cobros de contado</strong> − <strong>Anticipos</strong>,
+        todo agrupado por moneda.
+        Las columnas de CFDI (<em>Facturado, Notas, Pagos REP</em>) se toman del ledger fiscal
+        (<code>DocumentoCFDI</code> vigente). Las de operación (<em>Cobros de contado</em>,
+        <em>Anticipos</em>) salen de los pagos y anticipos capturados en el sistema.
+        <br>
+        <strong>Cobrado en pesos (equiv.):</strong> no viene del CFDI; es el total de dinero
+        <strong>realmente cobrado</strong> expresado en pesos — pagos registrados (<code>PagoVenta</code>)
+        + ventas de contado (PUE) sin pago capturado — convertido con su tipo de cambio. Por eso
+        <strong>no cuadra por diseño</strong> con «Pagos (REP)»: una diferencia aquí es la señal de
+        documentos fiscales sin pago operativo (o pagos topados al saldo de la venta).
+      </p>
+    </div>
+
+    <form class="conc-filters" method="get">
+      <label class="conc-filter">
+        <span>Desde</span>
+        <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}">
+      </label>
+      <label class="conc-filter">
+        <span>Hasta</span>
+        <input type="date" name="fecha_fin" value="{{ fecha_fin }}">
+      </label>
+      <button type="submit" class="conc-filter-btn">Filtrar</button>
+      {% if fecha_inicio or fecha_fin %}
+      <a class="conc-filter-clear" href="?">Limpiar</a>
+      {% endif %}
+    </form>
+
     {% if filas %}
     <div class="conc-tablewrap">
       <table class="conc-table">
@@ -55,7 +89,7 @@
             <th class="num">− Pagos (REP)</th>
             <th class="num">− Cobros contado</th>
             <th class="num">− Anticipos</th>
-            <th class="num">Cobrado MXN</th>
+            <th class="num" title="Total cobrado en el sistema (pagos registrados + ventas de contado) convertido a pesos con su tipo de cambio. Dato operativo, no fiscal: no proviene del CFDI y no cuadra con «Pagos (REP)» por diseño.">Cobrado en pesos (equiv.)</th>
             <th class="num">Saldo conciliado</th>
             <th class="center">Sin vincular</th>
           </tr>
@@ -176,4 +210,5 @@
 {% block extrajs %}
 {{ block.super }}
 <script src="{% static 'js/conciliacion.js' %}"></script>
+<script src="{% static 'js/conciliacion_filtros.js' %}"></script>
 {% endblock %}
