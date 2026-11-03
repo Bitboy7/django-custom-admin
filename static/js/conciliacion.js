@@ -1,5 +1,5 @@
 /*
- * Conciliación de CFDI — desglose de documentos "sin vincular".
+ * Conciliación de CFDI — popovers de documentos sin vincular y origen de cobros.
  *
  * Popover accesible (ratón + teclado) con posicionamiento fijo para que
  * el scroll horizontal/vertical de la tabla nunca lo recorte. El panel vive
@@ -108,6 +108,62 @@
           position(trigger, panel);
         }
       });
+    });
+
+    document.querySelectorAll('[data-conc-origin-filter]').forEach(function (select) {
+      var panel = select.closest('.conc-pop');
+      if (!panel) {
+        return;
+      }
+
+      var items = Array.prototype.slice.call(
+        panel.querySelectorAll('[data-conc-origin-item]')
+      );
+      var summary = panel.querySelector('[data-conc-origin-summary]');
+      var emptyState = panel.querySelector('[data-conc-origin-empty]');
+      var total = summary ? Number(summary.dataset.total || 0) : 0;
+      var currency = summary ? summary.dataset.moneda || '' : '';
+
+      function formatAmount(amount) {
+        return Number(amount).toLocaleString('es-MX', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+      }
+
+      function applyOriginFilter() {
+        var selectedType = select.value;
+        var visibleCount = 0;
+        var visibleTotal = 0;
+
+        items.forEach(function (item) {
+          var visible = !selectedType || item.dataset.concOriginItem === selectedType;
+          item.hidden = !visible;
+          if (visible) {
+            visibleCount += 1;
+            visibleTotal += Number(item.dataset.concOriginAmount || 0);
+          }
+        });
+
+        if (summary) {
+          var totalCount = Number(summary.dataset.count || items.length);
+          summary.textContent = selectedType
+            ? 'Mostrando ' + visibleCount + ' de ' + totalCount +
+              ' movimientos · Subtotal seleccionado: ' + formatAmount(visibleTotal) +
+              ' ' + currency + ' · Total completo: ' + formatAmount(total) + ' ' + currency
+            : 'Mostrando ' + visibleCount + ' movimientos · Total completo: ' +
+              formatAmount(total) + ' ' + currency;
+        }
+        if (emptyState) {
+          emptyState.hidden = visibleCount > 0;
+        }
+        if (active && panelFor(active) === panel) {
+          position(active, panel);
+        }
+      }
+
+      select.addEventListener('change', applyOriginFilter);
+      applyOriginFilter();
     });
 
     window.addEventListener('resize', function () {

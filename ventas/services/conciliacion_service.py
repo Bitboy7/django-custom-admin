@@ -58,6 +58,16 @@ def cobros_no_rep(cliente, fecha_inicio=None, fecha_fin=None):
     Solo cuenta la parte que no está ya representada por un REP vigente, para no
     restar dos veces. Con rango de fechas, considera los pagos del periodo.
     """
+    cobros, _desglose = _cobros_no_rep_con_detalle(
+        cliente, fecha_inicio, fecha_fin, incluir_detalle=False
+    )
+    return cobros
+
+
+def _cobros_no_rep_con_detalle(
+    cliente, fecha_inicio=None, fecha_fin=None, incluir_detalle=True
+):
+    """Calcula cobros sin REP y conserva su origen operativo por venta."""
     rep_por_venta = defaultdict(float)
     rep_docs = _en_rango(
         cliente.documentos_cfdi.filter(
@@ -69,7 +79,11 @@ def cobros_no_rep(cliente, fecha_inicio=None, fecha_fin=None):
         rep_por_venta[doc.venta_id] += float(doc.monto.amount)
 
     cobros = defaultdict(float)
-    for venta in cliente.ventas_set.all():
+    desglose = defaultdict(list)
+    ventas = cliente.ventas_set.all()
+    if incluir_detalle:
+        ventas = ventas.prefetch_related('documentos_cfdi')
+    for venta in ventas:
         pagos = list(_en_rango(
             venta.pagos.all(), 'fecha_pago', fecha_inicio, fecha_fin
         ))
@@ -84,6 +98,16 @@ def cobros_no_rep(cliente, fecha_inicio=None, fecha_fin=None):
                 else (venta.moneda_venta or 'MXN')
             )
             cobros[moneda] += sin_rep
+            if incluir_detalle:
+                desglose[moneda].append({
+                    'tipo': 'pago_sin_rep',
+                    'venta_id': venta.pk,
+                    'referencia': venta.referencia,
+                    'fechas': sorted({p.fecha_pago for p in pagos if p.fecha_pago}),
+                    'monto': round(sin_rep, 2),
+                    'moneda': moneda,
+                    'documentos_cfdi': _documentos_cfdi_de_venta(venta),
+                })
             continue
 
         if venta.modalidad_pago != 'Contado':
@@ -95,7 +119,32 @@ def cobros_no_rep(cliente, fecha_inicio=None, fecha_fin=None):
             continue
         moneda = str(venta.monto_pagado.currency) or venta.moneda_venta or 'MXN'
         cobros[moneda] += pagado
-    return dict(cobros)
+        if incluir_detalle:
+            desglose[moneda].append({
+                'tipo': 'venta_contado',
+                'venta_id': venta.pk,
+                'referencia': venta.referencia,
+                'fechas': [venta.fecha_deposito] if venta.fecha_deposito else [],
+                'monto': round(pagado, 2),
+                'moneda': moneda,
+                'documentos_cfdi': _documentos_cfdi_de_venta(venta),
+            })
+    return dict(cobros), dict(desglose)
+
+
+def _documentos_cfdi_de_venta(venta):
+    """Metadatos mínimos para enlazar cada cobro con sus CFDI relacionados."""
+    return [
+        {
+            'id': doc.pk,
+            'folio': doc.folio or '',
+            'uuid': doc.uuid or '',
+            'subtipo': doc.get_subtipo_display(),
+            'estado': doc.estado,
+            'fecha_emision': doc.fecha_emision,
+        }
+        for doc in venta.documentos_cfdi.all()
+    ]
 
 
 def pagos_total_mxn(cliente, fecha_inicio=None, fecha_fin=None):
@@ -124,13 +173,15 @@ def pagos_total_mxn(cliente, fecha_inicio=None, fecha_fin=None):
     return round(total, 2)
 
 
-def _calcular(cliente, fecha_inicio=None, fecha_fin=None):
+def _calcular(
+    cliente, fecha_inicio=None, fecha_fin=None, incluir_cobros_detalle=False
+):
     """Calcula el desglose y el saldo conciliado de un cliente.
 
-    Fuente única de la fórmula de saldo. Retorna ``(docs, detalle, saldo)``:
-    el queryset de documentos vigentes del periodo, el desglose por
-    concepto/moneda y el saldo por moneda. La usan ``conciliacion_cliente`` y
-    ``saldo_por_moneda`` para no duplicar la regla de cálculo.
+    Fuente única de la fórmula de saldo. Retorna ``(docs, detalle, saldo,
+    cobros_contado_desglose)``: documentos vigentes del período, desglose por
+    concepto/moneda, saldo por moneda y origen de los cobros operativos. La usan
+    ``conciliacion_cliente`` y ``saldo_por_moneda`` para no duplicar la regla.
 
     ``fecha_inicio``/``fecha_fin`` (date) limitan los documentos (por
     ``fecha_emision``), pagos (``fecha_pago``) y anticipos (``fecha``).
@@ -150,7 +201,15 @@ def _calcular(cliente, fecha_inicio=None, fecha_fin=None):
 
     # Cobros de contado / sin REP: descuentan el pago ya recibido que no tiene
     # un recibo electrónico de pago asociado (típicamente facturas PUE).
-    detalle['cobros_contado'] = cobros_no_rep(cliente, fecha_inicio, fecha_fin)
+    if incluir_cobros_detalle:
+        detalle['cobros_contado'], cobros_contado_desglose = (
+            _cobros_no_rep_con_detalle(cliente, fecha_inicio, fecha_fin)
+        )
+    else:
+        detalle['cobros_contado'] = cobros_no_rep(
+            cliente, fecha_inicio, fecha_fin
+        )
+        cobros_contado_desglose = {}
 
     # Anticipos pendientes de aplicar (saldo a favor del cliente)
     anticipo_por_moneda = defaultdict(float)
@@ -178,7 +237,7 @@ def _calcular(cliente, fecha_inicio=None, fecha_fin=None):
             - detalle['anticipos_disponibles'].get(mon, 0.0)
         )
 
-    return docs, detalle, saldo
+    return docs, detalle, saldo, cobros_contado_desglose
 
 
 def saldo_por_moneda(cliente, fecha_inicio=None, fecha_fin=None):
@@ -188,7 +247,9 @@ def saldo_por_moneda(cliente, fecha_inicio=None, fecha_fin=None):
     ``Cliente.saldo_conciliado()`` y la vista de conciliación, de modo que no
     existan dos implementaciones que puedan desincronizarse.
     """
-    _docs, _detalle, saldo = _calcular(cliente, fecha_inicio, fecha_fin)
+    _docs, _detalle, saldo, _cobros_contado_desglose = _calcular(
+        cliente, fecha_inicio, fecha_fin
+    )
     return saldo
 
 
@@ -199,7 +260,9 @@ def conciliacion_cliente(cliente, fecha_inicio=None, fecha_fin=None):
     ``fecha_emision``), pagos (``fecha_pago``) y anticipos (``fecha``) al
     periodo. Sin fechas, se considera todo el histórico.
     """
-    docs, detalle, saldo = _calcular(cliente, fecha_inicio, fecha_fin)
+    docs, detalle, saldo, cobros_contado_desglose = _calcular(
+        cliente, fecha_inicio, fecha_fin, incluir_cobros_detalle=True
+    )
 
     # Documentos que no pudieron vincularse a una venta (posible deriva):
     # son notas de cargo/crédito o recibos de pago cuyo CFDI padre no fue
@@ -240,6 +303,7 @@ def conciliacion_cliente(cliente, fecha_inicio=None, fecha_fin=None):
     return {
         'cliente': cliente,
         'detalle': detalle,
+        'cobros_contado_desglose': cobros_contado_desglose,
         'saldo_por_moneda': saldo,
         'pagos_mxn': pagos_total_mxn(cliente, fecha_inicio, fecha_fin),
         'total_documentos': docs.count(),
@@ -271,6 +335,26 @@ def _serializar_fila(fila):
         }
         for grupo in fila['sin_venta_detalle']
     ]
+    fila['cobros_contado_desglose'] = {
+        moneda: [
+            {
+                **item,
+                'fechas': [fecha.isoformat() for fecha in item['fechas']],
+                'documentos_cfdi': [
+                    {
+                        **doc,
+                        'fecha_emision': (
+                            doc['fecha_emision'].isoformat()
+                            if doc['fecha_emision'] else None
+                        ),
+                    }
+                    for doc in item['documentos_cfdi']
+                ],
+            }
+            for item in items
+        ]
+        for moneda, items in fila['cobros_contado_desglose'].items()
+    }
     return fila
 
 
@@ -292,6 +376,26 @@ def _rehidratar_fila(fila, cliente):
         }
         for grupo in fila['sin_venta_detalle']
     ]
+    fila['cobros_contado_desglose'] = {
+        moneda: [
+            {
+                **item,
+                'fechas': [date.fromisoformat(fecha) for fecha in item['fechas']],
+                'documentos_cfdi': [
+                    {
+                        **doc,
+                        'fecha_emision': (
+                            date.fromisoformat(doc['fecha_emision'])
+                            if doc.get('fecha_emision') else None
+                        ),
+                    }
+                    for doc in item['documentos_cfdi']
+                ],
+            }
+            for item in items
+        ]
+        for moneda, items in fila.get('cobros_contado_desglose', {}).items()
+    }
     return fila
 
 
@@ -327,3 +431,76 @@ def conciliacion_global(fecha_inicio=None, fecha_fin=None, cliente_id=None):
         [_serializar_fila(f) for f in filas],
     )
     return filas
+
+
+def monedas_disponibles_conciliacion(filas):
+    """Monedas que aparecen en los importes de las filas mostradas."""
+    monedas = set()
+    for fila in filas:
+        monedas.update(fila.get('saldo_por_moneda', {}).keys())
+        for importes in fila.get('detalle', {}).values():
+            if isinstance(importes, dict):
+                monedas.update(importes.keys())
+    return sorted(monedas)
+
+
+def _estado_saldo_conciliacion(saldo_por_moneda, moneda=None):
+    """Clasifica saldos por moneda sin sumar divisas distintas entre sí."""
+    if moneda:
+        valores = [saldo_por_moneda.get(moneda, 0.0)]
+    else:
+        valores = list(saldo_por_moneda.values())
+
+    tiene_deuda = any(valor > 0 for valor in valores)
+    tiene_favor = any(valor < 0 for valor in valores)
+    if tiene_deuda and tiene_favor:
+        return 'mixto'
+    if tiene_deuda:
+        return 'deuda'
+    if tiene_favor:
+        return 'favor'
+    return 'cero'
+
+
+def _tiene_cobros_sin_cfdi(fila):
+    return any(
+        not item.get('documentos_cfdi')
+        for items in fila.get('cobros_contado_desglose', {}).values()
+        for item in items
+    )
+
+
+def filtrar_filas_conciliacion(
+    filas, *, moneda=None, estado_saldo=None, incidencia=None
+):
+    """Filtra clientes sin modificar importes ni saldos conciliados.
+
+    ``moneda`` selecciona clientes con actividad en esa moneda. El estado se
+    calcula en esa moneda si está seleccionada; de otro modo identifica deuda,
+    saldo a favor, saldo mixto o cero entre las monedas del cliente.
+    """
+    resultado = []
+    for fila in filas:
+        monedas_fila = set(fila.get('saldo_por_moneda', {}).keys())
+        for importes in fila.get('detalle', {}).values():
+            if isinstance(importes, dict):
+                monedas_fila.update(importes.keys())
+        if moneda and moneda not in monedas_fila:
+            continue
+
+        if estado_saldo and _estado_saldo_conciliacion(
+            fila.get('saldo_por_moneda', {}), moneda
+        ) != estado_saldo:
+            continue
+
+        tiene_cfdi_sin_venta = fila.get('documentos_sin_venta', 0) > 0
+        tiene_cobro_sin_cfdi = _tiene_cobros_sin_cfdi(fila)
+        if incidencia == 'cfdi_sin_venta' and not tiene_cfdi_sin_venta:
+            continue
+        if incidencia == 'cobro_sin_cfdi' and not tiene_cobro_sin_cfdi:
+            continue
+        if incidencia == 'any' and not (tiene_cfdi_sin_venta or tiene_cobro_sin_cfdi):
+            continue
+
+        resultado.append(fila)
+    return resultado

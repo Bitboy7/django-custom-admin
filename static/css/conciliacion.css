@@ -204,6 +204,27 @@ html[data-theme="dark"] .conc-head-ico { color: var(--light-blue); }
 .conc-amt { display: block; color: var(--text-secondary); }
 .conc-amt + .conc-amt { margin-top: 2px; }
 
+.conc-breakdown-trigger {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: right;
+  cursor: pointer;
+  text-decoration: underline dotted var(--brand-teal-light);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+.conc-breakdown-trigger:hover { color: var(--action-primary); }
+.conc-breakdown-trigger:focus-visible {
+  outline: 2px solid var(--brand-teal-light);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
 .conc-cur {
   font-size: 0.68rem;
   font-weight: 700;
@@ -342,6 +363,97 @@ html[data-theme="dark"] .conc-head-ico { color: var(--light-blue); }
 }
 .conc-doc:hover { background: var(--surface-hover); }
 
+.conc-origin + .conc-origin {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-default);
+}
+.conc-origin-filter {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0 var(--space-2) var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+.conc-origin-filter select {
+  min-height: 36px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font: inherit;
+}
+.conc-origin-filter select:focus-visible {
+  outline: 2px solid var(--brand-teal-light);
+  outline-offset: 2px;
+}
+.conc-origin-summary,
+.conc-origin-empty {
+  margin: 0 var(--space-2) var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+}
+.conc-origin-empty { color: var(--conc-amber-fg); font-weight: 600; }
+.conc-origin-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.conc-origin-kind {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+.conc-origin-sale {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--action-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+.conc-origin-sale:hover { color: var(--brand-teal-dark); }
+.conc-origin-sale span {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  text-decoration: none;
+}
+.conc-origin-meta,
+.conc-origin-docs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px var(--space-2);
+  margin-top: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+.conc-origin-docs-label { font-weight: 600; color: var(--text-secondary); }
+.conc-origin-docs a {
+  color: var(--action-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+.conc-origin-docs a:hover { color: var(--brand-teal-dark); }
+.conc-origin-docs a span { color: var(--text-muted); font-weight: 400; }
+.conc-no-cfdi {
+  padding: 1px var(--space-2);
+  border: 1px solid rgba(201, 162, 39, 0.4);
+  border-radius: var(--radius-sm);
+  background: var(--conc-amber-bg);
+  color: var(--conc-amber-fg);
+  font-weight: 700;
+}
+
 .conc-doc-link {
   display: flex;
   align-items: baseline;
@@ -426,6 +538,11 @@ html[data-theme="dark"] .conc-head-ico { color: var(--light-blue); }
   .conc-title { font-size: var(--font-size-lg); }
   .conc-table tbody th,
   .conc-table tbody td { padding: var(--space-2) var(--space-3); }
+  .conc-filter,
+  .conc-filter-select,
+  .conc-filter input[type="date"] { width: 100%; max-width: none; }
+  .conc-filters { margin-right: var(--space-4); margin-left: var(--space-4); }
+  .conc-filter-btn { flex: 1 1 auto; }
 }
 
 /* ── Filtros por fecha ─────────────────────────────────────────── */
@@ -476,6 +593,16 @@ html[data-theme="dark"] .conc-head-ico { color: var(--light-blue); }
   text-decoration: none;
 }
 .conc-filter-clear:hover { color: var(--accent-red); text-decoration: underline; }
+.conc-filter-help {
+  margin: calc(-1 * var(--space-2)) var(--space-5) var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+}
+
+@media (max-width: 767px) {
+  .conc-filter-help { margin-right: var(--space-4); margin-left: var(--space-4); }
+}
 
 /* ── Enlace cruzado a Análisis de Ventas ───────────────────────── */
 .conc-crosslink {

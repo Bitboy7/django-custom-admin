@@ -1,5 +1,5 @@
 {% extends "admin/base_site.html" %}
-{% load i18n static %}
+{% load i18n l10n static ventas_tags %}
 
 {% block title %}{{ title }} | {{ site_title }}{% endblock %}
 
@@ -26,7 +26,7 @@
       <div>
         <h1 class="conc-title">Conciliación de CFDI por cliente</h1>
         <p class="conc-sub">
-          Saldo por cobrar <strong>conciliado desde los CFDI</strong>
+          Saldo por cobrar <strong>conciliado entre CFDI y cobros operativos</strong>
           (facturado + notas de cargo − notas de crédito − pagos (REP) − cobros de contado − anticipos).
           Solo se consideran documentos <strong>vigentes</strong>.
         </p>
@@ -39,10 +39,10 @@
     <div class="conc-note conc-note--warn" role="note">
       <span class="conc-note-ico" aria-hidden="true"><i class="fas fa-circle-exclamation"></i></span>
       <p>
-        <strong>Columna “Sin vincular”:</strong> número de notas de cargo/crédito o recibos de pago que
-        <strong>no</strong> pudieron asociarse a una venta (su factura padre no se encontró por UUID).
-        No afectan el saldo por venta, pero sí se cuentan en la conciliación por cliente.
-        Pasa el cursor, enfoca o pulsa el número para ver el desglose y abrir cada documento.
+        <strong>Columna “Sin vincular”:</strong> cuenta notas de cargo/crédito o recibos de pago que
+        <strong>no</strong> pudieron asociarse a una venta porque no se encontró su CFDI padre por UUID.
+        <strong>No significa que una venta esté sin factura.</strong> Para revisar ventas sin CFDI asociado,
+        abre un importe de “Cobros contado / sin REP”.
       </p>
     </div>
 
@@ -51,15 +51,17 @@
       <p>
         <strong>Cómo se calcula:</strong> el <em>Saldo conciliado</em> =
         <strong>Facturado</strong> + <strong>Notas de cargo</strong> − <strong>Notas de crédito</strong>
-        − <strong>Pagos (REP)</strong> − <strong>Cobros de contado</strong> − <strong>Anticipos</strong>,
+        − <strong>Pagos (REP)</strong> − <strong>Cobros contado / sin REP</strong> − <strong>Anticipos</strong>,
         todo agrupado por moneda.
         Las columnas de CFDI (<em>Facturado, Notas, Pagos REP</em>) se toman del ledger fiscal
-        (<code>DocumentoCFDI</code> vigente). Las de operación (<em>Cobros de contado</em>,
-        <em>Anticipos</em>) salen de los pagos y anticipos capturados en el sistema.
+        (<code>DocumentoCFDI</code> vigente). Los cobros son operativos: incluyen ventas de contado
+        registradas y pagos capturados que no están respaldados por un REP. Pulsa un importe para ver
+        las ventas que lo forman y sus CFDI asociados —o confirmar que no tienen uno vinculado—.
+        Los anticipos salen de los saldos disponibles capturados en el sistema.
         <br>
-        <strong>Cobrado en pesos (equiv.):</strong> no viene del CFDI; es el total de dinero
-        <strong>realmente cobrado</strong> expresado en pesos — pagos registrados (<code>PagoVenta</code>)
-        + ventas de contado (PUE) sin pago capturado — convertido con su tipo de cambio. Por eso
+        <strong>Cobrado en pesos (equiv.):</strong> no viene directamente del CFDI; es el total que el sistema
+        <strong>considera cobrado</strong>, expresado en pesos — pagos registrados (<code>PagoVenta</code>)
+        + ventas registradas como contado sin un <code>PagoVenta</code> — convertido con su tipo de cambio. Por eso
         <strong>no cuadra por diseño</strong> con «Pagos (REP)»: una diferencia aquí es la señal de
         documentos fiscales sin pago operativo (o pagos topados al saldo de la venta).
       </p>
@@ -83,11 +85,46 @@
         <span>Hasta</span>
         <input type="date" name="fecha_fin" value="{{ fecha_fin }}">
       </label>
+      <label class="conc-filter">
+        <span>Moneda con movimientos</span>
+        <select name="moneda" class="conc-filter-select">
+          <option value="">Todas las monedas</option>
+          {% for moneda in monedas %}
+          <option value="{{ moneda }}" {% if moneda == selected_moneda %}selected{% endif %}>{{ moneda }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="conc-filter">
+        <span>Estado del saldo</span>
+        <select name="estado_saldo" class="conc-filter-select">
+          <option value="">Todos los estados</option>
+          {% for value, label in estado_saldo_choices %}
+          <option value="{{ value }}" {% if value == selected_estado_saldo %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="conc-filter">
+        <span>Incidencias</span>
+        <select name="incidencia" class="conc-filter-select">
+          <option value="">Todas</option>
+          {% for value, label in incidencia_choices %}
+          <option value="{{ value }}" {% if value == selected_incidencia %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
       <button type="submit" class="conc-filter-btn">Filtrar</button>
-      {% if fecha_inicio or fecha_fin or selected_cliente_id %}
+      {% if filtros_activos %}
       <a class="conc-filter-clear" href="?">Limpiar</a>
       {% endif %}
     </form>
+    <p class="conc-filter-help">
+      La moneda filtra los clientes con movimientos; los importes conservan su desglose completo.
+      {% if selected_moneda %}
+      El estado del saldo se evalúa en {{ selected_moneda }}.
+      {% else %}
+      “Saldos mixtos” identifica clientes con deuda y saldo a favor en monedas distintas.
+      {% endif %}
+    </p>
 
     {% if filas %}
     <div class="conc-tablewrap">
@@ -99,7 +136,7 @@
             <th class="num">+ Notas cargo</th>
             <th class="num">− Notas crédito</th>
             <th class="num">− Pagos (REP)</th>
-            <th class="num">− Cobros contado</th>
+            <th class="num" title="Ventas de contado y pagos operativos que no están respaldados por un REP. Pulsa un importe para ver el origen.">− Cobros contado / sin REP</th>
             <th class="num">− Anticipos</th>
             <th class="num" title="Total cobrado en el sistema (pagos registrados + ventas de contado) convertido a pesos con su tipo de cambio. Dato operativo, no fiscal: no proviene del CFDI y no cuadra con «Pagos (REP)» por diseño.">Cobrado en pesos (equiv.)</th>
             <th class="num">Saldo conciliado</th>
@@ -127,7 +164,85 @@
               {% for m, v in f.detalle.recibos_pago.items %}<span class="conc-amt">{{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span></span>{% empty %}<span class="conc-empty">—</span>{% endfor %}
             </td>
             <td class="num">
-              {% for m, v in f.detalle.cobros_contado.items %}<span class="conc-amt">{{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span></span>{% empty %}<span class="conc-empty">—</span>{% endfor %}
+              {% for m, v in f.detalle.cobros_contado.items %}
+                {% with origenes=f.cobros_contado_desglose|get_item:m %}
+                {% if origenes %}
+                <span class="conc-amt">
+                  <button type="button" class="conc-breakdown-trigger"
+                          data-conc-trigger
+                          aria-haspopup="true"
+                          aria-expanded="false"
+                          aria-controls="cobros-origen-{{ f.cliente.id }}-{{ forloop.counter }}"
+                          aria-label="Ver origen de cobros por {{ v|floatformat:2 }} {{ m }} para {{ f.cliente.nombre }}"
+                          title="Ver ventas y pagos que forman este importe">
+                    {{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span>
+                  </button>
+                </span>
+
+                <div class="conc-pop" id="cobros-origen-{{ f.cliente.id }}-{{ forloop.counter }}"
+                     aria-label="Origen de cobros de {{ f.cliente.nombre }} en {{ m }}" hidden>
+                  <div class="conc-pop-head">
+                    <span class="conc-pop-title">Origen de cobros · {{ f.cliente.nombre }}</span>
+                    <span class="conc-pop-sub">{{ origenes|length }} movimiento{{ origenes|length|pluralize }} · Total {{ v|floatformat:2 }} {{ m }}</span>
+                  </div>
+
+                  <div class="conc-pop-body">
+                    <label class="conc-origin-filter">
+                      <span>Filtrar este desglose</span>
+                      <select data-conc-origin-filter aria-label="Filtrar origen de cobros">
+                        <option value="">Todos los orígenes</option>
+                        <option value="venta_contado">Ventas de contado</option>
+                        <option value="pago_sin_rep">Pagos operativos sin REP</option>
+                      </select>
+                    </label>
+                    <p class="conc-origin-summary" data-conc-origin-summary role="status" aria-live="polite"
+                       data-total="{{ v|unlocalize }}" data-moneda="{{ m }}" data-count="{{ origenes|length }}">
+                      Mostrando {{ origenes|length }} movimientos · Total completo: {{ v|floatformat:2 }} {{ m }}
+                    </p>
+                    <p class="conc-origin-empty" data-conc-origin-empty hidden>No hay movimientos de este tipo.</p>
+                    {% for origen in origenes %}
+                    <article class="conc-origin" data-conc-origin-item="{{ origen.tipo }}"
+                             data-conc-origin-amount="{{ origen.monto|unlocalize }}">
+                      <div class="conc-origin-head">
+                        <span class="conc-origin-kind">
+                          {% if origen.tipo == 'venta_contado' %}Venta de contado{% else %}Pago operativo sin REP{% endif %}
+                        </span>
+                        <span class="conc-doc-amt">{{ origen.monto|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></span>
+                      </div>
+
+                      <a class="conc-origin-sale" href="{% url 'admin:ventas_ventas_change' origen.venta_id %}">
+                        {{ origen.referencia }} <span>· Venta #{{ origen.venta_id }}</span>
+                      </a>
+
+                      <div class="conc-origin-meta">
+                        {% if origen.tipo == 'venta_contado' %}<span>Fecha de venta:</span>{% else %}<span>Fecha(s) de pago:</span>{% endif %}
+                        {% for fecha in origen.fechas %}<time datetime="{{ fecha|date:'Y-m-d' }}">{{ fecha|date:"d/m/Y" }}</time>{% empty %}<span>Sin fecha registrada</span>{% endfor %}
+                      </div>
+
+                      <div class="conc-origin-docs">
+                        <span class="conc-origin-docs-label">CFDI relacionado:</span>
+                        {% for doc in origen.documentos_cfdi %}
+                        <a href="{% url 'admin:ventas_documentocfdi_change' doc.id %}">
+                          {{ doc.subtipo }}{% if doc.folio %} · {{ doc.folio }}{% elif doc.uuid %} · {{ doc.uuid|truncatechars:16 }}{% else %} · #{{ doc.id }}{% endif %}
+                          <span>({{ doc.estado }})</span>
+                        </a>
+                        {% empty %}
+                        <span class="conc-no-cfdi">Sin CFDI vinculado</span>
+                        {% endfor %}
+                      </div>
+                    </article>
+                    {% endfor %}
+                  </div>
+
+                  <div class="conc-pop-foot">
+                    El importe suma ventas de contado y pagos operativos no cubiertos por REP.
+                  </div>
+                </div>
+                {% else %}
+                <span class="conc-amt">{{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span></span>
+                {% endif %}
+                {% endwith %}
+              {% empty %}<span class="conc-empty">—</span>{% endfor %}
             </td>
             <td class="num">
               {% for m, v in f.detalle.anticipos_disponibles.items %}<span class="conc-amt">{{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span></span>{% empty %}<span class="conc-empty">—</span>{% endfor %}
@@ -210,8 +325,13 @@
     {% else %}
     <div class="conc-empty-state">
       <i class="fas fa-inbox" aria-hidden="true"></i>
+      {% if filtros_activos %}
+      <strong>No hay clientes para estos filtros</strong>
+      <span>Prueba cambiar la moneda, el estado del saldo o las incidencias.</span>
+      {% else %}
       <strong>No hay clientes activos</strong>
       <span>Activa un cliente para comenzar a conciliar sus CFDI.</span>
+      {% endif %}
     </div>
     {% endif %}
 

@@ -21,7 +21,10 @@ from decimal import Decimal
 from types import SimpleNamespace
 
 from django.contrib import admin
+from django.http import HttpResponse
 from django.test import SimpleTestCase, TestCase
+from django.urls import path
+from django.views.i18n import set_language
 from djmoney.money import Money
 
 from catalogo.models import Estado, Pais, Producto, Sucursal
@@ -56,11 +59,23 @@ from ventas.tests_cfdi_parser import (
 )
 from ventas.admin import (
     CFDI_UPLOAD_LIMITS,
+    ClienteAdmin,
     VentasAdmin,
     _pdf_response,
     _validar_archivo_cfdi,
 )
 from ventas.forms import CFDIConfirmForm
+
+def _empty_test_view(request, *args, **kwargs):
+    return HttpResponse()
+
+
+urlpatterns = [
+    path('admin/mi-perfil/', _empty_test_view, name='profile_settings'),
+    path('manual/', _empty_test_view, name='user_manual'),
+    path('admin/', admin.site.urls),
+    path('i18n/setlang/', set_language, name='set_language'),
+]
 
 
 class VentasAdminDisplayTest(SimpleTestCase):
@@ -1162,6 +1177,71 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
         fila = conciliacion_cliente(cliente)
         self.assertAlmostEqual(fila['saldo_por_moneda'].get('USD', 0.0), 0.0)
 
+    def test_desglose_cobros_contado_identifica_ventas_pagos_y_cfdi(self):
+        """El detalle de cobros debe explicar el total y su vínculo fiscal."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente con desglose de cobros')
+
+        venta_con_cfdi = self._venta_contado(cliente, '1000.00')
+        Ventas.objects.filter(pk=venta_con_cfdi.pk).update(carga='CARGA-CONTADO')
+        factura_contado = DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            folio='F-1000', uuid='11111111-1111-1111-1111-111111111111',
+            monto=Money('1000.00', 'MXN'), venta=venta_con_cfdi,
+        )
+
+        venta_sin_cfdi = self._venta_contado(cliente, '240.00')
+
+        venta_con_pago = self._venta_credito(cliente, '5000.00')
+        Ventas.objects.filter(pk=venta_con_pago.pk).update(carga='CARGA-CREDITO')
+        factura_credito = DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            folio='F-5000', uuid='22222222-2222-2222-2222-222222222222',
+            monto=Money('5000.00', 'MXN'), venta=venta_con_pago,
+        )
+        pago = PagoVenta.objects.create(
+            venta=venta_con_pago,
+            fecha_pago=date(2026, 3, 4),
+            monto_pago=Money('400.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+        )
+        recibo = DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='P', subtipo='recibo_pago',
+            folio='REP-100', uuid='33333333-3333-3333-3333-333333333333',
+            monto=Money('100.00', 'MXN'), venta=venta_con_pago,
+            pago_venta=pago,
+        )
+
+        fila = conciliacion_cliente(cliente)
+        desglose = fila['cobros_contado_desglose']['MXN']
+        por_venta = {item['venta_id']: item for item in desglose}
+
+        self.assertAlmostEqual(fila['detalle']['cobros_contado']['MXN'], 1540.00)
+        self.assertAlmostEqual(sum(item['monto'] for item in desglose), 1540.00)
+
+        contado = por_venta[venta_con_cfdi.pk]
+        self.assertEqual(contado['tipo'], 'venta_contado')
+        self.assertEqual(contado['referencia'], 'CARGA-CONTADO')
+        self.assertEqual(contado['fechas'], [date(2026, 2, 1)])
+        self.assertEqual(contado['moneda'], 'MXN')
+        self.assertEqual(contado['documentos_cfdi'][0]['id'], factura_contado.pk)
+
+        sin_cfdi = por_venta[venta_sin_cfdi.pk]
+        self.assertEqual(sin_cfdi['documentos_cfdi'], [])
+
+        pago_sin_rep = por_venta[venta_con_pago.pk]
+        self.assertEqual(pago_sin_rep['tipo'], 'pago_sin_rep')
+        self.assertEqual(pago_sin_rep['referencia'], 'CARGA-CREDITO')
+        self.assertEqual(pago_sin_rep['fechas'], [date(2026, 3, 4)])
+        self.assertAlmostEqual(pago_sin_rep['monto'], 300.00)
+        self.assertEqual(
+            {doc['id'] for doc in pago_sin_rep['documentos_cfdi']},
+            {factura_credito.pk, recibo.pk},
+        )
+
+
     def test_venta_credito_pagada_por_rep_no_resta_doble(self):
         """El pago registrado por REP no debe descontarse dos veces."""
         from ventas.services.conciliacion_service import conciliacion_cliente
@@ -1189,6 +1269,256 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
         self.assertAlmostEqual(cliente.saldo_conciliado(), 0.0)
         fila = conciliacion_cliente(cliente)
         self.assertAlmostEqual(fila['saldo_por_moneda'].get('MXN', 0.0), 0.0)
+
+
+class ConciliacionOrigenTemplateTest(SimpleTestCase):
+
+    def test_cobro_contado_expone_origen_y_avisa_si_no_hay_cfdi(self):
+        from django.template.loader import render_to_string
+        from django.test import RequestFactory, override_settings
+        from django.contrib.auth.models import AnonymousUser
+
+        cliente = SimpleNamespace(id=81, nombre='Cliente trazable')
+        fila = {
+            'cliente': cliente,
+            'detalle': {
+                'facturado': {},
+                'notas_cargo': {},
+                'notas_credito': {},
+                'recibos_pago': {},
+                'cobros_contado': {'MXN': 48040.00},
+                'anticipos_disponibles': {},
+            },
+            'cobros_contado_desglose': {
+                'MXN': [{
+                    'tipo': 'venta_contado',
+                    'venta_id': 741,
+                    'referencia': 'CARGA-SIN-CFDI',
+                    'fechas': [date(2026, 2, 1)],
+                    'monto': 48040.00,
+                    'moneda': 'MXN',
+                    'documentos_cfdi': [],
+                }],
+            },
+            'pagos_mxn': 48040.00,
+            'saldo_por_moneda': {'MXN': 0.00},
+            'total_documentos': 0,
+            'documentos_sin_venta': 0,
+            'sin_venta_detalle': [],
+        }
+
+        with override_settings(ROOT_URLCONF='ventas.tests'):
+            request = RequestFactory().get('/admin/')
+            request.user = AnonymousUser()
+            html = render_to_string(
+                'admin/ventas/conciliacion.html',
+                {
+                    'title': 'Conciliación',
+                    'site_title': 'Admin',
+                    'filas': [fila],
+                    'clientes': [],
+                    'monedas': ['MXN', 'USD'],
+                    'estado_saldo_choices': [
+                        ('deuda', 'Con deuda'),
+                        ('favor', 'Saldo a favor'),
+                        ('mixto', 'Saldos mixtos'),
+                        ('cero', 'Sin saldo'),
+                    ],
+                    'incidencia_choices': [
+                        ('any', 'Cualquier incidencia'),
+                        ('cobro_sin_cfdi', 'Cobros sin CFDI vinculado'),
+                        ('cfdi_sin_venta', 'CFDI sin venta asociada'),
+                    ],
+                    'fecha_inicio': '',
+                    'fecha_fin': '',
+                    'selected_cliente_id': '',
+                    'selected_moneda': 'MXN',
+                    'selected_estado_saldo': 'deuda',
+                    'selected_incidencia': 'any',
+                },
+                request=request,
+            )
+
+        self.assertIn('data-conc-trigger', html)
+        self.assertIn('CARGA-SIN-CFDI', html)
+        self.assertIn('01/02/2026', html)
+        self.assertIn('Sin CFDI vinculado', html)
+        self.assertIn('admin/ventas/ventas/741/change/', html)
+        self.assertIn('name="moneda"', html)
+        self.assertIn('name="estado_saldo"', html)
+        self.assertIn('name="incidencia"', html)
+        self.assertIn('data-conc-origin-filter', html)
+
+
+class ConciliacionFiltrosTest(SimpleTestCase):
+
+    def setUp(self):
+        self.filas = [
+            {
+                'cliente': SimpleNamespace(id=1, nombre='Cliente MXN'),
+                'detalle': {
+                    'facturado': {'MXN': 500.00},
+                    'cobros_contado': {'MXN': 300.00},
+                    'anticipos_disponibles': {},
+                },
+                'saldo_por_moneda': {'MXN': 200.00},
+                'documentos_sin_venta': 0,
+                'cobros_contado_desglose': {
+                    'MXN': [{'documentos_cfdi': []}],
+                },
+            },
+            {
+                'cliente': SimpleNamespace(id=2, nombre='Cliente USD'),
+                'detalle': {
+                    'facturado': {'USD': 50.00},
+                    'cobros_contado': {},
+                    'anticipos_disponibles': {},
+                },
+                'saldo_por_moneda': {'USD': -50.00},
+                'documentos_sin_venta': 1,
+                'cobros_contado_desglose': {},
+            },
+            {
+                'cliente': SimpleNamespace(id=3, nombre='Cliente Mixto'),
+                'detalle': {
+                    'facturado': {'MXN': 200.00, 'USD': 20.00},
+                    'cobros_contado': {},
+                    'anticipos_disponibles': {},
+                },
+                'saldo_por_moneda': {'MXN': 100.00, 'USD': -20.00},
+                'documentos_sin_venta': 0,
+                'cobros_contado_desglose': {
+                    'MXN': [{'documentos_cfdi': [{'id': 90}]}],
+                },
+            },
+        ]
+
+    def test_combina_moneda_estado_e_incidencia_sin_recalcular_saldos(self):
+        from ventas.services.conciliacion_service import (
+            filtrar_filas_conciliacion,
+        )
+
+        resultado = filtrar_filas_conciliacion(
+            self.filas,
+            moneda='MXN',
+            estado_saldo='deuda',
+            incidencia='cobro_sin_cfdi',
+        )
+
+        self.assertEqual([f['cliente'].id for f in resultado], [1])
+        self.assertEqual(resultado[0]['saldo_por_moneda'], {'MXN': 200.00})
+        self.assertEqual(resultado[0]['detalle']['facturado'], {'MXN': 500.00})
+
+    def test_detecta_saldos_mixtos_y_documentos_sin_venta(self):
+        from ventas.services.conciliacion_service import (
+            filtrar_filas_conciliacion,
+            monedas_disponibles_conciliacion,
+        )
+
+        mixtos = filtrar_filas_conciliacion(self.filas, estado_saldo='mixto')
+        cfdi_sin_venta = filtrar_filas_conciliacion(
+            self.filas, incidencia='cfdi_sin_venta'
+        )
+        cualquier_incidencia = filtrar_filas_conciliacion(
+            self.filas, incidencia='any'
+        )
+
+        self.assertEqual([f['cliente'].id for f in mixtos], [3])
+        self.assertEqual([f['cliente'].id for f in cfdi_sin_venta], [2])
+        self.assertEqual([f['cliente'].id for f in cualquier_incidencia], [1, 2])
+        self.assertEqual(
+            monedas_disponibles_conciliacion(self.filas), ['MXN', 'USD']
+        )
+
+
+class ConciliacionVistaFiltrosTest(ReporteCobranzaBaseTest):
+
+    def test_vista_aplica_filtros_y_conserva_los_saldos_originales(self):
+        from django.contrib.auth.models import AnonymousUser
+        from django.core.cache import cache
+        from django.test import RequestFactory
+
+        cache.clear()
+        cliente = self._cliente('Cliente Vista Filtros')
+        Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=self.sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Nacional',
+            tipo_registro='VENTA',
+            modalidad_pago='Contado',
+            monto=Money('125.00', 'MXN'),
+            cantidad=Decimal('10.000'),
+            fecha_salida_manifiesto=date(2026, 2, 1),
+            fecha_deposito=date(2026, 2, 1),
+        )
+        request = RequestFactory().get('/admin/', {
+            'moneda': 'MXN',
+            'estado_saldo': 'favor',
+            'incidencia': 'cobro_sin_cfdi',
+        })
+        request.user = AnonymousUser()
+        model_admin = ClienteAdmin(Cliente, admin.site)
+
+        response = model_admin.conciliacion_view(request)
+
+        self.assertEqual(response.context_data['selected_moneda'], 'MXN')
+        self.assertEqual(response.context_data['selected_estado_saldo'], 'favor')
+        self.assertEqual(response.context_data['selected_incidencia'], 'cobro_sin_cfdi')
+        self.assertEqual(
+            [fila['cliente'].pk for fila in response.context_data['filas']],
+            [cliente.pk],
+        )
+        self.assertEqual(
+            response.context_data['filas'][0]['saldo_por_moneda'],
+            {'MXN': -125.00},
+        )
+
+    def test_no_muestra_estado_mixto_al_filtrar_una_moneda(self):
+        from django.contrib.auth.models import AnonymousUser
+        from django.core.cache import cache
+        from django.test import RequestFactory
+
+        cache.clear()
+        cliente = self._cliente('Cliente Saldos Mixtos')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            monto=Money('100.00', 'MXN'),
+            moneda='MXN',
+        )
+        Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=self.sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Exportación',
+            tipo_registro='VENTA',
+            modalidad_pago='Contado',
+            monto=Money('5.00', 'USD'),
+            cantidad=Decimal('1.000'),
+            fecha_salida_manifiesto=date(2026, 2, 1),
+            fecha_deposito=date(2026, 2, 1),
+        )
+        request = RequestFactory().get('/admin/', {
+            'moneda': 'MXN',
+            'estado_saldo': 'mixto',
+        })
+        request.user = AnonymousUser()
+        model_admin = ClienteAdmin(Cliente, admin.site)
+
+        response = model_admin.conciliacion_view(request)
+
+        self.assertEqual(response.context_data['selected_moneda'], 'MXN')
+        self.assertEqual(response.context_data['selected_estado_saldo'], '')
+        self.assertNotIn(
+            'mixto',
+            [value for value, _label in response.context_data['estado_saldo_choices']],
+        )
 
 
 class CobradoMxnOrigenTest(ReporteCobranzaBaseTest):
@@ -1448,6 +1778,56 @@ class ConciliacionSaldoYCacheTest(ReporteCobranzaBaseTest):
         self.assertAlmostEqual(doc['monto'], 300.00)
         self.assertEqual(
             cacheada['saldo_por_moneda'], calculada['saldo_por_moneda']
+        )
+
+    def test_fila_serializada_conserva_fechas_y_cfdi_del_desglose(self):
+        """El detalle de cobros sobrevive la serialización JSON de caché."""
+        from ventas.services.conciliacion_service import (
+            _rehidratar_fila,
+            _serializar_fila,
+            conciliacion_cliente,
+        )
+
+        cliente = self._cliente('Cliente Cache Cobros')
+        venta = Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=self.sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Nacional',
+            tipo_registro='VENTA',
+            modalidad_pago='Contado',
+            monto=Money('600.00', 'MXN'),
+            cantidad=Decimal('100.000'),
+            fecha_salida_manifiesto=date(2026, 2, 1),
+            fecha_deposito=date(2026, 2, 1),
+        )
+        documento = DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            folio='CACHE-600',
+            uuid='44444444-4444-4444-4444-444444444444',
+            fecha_emision=date(2026, 2, 1),
+            monto=Money('600.00', 'MXN'),
+            venta=venta,
+        )
+
+        serializada = _serializar_fila(conciliacion_cliente(cliente))
+        origen_json = serializada['cobros_contado_desglose']['MXN'][0]
+
+        self.assertEqual(origen_json['fechas'], ['2026-02-01'])
+        self.assertEqual(
+            origen_json['documentos_cfdi'][0]['fecha_emision'], '2026-02-01'
+        )
+        self.assertEqual(origen_json['documentos_cfdi'][0]['id'], documento.pk)
+
+        rehidratada = _rehidratar_fila(serializada, cliente)
+        origen = rehidratada['cobros_contado_desglose']['MXN'][0]
+        self.assertEqual(origen['fechas'], [date(2026, 2, 1)])
+        self.assertEqual(
+            origen['documentos_cfdi'][0]['fecha_emision'], date(2026, 2, 1)
         )
 
 

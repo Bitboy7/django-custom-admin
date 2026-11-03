@@ -402,9 +402,13 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
         return custom_urls + urls
 
     def conciliacion_view(self, request):
-        """Vista de conciliación de CFDI por cliente (filtros de fecha y cliente)."""
+        """Vista de conciliación de CFDI por cliente con filtros de auditoría."""
         from datetime import date
-        from .services.conciliacion_service import conciliacion_global
+        from .services.conciliacion_service import (
+            conciliacion_global,
+            filtrar_filas_conciliacion,
+            monedas_disponibles_conciliacion,
+        )
 
         def _parse(valor):
             if not valor:
@@ -423,11 +427,54 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
         inicio_raw = request.GET.get('fecha_inicio', '')
         fin_raw = request.GET.get('fecha_fin', '')
         cliente_raw = request.GET.get('cliente_id', '')
-        filas = conciliacion_global(
+        filas_completas = conciliacion_global(
             fecha_inicio=_parse(inicio_raw),
             fecha_fin=_parse(fin_raw),
             cliente_id=_parse_id(cliente_raw),
         )
+        monedas = monedas_disponibles_conciliacion(filas_completas)
+
+        moneda_raw = request.GET.get('moneda', '')
+        selected_moneda = moneda_raw if moneda_raw in monedas else ''
+
+        estado_saldo_choices = [
+            ('deuda', 'Con deuda'),
+            ('favor', 'Saldo a favor'),
+        ]
+        if not selected_moneda:
+            estado_saldo_choices.append(('mixto', 'Saldos mixtos'))
+        estado_saldo_choices.append(('cero', 'Sin saldo'))
+        estado_saldo_valido = {value for value, _label in estado_saldo_choices}
+        estado_saldo_raw = request.GET.get('estado_saldo', '')
+        selected_estado_saldo = (
+            estado_saldo_raw if estado_saldo_raw in estado_saldo_valido else ''
+        )
+
+        incidencia_choices = [
+            ('any', 'Cualquier incidencia'),
+            ('cobro_sin_cfdi', 'Cobros sin CFDI vinculado'),
+            ('cfdi_sin_venta', 'CFDI sin venta asociada'),
+        ]
+        incidencia_valida = {value for value, _label in incidencia_choices}
+        incidencia_raw = request.GET.get('incidencia', '')
+        selected_incidencia = (
+            incidencia_raw if incidencia_raw in incidencia_valida else ''
+        )
+
+        filas = filtrar_filas_conciliacion(
+            filas_completas,
+            moneda=selected_moneda,
+            estado_saldo=selected_estado_saldo,
+            incidencia=selected_incidencia,
+        )
+        filtros_activos = any((
+            inicio_raw,
+            fin_raw,
+            cliente_raw,
+            selected_moneda,
+            selected_estado_saldo,
+            selected_incidencia,
+        ))
         context = dict(
             self.admin_site.each_context(request),
             filas=filas,
@@ -437,6 +484,13 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
             fecha_fin=fin_raw,
             clientes=Cliente.objects.filter(activo=True).order_by('nombre'),
             selected_cliente_id=cliente_raw,
+            monedas=monedas,
+            selected_moneda=selected_moneda,
+            estado_saldo_choices=estado_saldo_choices,
+            selected_estado_saldo=selected_estado_saldo,
+            incidencia_choices=incidencia_choices,
+            selected_incidencia=selected_incidencia,
+            filtros_activos=filtros_activos,
         )
         return TemplateResponse(request, 'admin/ventas/conciliacion.html', context)
     
