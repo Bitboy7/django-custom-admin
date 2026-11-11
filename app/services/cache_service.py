@@ -44,7 +44,7 @@ class CacheService:
     def get(self, key: str, default=None, cache_alias='default') -> Any:
         """Obtiene un valor del cache"""
         try:
-            cache_instance = caches[cache_alias] if cache_alias != 'default' else self.default_cache
+            cache_instance = caches[cache_alias]
             return cache_instance.get(key, default)
         except Exception as e:
             logger.error(f"Error al obtener cache {key}: {e}")
@@ -53,7 +53,7 @@ class CacheService:
     def set(self, key: str, value: Any, timeout: Optional[int] = None, cache_alias='default') -> bool:
         """Establece un valor en cache"""
         try:
-            cache_instance = caches[cache_alias] if cache_alias != 'default' else self.default_cache
+            cache_instance = caches[cache_alias]
             if timeout is None:
                 timeout = 300  # 5 minutos por defecto
             cache_instance.set(key, value, timeout)
@@ -66,7 +66,7 @@ class CacheService:
     def delete(self, key: str, cache_alias='default') -> bool:
         """Elimina una clave del cache"""
         try:
-            cache_instance = caches[cache_alias] if cache_alias != 'default' else self.default_cache
+            cache_instance = caches[cache_alias]
             cache_instance.delete(key)
             logger.debug(f"Cache deleted: {key}")
             return True
@@ -77,7 +77,7 @@ class CacheService:
     def clear_pattern(self, pattern: str, cache_alias='default') -> bool:
         """Elimina todas las claves que coinciden con un patrón"""
         try:
-            cache_instance = caches[cache_alias] if cache_alias != 'default' else self.default_cache
+            cache_instance = caches[cache_alias]
             if hasattr(cache_instance, 'delete_pattern'):
                 cache_instance.delete_pattern(pattern)
                 logger.info(f"Cache pattern cleared: {pattern}")

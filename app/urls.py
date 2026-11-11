@@ -3,6 +3,7 @@ from django.urls import path, include
 from django.conf.urls.i18n import i18n_patterns
 from catalogo.views import index, data
 from .views import export_full_report_to_excel, currency_conversion_api, currency_test_view, user_manual_view, custom_admin_index, profile_settings_view
+from ventas.views import ventas_balances
 from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import redirect
@@ -30,6 +31,15 @@ if settings.DEBUG:
 
 # URLs con prefijo de idioma
 urlpatterns += i18n_patterns(
+    # Compatibilidad con enlaces históricos de balances y compras.
+    path('balances/', ventas_balances, name='balances'),
+    path(
+        'compras/',
+        RedirectView.as_view(
+            pattern_name='admin:gastos_compra_changelist', permanent=False
+        ),
+        name='compras',
+    ),
     path('admin/mi-perfil/', profile_settings_view, name='profile_settings'),
     path("admin/", admin.site.urls),
     path("admin/dashboard/", custom_admin_index, name='custom_admin_index'),

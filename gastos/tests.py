@@ -1,31 +1,59 @@
+from datetime import date
+
 from django.test import TestCase, SimpleTestCase
 from django.utils import timezone
-from .models import Gastos, CatGastos
+
+from catalogo.models import Estado, Pais, Sucursal
+from .models import Banco, Cuenta, Gastos, CatGastos
 from .forms import GastoForm
 from app.services.balance_service import BalanceAnalysisService
 
-class GastosModelTest(TestCase):
+
+class GastosFixturesMixin:
+	@classmethod
+	def setUpTestData(cls):
+		cls.pais = Pais.objects.create(siglas='GTO', nombre='Gastos MX', moneda='MXN')
+		cls.estado = Estado.objects.create(
+			id='GTO_SIN', nombre='Gastos Sinaloa', pais=cls.pais
+		)
+		cls.sucursal = Sucursal.objects.create(
+			nombre='Sucursal Gastos', id_estado=cls.estado
+		)
+		cls.banco = Banco.objects.create(nombre='Banco Gastos')
+		cls.cuenta = Cuenta.objects.create(
+			id_banco=cls.banco,
+			id_sucursal=cls.sucursal,
+			numero_cuenta='GTO-0001',
+		)
+		cls.cat_gastos = CatGastos.objects.create(nombre='Transporte')
+
+
+class GastosModelTest(GastosFixturesMixin, TestCase):
 	def setUp(self):
-		self.cat_gastos = CatGastos.objects.create(nombre="Transporte")
 		self.gasto = Gastos.objects.create(
 			monto=100.0,
 			fecha_registro=timezone.now(),
 			descripcion="Taxi",
-			id_cat_gastos=self.cat_gastos
+			id_sucursal=self.sucursal,
+			id_cuenta_banco=self.cuenta,
+			id_cat_gastos=self.cat_gastos,
 		)
 
 	def test_gastos_creation(self):
 		self.assertTrue(isinstance(self.gasto, Gastos))
-		self.assertEqual(self.gasto.__str__(), self.gasto.descripcion)
+		self.assertIn('Sucursal Gastos', str(self.gasto))
+		self.assertIn('Transporte', str(self.gasto))
 
-class GastoFormTest(TestCase):
+
+class GastoFormTest(GastosFixturesMixin, TestCase):
 	def test_valid_form(self):
-		cat_gastos = CatGastos.objects.create(nombre="Transporte")
 		data = {
 			'monto': 100.0,
-			'fecha_registro': timezone.now(),
+			'fecha': date.today(),
 			'descripcion': "Taxi",
-			'id_cat_gastos': cat_gastos.id
+			'id_sucursal': self.sucursal.id,
+			'id_cuenta_banco': self.cuenta.id,
+			'id_cat_gastos': self.cat_gastos.id,
 		}
 		form = GastoForm(data=data)
 		self.assertTrue(form.is_valid())

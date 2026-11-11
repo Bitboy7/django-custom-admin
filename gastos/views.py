@@ -147,7 +147,7 @@ def guardar_gasto_factura(request):
                     f'</div>'
                 )
                 return _hx_trigger_response(response, 'success', 'Gasto guardado', f'El gasto por ${gasto.monto} fue registrado correctamente.')
-            return redirect('gastos:compras_balances')
+            return redirect('admin:gastos_gastos_balances')
 
     return redirect('gastos:ingresar_gasto_factura')
 

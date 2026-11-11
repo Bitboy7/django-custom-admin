@@ -44,7 +44,7 @@ class BalanceServiceCacheIntegrationTestCase(TestCase):
         cache.clear()
         self.service = BalanceAnalysisService()
         self.client = Client()
-        self.client.login(username='admin_test', password='testpass123')
+        self.client.force_login(self.user)
     
     def tearDown(self):
         """Limpieza después de cada test"""
@@ -203,7 +203,7 @@ class VentasCacheIntegrationTestCase(TestCase):
     def setUp(self):
         cache.clear()
         self.client = Client()
-        self.client.login(username='admin_ventas', password='testpass123')
+        self.client.force_login(self.user)
     
     def tearDown(self):
         cache.clear()
@@ -237,21 +237,16 @@ class VentasCacheIntegrationTestCase(TestCase):
 
 class AdminViewsCacheIntegrationTestCase(TransactionTestCase):
     """Tests de integración para cache en vistas del admin"""
-    
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        # Crear usuario admin
-        cls.user = User.objects.create_superuser(
-            username='admin_views',
-            email='admin_views@test.com',
-            password='testpass123'
-        )
-    
+
     def setUp(self):
         cache.clear()
+        self.user = User.objects.create_superuser(
+            username='admin_views',
+            email='admin_views@test.com',
+            password='testpass123',
+        )
         self.client = Client()
-        self.client.login(username='admin_views', password='testpass123')
+        self.client.force_login(self.user)
     
     def tearDown(self):
         cache.clear()
@@ -309,7 +304,7 @@ class CacheMiddlewareIntegrationTestCase(TestCase):
             password='testpass123'
         )
         self.client = Client()
-        self.client.login(username='middleware_test', password='testpass123')
+        self.client.force_login(self.user)
     
     def tearDown(self):
         cache.clear()
