@@ -454,6 +454,139 @@ html[data-theme="dark"] .conc-head-ico { color: var(--light-blue); }
   font-weight: 700;
 }
 
+/* Aplicación REP y comparación operativo-fiscal */
+.conc-rep-pop { width: min(520px, calc(100vw - 24px)); }
+.conc-rep-entry + .conc-rep-entry {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-default);
+}
+.conc-rep-entry-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.conc-rep-identity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.conc-rep-kind,
+.conc-rep-folio {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+.conc-rep-folio.is-missing { color: var(--text-muted); font-weight: 500; }
+.conc-rep-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 1px var(--space-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+.conc-rep-status.is-exact {
+  border-color: rgba(79, 122, 95, 0.36);
+  background: rgba(79, 122, 95, 0.1);
+  color: var(--conc-credit);
+}
+.conc-rep-status.is-review {
+  border-color: rgba(201, 162, 39, 0.4);
+  background: var(--conc-amber-bg);
+  color: var(--conc-amber-fg);
+}
+.conc-rep-equation {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--space-4);
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border-default);
+  border-radius: 0;
+  background: transparent;
+}
+.conc-rep-equation > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+.conc-rep-equation dt {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+.conc-rep-equation dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-numeric);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: right;
+}
+.conc-rep-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin-top: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+.conc-rep-meta a {
+  color: var(--action-primary);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+.conc-rep-meta a:hover { color: var(--brand-teal-dark); }
+.conc-rep-uuid {
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+.conc-rep-missing-uuid { color: var(--conc-amber-fg); font-weight: 600; }
+.conc-rep-review-note,
+.conc-origin-review {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid rgba(201, 162, 39, 0.4);
+  border-radius: var(--radius-sm);
+  background: var(--conc-amber-bg);
+  color: var(--conc-amber-fg);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+}
+.conc-origin-equation {
+  display: grid;
+  gap: 2px;
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border-default);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--surface-bg);
+}
+.conc-origin-equation > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+.conc-origin-equation strong {
+  color: var(--text-primary);
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.conc-origin-review { margin-top: var(--space-2); }
+.conc-origin-review .conc-rep-uuid { display: block; margin-top: 2px; }
+
 .conc-doc-link {
   display: flex;
   align-items: baseline;
@@ -623,4 +756,10 @@ html[data-theme="dark"] .conc-head-ico { color: var(--light-blue); }
 .conc-crosslink:hover {
   border-color: var(--action-primary);
   color: var(--action-primary);
+}
+
+@media (max-width: 767px) {
+  .conc-rep-equation { grid-template-columns: 1fr; }
+  .conc-rep-entry-head { align-items: flex-start; }
+  .conc-rep-equation > div { align-items: baseline; }
 }

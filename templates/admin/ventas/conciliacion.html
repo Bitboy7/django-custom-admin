@@ -161,7 +161,122 @@
               {% for m, v in f.detalle.notas_credito.items %}<span class="conc-amt">{{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span></span>{% empty %}<span class="conc-empty">—</span>{% endfor %}
             </td>
             <td class="num">
-              {% for m, v in f.detalle.recibos_pago.items %}<span class="conc-amt">{{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span></span>{% empty %}<span class="conc-empty">—</span>{% endfor %}
+              {% for m, v in f.detalle.recibos_pago.items %}
+                {% with aplicaciones=f.rep_desglose_por_moneda|get_item:m %}
+                {% if aplicaciones %}
+                <span class="conc-amt">
+                  <button type="button" class="conc-breakdown-trigger"
+                          data-conc-trigger
+                          aria-haspopup="true"
+                          aria-expanded="false"
+                          aria-controls="rep-origen-{{ f.cliente.id }}-{{ forloop.counter }}"
+                          aria-label="Ver aplicaciones REP por {{ v|floatformat:2 }} {{ m }} para {{ f.cliente.nombre }}"
+                          title="{% trans 'Ver pago operativo, aplicación REP y saldo restante' %}">
+                    {{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span>
+                  </button>
+                </span>
+
+                <div class="conc-pop conc-rep-pop"
+                     id="rep-origen-{{ f.cliente.id }}-{{ forloop.counter }}"
+                     aria-label="Aplicaciones REP de {{ f.cliente.nombre }} en {{ m }}" hidden>
+                  <div class="conc-pop-head">
+                    <span class="conc-pop-title">{% trans "Aplicaciones REP" %} · {{ f.cliente.nombre }}</span>
+                    <span class="conc-pop-sub">
+                      {% blocktrans count counter=aplicaciones|length with total=v|floatformat:2 currency=m %}{{ counter }} movimiento · Total aplicado {{ total }} {{ currency }}{% plural %}{{ counter }} movimientos · Total aplicado {{ total }} {{ currency }}{% endblocktrans %}
+                    </span>
+                  </div>
+                  <div class="conc-pop-body">
+                    {% for rep in aplicaciones %}
+                    <article class="conc-rep-entry">
+                      <div class="conc-rep-entry-head">
+                        <div class="conc-rep-identity">
+                          <span class="conc-rep-kind">REP</span>
+                          {% if rep.folio_rep %}
+                          <span class="conc-rep-folio">{% trans "Folio" %} {{ rep.folio_rep }}</span>
+                          {% else %}
+                          <span class="conc-rep-folio is-missing">{% trans "Folio REP no registrado" %}</span>
+                          {% endif %}
+                          {% if rep.estado_vinculo == 'uuid_coincidente' %}
+                          <span class="conc-rep-status is-exact">{% trans "UUID coincidente" %}</span>
+                          {% else %}
+                          <span class="conc-rep-status is-review">{% trans "Revisión requerida" %}</span>
+                          {% endif %}
+                        </div>
+                        <span class="conc-doc-amt">{{ rep.monto_rep_aplicado|floatformat:2 }}<span class="conc-cur">{{ rep.moneda }}</span></span>
+                      </div>
+
+                      <dl class="conc-rep-equation">
+                        <div>
+                          <dt>{% trans "Pago operativo" %}</dt>
+                          <dd>
+                            {% if rep.monto_operativo != None %}
+                            {{ rep.monto_operativo|floatformat:2 }}<span class="conc-cur">{{ rep.moneda_operativa }}</span>
+                            {% else %}{% trans "Sin PagoVenta vinculado" %}{% endif %}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>{% trans "REP aplicado" %}</dt>
+                          <dd>{{ rep.monto_rep_aplicado|floatformat:2 }}<span class="conc-cur">{{ rep.moneda }}</span></dd>
+                        </div>
+                        <div>
+                          <dt>{% trans "Diferencia operativo-fiscal" %}</dt>
+                          <dd>
+                            {% if rep.diferencia_operativo_fiscal != None %}
+                            {{ rep.diferencia_operativo_fiscal|floatformat:2 }}<span class="conc-cur">{{ rep.moneda }}</span>
+                            {% else %}{% trans "Monedas distintas; no se restan" %}{% endif %}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>{% trans "Remanente según REP" %}</dt>
+                          <dd>
+                            {% if rep.imp_saldo_insoluto != None %}
+                            {{ rep.imp_saldo_insoluto|floatformat:2 }}<span class="conc-cur">{{ rep.moneda }}</span>
+                            {% elif rep.es_legacy %}
+                            {% trans "Monto histórico" %} · {{ rep.monto_rep_aplicado|floatformat:2 }}<span class="conc-cur">{{ rep.moneda }}</span>
+                            {% else %}{% trans "Sin saldo insoluto en XML" %}{% endif %}
+                          </dd>
+                        </div>
+                      </dl>
+
+                      <div class="conc-rep-meta">
+                        <span>
+                          {% if rep.es_legacy %}{% trans "Fecha de emisión (respaldo)" %}{% else %}{% trans "Fecha de Pago" %}{% endif %}:
+                          {% if rep.fecha_pago %}<time datetime="{{ rep.fecha_pago|date:'Y-m-d' }}">{{ rep.fecha_pago|date:'d/m/Y' }}</time>{% else %}{% trans "Sin fecha registrada" %}{% endif %}
+                        </span>
+                        {% if rep.uuid_rep %}<span class="conc-rep-uuid">{% trans "UUID REP" %}: {{ rep.uuid_rep }}</span>{% endif %}
+                        {% if rep.uuid_factura %}
+                          {% if rep.documento_factura_id %}
+                          <a href="{% url 'admin:ventas_documentocfdi_change' rep.documento_factura_id %}">{% trans "Factura exacta" %}: {{ rep.uuid_factura }}</a>
+                          {% else %}
+                          <span class="conc-rep-missing-uuid">{% trans "UUID de factura no encontrado" %}: {{ rep.uuid_factura }}</span>
+                          {% endif %}
+                        {% endif %}
+                      </div>
+                      {% if rep.estado_vinculo != 'uuid_coincidente' %}
+                      <p class="conc-rep-review-note" role="note">
+                        {% if rep.motivo_vinculo == 'no_encontrado' or rep.motivo_vinculo == 'uuid_documento_no_encontrado' %}
+                        {% trans "UUID no encontrado. Revisa el vínculo antes de interpretar el saldo." %}
+                        {% elif rep.motivo_vinculo == 'ambiguo' %}
+                        {% trans "UUID duplicado. Revisión requerida; no se eligió un pago automáticamente." %}
+                        {% elif rep.motivo_vinculo == 'otra_venta' %}
+                        {% trans "El UUID corresponde a otra venta. Revisión requerida." %}
+                        {% else %}
+                        {% trans "La asociación no se pudo confirmar por UUID exacto." %}
+                        {% endif %}
+                      </p>
+                      {% endif %}
+                    </article>
+                    {% endfor %}
+                  </div>
+                  <div class="conc-pop-foot">
+                    {% trans "El saldo insoluto proviene del XML. El detalle fiscal no modifica el PagoVenta operativo." %}
+                  </div>
+                </div>
+                {% else %}
+                <span class="conc-amt">{{ v|floatformat:2 }}<span class="conc-cur">{{ m }}</span></span>
+                {% endif %}
+                {% endwith %}
+              {% empty %}<span class="conc-empty">—</span>{% endfor %}
             </td>
             <td class="num">
               {% for m, v in f.detalle.cobros_contado.items %}
@@ -188,27 +303,41 @@
 
                   <div class="conc-pop-body">
                     <label class="conc-origin-filter">
-                      <span>Filtrar este desglose</span>
-                      <select data-conc-origin-filter aria-label="Filtrar origen de cobros">
-                        <option value="">Todos los orígenes</option>
-                        <option value="venta_contado">Ventas de contado</option>
-                        <option value="pago_sin_rep">Pagos operativos sin REP</option>
+                      <span>{% trans "Filtrar este desglose" %}</span>
+                      <select data-conc-origin-filter aria-label="{% trans 'Filtrar origen de cobros' %}">
+                        <option value="">{% trans "Todos los orígenes" %}</option>
+                        <option value="venta_contado">{% trans "Ventas de contado" %}</option>
+                        <option value="pago_sin_rep">{% trans "Pagos operativos sin REP" %}</option>
                       </select>
                     </label>
                     <p class="conc-origin-summary" data-conc-origin-summary role="status" aria-live="polite"
                        data-total="{{ v|unlocalize }}" data-moneda="{{ m }}" data-count="{{ origenes|length }}">
                       Mostrando {{ origenes|length }} movimientos · Total completo: {{ v|floatformat:2 }} {{ m }}
                     </p>
-                    <p class="conc-origin-empty" data-conc-origin-empty hidden>No hay movimientos de este tipo.</p>
+                    <p class="conc-origin-empty" data-conc-origin-empty hidden>{% trans "No hay movimientos de este tipo." %}</p>
                     {% for origen in origenes %}
                     <article class="conc-origin" data-conc-origin-item="{{ origen.tipo }}"
                              data-conc-origin-amount="{{ origen.monto|unlocalize }}">
                       <div class="conc-origin-head">
                         <span class="conc-origin-kind">
-                          {% if origen.tipo == 'venta_contado' %}Venta de contado{% else %}Pago operativo sin REP{% endif %}
+                          {% if origen.tipo == 'venta_contado' %}{% trans "Venta de contado" %}{% elif origen.rep_aplicado %}{% trans "Diferencia operativo-fiscal" %}{% else %}{% trans "Pago operativo sin REP" %}{% endif %}
                         </span>
                         <span class="conc-doc-amt">{{ origen.monto|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></span>
                       </div>
+
+                      {% if origen.tipo == 'pago_sin_rep' and origen.rep_aplicado %}
+                      <div class="conc-origin-equation" aria-label="{% trans 'Comparación operativo-fiscal' %}">
+                        <div><span>{% trans "Pago operativo" %}</span><strong>{{ origen.monto_operativo|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></strong></div>
+                        <div><span>{% trans "REP aplicado" %}</span><strong>{{ origen.rep_aplicado|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></strong></div>
+                        <div><span>{% trans "Diferencia operativo-fiscal" %}</span><strong>{{ origen.diferencia_operativo_fiscal|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></strong></div>
+                        <div><span>{% trans "Remanente operativo" %}</span><strong>{{ origen.monto|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></strong></div>
+                        <p class="conc-origin-review">
+                          <strong>{% trans "Revisión requerida." %}</strong>
+                          {% if origen.fuente_fecha_rep %}{% trans "Fecha REP" %}: {{ origen.fuente_fecha_rep }}.{% endif %}
+                          {% for uuid in origen.uuids_rep %}<span class="conc-rep-uuid">{% trans "UUID REP" %}: {{ uuid }}</span>{% endfor %}
+                        </p>
+                      </div>
+                      {% endif %}
 
                       <a class="conc-origin-sale" href="{% url 'admin:ventas_ventas_change' origen.venta_id %}">
                         {{ origen.referencia }} <span>· Venta #{{ origen.venta_id }}</span>
@@ -235,7 +364,7 @@
                   </div>
 
                   <div class="conc-pop-foot">
-                    El importe suma ventas de contado y pagos operativos no cubiertos por REP.
+                    {% trans "El importe suma ventas de contado y pagos operativos no cubiertos por REP." %}
                   </div>
                 </div>
                 {% else %}

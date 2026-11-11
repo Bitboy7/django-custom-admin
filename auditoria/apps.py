@@ -8,6 +8,7 @@ class AuditoriaConfig(AppConfig):
     verbose_name = _('Auditoría y Registro de Actividad')
 
     def ready(self):
+        from auditoria import signals  # noqa: F401
         from django.db.models.signals import post_save
         from django.contrib.auth.models import User
         from django.dispatch import receiver
