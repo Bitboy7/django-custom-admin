@@ -14,6 +14,7 @@ from .models import (
 )
 from .forms import (
     VentasAdminForm,
+    PagoVentaInlineForm,
     CFDIUploadForm,
     CFDIConfirmForm,
     AnticipoCFDIUploadForm,
@@ -401,14 +402,95 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
         return custom_urls + urls
 
     def conciliacion_view(self, request):
-        """Vista de conciliación de CFDI por cliente."""
-        from .services.conciliacion_service import conciliacion_global
-        filas = conciliacion_global()
+        """Vista de conciliación de CFDI por cliente con filtros de auditoría."""
+        from datetime import date
+        from .services.conciliacion_service import (
+            conciliacion_global,
+            filtrar_filas_conciliacion,
+            monedas_disponibles_conciliacion,
+        )
+
+        def _parse(valor):
+            if not valor:
+                return None
+            try:
+                return date.fromisoformat(valor)
+            except (ValueError, TypeError):
+                return None
+
+        def _parse_id(valor):
+            try:
+                return int(valor)
+            except (ValueError, TypeError):
+                return None
+
+        inicio_raw = request.GET.get('fecha_inicio', '')
+        fin_raw = request.GET.get('fecha_fin', '')
+        cliente_raw = request.GET.get('cliente_id', '')
+        filas_completas = conciliacion_global(
+            fecha_inicio=_parse(inicio_raw),
+            fecha_fin=_parse(fin_raw),
+            cliente_id=_parse_id(cliente_raw),
+        )
+        monedas = monedas_disponibles_conciliacion(filas_completas)
+
+        moneda_raw = request.GET.get('moneda', '')
+        selected_moneda = moneda_raw if moneda_raw in monedas else ''
+
+        estado_saldo_choices = [
+            ('deuda', 'Con deuda'),
+            ('favor', 'Saldo a favor'),
+        ]
+        if not selected_moneda:
+            estado_saldo_choices.append(('mixto', 'Saldos mixtos'))
+        estado_saldo_choices.append(('cero', 'Sin saldo'))
+        estado_saldo_valido = {value for value, _label in estado_saldo_choices}
+        estado_saldo_raw = request.GET.get('estado_saldo', '')
+        selected_estado_saldo = (
+            estado_saldo_raw if estado_saldo_raw in estado_saldo_valido else ''
+        )
+
+        incidencia_choices = [
+            ('any', 'Cualquier incidencia'),
+            ('cobro_sin_cfdi', 'Cobros sin CFDI vinculado'),
+            ('cfdi_sin_venta', 'CFDI sin venta asociada'),
+        ]
+        incidencia_valida = {value for value, _label in incidencia_choices}
+        incidencia_raw = request.GET.get('incidencia', '')
+        selected_incidencia = (
+            incidencia_raw if incidencia_raw in incidencia_valida else ''
+        )
+
+        filas = filtrar_filas_conciliacion(
+            filas_completas,
+            moneda=selected_moneda,
+            estado_saldo=selected_estado_saldo,
+            incidencia=selected_incidencia,
+        )
+        filtros_activos = any((
+            inicio_raw,
+            fin_raw,
+            cliente_raw,
+            selected_moneda,
+            selected_estado_saldo,
+            selected_incidencia,
+        ))
         context = dict(
             self.admin_site.each_context(request),
             filas=filas,
             title='Conciliación de CFDI por cliente',
             opts=self.model._meta,
+            fecha_inicio=inicio_raw,
+            fecha_fin=fin_raw,
+            clientes=Cliente.objects.filter(activo=True).order_by('nombre'),
+            selected_cliente_id=cliente_raw,
+            monedas=monedas,
+            selected_moneda=selected_moneda,
+            estado_saldo_choices=estado_saldo_choices,
+            selected_estado_saldo=selected_estado_saldo,
+            incidencia_choices=incidencia_choices,
+            selected_incidencia=selected_incidencia,
+            filtros_activos=filtros_activos,
         )
         return TemplateResponse(request, 'admin/ventas/conciliacion.html', context)
     
@@ -444,9 +526,11 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
 # Inline para PagoVenta - debe definirse antes de VentasAdmin
 class PagoVentaInline(admin.TabularInline):
     model = PagoVenta
+    form = PagoVentaInlineForm
     extra = 0
+    template = 'admin/ventas/pagoventa/inline_modal.html'
     readonly_fields = ('fecha_registro',)
-    fields = ('fecha_pago', 'monto_pago', 'cuenta_destino', 'metodo_pago', 'referencia', 'notas')
+    fields = ('fecha_pago', 'monto_pago', 'tipo_cambio', 'cuenta_destino', 'metodo_pago', 'referencia', 'notas')
 
 # Inline para DocumentoCFDI - debe definirse antes de VentasAdmin
 class DocumentoCFDIInline(admin.TabularInline):
@@ -528,7 +612,8 @@ class VentasAdmin(ModelAdmin):
     list_select_related = ('cliente', 'cliente__pais', 'mercado_destino')
 
     class Media:
-        js = ('js/ventas_form_logic.js',)
+        js = ('js/ventas_form_logic.js', 'js/pagoventa_modal.js')
+        css = {'all': ('css/pagoventa_modal.css',)}
     
     list_display = (
         'fecha_salida_manifiesto', 'carga', 'get_cliente_info', 'get_monto_formateado', 
@@ -563,29 +648,34 @@ class VentasAdmin(ModelAdmin):
     ]
     
     fieldsets = (
-        ('Información Básica', {
-            'fields': ('fecha_salida_manifiesto', 'agente_id', 'fecha_deposito',
-                       'carga', 'PO', 'pedimento')
+        ('Tipo de Registro', {
+            'fields': ('tipo_registro',),
+            'description': 'Indica si el ingreso corresponde a una venta, maquila o servicio.',
+            'classes': ('ventas-grid',),
         }),
         ('Concepto y Cliente', {
-            'fields': ('producto', 'cantidad', 'monto', 'cliente',
-                       'sucursal_id', 'descripcion')
+            'fields': ('cliente', 'producto', 'cantidad', 'monto',
+                       'sucursal_id', 'descripcion'),
+            'classes': ('ventas-grid',),
         }),
         ('Modalidad de Pago', {
             'fields': ('modalidad_pago', 'termino_credito', 'fecha_vencimiento',
                        'estado_cobranza', 'monto_pagado'),
-            'classes': ('wide',)
+            'classes': ('ventas-grid',),
+        }),
+        ('Información Básica', {
+            'fields': ('fecha_salida_manifiesto', 'agente_id', 'fecha_deposito',
+                       'carga', 'PO', 'pedimento'),
+            'classes': ('ventas-grid',),
         }),
         ('Mercado y Exportación', {
             'fields': ('tipo_venta', 'mercado_destino', 'incoterm',
                        'moneda_venta', 'tipo_cambio', 'numero_carga_comprador'),
+            'classes': ('ventas-grid',),
         }),
         ('Contabilidad', {
             'fields': ('cuenta', 'anticipo'),
-        }),
-        ('Tipo de Registro', {
-            'fields': ('tipo_registro',),
-            'description': 'Indica si el ingreso corresponde a una venta, maquila o servicio.'
+            'classes': ('ventas-grid',),
         }),
     )
     
@@ -2748,7 +2838,7 @@ class PagoVentaResource(resources.ModelResource):
 
     class Meta:
         model = PagoVenta
-        fields = ('id', 'fecha_pago', 'venta', 'monto_pago', 'cuenta_destino', 'metodo_pago', 'referencia')
+        fields = ('id', 'fecha_pago', 'venta', 'monto_pago', 'tipo_cambio', 'cuenta_destino', 'metodo_pago', 'referencia')
         import_id_fields = ('id',)
 
 @admin.register(PagoVenta)
@@ -2759,7 +2849,7 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
     """
     resource_class = PagoVentaResource
     change_list_template = 'admin/ventas/pagoventa/change_list.html'
-    list_display = ('fecha_pago', 'get_venta_info', 'monto_pago', 'metodo_pago', 'get_saldo_pendiente', 'folio_rep', 'get_comprobante', 'referencia', 'fecha_registro')
+    list_display = ('fecha_pago', 'get_venta_info', 'monto_pago', 'tipo_cambio', 'metodo_pago', 'get_saldo_pendiente', 'folio_rep', 'get_comprobante', 'referencia', 'fecha_registro')
     list_select_related = ('venta', 'venta__cliente', 'documento_cfdi')
     list_filter = ('fecha_pago', 'metodo_pago', 'venta__cliente', 'venta__estado_cobranza')
     search_fields = ('venta__carga', 'venta__cliente__nombre', 'referencia', 'notas', 'folio_rep', 'uuid_rep')
@@ -2814,7 +2904,7 @@ class PagoVentaAdmin(ImportExportModelAdmin, ModelAdmin):
     
     fieldsets = (
         ('Información del Pago', {
-            'fields': ('venta', 'get_saldo_venta', 'fecha_pago', 'monto_pago'),
+            'fields': ('venta', 'get_saldo_venta', 'fecha_pago', 'monto_pago', 'tipo_cambio'),
             'description': mark_safe(
                 '<strong style="color:#5a7d6b;">⚠️ Controles Bancarios Activos:</strong> '
                 'No se permiten pagos a ventas completadas ni sobrepagos.'
@@ -3743,13 +3833,6 @@ class PaisInline(admin.TabularInline):
 list_editable = ('activo',)
 inlines = [PaisInline]
 exclude = ('paises',)
-
-# Inline para PagoVenta - debe definirse antes de VentasAdmin
-class PagoVentaInline(admin.TabularInline):
-    model = PagoVenta
-    extra = 0
-    readonly_fields = ('fecha_registro',)
-    fields = ('fecha_pago', 'monto_pago', 'cuenta_destino', 'metodo_pago', 'referencia', 'notas')
 
 
 # =============================================================================

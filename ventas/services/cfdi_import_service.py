@@ -14,7 +14,7 @@ PagoVenta / DocumentoCFDI, conforme a la taxonomía del cliente:
 import json
 import re
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
 from django.utils import timezone
@@ -413,6 +413,31 @@ def _moneda_recibo(parsed):
     return parsed.get('moneda_venta') or 'MXN'
 
 
+def _tipo_cambio_recibo(parsed, venta, moneda):
+    """Tipo de cambio (MXN por unidad) de un recibo electrónico de pago.
+
+    Prioridad: ``TipoCambioP`` del complemento, luego el tipo de cambio del
+    CFDI/venta y, por último, 1.0 (pagos en pesos). Así el equivalente MXN de
+    un REP en moneda extranjera no queda subvaluado con el default 1.0.
+    """
+    if moneda == 'MXN':
+        return Decimal('1.0000')
+
+    raw = None
+    if parsed.get('pagos'):
+        raw = parsed['pagos'][0].get('tipo_cambio')
+    raw = raw or parsed.get('tipo_cambio') or (venta.tipo_cambio if venta else None)
+
+    try:
+        tipo_cambio = Decimal(str(raw)) if raw not in (None, '') else Decimal('1.0000')
+    except (InvalidOperation, ValueError):
+        tipo_cambio = Decimal('1.0000')
+
+    if tipo_cambio <= 0:
+        tipo_cambio = Decimal('1.0000')
+    return tipo_cambio
+
+
 def crear_documento(parsed, *, cliente, subtipo=None, venta=None,
                     anticipo=None, pago_venta=None, estado='VIGENTE',
                     conceptos=None, archivo_pdf=None, archivo_xml=None):
@@ -597,6 +622,7 @@ def _crear_recibo_pago(parsed, cliente, cuenta, archivo_pdf=None, archivo_xml=No
                     venta=venta,
                     fecha_pago=fecha_pago,
                     monto_pago=Money(monto_pago, moneda),
+                    tipo_cambio=_tipo_cambio_recibo(parsed, venta, moneda),
                     cuenta_destino=cuenta_destino,
                     metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
                     referencia=num_operacion,

@@ -61,30 +61,89 @@ html body #jazzy-navbar .btn-navbar i {
   color: var(--navbar-text, rgba(244, 244, 249, 0.9)) !important;
 }
 
-/* Brand */
+/* Brand lockup — the uploaded company logo sits on a light plate so it stays
+   legible over the dark sidebar no matter the logo's own colours. */
 body .brand-link {
   background: var(--sidebar-brand-bg) !important;
   border-bottom: 1px solid var(--sidebar-brand-border, var(--sidebar-border)) !important;
-  padding: var(--space-3) var(--space-6) !important;
+  padding: var(--space-2) var(--space-4) !important;
   font-family: var(--font-display);
   font-weight: 600;
   font-size: var(--font-size-md);
   letter-spacing: -0.01em;
   color: var(--sidebar-brand-text) !important;
+  display: flex !important;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 72px;
+  position: relative;
+}
+body .brand-link::after {
+  content: "";
+  position: absolute;
+  left: var(--space-4);
+  right: var(--space-4);
+  bottom: -1px;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--brand-teal-light, #b8dbd9) 50%,
+    transparent 100%
+  );
+  opacity: 0.55;
+  pointer-events: none;
 }
 body .brand-text {
+  display: block !important;
+  min-width: 0;
+  max-width: 140px;
   font-size: var(--font-size-sm) !important;
-  max-width: 160px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: none !important;
+  color: var(--sidebar-brand-text) !important;
 }
 
-/* Hide navbar logo and images */
+/* Company logo (loaded from SiteConfiguration.company_logo). The logo sits as
+   an emblem beside the short company name written in the brand area. */
 body .brand-link .brand-image,
 body .brand-link img {
+  display: block !important;
+  width: auto !important;
+  height: 52px;
+  max-height: 52px !important;
+  max-width: 160px;
+  padding: 4px 10px;
+  object-fit: contain;
+  background: #ffffff;
+  border-radius: 10px !important;
+  opacity: 1 !important;
+  flex-shrink: 0;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 6px 14px rgba(0, 0, 0, 0.22);
+}
+
+/* Collapsed sidebar: keep the logo mark inside the narrow rail */
+html body.sidebar-collapse aside#jazzy-sidebar .brand-link {
+  justify-content: center;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+html body.sidebar-collapse aside#jazzy-sidebar .brand-link .brand-text {
   display: none !important;
+}
+html body.sidebar-collapse aside#jazzy-sidebar .brand-link img.brand-image,
+html body.sidebar-collapse aside#jazzy-sidebar .brand-link img {
+  width: auto !important;
+  height: 36px !important;
+  max-height: 36px !important;
+  max-width: 40px;
+  padding: 3px 4px;
 }
 
 /* Navbar search */
@@ -105,6 +164,247 @@ body .form-control-navbar:focus {
   background: rgba(255, 255, 255, 0.12) !important;
   border-color: var(--brand-teal) !important;
   box-shadow: 0 0 0 3px rgba(88, 111, 124, 0.25) !important;
+}
+
+/* ── Professional navbar layout ───────────────────────────────── */
+html body #jazzy-navbar .container-fluid {
+  gap: var(--space-2);
+  padding-inline: var(--space-4);
+}
+
+html body #jazzy-navbar .navbar-nav {
+  align-items: center;
+  gap: var(--space-1);
+}
+
+html body #jazzy-navbar .navbar-nav > .nav-item > .nav-link {
+  position: relative;
+}
+
+/* Menu toggle — square target, never a stretched link */
+html body #jazzy-navbar .nav-link[data-lte-toggle="sidebar"] {
+  width: 40px;
+  min-height: 40px !important;
+  padding: 0 !important;
+  justify-content: center;
+  border-radius: 10px;
+}
+html body #jazzy-navbar .nav-link[data-lte-toggle="sidebar"] i {
+  font-size: 1rem;
+}
+
+/* Active page marker for top navigation */
+html body #jazzy-navbar .navbar-nav > .nav-item > .nav-link.jaz-nav-current {
+  color: var(--navbar-text-active, #fff) !important;
+  background: rgba(184, 219, 217, 0.12) !important;
+}
+html body #jazzy-navbar .navbar-nav > .nav-item > .nav-link.jaz-nav-current::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 6px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--brand-teal-light, #b8dbd9);
+}
+html body #jazzy-navbar .jaz-topmenu-item > .nav-link i {
+  margin-right: var(--space-2);
+  font-size: 0.78rem;
+  opacity: 0.85;
+}
+
+/* Vertical separators between navigation groups */
+html body #jazzy-navbar .jaz-nav-divider {
+  width: 1px;
+  height: 22px;
+  margin: 0 var(--space-1);
+  padding: 0;
+  align-self: center;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* Compact, consistent utility buttons */
+html body #jazzy-navbar .navbar-nav .nav-link.jaz-utility,
+html body #jazzy-navbar .navbar-nav .nav-link.btn.jaz-utility {
+  width: 40px;
+  min-height: 40px !important;
+  padding: 0 !important;
+  justify-content: center;
+  border-radius: 10px !important;
+}
+html body #jazzy-navbar .navbar-nav .nav-link.jaz-utility i,
+html body #jazzy-navbar .navbar-nav .nav-link.btn.jaz-utility i {
+  font-size: 0.95rem;
+}
+html body #jazzy-navbar .navbar-nav .nav-link.btn.jaz-avatar-btn {
+  padding: 3px 10px 3px 3px !important;
+  min-height: 40px !important;
+  border-radius: var(--radius-full) !important;
+}
+html body #jazzy-navbar .theme-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+/* Search — pill field with icon, keyboard hint and a round submit */
+html body #jazzy-navbar form.d-flex {
+  flex: 0 1 340px;
+  min-width: 170px;
+  margin-left: auto !important;
+  margin-right: var(--space-2) !important;
+}
+html body #jazzy-navbar .navbar-nav.ms-auto {
+  margin-left: 0 !important;
+}
+html body #jazzy-navbar form.d-flex .input-group {
+  position: relative;
+  width: 100%;
+  align-items: center;
+}
+html body #jazzy-navbar .form-control-navbar {
+  height: 40px;
+  border-radius: var(--radius-full) !important;
+  padding-left: 2.5rem !important;
+  padding-right: 5rem !important;
+}
+html body #jazzy-navbar .form-control-navbar::placeholder {
+  color: rgba(244, 244, 249, 0.64) !important;
+}
+html body #jazzy-navbar .jaz-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  z-index: 2;
+  transform: translateY(-50%);
+  color: rgba(244, 244, 249, 0.55);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+html body #jazzy-navbar .jaz-search-kbd {
+  position: absolute;
+  right: 46px;
+  top: 50%;
+  z-index: 2;
+  transform: translateY(-50%);
+  padding: 2px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(244, 244, 249, 0.7);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+  pointer-events: none;
+}
+html body #jazzy-navbar .btn-navbar {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0 !important;
+  transform: translateY(-50%);
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: rgba(244, 244, 249, 0.7) !important;
+}
+html body #jazzy-navbar .btn-navbar:hover,
+html body #jazzy-navbar .btn-navbar:focus-visible {
+  background: rgba(184, 219, 217, 0.16) !important;
+  color: #fff !important;
+}
+
+/* Brand shown in the top bar only where the sidebar is off-canvas */
+html body #jazzy-navbar .jaz-nav-brand-item {
+  display: none;
+  padding: 0;
+}
+html body #jazzy-navbar .jaz-navbar-brand {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 4px !important;
+}
+html body #jazzy-navbar .jaz-navbar-brand .jaz-brand-plate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 3px 9px;
+  border-radius: 9px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+html body #jazzy-navbar .jaz-navbar-brand img {
+  display: block;
+  width: auto;
+  height: 30px;
+  max-width: 112px;
+  object-fit: contain;
+}
+
+/* Keyboard-only skip link */
+.jaz-skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 2000;
+  padding: 10px 14px;
+  transform: translateY(-160%);
+  border-radius: 8px;
+  background: var(--brand-teal-light, #b8dbd9);
+  color: #0b1c22;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  transition: transform var(--duration-fast) var(--ease-default);
+}
+.jaz-skip-link:focus {
+  transform: translateY(0);
+  outline: 3px solid #ffffff;
+  outline-offset: 2px;
+}
+
+@media (max-width: 1199.98px) {
+  html body #jazzy-navbar .jaz-search-kbd {
+    display: none;
+  }
+  html body #jazzy-navbar .form-control-navbar {
+    padding-right: 3rem !important;
+  }
+}
+@media (max-width: 991.98px) {
+  html body #jazzy-navbar .jaz-nav-brand-item {
+    display: flex;
+    align-items: center;
+  }
+  html body #jazzy-navbar .jaz-topmenu-item {
+    display: none !important;
+  }
+}
+@media (max-width: 767.98px) {
+  html body #jazzy-navbar form.d-flex {
+    display: none !important;
+  }
+  html body #jazzy-navbar .navbar-nav.ms-auto {
+    margin-left: auto !important;
+  }
+  body .brand-link .brand-image,
+  body .brand-link img {
+    height: 46px;
+    max-height: 46px !important;
+    max-width: 140px;
+  }
 }
 
 /* ── Avatar pill in navbar ────────────────────────────────────── */
@@ -163,9 +463,23 @@ body .jaz-avatar-name {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+body .jaz-avatar-chevron {
+  flex-shrink: 0;
+  margin-left: 2px;
+  color: var(--text-on-dark-muted);
+  font-size: 0.6rem;
+  transition: transform var(--duration-fast) var(--ease-default);
+}
+body .jaz-avatar-btn[aria-expanded="true"] .jaz-avatar-chevron {
+  transform: rotate(180deg);
+}
 @media (max-width: 767px) {
   body .jaz-avatar-name {
     display: none !important;
+  }
+  body .jaz-avatar-btn {
+    min-height: 40px;
+    padding: 3px 8px 3px 3px !important;
   }
 }
 

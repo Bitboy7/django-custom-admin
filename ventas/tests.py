@@ -21,7 +21,10 @@ from decimal import Decimal
 from types import SimpleNamespace
 
 from django.contrib import admin
+from django.http import HttpResponse
 from django.test import SimpleTestCase, TestCase
+from django.urls import path
+from django.views.i18n import set_language
 from djmoney.money import Money
 
 from catalogo.models import Estado, Pais, Producto, Sucursal
@@ -56,11 +59,23 @@ from ventas.tests_cfdi_parser import (
 )
 from ventas.admin import (
     CFDI_UPLOAD_LIMITS,
+    ClienteAdmin,
     VentasAdmin,
     _pdf_response,
     _validar_archivo_cfdi,
 )
 from ventas.forms import CFDIConfirmForm
+
+def _empty_test_view(request, *args, **kwargs):
+    return HttpResponse()
+
+
+urlpatterns = [
+    path('admin/mi-perfil/', _empty_test_view, name='profile_settings'),
+    path('manual/', _empty_test_view, name='user_manual'),
+    path('admin/', admin.site.urls),
+    path('i18n/setlang/', set_language, name='set_language'),
+]
 
 
 class VentasAdminDisplayTest(SimpleTestCase):
@@ -220,7 +235,7 @@ class ReporteCobranzaBaseTest(TestCase):
         )
 
     def _venta_credito(self, cliente, monto, anticipo=None,
-                       fecha=date(2026, 2, 1)):
+                       fecha=date(2026, 2, 1), moneda='MXN'):
         """
         Crea una Venta a crédito que queda en estado 'Pendiente'
         (ESTADOS_CON_DEUDA) sin invocar full_clean.
@@ -234,8 +249,8 @@ class ReporteCobranzaBaseTest(TestCase):
             tipo_venta='Nacional',
             tipo_registro='VENTA',
             modalidad_pago='Credito',
-            monto=Money(monto, 'MXN'),
-            monto_pagado=Money('0.00', 'MXN'),
+            monto=Money(monto, moneda),
+            monto_pagado=Money('0.00', moneda),
             cantidad=Decimal('100.000'),
             fecha_salida_manifiesto=fecha,
             fecha_deposito=fecha,
@@ -676,6 +691,44 @@ class CFDIImportServiceTest(ReporteCobranzaBaseTest):
             DocumentoCFDI.objects.filter(uuid=parsed['uuid']).count(), 1
         )
 
+    def test_recibo_pago_usd_conserva_tipo_cambio_del_complemento(self):
+        """Un REP en USD debe guardar su TipoCambioP para no subvaluar el
+        equivalente en pesos (monto_pago_mxn)."""
+        cliente = self._cliente('Cliente REP USD')
+        venta = self._venta_credito(cliente, '2000.00', moneda='USD')
+        uuid_factura = 'AA000000-0000-0000-0000-000000000001'
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_EXPORTACION,
+            uuid=uuid_factura,
+            monto=Money('2000.00', 'USD'),
+            moneda='USD',
+            venta=venta,
+        )
+        xml = (
+            XML_RECIBO_PAGO_20
+            .replace('MonedaP="MXN"', 'MonedaP="USD"')
+            .replace('TipoCambioP="1"', 'TipoCambioP="17.50"')
+            .replace('Monto="162480.00"', 'Monto="2000.00"')
+            .replace('ImpSaldoAnt="162480.00" ImpPagado="162480.00"',
+                     'ImpSaldoAnt="2000.00" ImpPagado="2000.00"')
+            .replace('IdDocumento="28C06FD3-D87D-45C5-8C4D-D4927FCD3A64"',
+                     f'IdDocumento="{uuid_factura}"')
+            .replace('UUID="10BEF933-60EF-45B5-AB78-40C7D9A6246D"',
+                     'UUID="BB000000-0000-0000-0000-000000000002"')
+        )
+        parsed = parse_cfdi(xml.encode())
+
+        pago, _documento, subtipo = importar_cfdi(
+            parsed, cliente=cliente, cuenta=self.cuenta,
+        )
+
+        self.assertEqual(subtipo, 'recibo_pago')
+        self.assertEqual(pago.monto_pago, Money('2000.00', 'USD'))
+        self.assertEqual(pago.tipo_cambio, Decimal('17.5000'))
+        self.assertEqual(pago.monto_pago_mxn, Decimal('35000.00'))
+
     def test_match_producto_usa_conceptos_del_cfdi(self):
         parsed = parse_cfdi(XML_MULTI_CONCEPTOS.encode())
 
@@ -1073,6 +1126,24 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
         # 10000 producto + 1000 servicio + 500 - 200 - 3000 - 1000 = 7300
         self.assertAlmostEqual(cliente.saldo_conciliado(), 7300.00)
 
+    def test_otros_ingresos_sin_cfdi_suma_al_facturado_y_al_saldo(self):
+        """Un ingreso capturado sin CFDI ('otros_ingresos') se comporta como una
+        factura: suma al facturado y al saldo conciliado del cliente."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente Otros Ingresos')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='otros_ingresos',
+            monto=Money('1500.00', 'MXN'),
+        )
+
+        self.assertAlmostEqual(cliente.saldo_conciliado(), 1500.00)
+        fila = conciliacion_cliente(cliente)
+        self.assertAlmostEqual(
+            fila['detalle']['facturado'].get('MXN', 0.0), 1500.00
+        )
+        self.assertAlmostEqual(fila['saldo_por_moneda'].get('MXN', 0.0), 1500.00)
+
     def _venta_contado(self, cliente, monto, moneda='MXN',
                        fecha=date(2026, 2, 1)):
         """Venta de contado (PUE): queda pagada al crearse, sin REP."""
@@ -1106,6 +1177,71 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
         fila = conciliacion_cliente(cliente)
         self.assertAlmostEqual(fila['saldo_por_moneda'].get('USD', 0.0), 0.0)
 
+    def test_desglose_cobros_contado_identifica_ventas_pagos_y_cfdi(self):
+        """El detalle de cobros debe explicar el total y su vínculo fiscal."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente con desglose de cobros')
+
+        venta_con_cfdi = self._venta_contado(cliente, '1000.00')
+        Ventas.objects.filter(pk=venta_con_cfdi.pk).update(carga='CARGA-CONTADO')
+        factura_contado = DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            folio='F-1000', uuid='11111111-1111-1111-1111-111111111111',
+            monto=Money('1000.00', 'MXN'), venta=venta_con_cfdi,
+        )
+
+        venta_sin_cfdi = self._venta_contado(cliente, '240.00')
+
+        venta_con_pago = self._venta_credito(cliente, '5000.00')
+        Ventas.objects.filter(pk=venta_con_pago.pk).update(carga='CARGA-CREDITO')
+        factura_credito = DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            folio='F-5000', uuid='22222222-2222-2222-2222-222222222222',
+            monto=Money('5000.00', 'MXN'), venta=venta_con_pago,
+        )
+        pago = PagoVenta.objects.create(
+            venta=venta_con_pago,
+            fecha_pago=date(2026, 3, 4),
+            monto_pago=Money('400.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+        )
+        recibo = DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='P', subtipo='recibo_pago',
+            folio='REP-100', uuid='33333333-3333-3333-3333-333333333333',
+            monto=Money('100.00', 'MXN'), venta=venta_con_pago,
+            pago_venta=pago,
+        )
+
+        fila = conciliacion_cliente(cliente)
+        desglose = fila['cobros_contado_desglose']['MXN']
+        por_venta = {item['venta_id']: item for item in desglose}
+
+        self.assertAlmostEqual(fila['detalle']['cobros_contado']['MXN'], 1540.00)
+        self.assertAlmostEqual(sum(item['monto'] for item in desglose), 1540.00)
+
+        contado = por_venta[venta_con_cfdi.pk]
+        self.assertEqual(contado['tipo'], 'venta_contado')
+        self.assertEqual(contado['referencia'], 'CARGA-CONTADO')
+        self.assertEqual(contado['fechas'], [date(2026, 2, 1)])
+        self.assertEqual(contado['moneda'], 'MXN')
+        self.assertEqual(contado['documentos_cfdi'][0]['id'], factura_contado.pk)
+
+        sin_cfdi = por_venta[venta_sin_cfdi.pk]
+        self.assertEqual(sin_cfdi['documentos_cfdi'], [])
+
+        pago_sin_rep = por_venta[venta_con_pago.pk]
+        self.assertEqual(pago_sin_rep['tipo'], 'pago_sin_rep')
+        self.assertEqual(pago_sin_rep['referencia'], 'CARGA-CREDITO')
+        self.assertEqual(pago_sin_rep['fechas'], [date(2026, 3, 4)])
+        self.assertAlmostEqual(pago_sin_rep['monto'], 300.00)
+        self.assertEqual(
+            {doc['id'] for doc in pago_sin_rep['documentos_cfdi']},
+            {factura_credito.pk, recibo.pk},
+        )
+
+
     def test_venta_credito_pagada_por_rep_no_resta_doble(self):
         """El pago registrado por REP no debe descontarse dos veces."""
         from ventas.services.conciliacion_service import conciliacion_cliente
@@ -1133,6 +1269,566 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
         self.assertAlmostEqual(cliente.saldo_conciliado(), 0.0)
         fila = conciliacion_cliente(cliente)
         self.assertAlmostEqual(fila['saldo_por_moneda'].get('MXN', 0.0), 0.0)
+
+
+class ConciliacionOrigenTemplateTest(SimpleTestCase):
+
+    def test_cobro_contado_expone_origen_y_avisa_si_no_hay_cfdi(self):
+        from django.template.loader import render_to_string
+        from django.test import RequestFactory, override_settings
+        from django.contrib.auth.models import AnonymousUser
+
+        cliente = SimpleNamespace(id=81, nombre='Cliente trazable')
+        fila = {
+            'cliente': cliente,
+            'detalle': {
+                'facturado': {},
+                'notas_cargo': {},
+                'notas_credito': {},
+                'recibos_pago': {},
+                'cobros_contado': {'MXN': 48040.00},
+                'anticipos_disponibles': {},
+            },
+            'cobros_contado_desglose': {
+                'MXN': [{
+                    'tipo': 'venta_contado',
+                    'venta_id': 741,
+                    'referencia': 'CARGA-SIN-CFDI',
+                    'fechas': [date(2026, 2, 1)],
+                    'monto': 48040.00,
+                    'moneda': 'MXN',
+                    'documentos_cfdi': [],
+                }],
+            },
+            'pagos_mxn': 48040.00,
+            'saldo_por_moneda': {'MXN': 0.00},
+            'total_documentos': 0,
+            'documentos_sin_venta': 0,
+            'sin_venta_detalle': [],
+        }
+
+        with override_settings(ROOT_URLCONF='ventas.tests'):
+            request = RequestFactory().get('/admin/')
+            request.user = AnonymousUser()
+            html = render_to_string(
+                'admin/ventas/conciliacion.html',
+                {
+                    'title': 'Conciliación',
+                    'site_title': 'Admin',
+                    'filas': [fila],
+                    'clientes': [],
+                    'monedas': ['MXN', 'USD'],
+                    'estado_saldo_choices': [
+                        ('deuda', 'Con deuda'),
+                        ('favor', 'Saldo a favor'),
+                        ('mixto', 'Saldos mixtos'),
+                        ('cero', 'Sin saldo'),
+                    ],
+                    'incidencia_choices': [
+                        ('any', 'Cualquier incidencia'),
+                        ('cobro_sin_cfdi', 'Cobros sin CFDI vinculado'),
+                        ('cfdi_sin_venta', 'CFDI sin venta asociada'),
+                    ],
+                    'fecha_inicio': '',
+                    'fecha_fin': '',
+                    'selected_cliente_id': '',
+                    'selected_moneda': 'MXN',
+                    'selected_estado_saldo': 'deuda',
+                    'selected_incidencia': 'any',
+                },
+                request=request,
+            )
+
+        self.assertIn('data-conc-trigger', html)
+        self.assertIn('CARGA-SIN-CFDI', html)
+        self.assertIn('01/02/2026', html)
+        self.assertIn('Sin CFDI vinculado', html)
+        self.assertIn('admin/ventas/ventas/741/change/', html)
+        self.assertIn('name="moneda"', html)
+        self.assertIn('name="estado_saldo"', html)
+        self.assertIn('name="incidencia"', html)
+        self.assertIn('data-conc-origin-filter', html)
+
+
+class ConciliacionFiltrosTest(SimpleTestCase):
+
+    def setUp(self):
+        self.filas = [
+            {
+                'cliente': SimpleNamespace(id=1, nombre='Cliente MXN'),
+                'detalle': {
+                    'facturado': {'MXN': 500.00},
+                    'cobros_contado': {'MXN': 300.00},
+                    'anticipos_disponibles': {},
+                },
+                'saldo_por_moneda': {'MXN': 200.00},
+                'documentos_sin_venta': 0,
+                'cobros_contado_desglose': {
+                    'MXN': [{'documentos_cfdi': []}],
+                },
+            },
+            {
+                'cliente': SimpleNamespace(id=2, nombre='Cliente USD'),
+                'detalle': {
+                    'facturado': {'USD': 50.00},
+                    'cobros_contado': {},
+                    'anticipos_disponibles': {},
+                },
+                'saldo_por_moneda': {'USD': -50.00},
+                'documentos_sin_venta': 1,
+                'cobros_contado_desglose': {},
+            },
+            {
+                'cliente': SimpleNamespace(id=3, nombre='Cliente Mixto'),
+                'detalle': {
+                    'facturado': {'MXN': 200.00, 'USD': 20.00},
+                    'cobros_contado': {},
+                    'anticipos_disponibles': {},
+                },
+                'saldo_por_moneda': {'MXN': 100.00, 'USD': -20.00},
+                'documentos_sin_venta': 0,
+                'cobros_contado_desglose': {
+                    'MXN': [{'documentos_cfdi': [{'id': 90}]}],
+                },
+            },
+        ]
+
+    def test_combina_moneda_estado_e_incidencia_sin_recalcular_saldos(self):
+        from ventas.services.conciliacion_service import (
+            filtrar_filas_conciliacion,
+        )
+
+        resultado = filtrar_filas_conciliacion(
+            self.filas,
+            moneda='MXN',
+            estado_saldo='deuda',
+            incidencia='cobro_sin_cfdi',
+        )
+
+        self.assertEqual([f['cliente'].id for f in resultado], [1])
+        self.assertEqual(resultado[0]['saldo_por_moneda'], {'MXN': 200.00})
+        self.assertEqual(resultado[0]['detalle']['facturado'], {'MXN': 500.00})
+
+    def test_detecta_saldos_mixtos_y_documentos_sin_venta(self):
+        from ventas.services.conciliacion_service import (
+            filtrar_filas_conciliacion,
+            monedas_disponibles_conciliacion,
+        )
+
+        mixtos = filtrar_filas_conciliacion(self.filas, estado_saldo='mixto')
+        cfdi_sin_venta = filtrar_filas_conciliacion(
+            self.filas, incidencia='cfdi_sin_venta'
+        )
+        cualquier_incidencia = filtrar_filas_conciliacion(
+            self.filas, incidencia='any'
+        )
+
+        self.assertEqual([f['cliente'].id for f in mixtos], [3])
+        self.assertEqual([f['cliente'].id for f in cfdi_sin_venta], [2])
+        self.assertEqual([f['cliente'].id for f in cualquier_incidencia], [1, 2])
+        self.assertEqual(
+            monedas_disponibles_conciliacion(self.filas), ['MXN', 'USD']
+        )
+
+
+class ConciliacionVistaFiltrosTest(ReporteCobranzaBaseTest):
+
+    def test_vista_aplica_filtros_y_conserva_los_saldos_originales(self):
+        from django.contrib.auth.models import AnonymousUser
+        from django.core.cache import cache
+        from django.test import RequestFactory
+
+        cache.clear()
+        cliente = self._cliente('Cliente Vista Filtros')
+        Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=self.sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Nacional',
+            tipo_registro='VENTA',
+            modalidad_pago='Contado',
+            monto=Money('125.00', 'MXN'),
+            cantidad=Decimal('10.000'),
+            fecha_salida_manifiesto=date(2026, 2, 1),
+            fecha_deposito=date(2026, 2, 1),
+        )
+        request = RequestFactory().get('/admin/', {
+            'moneda': 'MXN',
+            'estado_saldo': 'favor',
+            'incidencia': 'cobro_sin_cfdi',
+        })
+        request.user = AnonymousUser()
+        model_admin = ClienteAdmin(Cliente, admin.site)
+
+        response = model_admin.conciliacion_view(request)
+
+        self.assertEqual(response.context_data['selected_moneda'], 'MXN')
+        self.assertEqual(response.context_data['selected_estado_saldo'], 'favor')
+        self.assertEqual(response.context_data['selected_incidencia'], 'cobro_sin_cfdi')
+        self.assertEqual(
+            [fila['cliente'].pk for fila in response.context_data['filas']],
+            [cliente.pk],
+        )
+        self.assertEqual(
+            response.context_data['filas'][0]['saldo_por_moneda'],
+            {'MXN': -125.00},
+        )
+
+    def test_no_muestra_estado_mixto_al_filtrar_una_moneda(self):
+        from django.contrib.auth.models import AnonymousUser
+        from django.core.cache import cache
+        from django.test import RequestFactory
+
+        cache.clear()
+        cliente = self._cliente('Cliente Saldos Mixtos')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            monto=Money('100.00', 'MXN'),
+            moneda='MXN',
+        )
+        Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=self.sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Exportación',
+            tipo_registro='VENTA',
+            modalidad_pago='Contado',
+            monto=Money('5.00', 'USD'),
+            cantidad=Decimal('1.000'),
+            fecha_salida_manifiesto=date(2026, 2, 1),
+            fecha_deposito=date(2026, 2, 1),
+        )
+        request = RequestFactory().get('/admin/', {
+            'moneda': 'MXN',
+            'estado_saldo': 'mixto',
+        })
+        request.user = AnonymousUser()
+        model_admin = ClienteAdmin(Cliente, admin.site)
+
+        response = model_admin.conciliacion_view(request)
+
+        self.assertEqual(response.context_data['selected_moneda'], 'MXN')
+        self.assertEqual(response.context_data['selected_estado_saldo'], '')
+        self.assertNotIn(
+            'mixto',
+            [value for value, _label in response.context_data['estado_saldo_choices']],
+        )
+
+
+class CobradoMxnOrigenTest(ReporteCobranzaBaseTest):
+    """
+    Documenta el origen de la columna «Cobrado MXN» y por qué no tiene por qué
+    coincidir con «Pagos (REP)».
+
+    «Cobrado MXN» (= ``pagos_mxn``) NO sale del CFDI. Es el total de dinero
+    realmente cobrado, expresado en pesos:
+      - ``PagoVenta.monto_pago_mxn`` (pagos operativos, convertidos con su
+        tipo de cambio), y
+      - el ``monto_pagado`` de ventas de contado sin pago registrado (PUE),
+        convertido con el tipo de cambio de la venta.
+
+    «Pagos (REP)» (= ``detalle['recibos_pago']``) sale del ledger fiscal: suma
+    los DocumentoCFDI con subtipo ``recibo_pago``, en su moneda, por el monto
+    completo del comprobante. Por eso ambas pueden divergir.
+    """
+
+    def _venta_contado_usd(self, cliente, monto, tipo_cambio,
+                           fecha=date(2026, 2, 1)):
+        venta = Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=self.sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Nacional',
+            tipo_registro='VENTA',
+            modalidad_pago='Contado',
+            monto=Money(monto, 'USD'),
+            cantidad=Decimal('100.000'),
+            fecha_salida_manifiesto=fecha,
+            fecha_deposito=fecha,
+        )
+        Ventas.objects.filter(pk=venta.pk).update(
+            tipo_cambio=Decimal(tipo_cambio)
+        )
+        venta.refresh_from_db()
+        return venta
+
+    def test_cobrado_mxn_de_contado_usd_es_equivalencia_fx(self):
+        """Caso WORLD PRODUCE: contado en USD -> Cobrado MXN es el equivalente
+        en pesos al tipo de cambio de la venta, no un dato del CFDI."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente Contado USD')
+        venta = self._venta_contado_usd(cliente, '434000.00', '17.8260')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_exportacion',
+            monto=Money('434000.00', 'USD'), moneda='USD', venta=venta,
+        )
+
+        fila = conciliacion_cliente(cliente)
+
+        # 434,000 USD x 17.8260 = 7,736,484.00 (aprox. lo visto en pantalla)
+        self.assertAlmostEqual(fila['pagos_mxn'], 7736484.00, places=2)
+        # No hay ningún recibo de pago (REP) en el ledger fiscal...
+        self.assertEqual(fila['detalle']['recibos_pago'], {})
+        # ...el cobro de contado vive en dólares, no en pesos.
+        self.assertAlmostEqual(
+            fila['detalle']['cobros_contado'].get('USD', 0.0), 434000.00
+        )
+
+    def test_rep_sin_pagoventa_aparece_en_rep_pero_no_en_cobrado_mxn(self):
+        """Un REP importado sin PagoVenta suma en «Pagos (REP)» pero no en
+        «Cobrado MXN»: así se explica que la columna REP sea mayor."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente REP Huérfano')
+        venta = self._venta_credito(cliente, '9000.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            monto=Money('9000.00', 'MXN'), venta=venta,
+        )
+        # Complemento de pago importado pero sin PagoVenta asociado
+        # (importación legacy o venta que ya no está en cobro).
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='P', subtipo='recibo_pago',
+            monto=Money('4000.00', 'MXN'), venta=venta,
+        )
+
+        fila = conciliacion_cliente(cliente)
+
+        self.assertAlmostEqual(fila['detalle']['recibos_pago']['MXN'], 4000.00)
+        self.assertEqual(fila['pagos_mxn'], 0.0)
+
+    def test_pagoventa_topado_al_saldo_deja_cobrado_mxn_bajo_el_rep(self):
+        """Si el PagoVenta se topó al saldo (como hace la importación de REP),
+        «Cobrado MXN» queda por debajo del monto del comprobante."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente REP Tope')
+        venta = self._venta_credito(cliente, '5000.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            monto=Money('5000.00', 'MXN'), venta=venta,
+        )
+        pago = PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 3, 1),
+            monto_pago=Money('5000.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+        )
+        # El CFDI (REP) declara 8,000 pero el pago operativo quedó en 5,000.
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='P', subtipo='recibo_pago',
+            monto=Money('8000.00', 'MXN'), venta=venta, pago_venta=pago,
+        )
+
+        fila = conciliacion_cliente(cliente)
+
+        self.assertAlmostEqual(fila['detalle']['recibos_pago']['MXN'], 8000.00)
+        self.assertAlmostEqual(fila['pagos_mxn'], 5000.00)
+
+
+class PagoVentaFormLabelTest(ReporteCobranzaBaseTest):
+    """El selector de «Venta» en el admin de Pagos de Ventas no debe mostrar
+    «None» cuando la venta no tiene número de carga."""
+
+    def _etiqueta(self, venta):
+        from ventas.forms_banking import PagoVentaForm
+
+        form = PagoVentaForm()
+        return dict(form.fields['venta'].choices)[venta.pk]
+
+    def test_venta_sin_carga_usa_folio_interno_en_la_etiqueta(self):
+        cliente = self._cliente('Cliente Sin Carga')
+        venta = self._venta_credito(cliente, '1000.00')
+
+        etiqueta = self._etiqueta(venta)
+
+        self.assertNotIn('None', etiqueta)
+        self.assertIn(cliente.nombre, etiqueta)
+        self.assertIn(f'V-{venta.pk}', etiqueta)
+        self.assertIn('Saldo:', etiqueta)
+
+    def test_venta_con_carga_conserva_la_referencia(self):
+        cliente = self._cliente('Cliente Con Carga')
+        venta = self._venta_credito(cliente, '1000.00')
+        Ventas.objects.filter(pk=venta.pk).update(carga='CARGA-123')
+        venta.refresh_from_db()
+
+        etiqueta = self._etiqueta(venta)
+
+        self.assertIn('CARGA-123', etiqueta)
+        self.assertNotIn('None', etiqueta)
+
+
+class ConciliacionSaldoYCacheTest(ReporteCobranzaBaseTest):
+    """El saldo conciliado del cliente debe venir de una sola fuente
+    (saldo_por_moneda) y la conciliación global debe cachearse por rango."""
+
+    def test_saldo_conciliado_es_la_suma_del_saldo_por_moneda(self):
+        """Cliente multimoneda: el saldo total es la suma del desglose."""
+        from ventas.services.conciliacion_service import saldo_por_moneda
+
+        cliente = self._cliente('Cliente Saldo Unificado')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            monto=Money('1000.00', 'MXN'),
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_exportacion',
+            monto=Money('200.00', 'USD'), moneda='USD',
+        )
+
+        saldos = saldo_por_moneda(cliente)
+
+        self.assertAlmostEqual(saldos.get('MXN'), 1000.00)
+        self.assertAlmostEqual(saldos.get('USD'), 200.00)
+        self.assertAlmostEqual(cliente.saldo_conciliado(), 1200.00)
+
+    def test_saldo_conciliado_coincide_con_conciliacion_cliente(self):
+        """saldo_conciliado() y conciliacion_cliente() no deben divergir."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente Saldo Consistente')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            monto=Money('5000.00', 'MXN'),
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='P', subtipo='recibo_pago',
+            monto=Money('2000.00', 'MXN'),
+        )
+        self._anticipo(cliente, '500.00')
+
+        fila = conciliacion_cliente(cliente)
+        esperado = round(sum(fila['saldo_por_moneda'].values()), 2)
+
+        self.assertAlmostEqual(cliente.saldo_conciliado(), esperado)
+
+    def test_conciliacion_global_filtra_por_cliente(self):
+        """``conciliacion_global`` puede limitarse a un cliente (filtro)."""
+        from ventas.services.conciliacion_service import conciliacion_global
+
+        cliente_a = self._cliente('Cliente Filtro A')
+        self._cliente('Cliente Filtro B')
+
+        filas = conciliacion_global(cliente_id=cliente_a.pk)
+
+        self.assertEqual([f['cliente'].pk for f in filas], [cliente_a.pk])
+
+    def test_conciliacion_global_cachea_por_rango(self):
+        """La segunda llamada con el mismo rango no recalcula por cliente: solo
+        reevalúa la lista de clientes (1 consulta) y rehidrata desde el cache."""
+        from django.core.cache import cache
+        from django.test import override_settings
+        from ventas.services.conciliacion_service import conciliacion_global
+
+        caches_locmem = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            }
+        }
+        self._cliente('Cliente Cache Conciliacion')
+
+        with override_settings(CACHES=caches_locmem):
+            cache.clear()
+            conciliacion_global()  # primera: calcula y cachea
+            with self.assertNumQueries(1):  # solo la consulta de clientes
+                conciliacion_global()
+
+    def test_conciliacion_global_rehidrata_desde_cache(self):
+        """Al leer del cache, la fila conserva cliente, tipos (fecha/monto) y el
+        desglose de documentos sin vincular."""
+        from django.core.cache import cache
+        from django.test import override_settings
+        from ventas.services.conciliacion_service import conciliacion_global
+
+        caches_locmem = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            }
+        }
+        cliente = self._cliente('Cliente Cache Detalle')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='nota_cargo',
+            monto=Money('300.00', 'MXN'), fecha_emision=date(2026, 3, 10),
+        )
+
+        with override_settings(CACHES=caches_locmem):
+            cache.clear()
+            primera = conciliacion_global()
+            segunda = conciliacion_global()
+
+        calculada = next(f for f in primera if f['cliente'].pk == cliente.pk)
+        cacheada = next(f for f in segunda if f['cliente'].pk == cliente.pk)
+
+        self.assertEqual(cacheada['cliente'].nombre, cliente.nombre)
+        grupos = cacheada['sin_venta_detalle']
+        self.assertEqual(len(grupos), 1)
+        doc = grupos[0]['documentos'][0]
+        self.assertEqual(doc['fecha'], date(2026, 3, 10))
+        self.assertAlmostEqual(doc['monto'], 300.00)
+        self.assertEqual(
+            cacheada['saldo_por_moneda'], calculada['saldo_por_moneda']
+        )
+
+    def test_fila_serializada_conserva_fechas_y_cfdi_del_desglose(self):
+        """El detalle de cobros sobrevive la serialización JSON de caché."""
+        from ventas.services.conciliacion_service import (
+            _rehidratar_fila,
+            _serializar_fila,
+            conciliacion_cliente,
+        )
+
+        cliente = self._cliente('Cliente Cache Cobros')
+        venta = Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=self.sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Nacional',
+            tipo_registro='VENTA',
+            modalidad_pago='Contado',
+            monto=Money('600.00', 'MXN'),
+            cantidad=Decimal('100.000'),
+            fecha_salida_manifiesto=date(2026, 2, 1),
+            fecha_deposito=date(2026, 2, 1),
+        )
+        documento = DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            folio='CACHE-600',
+            uuid='44444444-4444-4444-4444-444444444444',
+            fecha_emision=date(2026, 2, 1),
+            monto=Money('600.00', 'MXN'),
+            venta=venta,
+        )
+
+        serializada = _serializar_fila(conciliacion_cliente(cliente))
+        origen_json = serializada['cobros_contado_desglose']['MXN'][0]
+
+        self.assertEqual(origen_json['fechas'], ['2026-02-01'])
+        self.assertEqual(
+            origen_json['documentos_cfdi'][0]['fecha_emision'], '2026-02-01'
+        )
+        self.assertEqual(origen_json['documentos_cfdi'][0]['id'], documento.pk)
+
+        rehidratada = _rehidratar_fila(serializada, cliente)
+        origen = rehidratada['cobros_contado_desglose']['MXN'][0]
+        self.assertEqual(origen['fechas'], [date(2026, 2, 1)])
+        self.assertEqual(
+            origen['documentos_cfdi'][0]['fecha_emision'], date(2026, 2, 1)
+        )
 
 
 # =============================================================================
@@ -1179,3 +1875,75 @@ class CFDIConfirmFormTest(ReporteCobranzaBaseTest):
             pais_cliente=self.pais.pk,
         ))
         self.assertTrue(form.is_valid(), form.errors)
+
+
+# =============================================================================
+# Análisis de Ventas (balances) — caracterización para el refactor
+# =============================================================================
+
+class VentasBalancesContextTest(ReporteCobranzaBaseTest):
+    """Fija el comportamiento de ``build_ventas_balances_context`` antes de
+    simplificar la función."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+
+    def _request(self, **params):
+        from django.http import QueryDict
+
+        q = QueryDict('', mutable=True)
+        for key, value in params.items():
+            q[key] = value
+        return SimpleNamespace(GET=q)
+
+    def _context(self, **params):
+        from ventas.views import build_ventas_balances_context
+
+        return build_ventas_balances_context(self._request(**params))
+
+    def test_totales_y_agrupacion_mensual(self):
+        cliente = self._cliente('Cliente Balances Mes')
+        self._venta_credito(cliente, '1000.00', fecha=date(2026, 1, 10))
+        self._venta_credito(cliente, '2000.00', fecha=date(2026, 2, 10))
+
+        ctx = self._context(
+            cliente_id=str(cliente.pk), year='2026', periodo='mensual',
+        )
+
+        self.assertAlmostEqual(ctx['total_ventas'], 3000.00)
+        self.assertEqual(ctx['numero_transacciones'], 2)
+        self.assertEqual(len(ctx['balances']), 2)
+        self.assertAlmostEqual(ctx['balances'][0]['total_ventas'], 1000.00)
+        self.assertAlmostEqual(ctx['balances'][1]['total_ventas'], 2000.00)
+        self.assertAlmostEqual(ctx['balances'][1]['acumulado'], 3000.00)
+
+    def test_filtra_por_cliente(self):
+        cliente_a = self._cliente('Cliente Balances A')
+        cliente_b = self._cliente('Cliente Balances B')
+        self._venta_credito(cliente_a, '1000.00', fecha=date(2026, 1, 5))
+        self._venta_credito(cliente_b, '9999.00', fecha=date(2026, 1, 5))
+
+        ctx = self._context(
+            cliente_id=str(cliente_a.pk), year='2026', periodo='mensual',
+        )
+
+        self.assertAlmostEqual(ctx['total_ventas'], 1000.00)
+        self.assertEqual(
+            [b['cliente_nombre'] for b in ctx['balances']],
+            ['Cliente Balances A'],
+        )
+
+    def test_agrupacion_diaria(self):
+        cliente = self._cliente('Cliente Balances Dia')
+        self._venta_credito(cliente, '500.00', fecha=date(2026, 3, 5))
+        self._venta_credito(cliente, '700.00', fecha=date(2026, 3, 5))
+
+        ctx = self._context(
+            cliente_id=str(cliente.pk), periodo='diario', tipo_fecha='rango',
+            fecha_inicio='2026-03-01', fecha_fin='2026-03-31',
+        )
+
+        self.assertAlmostEqual(ctx['total_ventas'], 1200.00)
+        self.assertEqual(len(ctx['balances']), 1)
+        self.assertAlmostEqual(ctx['balances'][0]['total_ventas'], 1200.00)

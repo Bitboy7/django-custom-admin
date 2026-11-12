@@ -1,0 +1,100 @@
+{% load i18n %}
+{% comment %}
+Inline de Pagos de Ventas con edición en modal.
+
+El formset real (campos de cada pago + management form) vive oculto en
+.pv-forms; la tabla .pv-summary es solo una vista compacta. El modal mueve
+los .pv-field del renglón seleccionado, de modo que el POST y la validación
+siguen siendo los del formset inline de Django (funciona en agregar y editar).
+{% endcomment %}
+<div class="pagoventa-modal-group inline-group"
+     id="{{ inline_admin_formset.formset.prefix }}-group"
+     data-prefix="{{ inline_admin_formset.formset.prefix }}"
+     data-has-change="{% if inline_admin_formset.has_change_permission %}1{% else %}0{% endif %}"
+     data-has-delete="{% if inline_admin_formset.has_delete_permission and inline_admin_formset.formset.can_delete %}1{% else %}0{% endif %}">
+
+  {{ inline_admin_formset.formset.management_form }}
+  {{ inline_admin_formset.formset.non_form_errors }}
+
+  <div class="pv-toolbar">
+    <button type="button" class="pv-add button">
+      <span aria-hidden="true">+</span> {% trans "Agregar pago" %}
+    </button>
+  </div>
+
+  <table class="pv-summary">
+    <thead>
+      <tr>
+        <th>{% trans "Fecha pago" %}</th>
+        <th>{% trans "Monto pago" %}</th>
+        <th>{% trans "Cuenta destino" %}</th>
+        <th>{% trans "Método pago" %}</th>
+        <th class="pv-actions-col"><span class="sr-only">{% trans "Acciones" %}</span></th>
+      </tr>
+    </thead>
+    <tbody class="pv-summary-body">
+      {% for inline_admin_form in inline_admin_formset %}
+        {% if not forloop.last or not inline_admin_formset.has_add_permission %}
+          <tr class="pv-summary-row" data-index="{{ forloop.counter0 }}">
+            <td>{% if inline_admin_form.original %}{{ inline_admin_form.original.fecha_pago|date:"d/m/Y" }}{% endif %}</td>
+            <td class="pv-monto">{% if inline_admin_form.original %}{{ inline_admin_form.original.monto_pago }}{% endif %}</td>
+            <td>{% if inline_admin_form.original %}{{ inline_admin_form.original.cuenta_destino }}{% endif %}</td>
+            <td>{% if inline_admin_form.original %}{{ inline_admin_form.original.get_metodo_pago_display }}{% endif %}</td>
+            <td class="pv-actions">
+              {% if inline_admin_formset.has_change_permission %}
+                <button type="button" class="pv-edit" title="{% trans 'Editar' %}" aria-label="{% trans 'Editar pago' %}">✏️</button>
+              {% endif %}
+              {% if inline_admin_formset.has_delete_permission and inline_admin_formset.formset.can_delete %}
+                <button type="button" class="pv-delete" title="{% trans 'Eliminar' %}" aria-label="{% trans 'Eliminar pago' %}">✕</button>
+              {% endif %}
+            </td>
+          </tr>
+        {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="pv-empty-msg">{% trans "Sin pagos registrados." %}</p>
+
+  <div class="pv-forms" hidden>
+    {% for inline_admin_form in inline_admin_formset %}
+      <div class="pv-form"
+           data-index="{% if forloop.last and inline_admin_formset.has_add_permission %}__prefix__{% else %}{{ forloop.counter0 }}{% endif %}"
+           data-original="{% if inline_admin_form.original %}1{% else %}0{% endif %}">
+        {{ inline_admin_form.pk_field.field }}
+        {% if inline_admin_form.fk_field %}{{ inline_admin_form.fk_field.field }}{% endif %}
+        {% if inline_admin_formset.formset.can_delete %}{{ inline_admin_form.deletion_field.field }}{% endif %}
+        {% for fieldset in inline_admin_form %}
+          {% for line in fieldset %}
+            {% for field in line %}
+              {% if field.field.is_hidden %}
+                {{ field.field }}
+              {% else %}
+                <div class="pv-field field-{{ field.field.name }}">
+                  <label for="{{ field.field.id_for_label }}">{{ field.field.label }}</label>
+                  {{ field.field }}
+                  <div class="pv-errors">{{ field.field.errors }}</div>
+                </div>
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="pv-modal" id="pv-modal-{{ inline_admin_formset.formset.prefix }}" hidden>
+  <div class="pv-modal-backdrop" data-pv-close></div>
+  <div class="pv-modal-dialog" role="dialog" aria-modal="true"
+       aria-labelledby="pv-modal-title-{{ inline_admin_formset.formset.prefix }}">
+    <header class="pv-modal-header">
+      <h3 class="pv-modal-title" id="pv-modal-title-{{ inline_admin_formset.formset.prefix }}">{% trans "Pago de venta" %}</h3>
+      <button type="button" class="pv-modal-close" data-pv-close aria-label="{% trans 'Cerrar' %}">&times;</button>
+    </header>
+    <div class="pv-modal-body"></div>
+    <footer class="pv-modal-footer">
+      <button type="button" class="pv-modal-cancel button" data-pv-close>{% trans "Cancelar" %}</button>
+      <button type="button" class="pv-modal-accept button">{% trans "Aceptar" %}</button>
+    </footer>
+  </div>
+</div>
