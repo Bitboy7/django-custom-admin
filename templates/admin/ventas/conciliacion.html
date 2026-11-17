@@ -23,46 +23,57 @@
 
     <header class="conc-head">
       <div class="conc-head-ico" aria-hidden="true"><i class="fas fa-scale-balanced"></i></div>
-      <div>
+      <div class="conc-head-text">
         <h1 class="conc-title">Conciliación de CFDI por cliente</h1>
         <p class="conc-sub">
-          Saldo por cobrar <strong>conciliado entre CFDI y cobros operativos</strong>
-          (facturado + notas de cargo − notas de crédito − pagos (REP) − cobros de contado − anticipos).
-          Solo se consideran documentos <strong>vigentes</strong>.
+          Saldo por cobrar conciliado entre CFDI y cobros operativos. Solo documentos <strong>vigentes</strong>.
         </p>
       </div>
-      <a class="conc-crosslink" href="{% url 'admin:ventas_ventas_balances' %}">
-        <i class="fas fa-chart-line" aria-hidden="true"></i> Ver Análisis de Ventas
-      </a>
+      <div class="conc-head-actions">
+        <button type="button" class="conc-help-trigger"
+                id="conc-help-trigger"
+                aria-expanded="false"
+                aria-controls="conc-help-panel">
+          <i class="fas fa-circle-question" aria-hidden="true"></i>
+          <span>¿Cómo se calcula?</span>
+        </button>
+        <a class="conc-crosslink" href="{% url 'admin:ventas_ventas_balances' %}">
+          <i class="fas fa-chart-line" aria-hidden="true"></i> Ver Análisis de Ventas
+        </a>
+      </div>
     </header>
 
-    <div class="conc-note conc-note--warn" role="note">
-      <span class="conc-note-ico" aria-hidden="true"><i class="fas fa-circle-exclamation"></i></span>
-      <p>
-        <strong>“Sin vincular”</strong> muestra notas de cargo/crédito o recibos de pago que no se pudieron
-        ligar a una venta. <strong>Eso no significa que la venta no tenga factura.</strong> Para ver si una
-        venta está sin CFDI, revisa el desglose que aparece al dar clic en “Cobros contado / sin REP”.
-      </p>
-    </div>
+    <div class="conc-help-panel" id="conc-help-panel" role="region" aria-labelledby="conc-help-trigger" hidden>
+      <div class="conc-note conc-note--warn" role="note">
+        <span class="conc-note-ico" aria-hidden="true"><i class="fas fa-circle-exclamation"></i></span>
+        <p>
+          <strong>“Sin vincular”</strong> muestra notas de cargo/crédito o recibos de pago que no se pudieron
+          ligar a una venta. <strong>Eso no significa que la venta no tenga factura.</strong> Para ver si una
+          venta está sin CFDI, revisa el desglose que aparece al dar clic en “Cobros contado / sin REP”.
+        </p>
+      </div>
 
-    <div class="conc-note" role="note">
-      <span class="conc-note-ico" aria-hidden="true"><i class="fas fa-circle-info"></i></span>
-      <p>
-        <strong>El saldo conciliado</strong> se calcula así:<br>
-        Facturado + Notas de cargo − Notas de crédito − Pagos (REP) − Cobros contado/sin REP − Anticipos.
-        Todo se agrupa por moneda.
-      </p>
-      <p>
-        <strong>Facturado, notas y pagos REP</strong> salen de los CFDI vigentes registrados en el sistema.
-        <strong>Cobros contado / sin REP</strong> son pagos que ya se recibieron pero que aún no tienen un
-        REP asociado: ventas de contado y pagos manuales. Da clic en cualquier importe de estas columnas
-        para ver de qué venta proviene.
-      </p>
-      <p>
-        <strong>Cobrado en pesos (equiv.)</strong> es una referencia operativa: suma los pagos registrados y
-        las ventas de contado, convertidos a pesos. No tiene por qué coincidir con la columna “Pagos (REP)”,
-        porque una es información fiscal y la otra es información operativa.
-      </p>
+      <div class="conc-note" role="note">
+        <span class="conc-note-ico" aria-hidden="true"><i class="fas fa-circle-info"></i></span>
+        <div>
+          <p>
+            <strong>El saldo conciliado</strong> se calcula así:<br>
+            Facturado + Notas de cargo − Notas de crédito − Pagos (REP) − Cobros contado/sin REP − Anticipos.
+            Todo se agrupa por moneda.
+          </p>
+          <p>
+            <strong>Facturado, notas y pagos REP</strong> salen de los CFDI vigentes registrados en el sistema.
+            <strong>Cobros contado / sin REP</strong> son pagos que ya se recibieron pero que aún no tienen un
+            REP asociado: ventas de contado y pagos manuales. Da clic en cualquier importe de estas columnas
+            para ver de qué venta proviene.
+          </p>
+          <p>
+            <strong>Cobrado en pesos (equiv.)</strong> es una referencia operativa: suma los pagos registrados y
+            las ventas de contado, convertidos a pesos. No tiene por qué coincidir con la columna “Pagos (REP)”,
+            porque una es información fiscal y la otra es información operativa.
+          </p>
+        </div>
+      </div>
     </div>
 
     <form class="conc-filters" method="get">

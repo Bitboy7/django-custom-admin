@@ -185,6 +185,17 @@
         trigger.focus();
       }
     });
+
+    // Panel de ayuda colapsable en el header
+    var helpTrigger = document.getElementById('conc-help-trigger');
+    var helpPanel = document.getElementById('conc-help-panel');
+    if (helpTrigger && helpPanel) {
+      helpTrigger.addEventListener('click', function () {
+        var expanded = helpTrigger.getAttribute('aria-expanded') === 'true';
+        helpTrigger.setAttribute('aria-expanded', String(!expanded));
+        helpPanel.hidden = expanded;
+      });
+    }
   }
 
   if (document.readyState === 'loading') {
