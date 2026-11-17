@@ -2130,7 +2130,275 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
         self.assertEqual(rep['documento_factura_id'], factura.pk)
         self.assertEqual(rep['folio_rep'], '')
         self.assertEqual(rep['estado_vinculo'], 'revision_requerida')
-        self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], 0.00)
+        # El saldo insoluto declarado en el REP sigue pendiente; no debe
+        # contabilizarse como cobro de contado / sin REP solo porque el
+        # PagoVenta operativo fue registrado por el importe total.
+        self.assertAlmostEqual(
+            fila['detalle']['cobros_contado'].get('MXN', 0.00), 0.00,
+        )
+        self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], 48040.00)
+
+    def test_rep_parcial_sin_saldo_insoluto_lo_deriva_de_saldo_anterior(self):
+        """Si el XML/importación dejó saldo_insoluto vacío pero sí guardó
+        ImpSaldoAnt, el sistema debe derivar el saldo insoluto y no contar
+        ese importe como cobro de contado / sin REP."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente REP sin saldo insoluto guardado')
+        venta = self._venta_credito(cliente, '446880.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            uuid='FACTURA-SIN-SALDO-INS',
+            monto=Money('446880.00', 'MXN'),
+            moneda='MXN',
+            venta=venta,
+        )
+        PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 7, 3),
+            monto_pago=Money('446880.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='P',
+            subtipo='recibo_pago',
+            uuid='REP-SIN-SALDO-INS',
+            fecha_emision=date(2026, 7, 3),
+            monto=Money('398840.00', 'MXN'),
+            moneda='MXN',
+            venta=venta,
+            detalle_complemento={
+                'vinculo_pago': {'estado': 'no_encontrado'},
+                'pagos': [
+                    {
+                        'fecha_pago': '2026-07-03',
+                        'monto': '398840.00',
+                        'moneda': 'MXN',
+                        'doctos': [
+                            {
+                                'uuid': 'FACTURA-SIN-SALDO-INS',
+                                'imp_pagado': '398840.00',
+                                'saldo_anterior': '446880.00',
+                                'saldo_insoluto': '',
+                                'moneda': 'MXN',
+                            },
+                        ],
+                    },
+                ],
+            },
+        )
+
+        fila = conciliacion_cliente(cliente)
+
+        rep = fila['rep_desglose'][0]
+        self.assertAlmostEqual(rep['imp_saldo_insoluto'], 48040.00)
+        self.assertAlmostEqual(
+            fila['detalle']['cobros_contado'].get('MXN', 0.00), 0.00,
+        )
+        self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], 48040.00)
+
+    def test_rep_parcial_multiples_pagos_usa_menor_saldo_insoluto(self):
+        """Dos REPs parciales sobre la misma factura: el saldo insoluto a
+        usar es el más reciente (menor), no la suma de ambos."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente REP parcial multipago')
+        venta = self._venta_credito(cliente, '500000.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            uuid='FACTURA-MULTI-REP',
+            monto=Money('500000.00', 'MXN'),
+            moneda='MXN',
+            venta=venta,
+        )
+        PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 7, 3),
+            monto_pago=Money('500000.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+        )
+        for uuid_rep, imp_pagado, saldo_insoluto in (
+            ('REP-PARCIAL-1', '200000.00', '300000.00'),
+            ('REP-PARCIAL-2', '150000.00', '150000.00'),
+        ):
+            DocumentoCFDI.objects.create(
+                cliente=cliente,
+                tipo='P',
+                subtipo='recibo_pago',
+                uuid=uuid_rep,
+                fecha_emision=date(2026, 7, 3),
+                monto=Money(imp_pagado, 'MXN'),
+                moneda='MXN',
+                venta=venta,
+                detalle_complemento={
+                    'vinculo_pago': {'estado': 'no_encontrado'},
+                    'pagos': [{
+                        'fecha_pago': '2026-07-03',
+                        'monto': imp_pagado,
+                        'moneda': 'MXN',
+                        'doctos': [{
+                            'uuid': 'FACTURA-MULTI-REP',
+                            'imp_pagado': imp_pagado,
+                            'saldo_insoluto': saldo_insoluto,
+                            'moneda': 'MXN',
+                        }],
+                    }],
+                },
+            )
+
+        fila = conciliacion_cliente(cliente)
+
+        self.assertAlmostEqual(
+            fila['detalle']['recibos_pago']['MXN'], 350000.00,
+        )
+        self.assertAlmostEqual(
+            fila['detalle']['cobros_contado'].get('MXN', 0.00), 0.00,
+        )
+        self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], 150000.00)
+
+    def test_filtro_sucursal_excluye_ventas_y_anticipos_de_otra_sucursal(self):
+        """Al pasar sucursal_id solo se concilian documentos, pagos y ventas
+        de esa sucursal; los anticipos se excluyen."""
+        from catalogo.models import Sucursal
+        from ventas.services.conciliacion_service import (
+            conciliacion_cliente,
+            conciliacion_global,
+        )
+
+        otra_sucursal = Sucursal.objects.create(
+            nombre='Otra Sucursal', id_estado=self.estado,
+        )
+        cliente = self._cliente('Cliente Dos Sucursales')
+
+        # Sucursal A: factura de 10,000 con REP de 4,000
+        venta_a = Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=self.sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Nacional',
+            tipo_registro='VENTA',
+            modalidad_pago='Credito',
+            monto=Money('10000.00', 'MXN'),
+            monto_pagado=Money('0.00', 'MXN'),
+            cantidad=Decimal('100.000'),
+            fecha_salida_manifiesto=date(2026, 2, 1),
+            fecha_deposito=date(2026, 2, 1),
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            uuid='FACTURA-SUC-A',
+            monto=Money('10000.00', 'MXN'),
+            moneda='MXN',
+            venta=venta_a,
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='P',
+            subtipo='recibo_pago',
+            uuid='REP-SUC-A',
+            fecha_emision=date(2026, 2, 1),
+            monto=Money('4000.00', 'MXN'),
+            moneda='MXN',
+            venta=venta_a,
+            detalle_complemento={
+                'pagos': [{
+                    'fecha_pago': '2026-02-01',
+                    'doctos': [{
+                        'uuid': 'FACTURA-SUC-A',
+                        'imp_pagado': '4000.00',
+                        'saldo_insoluto': '6000.00',
+                        'moneda': 'MXN',
+                    }],
+                }],
+            },
+        )
+
+        # Sucursal B: factura de 5,000 sin REP
+        venta_b = Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=otra_sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Nacional',
+            tipo_registro='VENTA',
+            modalidad_pago='Credito',
+            monto=Money('5000.00', 'MXN'),
+            monto_pagado=Money('0.00', 'MXN'),
+            cantidad=Decimal('100.000'),
+            fecha_salida_manifiesto=date(2026, 2, 1),
+            fecha_deposito=date(2026, 2, 1),
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            uuid='FACTURA-SUC-B',
+            monto=Money('5000.00', 'MXN'),
+            moneda='MXN',
+            venta=venta_b,
+        )
+
+        # Anticipo sin sucursal: 2,000
+        Anticipo.objects.create(
+            cliente=cliente,
+            cuenta=self.cuenta,
+            monto=Money('2000.00', 'MXN'),
+            fecha=date(2026, 2, 1),
+            estado_anticipo='Pendiente',
+        )
+
+        # Sin filtro: 15,000 facturado - 4,000 REP - 2,000 anticipo = 9,000
+        fila_total = conciliacion_cliente(cliente)
+        self.assertAlmostEqual(
+            fila_total['detalle']['facturado']['MXN'], 15000.00
+        )
+        self.assertAlmostEqual(
+            fila_total['detalle']['recibos_pago']['MXN'], 4000.00
+        )
+        self.assertAlmostEqual(
+            fila_total['detalle']['anticipos_disponibles']['MXN'], 2000.00
+        )
+        self.assertAlmostEqual(fila_total['saldo_por_moneda']['MXN'], 9000.00)
+
+        # Filtro sucursal A: 10,000 - 4,000 = 6,000 (anticipo excluido)
+        fila_a = conciliacion_cliente(
+            cliente, sucursal_id=self.sucursal.id
+        )
+        self.assertAlmostEqual(fila_a['detalle']['facturado']['MXN'], 10000.00)
+        self.assertAlmostEqual(fila_a['detalle']['recibos_pago']['MXN'], 4000.00)
+        self.assertNotIn('MXN', fila_a['detalle']['anticipos_disponibles'])
+        self.assertAlmostEqual(fila_a['saldo_por_moneda']['MXN'], 6000.00)
+        self.assertEqual(fila_a['documentos_sin_venta'], 0)
+
+        # Filtro sucursal B: 5,000 sin REP = 5,000 (anticipo excluido)
+        fila_b = conciliacion_cliente(
+            cliente, sucursal_id=otra_sucursal.id
+        )
+        self.assertAlmostEqual(fila_b['detalle']['facturado']['MXN'], 5000.00)
+        self.assertNotIn('MXN', fila_b['detalle']['recibos_pago'])
+        self.assertNotIn('MXN', fila_b['detalle']['anticipos_disponibles'])
+        self.assertAlmostEqual(fila_b['saldo_por_moneda']['MXN'], 5000.00)
+
+        # conciliacion_global respeta el filtro de sucursal
+        filas_global = conciliacion_global(sucursal_id=self.sucursal.id)
+        fila_global = next(
+            f for f in filas_global if f['cliente'].id == cliente.id
+        )
+        self.assertAlmostEqual(
+            fila_global['saldo_por_moneda']['MXN'], 6000.00
+        )
 
     def test_saldo_conciliado_agrega_ingresos_y_egresos(self):
         cliente = self._cliente('Cliente Conciliación')
@@ -2346,7 +2614,7 @@ class ConciliacionOrigenTemplateTest(SimpleTestCase):
                 'notas_cargo': {},
                 'notas_credito': {},
                 'recibos_pago': {'MXN': rep['monto_rep_aplicado']},
-                'cobros_contado': {'MXN': 48040.00},
+                'cobros_contado': {'MXN': 0.00},
                 'anticipos_disponibles': {},
             },
             'cobros_contado_desglose': {
@@ -2355,11 +2623,12 @@ class ConciliacionOrigenTemplateTest(SimpleTestCase):
                     'venta_id': 741,
                     'referencia': 'BGA-VENTA',
                     'fechas': [date(2026, 7, 3)],
-                    'monto': 48040.00,
+                    'monto': 0.00,
                     'moneda': 'MXN',
                     'monto_operativo': 446880.00,
                     'rep_aplicado': 398840.00,
-                    'diferencia_operativo_fiscal': 48040.00,
+                    'saldo_insoluto_rep': 48040.00,
+                    'diferencia_operativo_fiscal': 0.00,
                     'estado_vinculo': 'revision_requerida',
                     'requiere_revision': True,
                     'fuente_fecha_rep': 'FechaPago',
@@ -2370,7 +2639,7 @@ class ConciliacionOrigenTemplateTest(SimpleTestCase):
             'rep_desglose': [rep],
             'rep_desglose_por_moneda': {'MXN': [rep]},
             'pagos_mxn': 446880.00,
-            'saldo_por_moneda': {'MXN': 0.00},
+            'saldo_por_moneda': {'MXN': 48040.00},
             'total_documentos': 2,
             'documentos_sin_venta': 0,
             'sin_venta_detalle': [],
@@ -2403,6 +2672,7 @@ class ConciliacionOrigenTemplateTest(SimpleTestCase):
         self.assertIn('Pago operativo', html)
         self.assertIn('REP aplicado', html)
         self.assertIn('Diferencia operativo-fiscal', html)
+        self.assertIn('Saldo insoluto REP', html)
         self.assertIn('Remanente según REP', html)
         self.assertIn('Revisión requerida', html)
         self.assertIn('UUID no encontrado', html)
@@ -2686,6 +2956,78 @@ class ConciliacionVistaFiltrosTest(ReporteCobranzaBaseTest):
             'mixto',
             [value for value, _label in response.context_data['estado_saldo_choices']],
         )
+
+    def test_vista_aplica_filtro_sucursal_y_excluye_anticipos(self):
+        from catalogo.models import Sucursal
+        from django.contrib.auth.models import AnonymousUser
+        from django.core.cache import cache
+        from django.test import RequestFactory
+
+        cache.clear()
+        otra_sucursal = Sucursal.objects.create(
+            nombre='Vista Sucursal B', id_estado=self.estado,
+        )
+        cliente = self._cliente('Cliente Vista Sucursal')
+
+        Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=self.sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Nacional',
+            tipo_registro='VENTA',
+            modalidad_pago='Contado',
+            monto=Money('300.00', 'MXN'),
+            cantidad=Decimal('10.000'),
+            fecha_salida_manifiesto=date(2026, 2, 1),
+            fecha_deposito=date(2026, 2, 1),
+        )
+        Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=otra_sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Nacional',
+            tipo_registro='VENTA',
+            modalidad_pago='Contado',
+            monto=Money('700.00', 'MXN'),
+            cantidad=Decimal('10.000'),
+            fecha_salida_manifiesto=date(2026, 2, 1),
+            fecha_deposito=date(2026, 2, 1),
+        )
+        Anticipo.objects.create(
+            cliente=cliente,
+            cuenta=self.cuenta,
+            monto=Money('1000.00', 'MXN'),
+            fecha=date(2026, 2, 1),
+            estado_anticipo='Pendiente',
+        )
+
+        request = RequestFactory().get('/admin/', {
+            'sucursal_id': str(self.sucursal.id),
+        })
+        request.user = AnonymousUser()
+        model_admin = ClienteAdmin(Cliente, admin.site)
+
+        response = model_admin.conciliacion_view(request)
+
+        self.assertEqual(
+            response.context_data['selected_sucursal_id'],
+            str(self.sucursal.id),
+        )
+        self.assertTrue(response.context_data['filtro_sucursal_activo'])
+        self.assertEqual(
+            [fila['cliente'].pk for fila in response.context_data['filas']],
+            [cliente.pk],
+        )
+        # Solo la venta de la sucursal seleccionada; anticipo excluido
+        fila = response.context_data['filas'][0]
+        self.assertAlmostEqual(
+            fila['detalle']['cobros_contado']['MXN'], 300.00
+        )
+        self.assertNotIn('MXN', fila['detalle']['anticipos_disponibles'])
 
 
 class CobradoMxnOrigenTest(ReporteCobranzaBaseTest):

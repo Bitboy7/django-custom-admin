@@ -39,31 +39,29 @@
     <div class="conc-note conc-note--warn" role="note">
       <span class="conc-note-ico" aria-hidden="true"><i class="fas fa-circle-exclamation"></i></span>
       <p>
-        <strong>Columna “Sin vincular”:</strong> cuenta notas de cargo/crédito o recibos de pago que
-        <strong>no</strong> pudieron asociarse a una venta porque no se encontró su CFDI padre por UUID.
-        <strong>No significa que una venta esté sin factura.</strong> Para revisar ventas sin CFDI asociado,
-        abre un importe de “Cobros contado / sin REP”.
+        <strong>“Sin vincular”</strong> muestra notas de cargo/crédito o recibos de pago que no se pudieron
+        ligar a una venta. <strong>Eso no significa que la venta no tenga factura.</strong> Para ver si una
+        venta está sin CFDI, revisa el desglose que aparece al dar clic en “Cobros contado / sin REP”.
       </p>
     </div>
 
     <div class="conc-note" role="note">
       <span class="conc-note-ico" aria-hidden="true"><i class="fas fa-circle-info"></i></span>
       <p>
-        <strong>Cómo se calcula:</strong> el <em>Saldo conciliado</em> =
-        <strong>Facturado</strong> + <strong>Notas de cargo</strong> − <strong>Notas de crédito</strong>
-        − <strong>Pagos (REP)</strong> − <strong>Cobros contado / sin REP</strong> − <strong>Anticipos</strong>,
-        todo agrupado por moneda.
-        Las columnas de CFDI (<em>Facturado, Notas, Pagos REP</em>) se toman del ledger fiscal
-        (<code>DocumentoCFDI</code> vigente). Los cobros son operativos: incluyen ventas de contado
-        registradas y pagos capturados que no están respaldados por un REP. Pulsa un importe para ver
-        las ventas que lo forman y sus CFDI asociados —o confirmar que no tienen uno vinculado—.
-        Los anticipos salen de los saldos disponibles capturados en el sistema.
-        <br>
-        <strong>Cobrado en pesos (equiv.):</strong> no viene directamente del CFDI; es el total que el sistema
-        <strong>considera cobrado</strong>, expresado en pesos — pagos registrados (<code>PagoVenta</code>)
-        + ventas registradas como contado sin un <code>PagoVenta</code> — convertido con su tipo de cambio. Por eso
-        <strong>no cuadra por diseño</strong> con «Pagos (REP)»: una diferencia aquí es la señal de
-        documentos fiscales sin pago operativo (o pagos topados al saldo de la venta).
+        <strong>El saldo conciliado</strong> se calcula así:<br>
+        Facturado + Notas de cargo − Notas de crédito − Pagos (REP) − Cobros contado/sin REP − Anticipos.
+        Todo se agrupa por moneda.
+      </p>
+      <p>
+        <strong>Facturado, notas y pagos REP</strong> salen de los CFDI vigentes registrados en el sistema.
+        <strong>Cobros contado / sin REP</strong> son pagos que ya se recibieron pero que aún no tienen un
+        REP asociado: ventas de contado y pagos manuales. Da clic en cualquier importe de estas columnas
+        para ver de qué venta proviene.
+      </p>
+      <p>
+        <strong>Cobrado en pesos (equiv.)</strong> es una referencia operativa: suma los pagos registrados y
+        las ventas de contado, convertidos a pesos. No tiene por qué coincidir con la columna “Pagos (REP)”,
+        porque una es información fiscal y la otra es información operativa.
       </p>
     </div>
 
@@ -74,6 +72,15 @@
           <option value="">Todos los clientes</option>
           {% for c in clientes %}
           <option value="{{ c.id }}" {% if c.id|stringformat:"s" == selected_cliente_id %}selected{% endif %}>{{ c.nombre }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="conc-filter">
+        <span>Sucursal</span>
+        <select name="sucursal_id" class="conc-filter-select">
+          <option value="">Todas las sucursales</option>
+          {% for s in sucursales %}
+          <option value="{{ s.id }}" {% if s.id|stringformat:"s" == selected_sucursal_id %}selected{% endif %}>{{ s.nombre }}</option>
           {% endfor %}
         </select>
       </label>
@@ -123,6 +130,9 @@
       El estado del saldo se evalúa en {{ selected_moneda }}.
       {% else %}
       “Saldos mixtos” identifica clientes con deuda y saldo a favor en monedas distintas.
+      {% endif %}
+      {% if filtro_sucursal_activo %}
+      <strong>Nota:</strong> al filtrar por sucursal se incluyen únicamente ventas, pagos y documentos vinculados a esa sucursal. Los anticipos y documentos sin venta asignada se excluyen del cálculo.
       {% endif %}
     </p>
 
@@ -294,7 +304,7 @@
                   </button>
                 </span>
 
-                <div class="conc-pop" id="cobros-origen-{{ f.cliente.id }}-{{ forloop.counter }}"
+                <div class="conc-pop conc-cobros-pop" id="cobros-origen-{{ f.cliente.id }}-{{ forloop.counter }}"
                      aria-label="Origen de cobros de {{ f.cliente.nombre }} en {{ m }}" hidden>
                   <div class="conc-pop-head">
                     <span class="conc-pop-title">Origen de cobros · {{ f.cliente.nombre }}</span>
@@ -325,17 +335,22 @@
                         <span class="conc-doc-amt">{{ origen.monto|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></span>
                       </div>
 
-                      {% if origen.tipo == 'pago_sin_rep' and origen.rep_aplicado %}
+                      {% if origen.monto_operativo != None %}
                       <div class="conc-origin-equation" aria-label="{% trans 'Comparación operativo-fiscal' %}">
                         <div><span>{% trans "Pago operativo" %}</span><strong>{{ origen.monto_operativo|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></strong></div>
                         <div><span>{% trans "REP aplicado" %}</span><strong>{{ origen.rep_aplicado|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></strong></div>
                         <div><span>{% trans "Diferencia operativo-fiscal" %}</span><strong>{{ origen.diferencia_operativo_fiscal|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></strong></div>
+                        {% if origen.saldo_insoluto_rep %}
+                        <div><span>{% trans "Saldo insoluto REP" %}</span><strong>{{ origen.saldo_insoluto_rep|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></strong></div>
+                        {% endif %}
                         <div><span>{% trans "Remanente operativo" %}</span><strong>{{ origen.monto|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></strong></div>
+                        {% if origen.rep_aplicado %}
                         <p class="conc-origin-review">
                           <strong>{% trans "Revisión requerida." %}</strong>
                           {% if origen.fuente_fecha_rep %}{% trans "Fecha REP" %}: {{ origen.fuente_fecha_rep }}.{% endif %}
                           {% for uuid in origen.uuids_rep %}<span class="conc-rep-uuid">{% trans "UUID REP" %}: {{ uuid }}</span>{% endfor %}
                         </p>
+                        {% endif %}
                       </div>
                       {% endif %}
 

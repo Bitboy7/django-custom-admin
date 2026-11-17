@@ -404,6 +404,7 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
     def conciliacion_view(self, request):
         """Vista de conciliación de CFDI por cliente con filtros de auditoría."""
         from datetime import date
+        from catalogo.models import Sucursal
         from .services.conciliacion_service import (
             conciliacion_global,
             filtrar_filas_conciliacion,
@@ -427,10 +428,13 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
         inicio_raw = request.GET.get('fecha_inicio', '')
         fin_raw = request.GET.get('fecha_fin', '')
         cliente_raw = request.GET.get('cliente_id', '')
+        sucursal_raw = request.GET.get('sucursal_id', '')
+        selected_sucursal_id = _parse_id(sucursal_raw)
         filas_completas = conciliacion_global(
             fecha_inicio=_parse(inicio_raw),
             fecha_fin=_parse(fin_raw),
             cliente_id=_parse_id(cliente_raw),
+            sucursal_id=selected_sucursal_id,
         )
         monedas = monedas_disponibles_conciliacion(filas_completas)
 
@@ -471,6 +475,7 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
             inicio_raw,
             fin_raw,
             cliente_raw,
+            selected_sucursal_id,
             selected_moneda,
             selected_estado_saldo,
             selected_incidencia,
@@ -484,6 +489,8 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
             fecha_fin=fin_raw,
             clientes=Cliente.objects.filter(activo=True).order_by('nombre'),
             selected_cliente_id=cliente_raw,
+            sucursales=Sucursal.objects.all().order_by('nombre'),
+            selected_sucursal_id=sucursal_raw,
             monedas=monedas,
             selected_moneda=selected_moneda,
             estado_saldo_choices=estado_saldo_choices,
@@ -491,6 +498,7 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
             incidencia_choices=incidencia_choices,
             selected_incidencia=selected_incidencia,
             filtros_activos=filtros_activos,
+            filtro_sucursal_activo=bool(selected_sucursal_id),
         )
         return TemplateResponse(request, 'admin/ventas/conciliacion.html', context)
     
@@ -3884,7 +3892,7 @@ class DocumentoCFDIAdmin(ModelAdmin):
     date_hierarchy = 'fecha_emision'
     list_per_page = 30
     list_select_related = ('cliente',)
-    readonly_fields = ('creado_en', 'actualizado_en')
+    readonly_fields = ('creado_en', 'actualizado_en', 'detalle_complemento')
 
     def get_urls(self):
         custom_urls = [
@@ -3942,6 +3950,10 @@ class DocumentoCFDIAdmin(ModelAdmin):
         }),
         ('Archivos', {
             'fields': ('archivo_xml', 'archivo_pdf')
+        }),
+        ('Detalle del complemento de pago', {
+            'fields': ('detalle_complemento',),
+            'classes': ('collapse',),
         }),
         ('Auditoría', {
             'fields': ('creado_en', 'actualizado_en')

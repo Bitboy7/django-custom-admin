@@ -456,6 +456,7 @@ html[data-theme="dark"] .conc-head-ico { color: var(--light-blue); }
 
 /* Aplicación REP y comparación operativo-fiscal */
 .conc-rep-pop { width: min(520px, calc(100vw - 24px)); }
+.conc-cobros-pop { width: min(520px, calc(100vw - 24px)); }
 .conc-rep-entry + .conc-rep-entry {
   margin-top: var(--space-3);
   padding-top: var(--space-3);

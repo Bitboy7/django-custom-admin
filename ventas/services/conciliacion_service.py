@@ -84,12 +84,20 @@ def _movimientos_rep(documento, fecha_inicio=None, fecha_fin=None):
             if not _fecha_en_rango(fecha_pago, fecha_inicio, fecha_fin):
                 continue
             for docto in (pago.get('doctos') or []):
+                monto = _decimal(docto.get('imp_pagado'))
+                saldo_insoluto = _decimal(docto.get('saldo_insoluto'))
+                saldo_anterior = _decimal(docto.get('saldo_anterior'))
+                # Algunos XML históricos o importaciones parciales dejan el
+                # saldo insoluto vacío aunque el saldo anterior sí esté
+                # presente. Se reconstruye para proteger el saldo pendiente.
+                if saldo_insoluto <= 0 and saldo_anterior > 0:
+                    saldo_insoluto = max(Decimal('0'), saldo_anterior - monto)
                 yield {
                     'uuid_factura': docto.get('uuid') or '',
                     'fecha_pago': fecha_pago,
                     'fecha_fuente': 'FechaPago',
-                    'monto': _decimal(docto.get('imp_pagado')),
-                    'saldo_insoluto': _decimal(docto.get('saldo_insoluto')),
+                    'monto': monto,
+                    'saldo_insoluto': saldo_insoluto,
                     'moneda': docto.get('moneda') or documento.moneda or 'MXN',
                     'legacy': False,
                 }
@@ -224,7 +232,9 @@ def _rep_tiene_vinculo_exacto(documento):
     return _estado_vinculo_rep(documento) == 'uuid_coincidente'
 
 
-def cobros_no_rep(cliente, fecha_inicio=None, fecha_fin=None):
+def cobros_no_rep(
+    cliente, fecha_inicio=None, fecha_fin=None, sucursal_id=None
+):
     """Cobros de ventas que no están respaldados por un recibo de pago (REP).
 
     Las facturas de contado (MetodoPago PUE) se pagan al emitirse y no generan
@@ -236,23 +246,27 @@ def cobros_no_rep(cliente, fecha_inicio=None, fecha_fin=None):
     restar dos veces. Con rango de fechas, considera los pagos del periodo.
     """
     cobros, _desglose = _cobros_no_rep_con_detalle(
-        cliente, fecha_inicio, fecha_fin, incluir_detalle=False
+        cliente, fecha_inicio, fecha_fin, incluir_detalle=False,
+        sucursal_id=sucursal_id,
     )
     return cobros
 
 
 def _cobros_no_rep_con_detalle(
-    cliente, fecha_inicio=None, fecha_fin=None, incluir_detalle=True
+    cliente, fecha_inicio=None, fecha_fin=None, incluir_detalle=True,
+    sucursal_id=None,
 ):
     """Calcula cobros sin REP y conserva su origen operativo por venta."""
     rep_por_venta_moneda = defaultdict(lambda: defaultdict(Decimal))
+    rep_saldo_insoluto_por_venta_moneda = defaultdict(lambda: defaultdict(list))
     rep_origen = defaultdict(lambda: defaultdict(list))
     pagos_rep_exactos = set()
-    rep_docs = list(
-        cliente.documentos_cfdi.filter(
-            estado='VIGENTE', subtipo='recibo_pago'
-        ).select_related('pago_venta')
-    )
+    rep_docs_qs = cliente.documentos_cfdi.filter(
+        estado='VIGENTE', subtipo='recibo_pago'
+    ).select_related('pago_venta')
+    if sucursal_id:
+        rep_docs_qs = rep_docs_qs.filter(venta__sucursal_id=sucursal_id)
+    rep_docs = list(rep_docs_qs)
     for doc in rep_docs:
         if not _rep_documento_en_rango(doc, fecha_inicio, fecha_fin):
             continue
@@ -270,6 +284,10 @@ def _cobros_no_rep_con_detalle(
                 continue
             moneda = movimiento['moneda']
             rep_por_venta_moneda[venta_id][moneda] += movimiento['monto']
+            if movimiento['saldo_insoluto'] is not None:
+                rep_saldo_insoluto_por_venta_moneda[venta_id][moneda].append(
+                    movimiento['saldo_insoluto']
+                )
             rep_origen[venta_id][moneda].append({
                 'uuid_rep': doc.uuid or '',
                 'fecha_fuente': movimiento['fecha_fuente'],
@@ -277,10 +295,12 @@ def _cobros_no_rep_con_detalle(
 
     cobros = defaultdict(float)
     desglose = defaultdict(list)
-    ventas = cliente.ventas_set.all()
+    ventas_qs = cliente.ventas_set.all()
+    if sucursal_id:
+        ventas_qs = ventas_qs.filter(sucursal_id=sucursal_id)
     if incluir_detalle:
-        ventas = ventas.prefetch_related('documentos_cfdi')
-    for venta in ventas:
+        ventas_qs = ventas_qs.prefetch_related('documentos_cfdi')
+    for venta in ventas_qs:
         pagos = list(_en_rango(
             venta.pagos.all(), 'fecha_pago', fecha_inicio, fecha_fin
         ))
@@ -296,7 +316,18 @@ def _cobros_no_rep_con_detalle(
                 rep_aplicado = rep_por_venta_moneda[venta.id].get(
                     moneda, Decimal('0')
                 )
-                sin_rep = total_pagos - rep_aplicado
+                # El saldo insoluto que el REP declara aún pendiente no debe
+                # pasar a "cobros contado / sin REP": fiscalmente no está
+                # cobrado. Se usa el menor saldo insoluto registrado para una
+                # misma venta/moneda (el más reciente en pagos parciales).
+                saldos_insolutos = rep_saldo_insoluto_por_venta_moneda[
+                    venta.id
+                ].get(moneda, [])
+                saldo_insoluto = (
+                    min(saldos_insolutos)
+                    if saldos_insolutos else Decimal('0')
+                )
+                sin_rep = total_pagos - rep_aplicado - saldo_insoluto
                 if sin_rep <= 0:
                     continue
                 sin_rep_float = float(sin_rep)
@@ -314,8 +345,9 @@ def _cobros_no_rep_con_detalle(
                         'moneda': moneda,
                         'monto_operativo': round(float(total_pagos), 2),
                         'rep_aplicado': round(float(rep_aplicado), 2),
+                        'saldo_insoluto_rep': round(float(saldo_insoluto), 2),
                         'diferencia_operativo_fiscal': round(
-                            float(total_pagos - rep_aplicado), 2
+                            float(sin_rep), 2
                         ),
                         'estado_vinculo': (
                             'revision_requerida'
@@ -378,17 +410,22 @@ def _documentos_cfdi_de_venta(venta):
     ]
 
 
-def _documentos_en_periodo(cliente, fecha_inicio=None, fecha_fin=None):
-    documentos = list(_en_rango(
-        cliente.documentos_cfdi.filter(estado='VIGENTE')
-        .exclude(subtipo='recibo_pago'),
-        'fecha_emision', fecha_inicio, fecha_fin,
-    ))
-    recibos = cliente.documentos_cfdi.filter(
+def _documentos_en_periodo(
+    cliente, fecha_inicio=None, fecha_fin=None, sucursal_id=None
+):
+    qs_documentos = cliente.documentos_cfdi.filter(
+        estado='VIGENTE'
+    ).exclude(subtipo='recibo_pago')
+    qs_recibos = cliente.documentos_cfdi.filter(
         estado='VIGENTE', subtipo='recibo_pago',
     ).select_related('pago_venta')
+    if sucursal_id:
+        qs_documentos = qs_documentos.filter(venta__sucursal_id=sucursal_id)
+        qs_recibos = qs_recibos.filter(venta__sucursal_id=sucursal_id)
+
+    documentos = list(_en_rango(qs_documentos, 'fecha_emision', fecha_inicio, fecha_fin))
     documentos.extend(
-        doc for doc in recibos
+        doc for doc in qs_recibos
         if _rep_documento_en_rango(doc, fecha_inicio, fecha_fin)
     )
     return documentos
@@ -489,7 +526,9 @@ def _agrupar_rep_por_moneda(rep_desglose):
     return dict(por_moneda)
 
 
-def pagos_total_mxn(cliente, fecha_inicio=None, fecha_fin=None):
+def pagos_total_mxn(
+    cliente, fecha_inicio=None, fecha_fin=None, sucursal_id=None
+):
     """Total cobrado en pesos (equivalente MXN) usando el tipo de cambio.
 
     Suma los ``PagoVenta`` (con su ``monto_pago_mxn``) y, para ventas de contado
@@ -499,14 +538,21 @@ def pagos_total_mxn(cliente, fecha_inicio=None, fecha_fin=None):
     from ..models import PagoVenta
 
     total = 0.0
-    pagos = _en_rango(
-        PagoVenta.objects.filter(venta__cliente=cliente).select_related('venta'),
-        'fecha_pago', fecha_inicio, fecha_fin,
-    )
+    pagos_qs = PagoVenta.objects.filter(
+        venta__cliente=cliente
+    ).select_related('venta')
+    if sucursal_id:
+        pagos_qs = pagos_qs.filter(venta__sucursal_id=sucursal_id)
+    pagos = _en_rango(pagos_qs, 'fecha_pago', fecha_inicio, fecha_fin)
     for pago in pagos:
         total += float(pago.monto_pago_mxn)
 
-    for venta in cliente.ventas_set.filter(pagos__isnull=True, modalidad_pago='Contado'):
+    ventas_contado_qs = cliente.ventas_set.filter(
+        pagos__isnull=True, modalidad_pago='Contado'
+    )
+    if sucursal_id:
+        ventas_contado_qs = ventas_contado_qs.filter(sucursal_id=sucursal_id)
+    for venta in ventas_contado_qs:
         if not _fecha_en_rango(venta.fecha_deposito, fecha_inicio, fecha_fin):
             continue
         if venta.monto_pagado and venta.monto_pagado.amount > 0:
@@ -516,7 +562,8 @@ def pagos_total_mxn(cliente, fecha_inicio=None, fecha_fin=None):
 
 
 def _calcular(
-    cliente, fecha_inicio=None, fecha_fin=None, incluir_cobros_detalle=False
+    cliente, fecha_inicio=None, fecha_fin=None, incluir_cobros_detalle=False,
+    sucursal_id=None,
 ):
     """Calcula el desglose y el saldo conciliado de un cliente.
 
@@ -526,8 +573,14 @@ def _calcular(
 
     ``fecha_inicio``/``fecha_fin`` (date) limitan documentos/anticipos por su
     fecha propia y movimientos REP por ``FechaPago``.
+
+    ``sucursal_id`` limita ventas, pagos y documentos vinculados a esa
+    sucursal. Los anticipos no tienen sucursal, por lo que se excluyen cuando
+    este filtro está activo.
     """
-    docs = _documentos_en_periodo(cliente, fecha_inicio, fecha_fin)
+    docs = _documentos_en_periodo(
+        cliente, fecha_inicio, fecha_fin, sucursal_id=sucursal_id
+    )
     documentos_rep = [doc for doc in docs if doc.subtipo == 'recibo_pago']
     rep_por_moneda = pagos_rep_por_moneda(
         documentos_rep, fecha_inicio, fecha_fin
@@ -550,22 +603,27 @@ def _calcular(
     # un recibo electrónico de pago asociado (típicamente facturas PUE).
     if incluir_cobros_detalle:
         detalle['cobros_contado'], cobros_contado_desglose = (
-            _cobros_no_rep_con_detalle(cliente, fecha_inicio, fecha_fin)
+            _cobros_no_rep_con_detalle(
+                cliente, fecha_inicio, fecha_fin, sucursal_id=sucursal_id
+            )
         )
     else:
         detalle['cobros_contado'] = cobros_no_rep(
-            cliente, fecha_inicio, fecha_fin
+            cliente, fecha_inicio, fecha_fin, sucursal_id=sucursal_id
         )
         cobros_contado_desglose = {}
 
-    # Anticipos pendientes de aplicar (saldo a favor del cliente)
+    # Anticipos pendientes de aplicar (saldo a favor del cliente).
+    # Al filtrar por sucursal se excluyen porque el modelo Anticipo no tiene
+    # sucursal asignada; la interfaz muestra una nota al respecto.
     anticipo_por_moneda = defaultdict(float)
-    anticipos = _en_rango(
-        cliente.anticipo_set.exclude(estado_anticipo='Cancelado'),
-        'fecha', fecha_inicio, fecha_fin,
-    )
-    for a in anticipos:
-        anticipo_por_moneda[str(a.monto.currency)] += a.saldo_disponible()
+    if not sucursal_id:
+        anticipos = _en_rango(
+            cliente.anticipo_set.exclude(estado_anticipo='Cancelado'),
+            'fecha', fecha_inicio, fecha_fin,
+        )
+        for a in anticipos:
+            anticipo_por_moneda[str(a.monto.currency)] += a.saldo_disponible()
     detalle['anticipos_disponibles'] = dict(anticipo_por_moneda)
 
     # Saldo por cobrar conciliado, por moneda
@@ -587,7 +645,9 @@ def _calcular(
     return docs, detalle, saldo, cobros_contado_desglose, rep_desglose
 
 
-def saldo_por_moneda(cliente, fecha_inicio=None, fecha_fin=None):
+def saldo_por_moneda(
+    cliente, fecha_inicio=None, fecha_fin=None, sucursal_id=None
+):
     """Saldo conciliado del cliente desglosado por moneda.
 
     Fuente única de la fórmula de saldo: la consumen
@@ -595,20 +655,27 @@ def saldo_por_moneda(cliente, fecha_inicio=None, fecha_fin=None):
     existan dos implementaciones que puedan desincronizarse.
     """
     _docs, _detalle, saldo, _cobros_contado_desglose, _rep_desglose = _calcular(
-        cliente, fecha_inicio, fecha_fin
+        cliente, fecha_inicio, fecha_fin, sucursal_id=sucursal_id
     )
     return saldo
 
 
-def conciliacion_cliente(cliente, fecha_inicio=None, fecha_fin=None):
+def conciliacion_cliente(
+    cliente, fecha_inicio=None, fecha_fin=None, sucursal_id=None
+):
     """Calcula la conciliación fiscal completa de un cliente.
 
     ``fecha_inicio``/``fecha_fin`` (date) limitan los documentos (por
     ``fecha_emision``), pagos (``fecha_pago``) y anticipos (``fecha``) al
     periodo. Sin fechas, se considera todo el histórico.
+
+    ``sucursal_id`` limita el cálculo a documentos y pagos vinculados a la
+    sucursal indicada. Los documentos sin venta asignada se excluyen bajo este
+    filtro y la interfaz lo notifica.
     """
     docs, detalle, saldo, cobros_contado_desglose, rep_desglose = _calcular(
-        cliente, fecha_inicio, fecha_fin, incluir_cobros_detalle=True
+        cliente, fecha_inicio, fecha_fin, incluir_cobros_detalle=True,
+        sucursal_id=sucursal_id,
     )
 
     # Documentos que no pudieron vincularse a una venta (posible deriva):
@@ -616,11 +683,15 @@ def conciliacion_cliente(cliente, fecha_inicio=None, fecha_fin=None):
     # encontrado por UUID (p. ej. la factura aún no se importa o no coincide).
     # Se materializan los propios documentos para poder desglosarlos y enlazar
     # cada uno a su ficha en el admin.
-    sin_venta_docs = [
-        doc for doc in docs
-        if doc.venta_id is None
-        and doc.subtipo not in INGRESOS_VENTA + ['remanente_anticipo']
-    ]
+    # Al filtrar por sucursal se excluyen porque no tienen venta ni sucursal.
+    if sucursal_id:
+        sin_venta_docs = []
+    else:
+        sin_venta_docs = [
+            doc for doc in docs
+            if doc.venta_id is None
+            and doc.subtipo not in INGRESOS_VENTA + ['remanente_anticipo']
+        ]
     sin_venta_docs.sort(key=lambda doc: (
         doc.subtipo,
         -(doc.fecha_emision.toordinal() if doc.fecha_emision else 0),
@@ -776,13 +847,16 @@ def _rehidratar_fila(fila, cliente):
     return fila
 
 
-def conciliacion_global(fecha_inicio=None, fecha_fin=None, cliente_id=None):
+def conciliacion_global(
+    fecha_inicio=None, fecha_fin=None, cliente_id=None, sucursal_id=None
+):
     """Conciliación de los clientes activos (opcionalmente por periodo).
 
-    ``cliente_id`` limita el resultado a un cliente. El resultado se cachea por
-    rango de fechas y cliente (``ConciliacionCache``) para evitar recalcular la
-    conciliación de cada cliente en cada carga. Al leer del cache se rehidrata
-    cada fila con su cliente actual.
+    ``cliente_id`` limita el resultado a un cliente. ``sucursal_id`` limita a
+    documentos y pagos de esa sucursal. El resultado se cachea por rango de
+    fechas, cliente y sucursal (``ConciliacionCache``) para evitar recalcular
+    la conciliación de cada cliente en cada carga. Al leer del cache se
+    rehidrata cada fila con su cliente actual.
     """
     from ..models import Cliente
     from .cache_service import ConciliacionCache
@@ -792,7 +866,9 @@ def conciliacion_global(fecha_inicio=None, fecha_fin=None, cliente_id=None):
         qs = qs.filter(pk=cliente_id)
     clientes = list(qs.order_by('nombre'))
 
-    cacheadas = ConciliacionCache.get(fecha_inicio, fecha_fin, cliente_id)
+    cacheadas = ConciliacionCache.get(
+        fecha_inicio, fecha_fin, cliente_id=cliente_id, sucursal_id=sucursal_id
+    )
     if cacheadas is not None and len(cacheadas) == len(clientes):
         return [
             _rehidratar_fila(fila, cliente)
@@ -800,12 +876,13 @@ def conciliacion_global(fecha_inicio=None, fecha_fin=None, cliente_id=None):
         ]
 
     filas = [
-        conciliacion_cliente(c, fecha_inicio, fecha_fin)
+        conciliacion_cliente(c, fecha_inicio, fecha_fin, sucursal_id=sucursal_id)
         for c in clientes
     ]
     ConciliacionCache.set(
-        fecha_inicio, fecha_fin, cliente_id,
-        [_serializar_fila(f) for f in filas],
+        fecha_inicio, fecha_fin, cliente_id=cliente_id,
+        data=[_serializar_fila(f) for f in filas],
+        sucursal_id=sucursal_id,
     )
     return filas
 
