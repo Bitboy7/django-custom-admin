@@ -106,6 +106,14 @@ def registrar_logout(request, usuario):
     )
 
 
+def _object_id(objeto):
+    """Extrae el identificador de un modelo o de un dict con 'pk'."""
+    pk = getattr(objeto, 'pk', None)
+    if pk is None and isinstance(objeto, dict):
+        pk = objeto.get('pk')
+    return str(pk) if pk is not None else ''
+
+
 def registrar_creacion(request, modelo, objeto):
     """Registra la creación de un objeto"""
     return registrar_log(
@@ -113,7 +121,7 @@ def registrar_creacion(request, modelo, objeto):
         tipo_accion='create',
         descripcion=f"Se ha creado un nuevo registro de {modelo}",
         modelo_afectado=modelo,
-        objeto_id=str(objeto.pk),
+        objeto_id=_object_id(objeto),
     )
 
 
@@ -124,7 +132,7 @@ def registrar_actualizacion(request, modelo, objeto, campos_modificados):
         tipo_accion='update',
         descripcion=f"Se ha actualizado un registro de {modelo}",
         modelo_afectado=modelo,
-        objeto_id=str(objeto.pk),
+        objeto_id=_object_id(objeto),
         campos_modificados=campos_modificados
     )
 
@@ -147,5 +155,5 @@ def registrar_visualizacion(request, modelo, objeto):
         tipo_accion='view',
         descripcion=f"Se ha visualizado un registro de {modelo}",
         modelo_afectado=modelo,
-        objeto_id=str(objeto.pk),
+        objeto_id=_object_id(objeto),
     )
