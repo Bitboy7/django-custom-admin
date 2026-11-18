@@ -5,7 +5,7 @@
 
 // Configuración global para DataTables en ventas
 $.extend(true, $.fn.dataTable.defaults, {
-  responsive: true,
+  responsive: false,
   pageLength: 25,
   lengthMenu: [
     [10, 25, 50, 100, -1],
@@ -303,7 +303,13 @@ function initializeVentasCharts() {
             beginAtZero: true,
             ticks: {
               callback: function (value) {
-                return formatCurrency(value);
+                if (Math.abs(value) >= 1000000) {
+                  return "$" + (value / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
+                }
+                if (Math.abs(value) >= 1000) {
+                  return "$" + Math.round(value / 1000) + "K";
+                }
+                return "$" + value;
               },
             },
             grid: {
@@ -413,10 +419,71 @@ function hideVentasToast() {
   }
 }
 
+// Animación de entrada: cabecera, filtros y resultados con cascada corta.
+// Se reutiliza tras cada swap de HTMX para dar continuidad al nuevo contenido.
+function animateBalancesEntrance(scope, options) {
+  const opts = options || {};
+  const root =
+    typeof scope === "string" ? document.querySelector(scope) : scope;
+  if (!root || typeof root.animate !== "function") return;
+
+  const reduceMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)"
+  ).matches;
+
+  const targets = [];
+  const add = (element) => {
+    if (element) targets.push(element);
+  };
+
+  if (!opts.resultsOnly) {
+    add(root.querySelector(".page-head") || root.querySelector(".balance-help-actions"));
+    add(root.querySelector(".filter-card"));
+  }
+
+  const results = opts.resultsOnly ? root : root.querySelector("#balances-results");
+  if (results) {
+    add(
+      results.querySelector('[data-tour="exports"]') ||
+        results.querySelector(".balances-results-heading")
+    );
+    results.querySelectorAll(".kpi-card").forEach(add);
+    results.querySelectorAll(".s-card").forEach(add);
+  }
+
+  targets.forEach((element, index) => {
+    const delay = reduceMotion ? 0 : Math.min(index * 40, 260);
+    const keyframes = reduceMotion
+      ? [{ opacity: 0 }, { opacity: 1 }]
+      : [
+          { opacity: 0, transform: "translateY(8px)" },
+          { opacity: 1, transform: "translateY(0)" },
+        ];
+
+    element.animate(keyframes, {
+      duration: reduceMotion ? 160 : 420,
+      delay: delay,
+      easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+      fill: "backwards",
+    });
+  });
+}
+
 // Inicialización cuando el documento esté listo
 $(document).ready(function () {
   // Inicializar filtros
   handleVentasFilters();
+
+  // Animación de entrada de la página
+  animateBalancesEntrance(document.getElementById("ventas-balances-page"));
+
+  // Animar solo los resultados cuando HTMX reemplaza el bloque
+  document.body.addEventListener("htmx:afterSwap", function (event) {
+    const target = event.detail && event.detail.target;
+    if (target && target.id === "balances-results") {
+      animateBalancesEntrance(target, { resultsOnly: true });
+    }
+  });
 
   // Inicializar DataTable si existe
   if ($("#ventasTable").length) {
@@ -426,7 +493,7 @@ $(document).ready(function () {
     }
 
     const table = $("#ventasTable").DataTable({
-      responsive: true,
+      responsive: false,
       pageLength: 25,
       lengthMenu: [
         [10, 25, 50, 100, -1],
@@ -504,8 +571,8 @@ $(document).ready(function () {
     );
   }
 
-  // Manejar envío del formulario con validación
-  $("form").on("submit", function (e) {
+  // Manejar envío del formulario con validación (solo si no está activo HTMX)
+  $("form").not("[hx-get], [hx-post]").on("submit", function (e) {
     const periodo = $("#periodo").val();
 
     if (periodo === "diario") {
@@ -556,4 +623,5 @@ window.VentasModule = {
   showToast: showVentasToast,
   hideToast: hideVentasToast,
   initCharts: initializeVentasCharts,
+  animateEntrance: animateBalancesEntrance,
 };
