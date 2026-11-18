@@ -2049,12 +2049,25 @@ class VentasAdmin(ModelAdmin):
             'months': FilterOptionsProvider.get_months_list(),
         })
 
+        results_html = render_to_string(
+            'admin/ventas/partials/ventas_balances_results.html',
+            context,
+            request=request,
+        )
+
+        if request.headers.get('HX-Request') == 'true':
+            from django.http import HttpResponse
+            response = HttpResponse(results_html)
+            response['HX-Trigger'] = json.dumps({
+                'showToast': {
+                    'type': 'info',
+                    'title': 'Filtros aplicados',
+                    'message': 'La información ha sido filtrada según los criterios seleccionados.'
+                }
+            })
+            return response
+
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            table_html = render_to_string(
-                'admin/ventas/partials/ventas_balances_table.html',
-                context,
-                request=request,
-            )
             return JsonResponse({
                 'kpis': {
                     'total_ventas': float(context.get('total_ventas') or 0),
@@ -2063,15 +2076,26 @@ class VentasAdmin(ModelAdmin):
                     'numero_transacciones': context.get('numero_transacciones', 0),
                     'venta_maxima': float(context.get('venta_maxima') or 0),
                     'promedio_ventas': float(context.get('promedio_ventas') or 0),
+                    'ventas_contado_total': float(context.get('ventas_contado_total') or 0),
+                    'ventas_contado_count': context.get('ventas_contado_count', 0),
+                    'ventas_credito_total': float(context.get('ventas_credito_total') or 0),
+                    'ventas_credito_count': context.get('ventas_credito_count', 0),
+                    'ventas_vencidas_total': float(context.get('ventas_vencidas_total') or 0),
+                    'ventas_vencidas_count': context.get('ventas_vencidas_count', 0),
+                    'total_facturado_cfdi': float(context.get('total_facturado_cfdi') or 0),
+                    'total_notas_credito_cfdi': float(context.get('total_notas_credito_cfdi') or 0),
+                    'total_recibos_pago_cfdi': float(context.get('total_recibos_pago_cfdi') or 0),
+                    'numero_cfdis': context.get('numero_cfdis', 0),
                 },
                 'chart_data': {
                     'modalidad': json.loads(context['ventas_por_modalidad']),
                     'estados': json.loads(context['ventas_por_estado']),
                     'clientes': json.loads(context['ventas_por_cliente']),
                 },
-                'table_html': table_html,
+                'results_html': results_html,
             })
 
+        context['results_html'] = results_html
         return TemplateResponse(request, 'admin/ventas/ventas_balances.html', context)
 
     def exportar_balances_xlsx_admin_view(self, request):

@@ -34,7 +34,8 @@ function initializeMultiMonthSelector() {
   monthSelectorBtn.addEventListener("click", function (e) {
     e.preventDefault();
     e.stopPropagation();
-    monthDropdown.classList.toggle("hidden");
+    const isOpen = !monthDropdown.classList.toggle("hidden");
+    monthSelectorBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
   });
 
   // Cerrar dropdown al hacer click fuera
@@ -44,6 +45,7 @@ function initializeMultiMonthSelector() {
       !monthDropdown.contains(e.target)
     ) {
       monthDropdown.classList.add("hidden");
+      monthSelectorBtn.setAttribute("aria-expanded", "false");
     }
   });
 
@@ -91,6 +93,8 @@ function initializeMultiMonthSelector() {
 
       // Actualizar el campo oculto y enviar formulario
       monthInput.value = "";
+      monthDropdown.classList.add("hidden");
+      monthSelectorBtn.setAttribute("aria-expanded", "false");
       const form = monthInput.closest("form");
       if (form) {
         if (typeof htmx !== 'undefined') {
@@ -109,6 +113,7 @@ function initializeMultiMonthSelector() {
     applyMonthsBtn.addEventListener("click", function () {
       monthInput.value = selectedMonths.join(",");
       monthDropdown.classList.add("hidden");
+      monthSelectorBtn.setAttribute("aria-expanded", "false");
       updateDisplayText();
 
       // Enviar el formulario automáticamente
