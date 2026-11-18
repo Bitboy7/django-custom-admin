@@ -1,60 +1,62 @@
 {% load l10n gastos_tags ventas_tags %}
 {% if balances %}
-<table id="ventasTable" class="display responsive nowrap min-w-full hover stripe" style="width:100%">
+<p class="table-scroll-hint">
+  <i class="fas fa-arrows-left-right" aria-hidden="true"></i>
+  Desliza la tabla para ver todas las columnas.
+</p>
+<table id="ventasTable" class="display min-w-full hover stripe" style="width:100%">
   <thead>
     <tr>
-      <th>#</th>
-      <th>Cliente</th>
-      <th>N° Cuenta</th>
-      <th>Banco</th>
-      <th>Sucursal</th>
-      <th>Fecha</th>
-      <th>Total Ventas</th>
-      <th>Total Pagado</th>
-      <th>Saldo Pendiente</th>
-      <th>Estado</th>
-      <th>Acumulado</th>
+      <th scope="col">#</th>
+      <th scope="col">Cliente</th>
+      <th scope="col">N° Cuenta</th>
+      <th scope="col">Banco</th>
+      <th scope="col">Sucursal</th>
+      <th scope="col">Fecha</th>
+      <th scope="col">Total Ventas</th>
+      <th scope="col">Total Pagado</th>
+      <th scope="col">Saldo Pendiente</th>
+      <th scope="col">Estado</th>
+      <th scope="col">Acumulado</th>
     </tr>
   </thead>
   <tbody>
     {% for balance in balances %}
     <tr>
-      <td class="font-mono text-xs text-[#586f7c]">{{ balance.numero_secuencial }}</td>
+      <td class="cell-id">{{ balance.numero_secuencial }}</td>
 
-      <td><span class="font-medium text-[#2f4550]">{{ balance.cliente_nombre }}</span></td>
+      <td><span class="cell-strong">{{ balance.cliente_nombre }}</span></td>
 
-      <td>
-        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-[rgba(184,219,217,.2)] text-[#2f4550]">{{ balance.cuenta_numero }}</span>
-      </td>
+      <td><span class="account-chip">{{ balance.cuenta_numero }}</span></td>
 
-      <td class="text-sm text-[#586f7c]">{{ balance.banco_nombre }}</td>
+      <td class="cell-muted">{{ balance.banco_nombre }}</td>
 
-      <td class="text-sm text-[#586f7c]">{{ balance.sucursal_nombre }}</td>
+      <td class="cell-muted">{{ balance.sucursal_nombre }}</td>
 
-      <td class="text-sm text-[#586f7c]">{{ balance.fecha|date:"d/m/Y" }}</td>
+      <td class="cell-muted">{{ balance.fecha|date:"d/m/Y" }}</td>
 
-      <td class="text-right font-semibold text-[#5a7d6b]" data-order="{{ balance.total_ventas|unlocalize }}">
+      <td class="text-right cell-money" data-order="{{ balance.total_ventas|unlocalize }}">
         ${{ balance.total_ventas|us_currency:2 }}
       </td>
 
-      <td class="text-right font-semibold text-[#2f4550]" data-order="{{ balance.total_pagado|unlocalize }}">
+      <td class="text-right cell-money cell-money--neutral" data-order="{{ balance.total_pagado|unlocalize }}">
         ${{ balance.total_pagado|us_currency:2 }}
       </td>
 
-      <td class="text-right font-semibold text-[#b85450]" data-order="{{ balance.saldo_pendiente|unlocalize }}">
+      <td class="text-right cell-money cell-money--danger" data-order="{{ balance.saldo_pendiente|unlocalize }}">
         ${{ balance.saldo_pendiente|us_currency:2 }}
       </td>
 
       <td class="text-center" data-order="{{ balance.estado_cobranza }}">
-        <div class="flex flex-col items-center space-y-1">
+        <div class="balances-status">
           <span class="{{ balance.estado_cobranza|estado_badge_class }}">{{ balance.estado_cobranza }}</span>
           {% if balance.fecha_vencimiento %}
-            <small class="text-xs text-[#b8dbd9]">{{ balance.fecha_vencimiento|date:"d/m/Y" }}</small>
+            <small class="status-date-hint">{{ balance.fecha_vencimiento|date:"d/m/Y" }}</small>
           {% endif %}
         </div>
       </td>
 
-      <td class="text-right font-semibold text-[#2f4550]" data-order="{{ balance.acumulado|unlocalize }}">
+      <td class="text-right cell-money cell-money--muted" data-order="{{ balance.acumulado|unlocalize }}">
         ${{ balance.acumulado|us_currency:2 }}
       </td>
     </tr>
@@ -72,11 +74,11 @@
   </tfoot>
 </table>
 {% else %}
-<div class="text-center py-12">
-  <div class="inline-flex items-center justify-center w-16 h-16 bg-[#f4f4f9] rounded-full mb-4">
-    <i class="fas fa-inbox text-[#b8dbd9] text-2xl"></i>
+<div class="balances-empty">
+  <div class="balances-empty-icon" aria-hidden="true">
+    <i class="fas fa-inbox"></i>
   </div>
-  <p class="text-[#586f7c] font-semibold">No hay datos de ventas disponibles</p>
-  <p class="text-[#b8dbd9] text-sm mt-1">Intente modificar los filtros para ver resultados.</p>
+  <p class="balances-empty-title">No hay datos de ventas disponibles</p>
+  <p class="balances-empty-hint">Ajuste los filtros del periodo o de cobranza e intente de nuevo.</p>
 </div>
 {% endif %}

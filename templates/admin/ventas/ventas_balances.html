@@ -1,4 +1,4 @@
-+++++{% extends "admin/base_site.html" %}
+{% extends "admin/base_site.html" %}
 {% load i18n l10n static humanize gastos_tags ventas_tags %}
 
 {% block title %}Análisis de Ventas | {{ site_title }}{% endblock %}
@@ -28,12 +28,10 @@
 
 {% block content %}
 <div id="ventas-balances-page"
-     class="text-[#2f4550]"
+     class="ventas-balances-wrapper"
      data-balance-tour="ventas"
      data-manual-url="{% url 'user_manual' %}#balances-y-reportes"
-     data-ventas-modalidad="{{ ventas_por_modalidad|escape }}"
-     data-ventas-estados="{{ ventas_por_estado|escape }}"
-     data-ventas-clientes="{{ ventas_por_cliente|escape }}">
+     data-ajax-url="{% url 'admin:ventas_ventas_balances' %}">
 
   {# ── Toast de notificación ── #}
   <div id="toast-notification" class="fixed top-4 right-4 z-50 transform translate-x-full transition-all duration-300 opacity-0">
@@ -51,30 +49,54 @@
     </div>
   </div>
 
-  <div class="balance-help-actions" data-tour="help">
-    <button type="button" class="balance-tour-help" data-balance-tour-start
-            aria-label="{% trans 'Iniciar guía interactiva del balance de ventas' %}">
-      <i class="fas fa-route" aria-hidden="true"></i>
-      {% trans "¿Cómo usar esta pantalla?" %}
-    </button>
-    <a class="balance-manual-link" href="{% url 'user_manual' %}#balances-y-reportes">
-      <i class="fas fa-book-open" aria-hidden="true"></i>
-      {% trans "Abrir manual" %}
-    </a>
-    <a class="balance-manual-link" href="{% url 'admin:ventas_cliente_conciliacion' %}">
-      <i class="fas fa-scale-balanced" aria-hidden="true"></i>
-      {% trans "Conciliación CFDI" %}
-    </a>
-  </div>
-
-  {# ── Aviso inicial ── #}
-  <div id="warning-message" class="bg-[rgba(184,219,217,.15)] border-l-4 border-[#586f7c] rounded-r-md p-3 mb-4 flex items-center gap-3" role="alert">
-    <div class="w-7 h-7 rounded bg-[rgba(184,219,217,.2)] flex items-center justify-center flex-shrink-0">
-      <i class="fas fa-info-circle text-[#586f7c] text-xs"></i>
+  <header class="page-head">
+    <div class="page-head-copy">
+      <h1 class="page-title">
+        <span class="page-title-icon" aria-hidden="true"><i class="fas fa-chart-line"></i></span>
+        <span>Análisis de ventas</span>
+      </h1>
+      <p class="page-subtitle">Ventas, cobranza y saldos por cliente, cuenta y sucursal.</p>
     </div>
-    <div>
-      <p class="text-xs font-bold text-[#2f4550]">Información</p>
-      <p class="text-xs text-[#2f4550]">El filtro por defecto es mensual. Seleccione el período y filtros deseados para el análisis.</p>
+
+    <div class="balance-help-actions" data-tour="help">
+      <button type="button" class="balance-tour-help" data-balance-tour-start
+              aria-label="{% trans 'Iniciar guía interactiva del balance de ventas' %}">
+        <i class="fas fa-route" aria-hidden="true"></i>
+        {% trans "¿Cómo usar esta pantalla?" %}
+      </button>
+      <a class="balance-manual-link" href="{% url 'user_manual' %}#balances-y-reportes">
+        <i class="fas fa-book-open" aria-hidden="true"></i>
+        {% trans "Abrir manual" %}
+      </a>
+      <a class="balance-manual-link" href="{% url 'admin:ventas_cliente_conciliacion' %}">
+        <i class="fas fa-scale-balanced" aria-hidden="true"></i>
+        {% trans "Conciliación CFDI" %}
+      </a>
+    </div>
+  </header>
+
+
+  {# ── Skeleton (shown during HTMX request) ── #}
+  <div id="balances-skeleton" class="htmx-indicator mb-5">
+    <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-5">
+      {% for i in "1234567890" %}
+      <div class="kpi-card" style="border-left-color:#d8dce6">
+        <div class="kpi-body w-full">
+          <div class="htmx-skeleton htmx-skeleton-block" style="width:55%;height:0.55rem;margin-bottom:0.4rem;"></div>
+          <div class="htmx-skeleton htmx-skeleton-block" style="width:80%;height:0.85rem;"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="s-card mb-5">
+      <div class="s-card-body">
+        <div class="htmx-skeleton htmx-skeleton-block" style="height:12rem;"></div>
+      </div>
+    </div>
+    <div class="s-card mb-5">
+      <div class="s-card-body">
+        <div class="htmx-skeleton htmx-skeleton-block" style="height:8rem;"></div>
+      </div>
     </div>
   </div>
 
@@ -101,13 +123,18 @@
       </span>
     </div>
     <div class="p-4">
-      <form method="get" action="{% url 'admin:ventas_ventas_balances' %}" class="space-y-3">
+      <form method="get" action="{% url 'admin:ventas_ventas_balances' %}" id="balances-filter-form" class="space-y-3"
+            hx-get="{% url 'admin:ventas_ventas_balances' %}"
+            hx-target="#balances-results"
+            hx-swap="innerHTML"
+            hx-indicator="#balances-skeleton"
+            hx-push-url="true">
 
         {# Fila 1: Cliente, Cuenta, Sucursal, Mercado #}
         <div class="flex flex-wrap gap-3 mb-2">
 
           <div class="flex-1 min-w-[140px]">
-            <label for="cliente_id" class="filter-label">Cliente:</label>
+            <label for="cliente_id" class="filter-label">Cliente</label>
             <select name="cliente_id" id="cliente_id" class="filter-select">
               <option value="">Todos los clientes</option>
               {% for cliente in clientes %}
@@ -117,7 +144,7 @@
           </div>
 
           <div class="flex-1 min-w-[140px]">
-            <label for="cuenta_id" class="filter-label">Cuenta:</label>
+            <label for="cuenta_id" class="filter-label">Cuenta bancaria</label>
             <div class="bank-account-select" data-bank-account-select>
               <input type="hidden" name="cuenta_id" id="cuenta_id" value="{{ selected_cuenta_id }}">
               <button type="button" class="bank-account-trigger" data-bank-account-button aria-expanded="false" aria-controls="cuenta_id_menu">
@@ -172,7 +199,7 @@
           </div>
 
           <div class="flex-1 min-w-[140px]">
-            <label for="sucursal_id" class="filter-label">Sucursal:</label>
+            <label for="sucursal_id" class="filter-label">Sucursal</label>
             <select name="sucursal_id" id="sucursal_id" class="filter-select">
               <option value="">Todas las sucursales</option>
               {% for sucursal in sucursales %}
@@ -182,7 +209,7 @@
           </div>
 
           <div class="flex-1 min-w-[140px]">
-            <label for="mercado_id" class="filter-label">Mercado:</label>
+            <label for="mercado_id" class="filter-label">Mercado</label>
             <select name="mercado_id" id="mercado_id" class="filter-select">
               <option value="">Todos los mercados</option>
               {% for mercado in mercados %}
@@ -196,7 +223,7 @@
         <div class="flex flex-wrap gap-3 mb-2" data-tour="sales-filters">
 
           <div class="flex-1 min-w-[140px]">
-            <label for="modalidad_pago" class="filter-label">Modalidad de Pago:</label>
+            <label for="modalidad_pago" class="filter-label">Modalidad de pago</label>
             <select name="modalidad_pago" id="modalidad_pago" class="filter-select">
               <option value="">Todas</option>
               {% for value, display in modalidad_choices %}
@@ -206,7 +233,7 @@
           </div>
 
           <div class="flex-1 min-w-[140px]">
-            <label for="estado_cobranza" class="filter-label">Estado de Cobranza:</label>
+            <label for="estado_cobranza" class="filter-label">Estado de cobranza</label>
             <select name="estado_cobranza" id="estado_cobranza" class="filter-select">
               <option value="">Todos</option>
               {% for value, display in estado_choices %}
@@ -216,22 +243,23 @@
           </div>
 
           <div class="flex-1 min-w-[110px]">
-            <label for="year" class="filter-label">Año:</label>
+            <label for="year" class="filter-label">Año</label>
             <select name="year" id="year" class="filter-select">
               {% for year in available_years %}
-              <option value="{{ year.year|safe }}" {% if year.year|stringformat:"s" == selected_year or not selected_year and year.year == current_year %}selected{% endif %}>{{ year.year|safe }}</option>
+              <option value="{{ year|unlocalize }}" {% if year|stringformat:"s" == selected_year or not selected_year and year == current_year %}selected{% endif %}>{{ year|unlocalize }}</option>
               {% endfor %}
             </select>
           </div>
 
           <div class="flex-1 min-w-[150px]">
-            <label class="filter-label">Meses:</label>
+            <label class="filter-label">Meses</label>
             <div class="relative">
               <input type="hidden" name="months" id="months" value="{{ selected_months|join:',' }}">
-              <button type="button" id="month-selector-btn" class="filter-select text-left w-full">
+              <button type="button" id="month-selector-btn" class="filter-select filter-select--button">
                 <span id="month-selector-text">Todos los meses</span>
+                <i class="fas fa-chevron-down filter-select-caret" aria-hidden="true"></i>
               </button>
-              <div id="month-dropdown" class="absolute z-50 w-full mt-1 bg-[#f4f4f9] border border-[#d8dce6] rounded-md shadow-lg hidden">
+              <div id="month-dropdown" class="month-dropdown hidden">
                 <div class="p-2 max-h-64 overflow-y-auto">
                   <label class="flex items-center gap-2 p-2 hover:bg-[rgba(184,219,217,.15)] rounded cursor-pointer">
                     <input type="checkbox" id="month-all" class="text-[#2f4550] focus:ring-[#b8dbd9] rounded">
@@ -250,7 +278,7 @@
           </div>
 
           <div class="flex-1 min-w-[130px]" data-tour="calendar">
-            <label for="periodo" class="filter-label">Período:</label>
+            <label for="periodo" class="filter-label">Período</label>
             <select name="periodo" id="periodo" class="filter-select">
               <option value="diario"  {% if selected_periodo == 'diario'  %}selected{% endif %}>Diario</option>
               <option value="semanal" {% if selected_periodo == 'semanal' %}selected{% endif %}>Semanal</option>
@@ -281,18 +309,18 @@
             </div>
 
             <div id="campo-dia-especifico" class="{% if selected_fecha_inicio %}is-hidden{% endif %}">
-              <label class="filter-label">Seleccione el día:</label>
+              <label class="filter-label">Seleccione el día</label>
               <input type="date" name="dia" id="dia" value="{{ selected_dia }}" class="filter-select w-auto">
             </div>
 
             <div id="campos-rango-fechas" class="{% if not selected_fecha_inicio %}is-hidden{% endif %}">
               <div class="flex flex-wrap gap-3">
                 <div class="flex-1 min-w-[160px]">
-                  <label class="filter-label">Fecha inicial:</label>
+                  <label class="filter-label">Fecha inicial</label>
                   <input type="date" name="fecha_inicio" id="fecha_inicio" value="{{ selected_fecha_inicio }}" class="filter-select">
                 </div>
                 <div class="flex-1 min-w-[160px]">
-                  <label class="filter-label">Fecha fin:</label>
+                  <label class="filter-label">Fecha fin</label>
                   <input type="date" name="fecha_fin" id="fecha_fin" value="{{ selected_fecha_fin }}" class="filter-select">
                 </div>
               </div>
@@ -300,199 +328,22 @@
           </div>
         </div>
 
-        {# Botón aplicar #}
-        <div class="flex items-center gap-2 pt-1" data-tour="actions">
-          <button type="submit"
-            class="inline-flex items-center gap-1.5 text-xs font-bold text-[#f4f4f9] bg-[#2f4550] hover:bg-[#2f4550] px-5 py-2 rounded shadow-sm transition-colors">
-            <i class="fas fa-search"></i> Aplicar Filtros
+        {# Acciones del filtro #}
+        <div class="filter-actions" data-tour="actions">
+          <a href="{% url 'admin:ventas_ventas_balances' %}" class="fb-btn fb-btn--ghost">
+            <i class="fas fa-rotate-left" aria-hidden="true"></i> Limpiar filtros
+          </a>
+          <button type="submit" class="fb-btn fb-btn--primary">
+            <i class="fas fa-search" aria-hidden="true"></i> Aplicar filtros
           </button>
         </div>
       </form>
     </div>
   </div>
 
-  {# ── KPI Cards — 6 métricas ── #}
-  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-5" data-tour="metrics">
-
-    <div class="kpi-card kpi-border-total" title="${{ total_ventas|us_currency:2 }}">
-      <div class="kpi-body">
-        <p class="kpi-label">Total Ventas</p>
-        <p class="kpi-value" id="kpi-total-ventas">${{ total_ventas|us_currency:2 }}</p>
-      </div>
-    </div>
-
-    <div class="kpi-card kpi-border-paid" title="${{ total_pagado|us_currency:2 }}">
-      <div class="kpi-body">
-        <p class="kpi-label">Total Pagado</p>
-        <p class="kpi-value" id="kpi-total-pagado">${{ total_pagado|us_currency:2 }}</p>
-      </div>
-    </div>
-
-    <div class="kpi-card kpi-border-neutral" title="${{ saldo_pendiente_total|us_currency:2 }}">
-      <div class="kpi-body">
-        <p class="kpi-label">Pendiente</p>
-        <p class="kpi-value" id="kpi-saldo-pendiente">${{ saldo_pendiente_total|us_currency:2 }}</p>
-      </div>
-    </div>
-
-    <div class="kpi-card kpi-border-neutral">
-      <div class="kpi-body">
-        <p class="kpi-label">Transacciones</p>
-        <p class="kpi-value" id="kpi-transacciones">{{ numero_transacciones }}</p>
-      </div>
-    </div>
-
-    <div class="kpi-card kpi-border-light" title="${{ venta_maxima|us_currency:2 }}">
-      <div class="kpi-body">
-        <p class="kpi-label">Venta Máxima</p>
-        <p class="kpi-value" id="kpi-venta-maxima">${{ venta_maxima|us_currency:2 }}</p>
-      </div>
-    </div>
-
-    <div class="kpi-card kpi-border-neutral" title="${{ promedio_ventas|us_currency:2 }}">
-      <div class="kpi-body">
-        <p class="kpi-label">Promedio</p>
-        <p class="kpi-value" id="kpi-promedio">${{ promedio_ventas|us_currency:2 }}</p>
-      </div>
-    </div>
-
-  </div>
-
-  {# ── Botón exportar PDF ── #}
-  <div class="flex items-center justify-between mb-3" data-tour="exports">
-    <span class="text-xs font-bold text-[#586f7c] uppercase tracking-wider flex items-center gap-1.5">
-      <i class="fas fa-chart-line text-[#586f7c]"></i> Análisis visual
-    </span>
-    <button type="button" id="btn-export-pdf" class="btn-export-pdf">
-      <i class="fas fa-file-pdf"></i> Exportar PDF
-    </button>
-  </div>
-
-  {# ── Gráficos: Modalidad + Estados ── #}
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5" data-tour="charts">
-
-    <div class="s-card">
-      <div class="s-card-head">
-        <div class="s-card-ico s-card-ico-primary"><i class="fas fa-chart-pie text-[#2f4550]"></i></div>
-        <span class="s-card-title">Distribución por Modalidad</span>
-      </div>
-      <div class="s-card-body">
-        <div class="chart-box-sm"><canvas id="modalidadChart"></canvas></div>
-      </div>
-    </div>
-
-    <div class="s-card">
-      <div class="s-card-head">
-        <div class="s-card-ico s-card-ico-warning"><i class="fas fa-chart-pie text-[#c9a227]"></i></div>
-        <span class="s-card-title">Estados de Cobranza</span>
-      </div>
-      <div class="s-card-body">
-        <div class="chart-box-sm"><canvas id="estadosChart"></canvas></div>
-      </div>
-    </div>
-
-  </div>
-
-  {# ── Gráfico: Top 10 clientes ── #}
-  <div class="s-card mb-5">
-    <div class="s-card-head">
-      <div class="s-card-ico s-card-ico-primary"><i class="fas fa-users text-[#2f4550]"></i></div>
-      <span class="s-card-title">Top 10 Clientes por Monto de Ventas</span>
-    </div>
-    <div class="s-card-body">
-      <div class="chart-box-md"><canvas id="clientesChart"></canvas></div>
-    </div>
-  </div>
-
-  {# ── Tabla de detalle ── #}
-  <div class="s-card mb-5" data-tour="detail">
-    <div class="s-card-head">
-      <div class="s-card-ico s-card-ico-primary"><i class="fas fa-table text-[#2f4550]"></i></div>
-      <span class="s-card-title">Detalle de Ventas</span>
-    </div>
-    <div class="s-card-body" id="ventas-table-container">
-      {% if balances %}
-      <table id="ventasTable" class="ventas-table display responsive nowrap min-w-full hover stripe">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Cliente</th>
-            <th>N° Cuenta</th>
-            <th>Banco</th>
-            <th>Sucursal</th>
-            <th>Fecha</th>
-            <th>Total Ventas</th>
-            <th>Total Pagado</th>
-            <th>Saldo Pendiente</th>
-            <th>Estado</th>
-            <th>Acumulado</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for balance in balances %}
-          <tr>
-            <td class="font-mono text-xs text-[#586f7c]">{{ balance.numero_secuencial }}</td>
-
-            <td><span class="font-medium text-[#2f4550]">{{ balance.cliente_nombre }}</span></td>
-
-            <td>
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-[rgba(184,219,217,.2)] text-[#2f4550]">{{ balance.cuenta_numero }}</span>
-            </td>
-
-            <td class="text-sm text-[#586f7c]">{{ balance.banco_nombre }}</td>
-
-            <td class="text-sm text-[#586f7c]">{{ balance.sucursal_nombre }}</td>
-
-            <td class="text-sm text-[#586f7c]">{{ balance.fecha|date:"d/m/Y" }}</td>
-
-            <td class="text-right font-semibold text-[#5a7d6b]" data-order="{{ balance.total_ventas|unlocalize }}">
-              ${{ balance.total_ventas|us_currency:2 }}
-            </td>
-
-            <td class="text-right font-semibold text-[#2f4550]" data-order="{{ balance.total_pagado|unlocalize }}">
-              ${{ balance.total_pagado|us_currency:2 }}
-            </td>
-
-            <td class="text-right font-semibold text-[#b85450]" data-order="{{ balance.saldo_pendiente|unlocalize }}">
-              ${{ balance.saldo_pendiente|us_currency:2 }}
-            </td>
-
-            <td class="text-center" data-order="{{ balance.estado_cobranza }}">
-              <div class="flex flex-col items-center space-y-1">
-                <span class="{{ balance.estado_cobranza|estado_badge_class }}">{{ balance.estado_cobranza }}</span>
-                {% if balance.fecha_vencimiento %}
-                  <small class="text-xs text-[#b8dbd9]">{{ balance.fecha_vencimiento|date:"d/m/Y" }}</small>
-                {% endif %}
-              </div>
-            </td>
-
-            <td class="text-right font-semibold text-[#2f4550]" data-order="{{ balance.acumulado|unlocalize }}">
-              ${{ balance.acumulado|us_currency:2 }}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-        <tfoot>
-          <tr>
-            <th colspan="6" class="text-right">Totales:</th>
-            <th class="text-right">${{ total_ventas|us_currency:2 }}</th>
-            <th class="text-right">${{ total_pagado|us_currency:2 }}</th>
-            <th class="text-right">${{ saldo_pendiente_total|us_currency:2 }}</th>
-            <th class="text-center">{{ numero_transacciones }}</th>
-            <th></th>
-          </tr>
-        </tfoot>
-      </table>
-      {% else %}
-      <div class="text-center py-12">
-        <div class="inline-flex items-center justify-center w-16 h-16 bg-[#f4f4f9] rounded-full mb-4">
-          <i class="fas fa-inbox text-[#b8dbd9] text-2xl"></i>
-        </div>
-        <p class="text-[#586f7c] font-semibold">No hay datos de ventas disponibles</p>
-        <p class="text-[#b8dbd9] text-sm mt-1">Intente modificar los filtros para ver resultados.</p>
-      </div>
-      {% endif %}
-    </div>
+  {# ── Resultados dinámicos (HTMX target) ── #}
+  <div id="balances-results">
+    {{ results_html|safe }}
   </div>
 
 </div>{# /wrapper #}
@@ -514,14 +365,10 @@
 <script src="//cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.70/pdfmake.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.70/vfs_fonts.js"></script>
 
-<script src="{% static 'js/balances-general.js' %}"></script>
-
-
 <script src="{% static 'js/datatables-utils.js' %}"></script>
 <script src="{% static 'js/ventas-balances.js' %}"></script>
 <script src="{% static 'js/multi-month-selector.js' %}"></script>
 <script src="{% static 'js/bank-account-select.js' %}"></script>
-
 <script src="{% static 'js/ventas-balances-page.js' %}"></script>
 <script src="{% static 'vendor/driverjs/driver.js.iife.js' %}"></script>
 <script src="{% static 'js/balance-tours.js' %}"></script>

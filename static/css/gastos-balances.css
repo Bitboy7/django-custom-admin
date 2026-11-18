@@ -673,30 +673,41 @@ h6 {
 .btn-export-pdf {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #fff;
-  background: linear-gradient(135deg, #b85450, #b85450);
-  border: none;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #d8dce6;
   border-radius: 0.375rem;
-  padding: 0.35rem 0.8rem;
+  background-color: #fff !important;
+  background-image: none !important;
+  color: #2f4550 !important;
+  font-size: 0.74rem;
+  font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.3);
-  transition: opacity 0.15s, box-shadow 0.15s;
+  box-shadow: 0 1px 2px rgba(47, 69, 80, 0.08) !important;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 
-.btn-export-pdf:hover {
-  opacity: 0.9;
-  box-shadow: 0 3px 8px rgba(220, 38, 38, 0.35);
+.btn-export-pdf i {
+  color: #b85450;
+}
+
+.btn-export-pdf:hover,
+.btn-export-pdf:focus-visible {
+  border-color: #b8c0cc;
+  background-color: #f8fafc !important;
+  background-image: none !important;
+  color: #2f4550 !important;
+  outline: none;
 }
 
 .btn-export-pdf:active {
-  opacity: 0.8;
+  background-color: #f1f5f9 !important;
 }
 
 .btn-export-pdf:disabled {
-  opacity: 0.5;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
