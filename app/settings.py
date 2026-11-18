@@ -102,11 +102,19 @@ def _get_user_avatar(user):
 JAZZMIN_SETTINGS = {
 
     
+    # Fallback logo bundled with the project. When a logo is uploaded through
+    # Configuración del sitio, base_site.html swaps this for the uploaded file.
+    "site_logo": "img/logo-sm.png",
+    "login_logo": "img/logo-sm.png",
+
     # Logo to use for login form in dark themes (defaults to login_logo)
     "login_logo_dark": None,
-    
+
+    # Short name next to the logo (the uploaded logo usually carries its own wordmark)
+    "site_brand": "Agrícola de la Costa",
+
     # CSS classes that are applied to the logo above
-    "site_logo_classes": "img-circle elevation-3",
+    "site_logo_classes": "brand-image",
     
     # Relative path to a favicon for your site, will default to site_logo if absent (ideally 32x32 px)
     "site_icon": "img/icon.png",

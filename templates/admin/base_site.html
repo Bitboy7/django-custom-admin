@@ -42,6 +42,12 @@
 </script>
 <link rel="stylesheet" href="{% static 'css/htmx-utils.css' %}">
 <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
+{% if site_config_global and site_config_global.company_logo_url %}
+<link rel="preload" as="image" href="{{ site_config_global.company_logo_url }}" fetchpriority="high">
+{% else %}
+<link rel="preload" as="image" href="{% static 'img/logo-sm.png' %}" fetchpriority="high">
+{% endif %}
+<meta name="theme-color" content="#1f2f38">
 {# Google Fonts: Inter (UI + datos) + JetBrains Mono (código) #}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -144,7 +150,7 @@
   body aside#jazzy-sidebar .nav-treeview .nav-item > .nav-link.active i {
     color: var(--sidebar-active-text, #fff) !important;
   }
-
+++
   /* Dark mode — sidebar goes dark, content area also darkens */
   html[data-theme="dark"] body aside#jazzy-sidebar.main-sidebar,
   html[data-theme="dark"] body aside#jazzy-sidebar .sidebar,
@@ -183,6 +189,55 @@
   html[data-theme="dark"] body .content-wrapper {
     background: var(--surface-bg, #1a1f24) !important;
   }
+
+  /* ── Company logo — critical guard ────────────────────────────────
+     Produccion sirve /static/ como immutable; estas reglas mantienen el
+     logo visible aunque layout.css llegue cacheado con la regla antigua
+     que ocultaba las imagenes de .brand-link. */
+  html body aside#jazzy-sidebar .brand-link {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem;
+    min-height: 72px;
+  }
+  html body aside#jazzy-sidebar .brand-link img.brand-image,
+  html body aside#jazzy-sidebar .brand-link img {
+    display: block !important;
+    width: auto !important;
+    height: 52px;
+    max-height: 52px !important;
+    max-width: 160px;
+    padding: 4px 10px;
+    object-fit: contain;
+    background: #ffffff;
+    border-radius: 10px !important;
+    opacity: 1 !important;
+    flex-shrink: 0;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.14),
+      0 6px 14px rgba(0, 0, 0, 0.22);
+  }
+  html body aside#jazzy-sidebar .brand-link .brand-text {
+    display: block !important;
+    min-width: 0;
+    max-width: 140px;
+    overflow: hidden;
+    color: var(--sidebar-brand-text, rgba(255, 255, 255, 0.94)) !important;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  @media (max-width: 767.98px) {
+    html body aside#jazzy-sidebar .brand-link img.brand-image,
+    html body aside#jazzy-sidebar .brand-link img {
+      height: 46px;
+      max-height: 46px !important;
+      max-width: 140px;
+    }
+  }
 </style>
 {% endblock %}
 
@@ -200,12 +255,231 @@
   var EMAIL    = "{{ request.user.email|escapejs }}";
   var LOGO     = "{{ site_config_global.company_logo_url|default:''|escapejs }}";
   var BRAND    = "{{ site_config_global.site_brand|default:''|escapejs }}";
+  var SITE     = "{{ site_config_global.site_header|default:''|escapejs }}";
+  var HOME     = "{% url 'admin:index' %}";
+  var FALLBACK = "{% static 'img/logo-sm.png' %}";
+  var LOGO_SRC = LOGO || FALLBACK;
+  var IS_MAC   = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
   var NAV_EXP  = {% if site_config_global and site_config_global.navigation_expanded %}true{% else %}false{% endif %};
   var PROF_URL = "{% url 'profile_settings' %}";
 
   function ready(fn) {
     if (document.readyState !== 'loading') { fn(); }
     else { document.addEventListener('DOMContentLoaded', fn); }
+  }
+
+  function logoAlt() {
+    return 'Logo ' + (SITE || BRAND || 'Agrícola de la Costa');
+  }
+
+  function hardenLogoImage(img) {
+    img.addEventListener('error', function () {
+      if (this.dataset.logoFallback === '1') {
+        this.style.display = 'none';
+        return;
+      }
+      this.dataset.logoFallback = '1';
+      this.src = FALLBACK;
+    });
+  }
+
+  function divider() {
+    var li = document.createElement('li');
+    li.className = 'nav-item jaz-nav-divider';
+    li.setAttribute('aria-hidden', 'true');
+    return li;
+  }
+
+  /* ── Company logo: uploaded file first, bundled logo as fallback ── */
+  function applyCompanyLogo() {
+    document.querySelectorAll('.brand-link').forEach(function (link) {
+      link.setAttribute('aria-label', (SITE || BRAND || 'Panel de administración') + ' — Ir al panel');
+      link.setAttribute('title', SITE || BRAND || '');
+    });
+
+    document.querySelectorAll('.brand-link .brand-image, .brand-link img').forEach(function (img) {
+      img.classList.add('brand-logo-dyn');
+      img.alt = logoAlt();
+      hardenLogoImage(img);
+      if (img.getAttribute('src') !== LOGO_SRC) img.src = LOGO_SRC;
+    });
+  }
+
+  /* ── Keyboard skip link ── */
+  function addSkipLink() {
+    var main = document.querySelector('main.app-main');
+    if (!main || document.querySelector('.jaz-skip-link')) return;
+    if (!main.id) main.id = 'main-content';
+    main.setAttribute('tabindex', '-1');
+
+    var link = document.createElement('a');
+    link.className = 'jaz-skip-link';
+    link.href = '#' + main.id;
+    link.textContent = 'Saltar al contenido';
+    document.body.insertBefore(link, document.body.firstChild);
+  }
+
+  /* ── Navbar: brand on mobile, top-nav affordances, search, dividers ── */
+  function enhanceNavbar() {
+    var navbar = document.getElementById('jazzy-navbar');
+    if (!navbar) return;
+
+    var toggle = navbar.querySelector('[data-lte-toggle="sidebar"]');
+    var leftNav = toggle ? toggle.closest('ul.navbar-nav') : navbar.querySelector('.navbar-nav');
+    if (!leftNav) return;
+
+    var toggleLi = toggle ? toggle.closest('.nav-item') : null;
+    var afterToggle = !toggleLi;
+
+    Array.prototype.forEach.call(leftNav.children, function (li) {
+      if (li === toggleLi) { afterToggle = true; return; }
+      if (!afterToggle || li.classList.contains('jaz-nav-brand-item')) return;
+
+      li.classList.add('jaz-topmenu-item');
+      var link = li.querySelector('a.nav-link');
+      if (!link || link.querySelector('i')) return;
+
+      var href = link.getAttribute('href') || '';
+      if (!href || href === '#') return;
+
+      try {
+        var path = new URL(link.href, location.origin).pathname.replace(/\/+$/, '');
+        if (path.endsWith('/admin')) {
+          var icon = document.createElement('i');
+          icon.className = 'fas fa-th-large';
+          icon.setAttribute('aria-hidden', 'true');
+          link.insertBefore(icon, link.firstChild);
+        }
+      } catch (e) { /* URL no válida: sin icono */ }
+    });
+
+    /* Compact logo for the off-canvas layout */
+    if (toggleLi && !leftNav.querySelector('.jaz-nav-brand-item')) {
+      var brandLi = document.createElement('li');
+      brandLi.className = 'nav-item jaz-nav-brand-item';
+
+      var brandA = document.createElement('a');
+      brandA.className = 'jaz-navbar-brand';
+      brandA.href = HOME;
+      brandA.setAttribute('aria-label', (SITE || BRAND || 'Agrícola de la Costa') + ' — Ir al panel');
+
+      var plate = document.createElement('span');
+      plate.className = 'jaz-brand-plate';
+
+      var brandImg = document.createElement('img');
+      brandImg.src = LOGO_SRC;
+      brandImg.alt = logoAlt();
+      hardenLogoImage(brandImg);
+
+      plate.appendChild(brandImg);
+      brandA.appendChild(plate);
+      brandLi.appendChild(brandA);
+      toggleLi.parentNode.insertBefore(brandLi, toggleLi.nextSibling);
+    }
+
+    /* Search: leading icon, shortcut hint, ⌘/Ctrl + K focus */
+    var forms = navbar.querySelectorAll('form.d-flex');
+    Array.prototype.forEach.call(forms, function (form) {
+      form.setAttribute('role', 'search');
+
+      var group = form.querySelector('.input-group');
+      var input = form.querySelector('input[name="q"]');
+      if (!group || !input) return;
+
+      if (!group.querySelector('.jaz-search-icon')) {
+        var icon = document.createElement('i');
+        icon.className = 'fas fa-search jaz-search-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        group.insertBefore(icon, group.firstChild);
+      }
+
+      if (!group.querySelector('.jaz-search-kbd')) {
+        var kbd = document.createElement('kbd');
+        kbd.className = 'jaz-search-kbd';
+        kbd.textContent = IS_MAC ? '⌘K' : 'Ctrl K';
+        kbd.setAttribute('aria-hidden', 'true');
+        var submit = group.querySelector('button');
+        if (submit) group.insertBefore(kbd, submit);
+        else group.appendChild(kbd);
+      }
+
+      input.placeholder = 'Buscar usuarios…';
+      input.setAttribute('aria-label', 'Buscar usuarios');
+
+      var submitEl = group.querySelector('button');
+      if (submitEl) {
+        if (!submitEl.getAttribute('aria-label')) submitEl.setAttribute('aria-label', 'Buscar');
+        var submitIcon = submitEl.querySelector('i');
+        if (submitIcon) submitIcon.className = 'fas fa-arrow-right';
+      }
+    });
+
+    if (forms.length) {
+      document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'k' || e.key === 'K')) {
+          var input = navbar.querySelector('form.d-flex input[name="q"]');
+          if (!input) return;
+          e.preventDefault();
+          input.focus();
+          input.select();
+        }
+      });
+    }
+
+    /* Right side: consistent utility buttons, labels and separators */
+    var rightNav = navbar.querySelector('.navbar-nav.ms-auto');
+    if (rightNav) {
+      var langMenu = rightNav.querySelector('#jazzy-languagemenu');
+      if (langMenu) {
+        var langToggle = langMenu.closest('.nav-item')?.querySelector('.nav-link');
+        if (langToggle) {
+          langToggle.classList.add('jaz-utility');
+          langToggle.setAttribute('aria-label', 'Cambiar idioma');
+          langToggle.setAttribute('title', 'Cambiar idioma');
+        }
+      }
+
+      var userMenu = rightNav.querySelector('#jazzy-usermenu');
+      if (userMenu) {
+        var userToggle = userMenu.closest('.nav-item')?.querySelector('.nav-link');
+        if (userToggle) {
+          userToggle.setAttribute('aria-label', NAME ? 'Menú de usuario: ' + NAME : 'Menú de usuario');
+          userToggle.setAttribute('title', NAME || 'Menú de usuario');
+        }
+
+        var userLi = userMenu.closest('.nav-item');
+        if (userLi && !userLi.previousElementSibling?.classList.contains('jaz-nav-divider')) {
+          rightNav.insertBefore(divider(), userLi);
+        }
+      }
+
+      var themeBtn = rightNav.querySelector('#theme-toggle-btn');
+      if (themeBtn) {
+        var themeLi = themeBtn.closest('.nav-item');
+        if (themeLi && !themeLi.previousElementSibling?.classList.contains('jaz-nav-divider')) {
+          rightNav.insertBefore(divider(), themeLi);
+        }
+      }
+    }
+  }
+
+  /* ── Mark the current top-level destination ── */
+  function markCurrentNav() {
+    var navbar = document.getElementById('jazzy-navbar');
+    if (!navbar) return;
+    var here = location.pathname.replace(/\/+$/, '');
+
+    navbar.querySelectorAll('.jaz-topmenu-item > a.nav-link[href]').forEach(function (link) {
+      var href = link.getAttribute('href');
+      if (!href || href === '#') return;
+      try {
+        var target = new URL(link.href, location.origin).pathname.replace(/\/+$/, '');
+        if (target && (target === here || here === target + '/index')) {
+          link.classList.add('jaz-nav-current');
+          link.setAttribute('aria-current', 'page');
+        }
+      } catch (e) { /* sin estado activo */ }
+    });
   }
 
   function avatarEl(cls) {
@@ -228,88 +502,98 @@
     return sp;
   }
 
-  ready(function () {
-    /* ── 1. Navbar button → avatar pill ── */
+  function buildAvatar() {
     var userBtn = (
       document.querySelector('#jazzy-usermenu')?.closest('.nav-item')?.querySelector(':scope > .nav-link') ||
       document.querySelector('#jazzy-usermenu')?.closest('.nav-item.dropdown')?.querySelector('.nav-link')
     );
-    if (userBtn) {
-      userBtn.classList.add('jaz-avatar-btn');
-      userBtn.setAttribute('aria-label', NAME ? 'Usuario: ' + NAME : 'Menu de usuario');
-      userBtn.setAttribute('title', '');
-      userBtn.innerHTML = '';
-      userBtn.appendChild(avatarEl('jaz-avatar-img'));
-      var nameSpan = document.createElement('span');
-      nameSpan.className = 'jaz-avatar-name';
-      nameSpan.textContent = NAME;
-      userBtn.appendChild(nameSpan);
-    }
+    if (!userBtn) return;
 
-    /* ── 2. Rebuild user dropdown: single profile card, no duplicates ── */
+    userBtn.classList.add('jaz-avatar-btn');
+    userBtn.setAttribute('aria-label', NAME ? 'Usuario: ' + NAME : 'Menú de usuario');
+    userBtn.setAttribute('title', '');
+    userBtn.innerHTML = '';
+    userBtn.appendChild(avatarEl('jaz-avatar-img'));
+
+    var nameSpan = document.createElement('span');
+    nameSpan.className = 'jaz-avatar-name';
+    nameSpan.textContent = NAME;
+    userBtn.appendChild(nameSpan);
+
+    var chevron = document.createElement('i');
+    chevron.className = 'fas fa-chevron-down jaz-avatar-chevron';
+    chevron.setAttribute('aria-hidden', 'true');
+    userBtn.appendChild(chevron);
+  }
+
+  function buildUserDropdown() {
     var dropMenu = document.querySelector('#jazzy-usermenu');
-    if (dropMenu) {
-      var hdr = dropMenu.querySelector('.dropdown-header');
-      if (hdr) {
-        var nextEl = hdr.nextElementSibling;
-        if (nextEl && nextEl.classList.contains('dropdown-divider')) nextEl.remove();
-        hdr.remove();
-      }
-      var footer = dropMenu.querySelector('.dropdown-footer');
-      if (footer) {
-        var prevEl = footer.previousElementSibling;
-        if (prevEl && prevEl.classList.contains('dropdown-divider')) prevEl.remove();
-        footer.remove();
-      }
-      var logoutBtn = dropMenu.querySelector('#logout-form button[type="submit"]');
-      if (logoutBtn) logoutBtn.classList.add('jaz-logout-btn');
+    if (!dropMenu) return;
 
-      var card = document.createElement('a');
-      card.href = PROF_URL;
-      card.className = 'jaz-dd-card';
-      card.setAttribute('aria-label', 'Ir a Mi Perfil');
-
-      var avatarWrap = document.createElement('span');
-      avatarWrap.appendChild(avatarEl('profile-mini-avatar'));
-
-      var meta = document.createElement('div');
-      meta.className = 'jaz-dd-meta';
-      meta.innerHTML =
-        '<span class="pname">' + (NAME || 'Usuario') + '</span>' +
-        (EMAIL ? '<span class="pemail">' + EMAIL + '</span>' : '');
-
-      var editBtn = document.createElement('span');
-      editBtn.className = 'jaz-dd-edit-btn';
-      editBtn.setAttribute('aria-hidden', 'true');
-      editBtn.innerHTML = '<i class="fas fa-pencil-alt"></i>';
-
-      card.appendChild(avatarWrap);
-      card.appendChild(meta);
-      card.appendChild(editBtn);
-
-      var divider = document.createElement('div');
-      divider.className = 'dropdown-divider';
-      divider.style.margin = '0';
-
-      dropMenu.insertBefore(divider, dropMenu.firstChild);
-      dropMenu.insertBefore(card, dropMenu.firstChild);
+    var hdr = dropMenu.querySelector('.dropdown-header');
+    if (hdr) {
+      var nextEl = hdr.nextElementSibling;
+      if (nextEl && nextEl.classList.contains('dropdown-divider')) nextEl.remove();
+      hdr.remove();
     }
 
-    /* ── 3. Dynamic company logo ── */
-    if (LOGO) {
-      document.querySelectorAll('.brand-link .brand-image, .brand-link img').forEach(function (img) {
-        img.src = LOGO; img.classList.add('brand-logo-dyn');
-      });
+    var footer = dropMenu.querySelector('.dropdown-footer');
+    if (footer) {
+      var prevEl = footer.previousElementSibling;
+      if (prevEl && prevEl.classList.contains('dropdown-divider')) prevEl.remove();
+      footer.remove();
     }
 
-    /* ── 4. Dynamic brand text ── */
+    var logoutBtn = dropMenu.querySelector('#logout-form button[type="submit"]');
+    if (logoutBtn) logoutBtn.classList.add('jaz-logout-btn');
+
+    var card = document.createElement('a');
+    card.href = PROF_URL;
+    card.className = 'jaz-dd-card';
+    card.setAttribute('aria-label', 'Ir a Mi Perfil');
+
+    var avatarWrap = document.createElement('span');
+    avatarWrap.appendChild(avatarEl('profile-mini-avatar'));
+
+    var meta = document.createElement('div');
+    meta.className = 'jaz-dd-meta';
+    meta.innerHTML =
+      '<span class="pname">' + (NAME || 'Usuario') + '</span>' +
+      (EMAIL ? '<span class="pemail">' + EMAIL + '</span>' : '');
+
+    var editBtn = document.createElement('span');
+    editBtn.className = 'jaz-dd-edit-btn';
+    editBtn.setAttribute('aria-hidden', 'true');
+    editBtn.innerHTML = '<i class="fas fa-pencil-alt"></i>';
+
+    card.appendChild(avatarWrap);
+    card.appendChild(meta);
+    card.appendChild(editBtn);
+
+    var dividerEl = document.createElement('div');
+    dividerEl.className = 'dropdown-divider';
+    dividerEl.style.margin = '0';
+
+    dropMenu.insertBefore(dividerEl, dropMenu.firstChild);
+    dropMenu.insertBefore(card, dropMenu.firstChild);
+  }
+
+  ready(function () {
+    applyCompanyLogo();
+    addSkipLink();
+    buildAvatar();
+    buildUserDropdown();
+    enhanceNavbar();
+    markCurrentNav();
+
+    /* Dynamic brand text (kept for assistive tech / future wordmark use) */
     if (BRAND) {
       document.querySelectorAll('.brand-text').forEach(function (el) {
         el.textContent = BRAND;
       });
     }
 
-    /* ── 5. Navigation expanded ── */
+    /* Navigation expanded */
     if (NAV_EXP) {
       document.querySelectorAll('.nav-sidebar .nav-item .nav-treeview').forEach(function (sub) {
         sub.style.display = 'block';

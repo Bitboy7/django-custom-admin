@@ -32,3 +32,56 @@ msgstr "Guardar y agregar otro"
 
 msgid "Home"
 msgstr "Inicio"
+
+# Generador de contraseñas (admin/auth/user/change_password.html)
+msgid "Secure password generator"
+msgstr "Generador de contraseñas seguras"
+
+msgid ""
+"Creates a random password with uppercase, lowercase, numbers and symbols. "
+"It fills both fields; copy it and share it through a secure channel."
+msgstr ""
+"Crea una contraseña aleatoria con mayúsculas, minúsculas, números y "
+"símbolos. Rellena ambos campos; cópiala y compártela por un canal seguro."
+
+msgid "Length"
+msgstr "Longitud"
+
+msgid "Include symbols"
+msgstr "Incluir símbolos"
+
+msgid "Generate password"
+msgstr "Generar contraseña"
+
+msgid "Generated password"
+msgstr "Contraseña generada"
+
+msgid "Copy"
+msgstr "Copiar"
+
+msgid "Show password"
+msgstr "Mostrar contraseña"
+
+msgid "Hide password"
+msgstr "Ocultar contraseña"
+
+msgid "Password generated and filled into both fields. Copy it before saving."
+msgstr "Contraseña generada y rellenada en ambos campos. Cópiala antes de guardar."
+
+msgid "Password copied to the clipboard."
+msgstr "Contraseña copiada al portapapeles."
+
+msgid "Could not copy automatically. Select and copy the password manually."
+msgstr "No se pudo copiar automáticamente. Selecciona y copia la contraseña manualmente."
+
+msgid "This browser does not support secure random generation."
+msgstr "Este navegador no soporta la generación aleatoria segura."
+
+msgid "Strength: low"
+msgstr "Fortaleza: baja"
+
+msgid "Strength: good"
+msgstr "Fortaleza: buena"
+
+msgid "Strength: strong"
+msgstr "Fortaleza: alta"
