@@ -352,7 +352,7 @@
                         <div><span>{% trans "REP aplicado" %}</span><strong>{{ origen.rep_aplicado|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></strong></div>
                         <div><span>{% trans "Diferencia operativo-fiscal" %}</span><strong>{{ origen.diferencia_operativo_fiscal|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></strong></div>
                         {% if origen.saldo_insoluto_rep %}
-                        <div><span>{% trans "Saldo insoluto REP" %}</span><strong>{{ origen.saldo_insoluto_rep|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></strong></div>
+                        <div><span>{% if origen.saldo_insoluto_estimado %}{% trans "Saldo pendiente estimado (REP sin XML)" %}{% else %}{% trans "Saldo insoluto REP" %}{% endif %}</span><strong>{{ origen.saldo_insoluto_rep|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></strong></div>
                         {% endif %}
                         <div><span>{% trans "Remanente operativo" %}</span><strong>{{ origen.monto|floatformat:2 }}<span class="conc-cur">{{ origen.moneda }}</span></strong></div>
                         {% if origen.rep_aplicado %}

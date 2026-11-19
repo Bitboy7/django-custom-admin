@@ -252,6 +252,38 @@ def cobros_no_rep(
     return cobros
 
 
+def _saldo_insoluto_estimado_venta(venta, moneda, fecha_fin=None):
+    """Saldo pendiente de una venta según sus CFDI, para REP sin detalle XML.
+
+    Los REP históricos sin ``detalle_complemento`` no informan
+    ``ImpSaldoInsoluto``. Se estima como facturado + notas de cargo − notas de
+    crédito − REP vigentes aplicados a la venta (hasta ``fecha_fin``), en la
+    moneda indicada. Nunca es negativo.
+    """
+    saldo = Decimal('0')
+    for doc in venta.documentos_cfdi.all():
+        if doc.estado != 'VIGENTE':
+            continue
+        if doc.subtipo == 'recibo_pago':
+            for movimiento in _movimientos_rep(doc, None, fecha_fin):
+                if (
+                    movimiento['moneda'] == moneda
+                    and _venta_id_del_movimiento_rep(doc, movimiento) == venta.id
+                ):
+                    saldo -= movimiento['monto']
+            continue
+        if (doc.moneda or 'MXN') != moneda:
+            continue
+        if fecha_fin and doc.fecha_emision and doc.fecha_emision > fecha_fin:
+            continue
+        monto = _decimal(doc.monto.amount)
+        if doc.subtipo in INGRESOS_VENTA or doc.subtipo == 'nota_cargo':
+            saldo += monto
+        elif doc.subtipo == 'nota_credito':
+            saldo -= monto
+    return max(Decimal('0'), saldo)
+
+
 def _cobros_no_rep_con_detalle(
     cliente, fecha_inicio=None, fecha_fin=None, incluir_detalle=True,
     sucursal_id=None,
@@ -259,6 +291,7 @@ def _cobros_no_rep_con_detalle(
     """Calcula cobros sin REP y conserva su origen operativo por venta."""
     rep_por_venta_moneda = defaultdict(lambda: defaultdict(Decimal))
     rep_saldo_insoluto_por_venta_moneda = defaultdict(lambda: defaultdict(list))
+    rep_legacy_por_venta = defaultdict(set)
     rep_origen = defaultdict(lambda: defaultdict(list))
     pagos_rep_exactos = set()
     rep_docs_qs = cliente.documentos_cfdi.filter(
@@ -288,6 +321,8 @@ def _cobros_no_rep_con_detalle(
                 rep_saldo_insoluto_por_venta_moneda[venta_id][moneda].append(
                     movimiento['saldo_insoluto']
                 )
+            elif movimiento.get('legacy'):
+                rep_legacy_por_venta[venta_id].add(moneda)
             rep_origen[venta_id][moneda].append({
                 'uuid_rep': doc.uuid or '',
                 'fecha_fuente': movimiento['fecha_fuente'],
@@ -327,6 +362,19 @@ def _cobros_no_rep_con_detalle(
                     min(saldos_insolutos)
                     if saldos_insolutos else Decimal('0')
                 )
+                # REP histórico sin detalle XML: no hay ImpSaldoInsoluto, así
+                # que la diferencia contra el pago operativo no se da por
+                # cobrada; se estima el saldo pendiente con los CFDI de la
+                # venta y el vínculo queda en "revisión requerida".
+                saldo_insoluto_estimado = (
+                    not saldos_insolutos
+                    and rep_aplicado > 0
+                    and moneda in rep_legacy_por_venta[venta.id]
+                )
+                if saldo_insoluto_estimado:
+                    saldo_insoluto = _saldo_insoluto_estimado_venta(
+                        venta, moneda, fecha_fin
+                    )
                 sin_rep = total_pagos - rep_aplicado - saldo_insoluto
                 if sin_rep <= 0:
                     continue
@@ -346,6 +394,7 @@ def _cobros_no_rep_con_detalle(
                         'monto_operativo': round(float(total_pagos), 2),
                         'rep_aplicado': round(float(rep_aplicado), 2),
                         'saldo_insoluto_rep': round(float(saldo_insoluto), 2),
+                        'saldo_insoluto_estimado': saldo_insoluto_estimado,
                         'diferencia_operativo_fiscal': round(
                             float(sin_rep), 2
                         ),

@@ -2201,6 +2201,67 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
         )
         self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], 48040.00)
 
+    def _venta_rep_legacy(self, nombre, pagos_operativos, rep_monto):
+        cliente = self._cliente(nombre)
+        venta = self._venta_credito(cliente, '446880.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            uuid=f'FACTURA-{nombre}', monto=Money('446880.00', 'MXN'),
+            moneda='MXN', venta=venta,
+        )
+        for monto in pagos_operativos:
+            PagoVenta.objects.create(
+                venta=venta, fecha_pago=date(2026, 6, 26),
+                monto_pago=Money(monto, 'MXN'), cuenta_destino=self.cuenta,
+                metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+                uuid_rep='REP-LEGACY-OTRO-UUID',
+            )
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='P', subtipo='recibo_pago',
+            uuid=f'REP-{nombre}', fecha_emision=date(2026, 10, 10),
+            monto=Money(rep_monto, 'MXN'), moneda='MXN', venta=venta,
+            detalle_complemento={},
+        )
+        return cliente
+
+    def test_rep_legacy_sin_detalle_no_cuenta_saldo_pendiente_como_cobro(self):
+        """REP histórico sin detalle XML (caso BGA folio 2389): la diferencia
+        contra el pago operativo es saldo pendiente estimado, no cobro."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._venta_rep_legacy(
+            'BGA-LEGACY', ['446880.00'], '398840.00'
+        )
+        fila = conciliacion_cliente(cliente)
+
+        self.assertAlmostEqual(
+            fila['detalle']['cobros_contado'].get('MXN', 0.00), 0.00,
+        )
+        self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], 48040.00)
+
+    def test_rep_legacy_sin_detalle_descuenta_notas_credito_del_estimado(self):
+        """El saldo estimado considera notas de crédito: lo cobrado por encima
+        de ese saldo sí sigue contando como cobro sin REP."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._venta_rep_legacy(
+            'LEGACY-NC', ['446880.00'], '398840.00'
+        )
+        venta = cliente.ventas_set.get()
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='E', subtipo='nota_credito',
+            uuid='NC-LEGACY', monto=Money('20000.00', 'MXN'),
+            moneda='MXN', venta=venta,
+        )
+        fila = conciliacion_cliente(cliente)
+
+        # Estimado: 446,880 − 20,000 − 398,840 = 28,040 pendiente.
+        self.assertAlmostEqual(fila['detalle']['cobros_contado']['MXN'], 20000.00)
+        desglose = fila['cobros_contado_desglose']['MXN'][0]
+        self.assertTrue(desglose['saldo_insoluto_estimado'])
+        self.assertAlmostEqual(desglose['saldo_insoluto_rep'], 28040.00)
+        self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], 8040.00)
+
     def test_rep_parcial_multiples_pagos_usa_menor_saldo_insoluto(self):
         """Dos REPs parciales sobre la misma factura: el saldo insoluto a
         usar es el más reciente (menor), no la suma de ambos."""
@@ -2509,16 +2570,36 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
             cuenta_destino=self.cuenta,
             metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
         )
-        recibo = DocumentoCFDI.objects.create(
+        DocumentoCFDI.objects.create(
             cliente=cliente, tipo='P', subtipo='recibo_pago',
             folio='REP-100', uuid='33333333-3333-3333-3333-333333333333',
             monto=Money('100.00', 'MXN'), venta=venta_con_pago,
             pago_venta=pago,
         )
 
+        # Pago operativo sin ningún REP: sí es cobro sin REP.
+        venta_pago_sin_rep = self._venta_credito(cliente, '2000.00')
+        Ventas.objects.filter(pk=venta_pago_sin_rep.pk).update(carga='CARGA-SIN-REP')
+        factura_sin_rep = DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            folio='F-2000', uuid='44444444-4444-4444-4444-444444444444',
+            monto=Money('2000.00', 'MXN'), venta=venta_pago_sin_rep,
+        )
+        PagoVenta.objects.create(
+            venta=venta_pago_sin_rep,
+            fecha_pago=date(2026, 3, 4),
+            monto_pago=Money('300.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+        )
+
         fila = conciliacion_cliente(cliente)
         desglose = fila['cobros_contado_desglose']['MXN']
         por_venta = {item['venta_id']: item for item in desglose}
+
+        # REP histórico (sin XML) por 100 sobre factura de 5000: los 300
+        # restantes del pago operativo quedan como saldo pendiente estimado.
+        self.assertNotIn(venta_con_pago.pk, por_venta)
 
         self.assertAlmostEqual(fila['detalle']['cobros_contado']['MXN'], 1540.00)
         self.assertAlmostEqual(sum(item['monto'] for item in desglose), 1540.00)
@@ -2533,15 +2614,16 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
         sin_cfdi = por_venta[venta_sin_cfdi.pk]
         self.assertEqual(sin_cfdi['documentos_cfdi'], [])
 
-        pago_sin_rep = por_venta[venta_con_pago.pk]
+        pago_sin_rep = por_venta[venta_pago_sin_rep.pk]
         self.assertEqual(pago_sin_rep['tipo'], 'pago_sin_rep')
-        self.assertEqual(pago_sin_rep['referencia'], 'CARGA-CREDITO')
+        self.assertEqual(pago_sin_rep['referencia'], 'CARGA-SIN-REP')
         self.assertEqual(pago_sin_rep['fechas'], [date(2026, 3, 4)])
         self.assertAlmostEqual(pago_sin_rep['monto'], 300.00)
         self.assertEqual(
             {doc['id'] for doc in pago_sin_rep['documentos_cfdi']},
-            {factura_credito.pk, recibo.pk},
+            {factura_sin_rep.pk},
         )
+        self.assertTrue(factura_credito.pk)
 
 
     def test_venta_credito_pagada_por_rep_no_resta_doble(self):
