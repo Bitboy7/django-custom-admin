@@ -162,10 +162,14 @@ class Compra(models.Model):
             ordering = ['-fecha_compra']
             permissions = [("can_view_compras", "Can view compras")]
            
+def mes_actual():
+    return timezone.now().month
+
+
 class SaldoMensual(models.Model):
     cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE)
     año = models.PositiveIntegerField(choices=[(r, r) for r in range(1999, timezone.now().year + 1)], default=2025)
-    mes = models.PositiveIntegerField(choices=[(i, i) for i in range(1, 13)], default=timezone.now().month)
+    mes = models.PositiveIntegerField(choices=[(i, i) for i in range(1, 13)], default=mes_actual)
     saldo_inicial = MoneyField(max_digits=10, decimal_places=2, default_currency='MXN', default=0)
     saldo_final = MoneyField(max_digits=10, decimal_places=2, default_currency='MXN', default=0, blank=True, null=True)
     fecha_registro = models.DateTimeField(default=timezone.now)

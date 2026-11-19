@@ -62,16 +62,6 @@
     </a>
   </div>
 
-  {# ── Aviso inicial ── #}
-  <div id="warning-message" class="bg-[rgba(201,162,39,.08)] border-l-4 border-amber-400 rounded-r-md p-3 mb-4 flex items-center gap-3" role="alert">
-    <div class="w-7 h-7 rounded bg-[rgba(201,162,39,.15)] flex items-center justify-center flex-shrink-0">
-      <i class="fas fa-exclamation-triangle text-[#c9a227] text-xs"></i>
-    </div>
-    <div>
-      <p class="text-xs font-bold text-[#c9a227]">Atención</p>
-      <p class="text-xs text-[#c9a227]">El filtro por defecto es diario. Por favor, seleccione el periodo deseado.</p>
-    </div>
-  </div>
 
   {# ── Skeleton (shown during HTMX request) ── #}
   <div id="balances-skeleton" class="htmx-indicator mb-5">
@@ -210,7 +200,7 @@
             <label for="year" class="filter-label">Seleccione el año:</label>
             <select name="year" id="year" class="filter-select">
               {% for year in available_years %}
-              <option value="{{ year.year|safe }}" {% if year.year|stringformat:"s" == selected_year or not selected_year and year.year == current_year %}selected{% endif %}>{{ year.year|safe }}</option>
+              <option value="{{ year.year|unlocalize }}" {% if year.year|stringformat:"s" == selected_year or not selected_year and year.year == current_year %}selected{% endif %}>{{ year.year|unlocalize }}</option>
               {% endfor %}
             </select>
           </div>
@@ -380,4 +370,71 @@
 <script src="{% static 'js/gastos-balances-page.js' %}"></script>
 <script src="{% static 'vendor/driverjs/driver.js.iife.js' %}"></script>
 <script src="{% static 'js/balance-tours.js' %}"></script>
+<script>
+(function () {
+  function animateBalancesEntrance(scope, options) {
+    var opts = options || {};
+    var root = typeof scope === "string" ? document.querySelector(scope) : scope;
+    if (!root || typeof root.animate !== "function") return;
+
+    var reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    var targets = [];
+    var add = function (element) {
+      if (element) targets.push(element);
+    };
+
+    if (!opts.resultsOnly) {
+      add(root.querySelector(".page-head") || root.querySelector(".balance-help-actions"));
+      add(root.querySelector(".filter-card"));
+    }
+
+    var results = opts.resultsOnly ? root : root.querySelector("#balances-results");
+    if (results) {
+      add(
+        results.querySelector('[data-tour="exports"]') ||
+          results.querySelector(".balances-results-heading")
+      );
+      results.querySelectorAll(".kpi-card").forEach(add);
+      results.querySelectorAll(".s-card").forEach(add);
+    }
+
+    targets.forEach(function (element, index) {
+      var delay = reduceMotion ? 0 : Math.min(index * 40, 260);
+      var keyframes = reduceMotion
+        ? [{ opacity: 0 }, { opacity: 1 }]
+        : [
+            { opacity: 0, transform: "translateY(8px)" },
+            { opacity: 1, transform: "translateY(0)" },
+          ];
+
+      element.animate(keyframes, {
+        duration: reduceMotion ? 160 : 420,
+        delay: delay,
+        easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+        fill: "backwards",
+      });
+    });
+  }
+
+  function initEntrance() {
+    animateBalancesEntrance(document.querySelector("[data-balances-page]"));
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initEntrance);
+  } else {
+    initEntrance();
+  }
+
+  document.body.addEventListener("htmx:afterSwap", function (event) {
+    var target = event.detail && event.detail.target;
+    if (target && target.id === "balances-results") {
+      animateBalancesEntrance(target, { resultsOnly: true });
+    }
+  });
+})();
+</script>
 {% endblock %}

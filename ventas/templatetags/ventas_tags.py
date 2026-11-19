@@ -47,21 +47,22 @@ def percentage(value, total):
 @register.filter
 def estado_badge_class(estado):
     """
-    Devuelve las clases CSS para el estado de cobranza
+    Devuelve las clases CSS para el estado de cobranza.
+    Las clases semánticas viven en static/css/ventas-balances.css.
     Uso: {{ estado|estado_badge_class }}
     """
     if not estado:
-        return 'px-2 py-1 text-xs rounded-full bg-[#f4f4f9] text-[#586f7c]'
-    
+        return 'estado-badge estado-badge--neutral'
+
     class_map = {
-        'Pagado': 'px-2 py-1 text-xs rounded-full bg-[rgba(184,219,217,.15)] text-[#5a7d6b] font-medium',
-        'Pendiente': 'px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 font-medium', 
-        'Parcial': 'px-2 py-1 text-xs rounded-full bg-[rgba(184,219,217,.2)] text-[#2f4550] font-medium',
-        'Vencido': 'px-2 py-1 text-xs rounded-full bg-[rgba(184,84,80,.15)] text-[#b85450] font-medium',
-        'Incobrable': 'px-2 py-1 text-xs rounded-full bg-[#f4f4f9] text-[#586f7c] font-medium'
+        'Pagado': 'estado-badge estado-badge--success',
+        'Pendiente': 'estado-badge estado-badge--warning',
+        'Parcial': 'estado-badge estado-badge--info',
+        'Vencido': 'estado-badge estado-badge--danger',
+        'Incobrable': 'estado-badge estado-badge--neutral',
     }
-    
-    return class_map.get(estado, 'px-2 py-1 text-xs rounded-full bg-[#f4f4f9] text-[#586f7c]')
+
+    return class_map.get(estado, 'estado-badge estado-badge--neutral')
 
 @register.filter
 def estado_cobranza_badge(estado):

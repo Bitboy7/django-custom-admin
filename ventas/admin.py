@@ -404,6 +404,7 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
     def conciliacion_view(self, request):
         """Vista de conciliación de CFDI por cliente con filtros de auditoría."""
         from datetime import date
+        from catalogo.models import Sucursal
         from .services.conciliacion_service import (
             conciliacion_global,
             filtrar_filas_conciliacion,
@@ -427,10 +428,13 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
         inicio_raw = request.GET.get('fecha_inicio', '')
         fin_raw = request.GET.get('fecha_fin', '')
         cliente_raw = request.GET.get('cliente_id', '')
+        sucursal_raw = request.GET.get('sucursal_id', '')
+        selected_sucursal_id = _parse_id(sucursal_raw)
         filas_completas = conciliacion_global(
             fecha_inicio=_parse(inicio_raw),
             fecha_fin=_parse(fin_raw),
             cliente_id=_parse_id(cliente_raw),
+            sucursal_id=selected_sucursal_id,
         )
         monedas = monedas_disponibles_conciliacion(filas_completas)
 
@@ -471,6 +475,7 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
             inicio_raw,
             fin_raw,
             cliente_raw,
+            selected_sucursal_id,
             selected_moneda,
             selected_estado_saldo,
             selected_incidencia,
@@ -484,6 +489,8 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
             fecha_fin=fin_raw,
             clientes=Cliente.objects.filter(activo=True).order_by('nombre'),
             selected_cliente_id=cliente_raw,
+            sucursales=Sucursal.objects.all().order_by('nombre'),
+            selected_sucursal_id=sucursal_raw,
             monedas=monedas,
             selected_moneda=selected_moneda,
             estado_saldo_choices=estado_saldo_choices,
@@ -491,6 +498,7 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
             incidencia_choices=incidencia_choices,
             selected_incidencia=selected_incidencia,
             filtros_activos=filtros_activos,
+            filtro_sucursal_activo=bool(selected_sucursal_id),
         )
         return TemplateResponse(request, 'admin/ventas/conciliacion.html', context)
     
@@ -2041,12 +2049,25 @@ class VentasAdmin(ModelAdmin):
             'months': FilterOptionsProvider.get_months_list(),
         })
 
+        results_html = render_to_string(
+            'admin/ventas/partials/ventas_balances_results.html',
+            context,
+            request=request,
+        )
+
+        if request.headers.get('HX-Request') == 'true':
+            from django.http import HttpResponse
+            response = HttpResponse(results_html)
+            response['HX-Trigger'] = json.dumps({
+                'showToast': {
+                    'type': 'info',
+                    'title': 'Filtros aplicados',
+                    'message': 'La información ha sido filtrada según los criterios seleccionados.'
+                }
+            })
+            return response
+
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            table_html = render_to_string(
-                'admin/ventas/partials/ventas_balances_table.html',
-                context,
-                request=request,
-            )
             return JsonResponse({
                 'kpis': {
                     'total_ventas': float(context.get('total_ventas') or 0),
@@ -2055,15 +2076,26 @@ class VentasAdmin(ModelAdmin):
                     'numero_transacciones': context.get('numero_transacciones', 0),
                     'venta_maxima': float(context.get('venta_maxima') or 0),
                     'promedio_ventas': float(context.get('promedio_ventas') or 0),
+                    'ventas_contado_total': float(context.get('ventas_contado_total') or 0),
+                    'ventas_contado_count': context.get('ventas_contado_count', 0),
+                    'ventas_credito_total': float(context.get('ventas_credito_total') or 0),
+                    'ventas_credito_count': context.get('ventas_credito_count', 0),
+                    'ventas_vencidas_total': float(context.get('ventas_vencidas_total') or 0),
+                    'ventas_vencidas_count': context.get('ventas_vencidas_count', 0),
+                    'total_facturado_cfdi': float(context.get('total_facturado_cfdi') or 0),
+                    'total_notas_credito_cfdi': float(context.get('total_notas_credito_cfdi') or 0),
+                    'total_recibos_pago_cfdi': float(context.get('total_recibos_pago_cfdi') or 0),
+                    'numero_cfdis': context.get('numero_cfdis', 0),
                 },
                 'chart_data': {
                     'modalidad': json.loads(context['ventas_por_modalidad']),
                     'estados': json.loads(context['ventas_por_estado']),
                     'clientes': json.loads(context['ventas_por_cliente']),
                 },
-                'table_html': table_html,
+                'results_html': results_html,
             })
 
+        context['results_html'] = results_html
         return TemplateResponse(request, 'admin/ventas/ventas_balances.html', context)
 
     def exportar_balances_xlsx_admin_view(self, request):
@@ -3872,6 +3904,35 @@ class ObligacionFiscalAdmin(ModelAdmin):
 # DOCUMENTOS CFDI
 # =============================================================================
 
+class UUIDDocumentoCFDIFilter(admin.ListFilter):
+    """Filtro de texto por UUID (coincidencia parcial, sin distinguir mayúsculas)."""
+    title = 'UUID'
+    parameter_name = 'uuid_q'
+    template = 'admin/ventas/documentocfdi/filters/uuid.html'
+
+    def __init__(self, request, params, model, model_admin):
+        super().__init__(request, params, model, model_admin)
+        value = params.pop(self.parameter_name, None)
+        if isinstance(value, (list, tuple)):
+            value = value[-1] if value else None
+        self.used_parameters[self.parameter_name] = (value or '').strip()
+
+    def has_output(self):
+        return True
+
+    def expected_parameters(self):
+        return [self.parameter_name]
+
+    def choices(self, changelist):
+        return []
+
+    def queryset(self, request, queryset):
+        valor = self.used_parameters.get(self.parameter_name)
+        if valor:
+            return queryset.filter(uuid__icontains=valor)
+        return queryset
+
+
 @admin.register(DocumentoCFDI)
 class DocumentoCFDIAdmin(ModelAdmin):
     change_list_template = 'admin/ventas/documentocfdi/change_list.html'
@@ -3879,12 +3940,17 @@ class DocumentoCFDIAdmin(ModelAdmin):
         'subtipo', 'folio', 'uuid', 'get_cliente', 'fecha_emision', 'monto',
         'estado', 'pdf_preview',
     )
-    list_filter = ('tipo', 'subtipo', 'estado', 'fecha_emision')
+    list_filter = (
+        'tipo',
+        ('cliente', admin.RelatedOnlyFieldListFilter),
+        UUIDDocumentoCFDIFilter,
+        'fecha_emision',
+    )
     search_fields = ('folio', 'uuid', 'cliente__nombre', 'venta__carga')
     date_hierarchy = 'fecha_emision'
     list_per_page = 30
     list_select_related = ('cliente',)
-    readonly_fields = ('creado_en', 'actualizado_en')
+    readonly_fields = ('creado_en', 'actualizado_en', 'detalle_complemento')
 
     def get_urls(self):
         custom_urls = [
@@ -3942,6 +4008,10 @@ class DocumentoCFDIAdmin(ModelAdmin):
         }),
         ('Archivos', {
             'fields': ('archivo_xml', 'archivo_pdf')
+        }),
+        ('Detalle del complemento de pago', {
+            'fields': ('detalle_complemento',),
+            'classes': ('collapse',),
         }),
         ('Auditoría', {
             'fields': ('creado_en', 'actualizado_en')

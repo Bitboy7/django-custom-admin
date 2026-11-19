@@ -425,10 +425,8 @@ class Anticipo(models.Model):
     def _registrar_aplicacion(self, venta):
         """Registra la aplicación del anticipo en auditoría"""
         try:
-            from auditoria.models import LogActividad
-            LogActividad.objects.create(
-                usuario=None,
-                nombre_usuario='Sistema',
+            from auditoria.request_context import registrar_evento_modelo
+            registrar_evento_modelo(
                 tipo_accion='update',
                 descripcion=f'Anticipo de ${self.monto.amount:,.2f} aplicado a venta {venta.carga}',
                 modelo_afectado='Anticipo',
@@ -859,10 +857,8 @@ class Ventas(models.Model):
 
         if self.estado_cobranza != estado_anterior:
             try:
-                from auditoria.models import LogActividad
-                LogActividad.objects.create(
-                    usuario=None,
-                    nombre_usuario='Sistema',
+                from auditoria.request_context import registrar_evento_modelo
+                registrar_evento_modelo(
                     tipo_accion='update',
                     descripcion=f'Estado de cobranza cambió de {estado_anterior} a {self.estado_cobranza}',
                     modelo_afectado='Ventas',
@@ -1097,10 +1093,8 @@ class PagoVenta(models.Model):
     def _registrar_auditoria(self, es_nuevo, venta):
         """Registra el pago en auditoría para trazabilidad completa"""
         try:
-            from auditoria.models import LogActividad
-            LogActividad.objects.create(
-                usuario=None,
-                nombre_usuario='Sistema',
+            from auditoria.request_context import registrar_evento_modelo
+            registrar_evento_modelo(
                 tipo_accion='create' if es_nuevo else 'update',
                 descripcion=f'Pago de ${self.monto_pago.amount:,.2f} registrado para venta {venta.carga}. '
                            f'Saldo restante: ${venta.saldo_pendiente():,.2f}',
@@ -1808,6 +1802,16 @@ class DocumentoCFDI(models.Model):
         default=list, blank=True,
         verbose_name='Conceptos',
         help_text='Lista de conceptos extraídos del XML (clave, descripción, cantidad, unidad...).',
+    )
+
+    detalle_complemento = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Detalle del complemento',
+        help_text=(
+            'Detalle de pagos REP y documentos relacionados extraído del XML, '
+            'con montos decimales serializados como texto.'
+        ),
     )
 
     creado_en = models.DateTimeField(auto_now_add=True)

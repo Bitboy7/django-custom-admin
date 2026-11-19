@@ -127,6 +127,7 @@ def _extract_pagos(root):
                 'saldo_insoluto': d.get('ImpSaldoInsoluto', ''),
                 'parcialidad': d.get('NumParcialidad', ''),
                 'moneda': d.get('MonedaDR', ''),
+                'equivalencia': d.get('EquivalenciaDR', ''),
             })
 
         pagos.append({

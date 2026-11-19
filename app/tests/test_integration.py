@@ -155,8 +155,8 @@ class BalancesViewIntegrationTest(BaseIntegrationTest):
         )
 
     def test_balances_view_carga_con_autenticacion(self):
-        """La vista /balances/ debe cargar correctamente para usuario autenticado."""
-        self.client.force_login(self.regular_user)
+        """La vista /balances/ debe cargar para un usuario con permiso de ventas."""
+        self.client.force_login(self.admin_user)
         response = self.client.get('/en/balances/')
         self.assertIn(response.status_code, [200, 302])
 

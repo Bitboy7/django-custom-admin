@@ -397,6 +397,114 @@ def resolver_venta(parsed):
     return doc.venta if doc else None
 
 
+def resolver_documentos_relacionados(uuids):
+    """Resuelve documentos solo por UUID completo y separa los pendientes."""
+    resueltos = {}
+    pendientes = []
+    vistos = set()
+
+    for valor in (uuids or []):
+        uuid = str(valor or '').strip()
+        clave = uuid.upper()
+        if not uuid or clave in vistos:
+            continue
+        vistos.add(clave)
+
+        documentos = list(
+            DocumentoCFDI.objects.filter(uuid__iexact=uuid).order_by('pk')
+        )
+        if len(documentos) == 1:
+            resueltos[clave] = documentos[0]
+        else:
+            pendientes.append({
+                'uuid': uuid,
+                'estado': 'ambiguo' if documentos else 'no_encontrado',
+            })
+
+    return resueltos, pendientes
+
+
+def _uuids_cfdi_relacionados(parsed):
+    """Devuelve solo UUIDs provenientes del bloque CfdiRelacionados."""
+    if 'relacionados_cfdi' in parsed:
+        return parsed.get('relacionados_cfdi') or []
+    # Compatibilidad con datos parseados antes de separar los UUID fiscales de
+    # los IdDocumento usados por Pagos 2.0.
+    if parsed.get('tipo_relacion'):
+        return parsed.get('relacionados') or []
+    return []
+
+
+def _resolver_documentos_doctos(parsed):
+    """Resuelve por UUID las facturas indicadas en los DoctoRelacionado."""
+    uuids = [
+        docto.get('uuid')
+        for pago in (parsed.get('pagos') or [])
+        for docto in (pago.get('doctos') or [])
+        if docto.get('uuid')
+    ]
+    resueltos, pendientes = resolver_documentos_relacionados(uuids)
+    documentos = list({doc.pk: doc for doc in resueltos.values()}.values())
+    ventas = list({
+        doc.venta_id: doc.venta
+        for doc in documentos
+        if doc.venta_id and doc.venta
+    }.values())
+    return uuids, documentos, pendientes, ventas
+
+
+def _documentos_docto_pertenecen_al_cliente(documentos, cliente):
+    return all(
+        documento.cliente_id == cliente.pk
+        and (
+            not documento.venta_id
+            or documento.venta.cliente_id == cliente.pk
+        )
+        for documento in documentos
+    )
+
+
+def _resolver_cfdi_relacionado(parsed, cliente=None):
+    """Resuelve la FK fiscal solo desde UUIDs explícitos del comprobante."""
+    uuids = _uuids_cfdi_relacionados(parsed)
+    if not uuids:
+        return None
+    resueltos, pendientes = resolver_documentos_relacionados(uuids)
+    if pendientes or len(resueltos) != 1:
+        return None
+    relacionado = next(iter(resueltos.values()))
+    if cliente and not _documentos_docto_pertenecen_al_cliente(
+        [relacionado], cliente
+    ):
+        return None
+    return relacionado
+
+
+def _resolver_pago_venta_exacto(uuid_rep, venta):
+    """Busca un PagoVenta único por UUID REP y valida que sea de la misma Venta."""
+    if not uuid_rep:
+        return None, 'uuid_ausente'
+
+    pagos = list(
+        PagoVenta.objects.filter(uuid_rep__iexact=str(uuid_rep).strip())
+        .select_related('venta')
+        .order_by('pk')
+    )
+    if len(pagos) > 1:
+        return None, 'ambiguo'
+    if not pagos:
+        return None, 'no_encontrado'
+    if venta is None:
+        return None, 'venta_no_resuelta'
+
+    pago = pagos[0]
+    if pago.venta_id != venta.pk:
+        return None, 'otra_venta'
+    if DocumentoCFDI.objects.filter(pago_venta_id=pago.pk).exists():
+        return None, 'ya_vinculado'
+    return pago, 'uuid_coincidente'
+
+
 def _monto_recibo(parsed):
     """Monto total pagado en un recibo electrónico de pago."""
     pagos = parsed.get('pagos') or []
@@ -438,9 +546,58 @@ def _tipo_cambio_recibo(parsed, venta, moneda):
     return tipo_cambio
 
 
+def _serializar_detalle_complemento(parsed, *, vinculo_pago=None):
+    """Normaliza pagos REP a datos JSON sin perder pagos parciales."""
+    relacionados = [
+        str(uuid) for uuid in _uuids_cfdi_relacionados(parsed) if uuid
+    ]
+    pagos = []
+
+    for pago in (parsed.get('pagos') or []):
+        fecha = pago.get('fecha')
+        if isinstance(fecha, (date, datetime)):
+            fecha = fecha.isoformat()
+        elif fecha is not None:
+            fecha = str(fecha)
+
+        doctos = []
+        for docto in (pago.get('doctos') or []):
+            pagado = docto.get('pagado')
+            doctos.append({
+                'uuid': docto.get('uuid') or '',
+                'saldo_anterior': str(docto.get('saldo_anterior') or ''),
+                'imp_pagado': str(pagado if pagado is not None else '0'),
+                'saldo_insoluto': str(docto.get('saldo_insoluto') or ''),
+                'parcialidad': str(docto.get('parcialidad') or ''),
+                'moneda': docto.get('moneda') or '',
+                'equivalencia': str(docto.get('equivalencia') or ''),
+            })
+
+        monto = pago.get('monto')
+        pagos.append({
+            'fecha_pago': fecha,
+            'monto': str(monto if monto is not None else '0'),
+            'moneda': pago.get('moneda') or '',
+            'tipo_cambio': str(pago.get('tipo_cambio') or ''),
+            'forma': pago.get('forma') or '',
+            'num_operacion': pago.get('num_operacion') or '',
+            'doctos': doctos,
+        })
+
+    detalle = {
+        'relacionados': relacionados,
+        'tipo_relacion': parsed.get('tipo_relacion') or '',
+        'pagos': pagos,
+    }
+    if vinculo_pago:
+        detalle['vinculo_pago'] = vinculo_pago
+    return detalle
+
+
 def crear_documento(parsed, *, cliente, subtipo=None, venta=None,
                     anticipo=None, pago_venta=None, estado='VIGENTE',
-                    conceptos=None, archivo_pdf=None, archivo_xml=None):
+                    conceptos=None, archivo_pdf=None, archivo_xml=None,
+                    cfdi_relacionado=None, detalle_complemento=None):
     """Crea un DocumentoCFDI a partir de un CFDI parseado."""
     subtipo = subtipo or classify_subtipo(parsed)
 
@@ -478,11 +635,17 @@ def crear_documento(parsed, *, cliente, subtipo=None, venta=None,
         moneda=moneda,
         tipo_cambio=parsed.get('tipo_cambio') or Decimal('1.0000'),
         estado=estado,
+        cfdi_relacionado=cfdi_relacionado,
         tipo_relacion=parsed.get('tipo_relacion') or None,
         venta=venta,
         anticipo=anticipo,
         pago_venta=pago_venta,
         conceptos=conceptos,
+        detalle_complemento=(
+            detalle_complemento
+            if detalle_complemento is not None
+            else _serializar_detalle_complemento(parsed)
+        ),
         archivo_pdf=archivo_pdf,
         archivo_xml=archivo_xml,
     )
@@ -567,40 +730,69 @@ def _crear_anticipo(parsed, cliente, cuenta):
 
 
 def _crear_recibo_pago(parsed, cliente, cuenta, archivo_pdf=None, archivo_xml=None):
-    venta = resolver_venta(parsed)
+    pagos = parsed.get('pagos') or []
+    referencias, documentos_docto, pendientes, ventas = (
+        _resolver_documentos_doctos(parsed)
+    )
+    cliente_discordante = not _documentos_docto_pertenecen_al_cliente(
+        documentos_docto, cliente
+    )
+    venta = (
+        ventas[0]
+        if len(ventas) == 1 and not pendientes and not cliente_discordante
+        else None
+    )
+    relacionado = _resolver_cfdi_relacionado(parsed, cliente=cliente)
 
-    # Fallback: buscar venta por los doctos del complemento de pagos
-    if not venta:
-        for pago in (parsed.get('pagos') or []):
-            for d in (pago.get('doctos') or []):
-                doc = DocumentoCFDI.objects.filter(
-                    uuid=d.get('uuid'), venta__isnull=False
-                ).select_related('venta').first()
-                if doc:
-                    venta = doc.venta
-                    break
-            if venta:
-                break
+    pago_existente, estado_vinculo = _resolver_pago_venta_exacto(
+        parsed.get('uuid'), venta,
+    )
+    if cliente_discordante:
+        estado_vinculo = 'cliente_documento_discordante'
+        pago_existente = None
+    elif len(ventas) > 1:
+        estado_vinculo = 'multiples_ventas_revision'
+        pago_existente = None
+    elif pendientes:
+        estado_vinculo = 'uuid_documento_no_encontrado'
+        pago_existente = None
+    elif estado_vinculo != 'uuid_coincidente' and len(pagos) > 1:
+        estado_vinculo = 'multipago_revision'
+    elif estado_vinculo != 'uuid_coincidente' and referencias and venta is None:
+        estado_vinculo = 'venta_no_resuelta'
 
-    referencias = [
-        docto.get('uuid')
-        for pago in (parsed.get('pagos') or [])
-        for docto in (pago.get('doctos') or [])
-        if docto.get('uuid')
-    ]
-    if not venta and referencias:
-        raise ValueError(
-            'No se encontró la factura relacionada con UUID '
-            f'{referencias[0]}. Importa primero la factura y después su '
-            'complemento de pago.'
-        )
+    puede_crear_pago = (
+        pago_existente is None
+        and len(pagos) == 1
+        and len(ventas) == 1
+        and not pendientes
+        and estado_vinculo == 'no_encontrado'
+        and bool(parsed.get('uuid'))
+    )
+    detalle = _serializar_detalle_complemento(
+        parsed,
+        vinculo_pago={
+            'estado': estado_vinculo,
+            'uuid_rep': parsed.get('uuid') or '',
+        },
+    )
 
     doc = crear_documento(
-        parsed, cliente=cliente, venta=venta, subtipo='recibo_pago',
+        parsed,
+        cliente=cliente,
+        venta=venta,
+        cfdi_relacionado=relacionado,
+        detalle_complemento=detalle,
+        subtipo='recibo_pago',
         archivo_pdf=archivo_pdf, archivo_xml=archivo_xml,
     )
 
-    if venta and venta.modalidad_pago == Ventas.ModalidadPago.CREDITO and \
+    if pago_existente:
+        doc.pago_venta = pago_existente
+        doc.save(update_fields=['pago_venta'])
+        return pago_existente, doc
+
+    if puede_crear_pago and venta.modalidad_pago == Ventas.ModalidadPago.CREDITO and \
             venta.estado_cobranza in ('Pendiente', 'Parcial', 'Vencido'):
         saldo = venta.saldo_por_cobrar()
         if saldo > 0:
@@ -630,7 +822,10 @@ def _crear_recibo_pago(parsed, cliente, cuenta, archivo_pdf=None, archivo_xml=No
                     uuid_rep=parsed.get('uuid') or None,
                 )
                 doc.pago_venta = pago
-                doc.save(update_fields=['pago_venta'])
+                doc.detalle_complemento['vinculo_pago']['estado'] = (
+                    'uuid_coincidente'
+                )
+                doc.save(update_fields=['pago_venta', 'detalle_complemento'])
                 return pago, doc
 
     return None, doc

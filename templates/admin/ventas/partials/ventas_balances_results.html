@@ -1,0 +1,140 @@
+{# Partial: ventas_balances_results — KPIs, gráficos y tabla para HTMX/AJAX #}
+{% load i18n l10n static humanize gastos_tags ventas_tags %}
+
+<script>
+  window.ventasModalidadData = {{ ventas_por_modalidad|safe }};
+  window.ventasEstadosData = {{ ventas_por_estado|safe }};
+  window.ventasClientesData = {{ ventas_por_cliente|safe }};
+</script>
+
+{# ── KPI Cards ── #}
+<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-5" data-tour="metrics">
+
+  <div class="kpi-card kpi-border-total" title="${{ total_ventas|us_currency:2 }}">
+    <div class="kpi-body">
+      <p class="kpi-label">Total Ventas</p>
+      <p class="kpi-value" id="kpi-total-ventas">${{ total_ventas|us_currency:2 }}</p>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-border-paid" title="${{ total_pagado|us_currency:2 }}">
+    <div class="kpi-body">
+      <p class="kpi-label">Total Pagado</p>
+      <p class="kpi-value" id="kpi-total-pagado">${{ total_pagado|us_currency:2 }}</p>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-border-neutral" title="${{ saldo_pendiente_total|us_currency:2 }}">
+    <div class="kpi-body">
+      <p class="kpi-label">Pendiente</p>
+      <p class="kpi-value" id="kpi-saldo-pendiente">${{ saldo_pendiente_total|us_currency:2 }}</p>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-border-light" title="${{ total_facturado_cfdi|us_currency:2 }}">
+    <div class="kpi-body">
+      <p class="kpi-label">Facturado (CFDI)</p>
+      <p class="kpi-value" id="kpi-total-facturado-cfdi">${{ total_facturado_cfdi|us_currency:2 }}</p>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-border-light" title="${{ total_notas_credito_cfdi|us_currency:2 }}">
+    <div class="kpi-body">
+      <p class="kpi-label">Notas de Crédito</p>
+      <p class="kpi-value" id="kpi-total-notas-credito-cfdi">${{ total_notas_credito_cfdi|us_currency:2 }}</p>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-border-light" title="${{ total_recibos_pago_cfdi|us_currency:2 }}">
+    <div class="kpi-body">
+      <p class="kpi-label">Recibos de Pago</p>
+      <p class="kpi-value" id="kpi-total-recibos-pago-cfdi">${{ total_recibos_pago_cfdi|us_currency:2 }}</p>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-border-neutral">
+    <div class="kpi-body">
+      <p class="kpi-label">Transacciones</p>
+      <p class="kpi-value" id="kpi-transacciones">{{ numero_transacciones }}</p>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-border-neutral">
+    <div class="kpi-body">
+      <p class="kpi-label">CFDIs vigentes</p>
+      <p class="kpi-value" id="kpi-numero-cfdis">{{ numero_cfdis }}</p>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-border-light" title="${{ venta_maxima|us_currency:2 }}">
+    <div class="kpi-body">
+      <p class="kpi-label">Venta Máxima</p>
+      <p class="kpi-value" id="kpi-venta-maxima">${{ venta_maxima|us_currency:2 }}</p>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-border-neutral" title="${{ promedio_ventas|us_currency:2 }}">
+    <div class="kpi-body">
+      <p class="kpi-label">Promedio</p>
+      <p class="kpi-value" id="kpi-promedio">${{ promedio_ventas|us_currency:2 }}</p>
+    </div>
+  </div>
+
+</div>
+
+{# ── Botón exportar PDF ── #}
+<div class="flex items-center justify-between mb-3" data-tour="exports">
+  <span class="balances-results-heading">
+    <i class="fas fa-chart-line" aria-hidden="true"></i> Análisis visual
+  </span>
+  <button type="button" id="btn-export-pdf" class="btn-export-pdf">
+    <i class="fas fa-file-pdf"></i> Exportar PDF
+  </button>
+</div>
+
+{# ── Gráficos: Modalidad + Estados ── #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5" data-tour="charts">
+
+  <div class="s-card">
+    <div class="s-card-head">
+      <div class="s-card-ico s-card-ico-primary"><i class="fas fa-chart-pie text-[#2f4550]"></i></div>
+      <span class="s-card-title">Distribución por Modalidad</span>
+    </div>
+    <div class="s-card-body">
+      <div class="chart-box-sm"><canvas id="modalidadChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="s-card">
+    <div class="s-card-head">
+      <div class="s-card-ico s-card-ico-warning"><i class="fas fa-chart-pie text-[#c9a227]"></i></div>
+      <span class="s-card-title">Estados de Cobranza</span>
+    </div>
+    <div class="s-card-body">
+      <div class="chart-box-sm"><canvas id="estadosChart"></canvas></div>
+    </div>
+  </div>
+
+</div>
+
+{# ── Gráfico: Top 10 clientes ── #}
+<div class="s-card mb-5">
+  <div class="s-card-head">
+    <div class="s-card-ico s-card-ico-primary"><i class="fas fa-users text-[#2f4550]"></i></div>
+    <span class="s-card-title">Top 10 Clientes por Monto de Ventas</span>
+  </div>
+  <div class="s-card-body">
+    <div class="chart-box-md"><canvas id="clientesChart"></canvas></div>
+  </div>
+</div>
+
+{# ── Tabla de detalle ── #}
+<div class="s-card mb-5" data-tour="detail">
+  <div class="s-card-head">
+    <div class="s-card-ico s-card-ico-primary"><i class="fas fa-table text-[#2f4550]"></i></div>
+    <span class="s-card-title">Detalle de Ventas</span>
+  </div>
+  <div class="s-card-body" id="ventas-table-container">
+    {% include "admin/ventas/partials/ventas_balances_table.html" %}
+  </div>
+</div>

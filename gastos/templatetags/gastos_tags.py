@@ -1,6 +1,5 @@
 from django import template
 from gastos.models import CatGastos, Cuenta
-from django.contrib.humanize.templatetags.humanize import intcomma
 from decimal import Decimal
 
 register = template.Library()
@@ -38,24 +37,9 @@ def us_currency(value, decimal_places=2):
             # Intentar convertir otros tipos
             value = Decimal(str(value))
         
-        # Formatear con la cantidad específica de decimales
-        formatted = f"{value:.{decimal_places}f}"
-        
-        # Separar parte entera y decimal
-        if '.' in formatted:
-            integer_part, decimal_part = formatted.split('.')
-        else:
-            integer_part, decimal_part = formatted, ''
-        
-        # Agregar separadores de miles
-        integer_with_commas = intcomma(integer_part)
-        
-        # Retornar formato completo
-        if decimal_places > 0:
-            return f"{integer_with_commas}.{decimal_part}"
-        else:
-            return integer_with_commas
-            
+        # Formatear con separador de miles fijo (US), sin depender del locale
+        return f"{value:,.{decimal_places}f}"
+
     except (ValueError, TypeError, AttributeError, Exception):
         return '0.00' if decimal_places > 0 else '0'
 

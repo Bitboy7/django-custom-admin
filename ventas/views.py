@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, date
 from decimal import Decimal
 from collections import defaultdict, OrderedDict
 import json
-from .models import Anticipo, Ventas, Cliente, TerminoCredito, MercadoDestino, PagoVenta
+from .models import Anticipo, Ventas, Cliente, TerminoCredito, MercadoDestino, PagoVenta, DocumentoCFDI
 from .forms import AnticipoForm
 from catalogo.models import Sucursal, Pais
 from gastos.models import Cuenta
@@ -116,6 +116,70 @@ def _construir_balances(ventas_queryset, periodo):
     return balances
 
 
+def _get_available_years():
+    """Años disponibles para filtrar, combinando ventas y CFDI importados."""
+    current_year = timezone.now().year
+    years = set()
+    for date_obj in Ventas.objects.dates('fecha_deposito', 'year'):
+        years.add(date_obj.year)
+    for date_obj in DocumentoCFDI.objects.dates('fecha_emision', 'year'):
+        if date_obj.year:
+            years.add(date_obj.year)
+    if not years:
+        years.add(current_year)
+    return sorted(years, reverse=True)
+
+
+def _build_cfdi_filters(
+    selected_cliente_id,
+    selected_periodo,
+    selected_year,
+    selected_months,
+    selected_dia,
+    selected_fecha_inicio,
+    selected_fecha_fin,
+    tipo_fecha,
+):
+    """Construye filtros de DocumentoCFDI por cliente y rango de fechas.
+
+    Se mantienen solo los filtros que se aplican de forma directa sobre el
+    documento fiscal (cliente y fecha de emisión). Los filtros operativos de
+    sucursal/mercado/modalidad no siempre están disponibles en el CFDI y su
+    join generaba errores de lookup con el campo ``sucursal_id`` de ``Ventas``.
+    """
+    cfdi_filters = Q(estado=DocumentoCFDI.EstadoDocumento.VIGENTE)
+
+    if selected_cliente_id:
+        cfdi_filters &= Q(cliente_id=selected_cliente_id)
+
+    if selected_periodo == 'diario':
+        if tipo_fecha == 'dia' and selected_dia:
+            try:
+                fecha_dia = datetime.strptime(selected_dia, '%Y-%m-%d').date()
+                cfdi_filters &= Q(fecha_emision=fecha_dia)
+            except ValueError:
+                pass
+        elif tipo_fecha == 'rango' and selected_fecha_inicio and selected_fecha_fin:
+            try:
+                fecha_inicio = datetime.strptime(selected_fecha_inicio, '%Y-%m-%d').date()
+                fecha_fin = datetime.strptime(selected_fecha_fin, '%Y-%m-%d').date()
+                cfdi_filters &= Q(fecha_emision__range=[fecha_inicio, fecha_fin])
+            except ValueError:
+                pass
+    else:
+        if selected_year:
+            try:
+                cfdi_filters &= Q(fecha_emision__year=int(selected_year))
+            except ValueError:
+                pass
+        if selected_months:
+            months_int = [int(m) for m in selected_months if m.isdigit()]
+            if months_int:
+                cfdi_filters &= Q(fecha_emision__month__in=months_int)
+
+    return cfdi_filters
+
+
 def build_ventas_balances_context(request):
     """Construye y retorna el contexto para la vista de balances de ventas."""    # Obtener parámetros de filtro
     selected_cliente_id = request.GET.get('cliente_id', '')
@@ -124,7 +188,9 @@ def build_ventas_balances_context(request):
     selected_mercado_id = request.GET.get('mercado_id', '')
     selected_modalidad = request.GET.get('modalidad_pago', '')
     selected_estado = request.GET.get('estado_cobranza', '')
-    selected_year = request.GET.get('year', str(timezone.now().year))
+    selected_year = ''.join(
+        ch for ch in request.GET.get('year', '') if ch.isdigit()
+    ) or str(timezone.now().year)
     selected_months = _parse_selected_months(request.GET)
     selected_periodo = request.GET.get('periodo', 'mensual')
     
@@ -140,8 +206,8 @@ def build_ventas_balances_context(request):
     sucursales = Sucursal.objects.all().order_by('nombre')
     mercados = MercadoDestino.objects.filter(activo=True).order_by('nombre')
     
-    # Años disponibles basados en las ventas registradas
-    available_years = Ventas.objects.dates('fecha_registro', 'year').order_by('-fecha_registro')
+    # Años disponibles combinando ventas y CFDI importados
+    available_years = _get_available_years()
     current_year = timezone.now().year
 
     # ── Cache check ────────────────────────────────────────────────────────────
@@ -184,6 +250,11 @@ def build_ventas_balances_context(request):
             'tipo_fecha':            tipo_fecha,
             'modalidad_choices': Ventas.ModalidadPago.choices,
             'estado_choices':    Ventas.EstadoCobranza.choices,
+            # Defaults para entradas cacheadas antes de la incorporación de métricas CFDI
+            'total_facturado_cfdi': _cached.get('total_facturado_cfdi', 0),
+            'total_notas_credito_cfdi': _cached.get('total_notas_credito_cfdi', 0),
+            'total_recibos_pago_cfdi': _cached.get('total_recibos_pago_cfdi', 0),
+            'numero_cfdis': _cached.get('numero_cfdis', 0),
         })
         return _cached
     # ── /Cache check ────────────────────────────────────────────────────────────
@@ -304,7 +375,30 @@ def build_ventas_balances_context(request):
     ventas_vencidas = ventas_queryset.filter(
         estado_cobranza='Vencido'
     ).aggregate(total=Sum('monto'), count=Count('id'))
-    
+
+    # Métricas de CFDI importados (vigentes) en el mismo rango de filtros
+    cfdi_filters = _build_cfdi_filters(
+        selected_cliente_id,
+        selected_periodo,
+        selected_year,
+        selected_months,
+        selected_dia,
+        selected_fecha_inicio,
+        selected_fecha_fin,
+        tipo_fecha,
+    )
+    cfdi_qs = DocumentoCFDI.objects.filter(cfdi_filters)
+    cfdi_totals = cfdi_qs.aggregate(
+        total_facturado=Sum('monto', filter=Q(tipo=DocumentoCFDI.TipoDocumento.INGRESO)),
+        total_notas_credito=Sum('monto', filter=Q(subtipo=DocumentoCFDI.SubtipoDocumento.NOTA_CREDITO)),
+        total_recibos_pago=Sum('monto', filter=Q(tipo=DocumentoCFDI.TipoDocumento.PAGO)),
+        numero_cfdis=Count('id'),
+    )
+    total_facturado_cfdi = float(cfdi_totals['total_facturado'] or 0)
+    total_notas_credito_cfdi = float(cfdi_totals['total_notas_credito'] or 0)
+    total_recibos_pago_cfdi = float(cfdi_totals['total_recibos_pago'] or 0)
+    numero_cfdis = cfdi_totals['numero_cfdis'] or 0
+
     context = {
         # Datos para filtros
         'clientes': clientes,
@@ -350,7 +444,13 @@ def build_ventas_balances_context(request):
         # Métricas de cobranza
         'ventas_vencidas_total': float(ventas_vencidas['total'] or 0),
         'ventas_vencidas_count': ventas_vencidas['count'] or 0,
-        
+
+        # Métricas de CFDI
+        'total_facturado_cfdi': total_facturado_cfdi,
+        'total_notas_credito_cfdi': total_notas_credito_cfdi,
+        'total_recibos_pago_cfdi': total_recibos_pago_cfdi,
+        'numero_cfdis': numero_cfdis,
+
         # Datos para gráficos (serializados como JSON)
         'ventas_por_modalidad': json.dumps(ventas_por_modalidad),
         'ventas_por_estado': json.dumps(ventas_por_estado),
@@ -377,6 +477,10 @@ def build_ventas_balances_context(request):
         'ventas_credito_count':   context['ventas_credito_count'],
         'ventas_vencidas_total':  context['ventas_vencidas_total'],
         'ventas_vencidas_count':  context['ventas_vencidas_count'],
+        'total_facturado_cfdi':   context['total_facturado_cfdi'],
+        'total_notas_credito_cfdi': context['total_notas_credito_cfdi'],
+        'total_recibos_pago_cfdi': context['total_recibos_pago_cfdi'],
+        'numero_cfdis':           context['numero_cfdis'],
         'ventas_por_modalidad':   context['ventas_por_modalidad'],
         'ventas_por_estado':      context['ventas_por_estado'],
         'ventas_por_cliente':     context['ventas_por_cliente'],
@@ -389,14 +493,27 @@ def build_ventas_balances_context(request):
 @permission_required('ventas.view_ventas', raise_exception=True)
 def ventas_balances(request):
     """Vista para mostrar balances y análisis de ventas con filtros avanzados"""
+    from django.http import HttpResponse
     context = build_ventas_balances_context(request)
 
+    results_html = render_to_string(
+        'admin/ventas/partials/ventas_balances_results.html',
+        context,
+        request=request,
+    )
+
+    if request.headers.get('HX-Request') == 'true':
+        response = HttpResponse(results_html)
+        response['HX-Trigger'] = json.dumps({
+            'showToast': {
+                'type': 'info',
+                'title': 'Filtros aplicados',
+                'message': 'La información ha sido filtrada según los criterios seleccionados.'
+            }
+        })
+        return response
+
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        table_html = render_to_string(
-            'ventas/partials/ventas_balances_table.html',
-            context,
-            request=request,
-        )
         return JsonResponse({
             'kpis': {
                 'total_ventas': float(context['total_ventas']),
@@ -411,15 +528,20 @@ def ventas_balances(request):
                 'ventas_credito_count': context['ventas_credito_count'],
                 'ventas_vencidas_total': float(context['ventas_vencidas_total']),
                 'ventas_vencidas_count': context['ventas_vencidas_count'],
+                'total_facturado_cfdi': float(context['total_facturado_cfdi']),
+                'total_notas_credito_cfdi': float(context['total_notas_credito_cfdi']),
+                'total_recibos_pago_cfdi': float(context['total_recibos_pago_cfdi']),
+                'numero_cfdis': context['numero_cfdis'],
             },
             'chart_data': {
                 'modalidad': json.loads(context['ventas_por_modalidad']),
                 'estados': json.loads(context['ventas_por_estado']),
                 'clientes': json.loads(context['ventas_por_cliente']),
             },
-            'table_html': table_html,
+            'results_html': results_html,
         })
 
+    context['results_html'] = results_html
     return render(request, 'ventas/ventas_balances.html', context)
 
 

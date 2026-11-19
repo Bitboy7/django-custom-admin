@@ -167,7 +167,6 @@ class AnticipoModelFlowTest(VentasBaseTest):
         """Un anticipo creado debe persistir en la base de datos."""
         anticipo = Anticipo.objects.create(
             cliente=self.cliente_mx,
-            sucursal=self.sucursal,
             cuenta=self.cuenta,
             monto=Money('5000.00', 'MXN'),
             fecha=date.today(),
@@ -182,7 +181,6 @@ class AnticipoModelFlowTest(VentasBaseTest):
         """El __str__ del anticipo incluye cliente y monto."""
         anticipo = Anticipo.objects.create(
             cliente=self.cliente_mx,
-            sucursal=self.sucursal,
             cuenta=self.cuenta,
             monto=Money('3000.00', 'MXN'),
             fecha=date.today()
@@ -195,7 +193,6 @@ class AnticipoModelFlowTest(VentasBaseTest):
         """Se puede cambiar el estado de un anticipo a Aplicado."""
         anticipo = Anticipo.objects.create(
             cliente=self.cliente_us,
-            sucursal=self.sucursal,
             cuenta=self.cuenta,
             monto=Money('2000.00', 'MXN'),
             fecha=date.today(),
@@ -212,7 +209,6 @@ class AnticipoModelFlowTest(VentasBaseTest):
         for i in range(3):
             Anticipo.objects.create(
                 cliente=self.cliente_mx,
-                sucursal=self.sucursal,
                 cuenta=self.cuenta,
                 monto=Money(f'{(i + 1) * 1000}.00', 'MXN'),
                 fecha=date.today() - timedelta(days=i)
@@ -224,11 +220,11 @@ class AnticipoModelFlowTest(VentasBaseTest):
         """Los anticipos deben listarse en orden descendente por fecha_registro."""
         Anticipo.objects.all().delete()  # Limpiar para este test
         a1 = Anticipo.objects.create(
-            cliente=self.cliente_mx, sucursal=self.sucursal, cuenta=self.cuenta,
+            cliente=self.cliente_mx, cuenta=self.cuenta,
             monto=Money('1000.00', 'MXN'), fecha=date.today()
         )
         a2 = Anticipo.objects.create(
-            cliente=self.cliente_mx, sucursal=self.sucursal, cuenta=self.cuenta,
+            cliente=self.cliente_mx, cuenta=self.cuenta,
             monto=Money('2000.00', 'MXN'), fecha=date.today()
         )
         # El más reciente (a2) debe aparecer primero
@@ -257,7 +253,6 @@ class VentasViewsTest(VentasBaseTest):
         # Crear anticipo de referencia
         cls.anticipo = Anticipo.objects.create(
             cliente=cls.cliente_mx,
-            sucursal=cls.sucursal,
             cuenta=cls.cuenta,
             monto=Money('10000.00', 'MXN'),
             fecha=date.today()
@@ -374,7 +369,6 @@ class VentasModelFlowTest(VentasBaseTest):
         """Se puede crear una venta de exportación vinculada a un anticipo."""
         anticipo = Anticipo.objects.create(
             cliente=self.cliente_us,
-            sucursal=self.sucursal,
             cuenta=self.cuenta,
             monto=Money('5000.00', 'MXN'),
             fecha=date.today()
@@ -477,3 +471,123 @@ class VentasCacheTest(VentasBaseTest):
                 response.status_code, 500,
                 f"Error 500 con periodo={periodo}"
             )
+
+
+class CFDIRepReconciliationIntegrationTest(VentasBaseTest):
+    def test_import_rep_hasta_conciliacion_conserva_diferencia_y_referencias(self):
+        from ventas.cfdi_parser import parse_cfdi
+        from ventas.models import DocumentoCFDI, PagoVenta
+        from ventas.services.cfdi_import_service import importar_cfdi
+        from ventas.services.conciliacion_service import conciliacion_cliente
+        from ventas.tests_cfdi_parser import XML_RECIBO_PAGO_20
+
+        venta_uno = Ventas.objects.create(
+            fecha_salida_manifiesto=date(2026, 7, 1),
+            agente_id=self.agente,
+            fecha_deposito=date(2026, 7, 1),
+            producto=self.producto,
+            cantidad='100',
+            monto=Money('1000.00', 'MXN'),
+            cliente=self.cliente_mx,
+            sucursal_id=self.sucursal,
+            cuenta=self.cuenta,
+            tipo_venta=Ventas.TipoVenta.NACIONAL,
+            modalidad_pago=Ventas.ModalidadPago.CREDITO,
+            termino_credito=self.termino_30,
+            estado_cobranza=Ventas.EstadoCobranza.PENDIENTE,
+            moneda_venta='MXN',
+        )
+        venta_dos = Ventas.objects.create(
+            fecha_salida_manifiesto=date(2026, 7, 2),
+            agente_id=self.agente,
+            fecha_deposito=date(2026, 7, 2),
+            producto=self.producto,
+            cantidad='200',
+            monto=Money('2000.00', 'MXN'),
+            cliente=self.cliente_mx,
+            sucursal_id=self.sucursal,
+            cuenta=self.cuenta,
+            tipo_venta=Ventas.TipoVenta.NACIONAL,
+            modalidad_pago=Ventas.ModalidadPago.CREDITO,
+            termino_credito=self.termino_30,
+            estado_cobranza=Ventas.EstadoCobranza.PENDIENTE,
+            moneda_venta='MXN',
+        )
+        factura_uno = DocumentoCFDI.objects.create(
+            cliente=self.cliente_mx,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL,
+            uuid='28C06FD3-D87D-45C5-8C4D-D4927FCD3A64',
+            fecha_emision=date(2026, 7, 1),
+            monto=Money('1000.00', 'MXN'),
+            venta=venta_uno,
+        )
+        factura_dos = DocumentoCFDI.objects.create(
+            cliente=self.cliente_mx,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL,
+            uuid='CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC',
+            fecha_emision=date(2026, 7, 2),
+            monto=Money('2000.00', 'MXN'),
+            venta=venta_dos,
+        )
+        segundo_pago = '''
+      <pago20:Pago FechaPago="2026-08-16T09:30:00" FormaDePagoP="03"
+          MonedaP="MXN" TipoCambioP="1" Monto="500.00">
+        <pago20:DoctoRelacionado
+          IdDocumento="CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC"
+          Serie="B" Folio="F-2" MonedaDR="MXN" EquivalenciaDR="1"
+          NumParcialidad="1" ImpSaldoAnt="2000.00" ImpPagado="500.00"
+          ImpSaldoInsoluto="1500.00" />
+      </pago20:Pago>
+        '''
+        xml = XML_RECIBO_PAGO_20.replace(
+            'Monto="162480.00"',
+            'Monto="400.00"',
+        ).replace(
+            'IdDocumento="28C06FD3-D87D-45C5-8C4D-D4927FCD3A64"',
+            f'IdDocumento="{factura_uno.uuid}"',
+        ).replace(
+            'ImpSaldoAnt="162480.00"',
+            'ImpSaldoAnt="1000.00"',
+        ).replace(
+            'ImpPagado="162480.00"',
+            'ImpPagado="400.00"',
+        ).replace(
+            'ImpSaldoInsoluto="0"',
+            'ImpSaldoInsoluto="600.00"',
+        ).replace('</pago20:Pagos>', segundo_pago + '</pago20:Pagos>')
+
+        pago, documento, subtipo = importar_cfdi(
+            parse_cfdi(xml.encode()),
+            cliente=self.cliente_mx,
+            cuenta=self.cuenta,
+        )
+
+        fila = conciliacion_cliente(self.cliente_mx)
+
+        self.assertEqual(subtipo, 'recibo_pago')
+        self.assertIsNone(pago)
+        self.assertIsNone(documento.venta_id)
+        self.assertIsNone(documento.pago_venta_id)
+        self.assertEqual(len(documento.detalle_complemento['pagos']), 2)
+        self.assertEqual(
+            documento.detalle_complemento['vinculo_pago']['estado'],
+            'multiples_ventas_revision',
+        )
+        self.assertEqual(
+            fila['detalle']['recibos_pago']['MXN'], 900.00,
+        )
+        self.assertEqual(len(fila['rep_desglose']), 2)
+        self.assertEqual(
+            {item['documento_factura_id'] for item in fila['rep_desglose']},
+            {factura_uno.pk, factura_dos.pk},
+        )
+        self.assertEqual(
+            {item['estado_vinculo'] for item in fila['rep_desglose']},
+            {'revision_requerida'},
+        )
+        self.assertEqual(
+            PagoVenta.objects.filter(venta__in=[venta_uno, venta_dos]).count(),
+            0,
+        )

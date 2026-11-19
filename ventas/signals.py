@@ -11,10 +11,11 @@ Señales Django para automatizar el ciclo de vida de cuentas por cobrar.
 
 import logging
 
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, pre_delete, pre_save
 from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
+_ventas_en_eliminacion = set()
 
 
 def _invalidar_cache_conciliacion(sender, **kwargs):
@@ -46,6 +47,76 @@ def _conectar_invalidacion_conciliacion():
 
 
 _conectar_invalidacion_conciliacion()
+
+
+@receiver(pre_delete, sender='ventas.Ventas')
+def marcar_venta_en_eliminacion(sender, instance, **kwargs):
+    _ventas_en_eliminacion.add(instance.pk)
+
+
+@receiver(post_delete, sender='ventas.Ventas')
+def limpiar_venta_en_eliminacion(sender, instance, **kwargs):
+    _ventas_en_eliminacion.discard(instance.pk)
+
+
+def _es_nota_que_afecta_saldo(subtipo, DocumentoCFDI):
+    return subtipo in (
+        DocumentoCFDI.SubtipoDocumento.NOTA_CARGO,
+        DocumentoCFDI.SubtipoDocumento.NOTA_CREDITO,
+    )
+
+
+def _capturar_venta_anterior_documento(sender, instance, **kwargs):
+    """Conserva el vínculo anterior para recalcular al mover o cambiar notas."""
+    from .models import DocumentoCFDI
+
+    anterior = None
+    if instance.pk:
+        anterior = DocumentoCFDI.objects.filter(pk=instance.pk).values(
+            'venta_id', 'subtipo',
+        ).first()
+    instance._cobranza_anterior = anterior
+
+
+def _actualizar_estado_venta_por_nota(sender, instance, **kwargs):
+    """Recalcula las ventas anterior y actual de una nota cargo/crédito."""
+    from .models import DocumentoCFDI, Ventas
+
+    venta_ids = set()
+    anterior = getattr(instance, '_cobranza_anterior', None) or {}
+    if (
+        _es_nota_que_afecta_saldo(anterior.get('subtipo'), DocumentoCFDI)
+        and anterior.get('venta_id')
+    ):
+        venta_ids.add(anterior['venta_id'])
+    if _es_nota_que_afecta_saldo(instance.subtipo, DocumentoCFDI) and instance.venta_id:
+        venta_ids.add(instance.venta_id)
+
+    for venta_id in venta_ids:
+        if venta_id in _ventas_en_eliminacion:
+            continue
+        venta = Ventas.objects.filter(pk=venta_id).first()
+        if venta is not None:
+            venta.actualizar_estado_cobranza()
+
+
+pre_save.connect(
+    _capturar_venta_anterior_documento,
+    sender='ventas.DocumentoCFDI',
+    dispatch_uid='capturar_venta_anterior_documento',
+)
+
+
+post_save.connect(
+    _actualizar_estado_venta_por_nota,
+    sender='ventas.DocumentoCFDI',
+    dispatch_uid='actualizar_cobranza_por_nota_save',
+)
+post_delete.connect(
+    _actualizar_estado_venta_por_nota,
+    sender='ventas.DocumentoCFDI',
+    dispatch_uid='actualizar_cobranza_por_nota_delete',
+)
 
 
 @receiver(post_save, sender='ventas.Ventas')

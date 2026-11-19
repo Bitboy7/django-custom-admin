@@ -240,7 +240,7 @@ class CSRFProtectionTests(BaseSecurityTest):
     def test_csrf_cookie_presente_en_login(self):
         """La cookie CSRF debe generarse en la página de login del admin."""
         client = Client()
-        response = client.get('/en/admin/login/')
+        response = client.get('/en/admin/login/', follow=True)
         self.assertIn(
             'csrftoken', response.cookies,
             "La cookie csrftoken debe estar presente en la página de login"

@@ -2,8 +2,9 @@
 Middleware para registrar actividad en el admin
 """
 import logging
-from django.urls import resolve
-from .services import registrar_creacion, registrar_actualizacion, registrar_eliminacion, registrar_visualizacion
+from django.urls import Resolver404, resolve
+from .request_context import reset_audit_actor, set_audit_actor
+from .services import registrar_creacion, registrar_actualizacion, registrar_visualizacion
 
 logger = logging.getLogger('auditoria.middleware')
 
@@ -36,91 +37,84 @@ class AdminAuditMiddleware:
         self.get_response = get_response
     
     def __call__(self, request):
-        # Solo procesar si el usuario está autenticado
-        if not request.user.is_authenticated:
-            return self.get_response(request)
-        
-        # Solo procesar solicitudes del admin
-        if not request.path.startswith('/admin/'):
-            return self.get_response(request)
-        
-        # Procesar la solicitud
-        response = self.get_response(request)
-        
-        # Intentar resolver la URL para obtener información
+        usuario = getattr(request, 'user', None)
+        token = set_audit_actor(
+            usuario if getattr(usuario, 'is_authenticated', False) else None
+        )
         try:
-            resolver_match = resolve(request.path)
+            response = self.get_response(request)
+        finally:
+            reset_audit_actor(token)
+
+        if not getattr(usuario, 'is_authenticated', False):
+            return response
+
+        try:
+            resolver_match = resolve(request.path_info)
+            es_admin = (
+                resolver_match.app_name == 'admin'
+                or 'admin' in resolver_match.namespaces
+            )
+            if not es_admin or not resolver_match.url_name:
+                return response
+
             url_name = resolver_match.url_name
-            view_name = resolver_match.view_name
-            app_name = resolver_match.app_name
-            namespace = resolver_match.namespace
-            
-            # Detectar acciones del admin
-            if url_name:
-                # Obtener el modelo y el ID del objeto si están disponibles
-                model_name = None
-                object_id = None
-                
-                # Extraer el modelo del view_name
-                if view_name and '_' in view_name:
-                    parts = view_name.split('_')
-                    if len(parts) >= 2:
-                        app_label = parts[0]
-                        model_name = parts[1]
-                
-                # Extraer el ID del objeto de los argumentos de URL
-                if resolver_match.kwargs:
-                    object_id = resolver_match.kwargs.get('object_id')
-                
-                # Registrar la acción según el tipo de vista
-                if url_name.endswith('_add') and request.method == 'POST' and response.status_code in (302, 303):
-                    # Creación exitosa (redirección después de guardar)
-                    if hasattr(request, 'POST') and model_name:
-                        # Obtener el objeto creado (esto es aproximado, podría mejorar)
-                        # En una implementación real habría que acceder al objeto desde la respuesta
-                        registrar_creacion(
-                            request=request,
-                            modelo=model_name,
-                            objeto={'pk': 'nuevo'}  # Placeholder
-                        )
-                
-                elif url_name.endswith('_change') and request.method == 'POST' and response.status_code in (302, 303):
-                    # Actualización exitosa (redirección después de guardar)
-                    if hasattr(request, 'POST') and model_name and object_id:
-                        # Obtener los campos modificados (simplificado)
-                        campos_modificados = _sanitize_post_data(dict(request.POST))
-                        
-                        registrar_actualizacion(
-                            request=request,
-                            modelo=model_name,
-                            objeto={'pk': object_id},
-                            campos_modificados=campos_modificados
-                        )
-                
-                elif url_name.endswith('_delete') and request.method == 'POST' and response.status_code in (302, 303):
-                    # Eliminación exitosa (redirección después de eliminar)
-                    if model_name and object_id:
-                        registrar_eliminacion(
-                            request=request,
-                            modelo=model_name,
-                            objeto_id=object_id
-                        )
-                
-                elif url_name.endswith('_change') and request.method == 'GET':
-                    # Visualización de detalle
-                    if model_name and object_id:
-                        registrar_visualizacion(
-                            request=request,
-                            modelo=model_name,
-                            objeto={'pk': object_id}
-                        )
-        
+            kwargs = resolver_match.kwargs or {}
+            app_label = kwargs.get('app_label')
+            model_name = kwargs.get('model_name')
+            if not model_name:
+                partes = (url_name or '').split('_')
+                if len(partes) >= 3:
+                    app_label = app_label or partes[0]
+                    model_name = '_'.join(partes[1:-1])
+            if app_label and model_name:
+                model_name = f'{app_label}.{model_name}'
+            object_id = kwargs.get('object_id')
+            es_pago_venta = (model_name or '').lower().endswith('pagoventa')
+
+            if (
+                url_name.endswith('_add')
+                and request.method == 'POST'
+                and response.status_code in (302, 303)
+                and model_name
+                and not es_pago_venta
+            ):
+                registrar_creacion(
+                    request=request,
+                    modelo=model_name,
+                    objeto={'pk': 'nuevo'},
+                )
+            elif (
+                url_name.endswith('_change')
+                and request.method == 'POST'
+                and response.status_code in (302, 303)
+                and model_name
+                and object_id
+                and not es_pago_venta
+            ):
+                registrar_actualizacion(
+                    request=request,
+                    modelo=model_name,
+                    objeto={'pk': object_id},
+                    campos_modificados=_sanitize_post_data(dict(request.POST)),
+                )
+            elif url_name.endswith('_change') and request.method == 'GET':
+                if model_name and object_id:
+                    registrar_visualizacion(
+                        request=request,
+                        modelo=model_name,
+                        objeto={'pk': object_id},
+                    )
+        except Resolver404:
+            # Las rutas inexistentes (404) no son actividad del admin que
+            # deba reportarse como error operativo de auditoría.
+            pass
         except Exception:
             logger.error(
-                "Error en AdminAuditMiddleware | Usuario: %s | Path: %s",
-                getattr(request.user, 'username', 'anónimo'),
+                'Error en AdminAuditMiddleware | Usuario: %s | Path: %s',
+                getattr(usuario, 'username', 'anónimo'),
                 request.path,
                 exc_info=True,
             )
-        
+
         return response

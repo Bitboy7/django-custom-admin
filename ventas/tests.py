@@ -546,6 +546,92 @@ class InyeccionSaldoEnFilaTest(ReporteCobranzaBaseTest):
 
 class SaldoPorCobrarNotasTest(ReporteCobranzaBaseTest):
 
+    def test_nota_credito_que_liquida_saldo_actualiza_venta_a_pagada(self):
+        cliente = self._cliente('Cliente Nota liquida saldo')
+        venta = self._venta_credito(cliente, '1000.00')
+        Ventas.objects.filter(pk=venta.pk).update(
+            estado_cobranza=Ventas.EstadoCobranza.VENCIDO,
+        )
+        venta.refresh_from_db()
+
+        nota = DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.EGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.NOTA_CREDITO,
+            monto=Money('1000.00', 'MXN'),
+            venta=venta,
+        )
+
+        venta.refresh_from_db()
+        self.assertEqual(venta.estado_cobranza, Ventas.EstadoCobranza.PAGADO)
+
+        nota.delete()
+        venta.refresh_from_db()
+        self.assertEqual(venta.estado_cobranza, Ventas.EstadoCobranza.PENDIENTE)
+
+    def test_rep_sin_pagoventa_no_actualiza_estado_operativo(self):
+        cliente = self._cliente('Cliente REP sin vínculo operativo')
+        venta = self._venta_credito(cliente, '1000.00')
+        Ventas.objects.filter(pk=venta.pk).update(
+            estado_cobranza=Ventas.EstadoCobranza.VENCIDO,
+        )
+        venta.refresh_from_db()
+
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.PAGO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.RECIBO_PAGO,
+            monto=Money('1000.00', 'MXN'),
+            venta=venta,
+        )
+
+        venta.refresh_from_db()
+        self.assertEqual(venta.estado_cobranza, Ventas.EstadoCobranza.VENCIDO)
+
+    def test_editar_nota_recalcula_venta_anterior_y_nueva(self):
+        cliente = self._cliente('Cliente nota movida entre ventas')
+        venta_anterior = self._venta_credito(cliente, '1000.00')
+        venta_nueva = self._venta_credito(cliente, '1000.00')
+        nota = DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.EGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.NOTA_CREDITO,
+            monto=Money('1000.00', 'MXN'),
+            venta=venta_anterior,
+        )
+        venta_anterior.refresh_from_db()
+        self.assertEqual(venta_anterior.estado_cobranza, Ventas.EstadoCobranza.PAGADO)
+
+        nota.venta = venta_nueva
+        nota.save(update_fields=['venta'])
+
+        venta_anterior.refresh_from_db()
+        venta_nueva.refresh_from_db()
+        self.assertEqual(
+            venta_anterior.estado_cobranza, Ventas.EstadoCobranza.PENDIENTE,
+        )
+        self.assertEqual(
+            venta_nueva.estado_cobranza, Ventas.EstadoCobranza.PAGADO,
+        )
+
+    def test_eliminar_venta_con_nota_no_recalcula_venta_en_cascada(self):
+        from unittest.mock import patch
+
+        cliente = self._cliente('Cliente Venta eliminada con nota')
+        venta = self._venta_credito(cliente, '1000.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.EGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.NOTA_CREDITO,
+            monto=Money('100.00', 'MXN'),
+            venta=venta,
+        )
+
+        with patch.object(Ventas, 'actualizar_estado_cobranza') as actualizar:
+            venta.delete()
+
+        actualizar.assert_not_called()
+
     def test_nota_cargo_suma_y_nota_credito_resta(self):
         """Nota de cargo suma al saldo; nota de crédito resta."""
         cliente = self._cliente('Cliente Notas')
@@ -621,6 +707,53 @@ class ServiciosPorCobrarTest(ReporteCobranzaBaseTest):
 
 class CFDIImportServiceTest(ReporteCobranzaBaseTest):
 
+    def test_evento_pago_usa_usuario_actual(self):
+        from django.contrib.auth.models import User
+
+        from auditoria.models import LogActividad
+        from auditoria.request_context import reset_audit_actor, set_audit_actor
+
+        cliente = self._cliente('Cliente Auditoría PagoVenta')
+        venta = self._venta_credito(cliente, '1000.00')
+        usuario = User.objects.create_user(username='auditor-pago')
+        token = set_audit_actor(usuario)
+        try:
+            pago = PagoVenta.objects.create(
+                venta=venta,
+                fecha_pago=date(2026, 7, 16),
+                monto_pago=Money('100.00', 'MXN'),
+                cuenta_destino=self.cuenta,
+                metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+            )
+        finally:
+            reset_audit_actor(token)
+
+        log = LogActividad.objects.get(
+            modelo_afectado='PagoVenta', objeto_id=str(pago.pk),
+        )
+        self.assertEqual(log.usuario_id, usuario.pk)
+        self.assertEqual(log.nombre_usuario, usuario.username)
+
+    def test_tarea_sin_usuario_usa_sistema(self):
+        from auditoria.models import LogActividad
+
+        cliente = self._cliente('Cliente Auditoría Sistema')
+        venta = self._venta_credito(cliente, '1000.00')
+
+        pago = PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 7, 16),
+            monto_pago=Money('100.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+        )
+
+        log = LogActividad.objects.get(
+            modelo_afectado='PagoVenta', objeto_id=str(pago.pk),
+        )
+        self.assertIsNone(log.usuario_id)
+        self.assertEqual(log.nombre_usuario, 'Sistema')
+
     def test_importar_pago_20_lo_aplica_a_la_factura_relacionada(self):
         cliente = self._cliente('EMSEGA MARKET')
         cliente.rfc = 'EMA220607QL9'
@@ -650,15 +783,523 @@ class CFDIImportServiceTest(ReporteCobranzaBaseTest):
         venta.refresh_from_db()
         self.assertEqual(venta.estado_cobranza, Ventas.EstadoCobranza.PAGADO)
 
-    def test_pago_20_sin_factura_relacionada_indica_orden_correcto(self):
+    def test_importar_rep_reutiliza_pagoventa_por_uuid_exacto(self):
+        cliente = self._cliente('Cliente REP enlace exacto')
+        venta = self._venta_credito(cliente, '162480.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL,
+            uuid='28C06FD3-D87D-45C5-8C4D-D4927FCD3A64',
+            monto=Money('162480.00', 'MXN'),
+            venta=venta,
+        )
+        parsed = parse_cfdi(XML_RECIBO_PAGO_20.encode())
+        pago_existente = PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 7, 16),
+            monto_pago=Money('162480.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+            folio_rep=parsed['folio_num'],
+            uuid_rep=parsed['uuid'],
+        )
+
+        pago, documento, _subtipo = importar_cfdi(
+            parsed, cliente=cliente, cuenta=self.cuenta,
+        )
+
+        self.assertEqual(pago.pk, pago_existente.pk)
+        self.assertEqual(documento.pago_venta_id, pago_existente.pk)
+        self.assertEqual(PagoVenta.objects.filter(venta=venta).count(), 1)
+
+    def test_importar_rep_no_asocia_por_monto_si_uuid_no_coincide(self):
+        cliente = self._cliente('Cliente REP sin UUID coincidente')
+        venta = self._venta_credito(cliente, '162480.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL,
+            uuid='28C06FD3-D87D-45C5-8C4D-D4927FCD3A64',
+            monto=Money('162480.00', 'MXN'),
+            venta=venta,
+        )
+        PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 7, 16),
+            monto_pago=Money('162480.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+            folio_rep='REP-ANTERIOR',
+            uuid_rep='AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA',
+        )
+        parsed = parse_cfdi(XML_RECIBO_PAGO_20.encode())
+
+        pago, documento, _subtipo = importar_cfdi(
+            parsed, cliente=cliente, cuenta=self.cuenta,
+        )
+
+        self.assertIsNone(pago)
+        self.assertIsNone(documento.pago_venta_id)
+        self.assertEqual(
+            documento.detalle_complemento['vinculo_pago']['estado'],
+            'no_encontrado',
+        )
+
+    def test_importar_rep_no_asocia_factura_de_otro_cliente(self):
+        cliente_rep = self._cliente('Cliente receptor del REP')
+        cliente_factura = self._cliente('Cliente propietario de factura')
+        venta = self._venta_credito(cliente_factura, '162480.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente_factura,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL,
+            uuid='28C06FD3-D87D-45C5-8C4D-D4927FCD3A64',
+            monto=Money('162480.00', 'MXN'),
+            venta=venta,
+        )
+
+        pago, documento, _subtipo = importar_cfdi(
+            parse_cfdi(XML_RECIBO_PAGO_20.encode()),
+            cliente=cliente_rep,
+            cuenta=self.cuenta,
+        )
+
+        self.assertIsNone(pago)
+        self.assertIsNone(documento.venta_id)
+        self.assertIsNone(documento.pago_venta_id)
+        self.assertEqual(
+            documento.detalle_complemento['vinculo_pago']['estado'],
+            'cliente_documento_discordante',
+        )
+        self.assertEqual(PagoVenta.objects.filter(venta=venta).count(), 0)
+
+    def test_importar_rep_ambiguo_no_elige_un_pago_por_uuid_repetido(self):
+        cliente = self._cliente('Cliente REP UUID ambiguo')
+        venta = self._venta_credito(cliente, '162480.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL,
+            uuid='28C06FD3-D87D-45C5-8C4D-D4927FCD3A64',
+            monto=Money('162480.00', 'MXN'),
+            venta=venta,
+        )
+        for monto in ('81240.00', '81240.00'):
+            PagoVenta.objects.create(
+                venta=venta,
+                fecha_pago=date(2026, 7, 16),
+                monto_pago=Money(monto, 'MXN'),
+                cuenta_destino=self.cuenta,
+                metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+                folio_rep='2325',
+                uuid_rep='10BEF933-60EF-45B5-AB78-40C7D9A6246D',
+            )
+        parsed = parse_cfdi(XML_RECIBO_PAGO_20.encode())
+
+        pago, documento, _subtipo = importar_cfdi(
+            parsed, cliente=cliente, cuenta=self.cuenta,
+        )
+
+        self.assertIsNone(pago)
+        self.assertIsNone(documento.pago_venta_id)
+        self.assertEqual(
+            documento.detalle_complemento['vinculo_pago']['estado'],
+            'ambiguo',
+        )
+
+    def test_backfill_vincula_solo_uuid_exactos(self):
+        from django.core.management import call_command
+
+        cliente = self._cliente('Cliente Backfill UUID')
+        venta = self._venta_credito(cliente, '1000.00')
+        pago = PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 7, 16),
+            monto_pago=Money('1000.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+            folio_rep='REP-EXACTO',
+            uuid_rep='AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA',
+        )
+        documento = DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.PAGO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.RECIBO_PAGO,
+            folio='REP-EXACTO',
+            uuid='AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA',
+            monto=Money('1000.00', 'MXN'),
+            venta=venta,
+        )
+
+        call_command('backfill_cfdi_detalle_reps', cliente_id=cliente.pk)
+
+        documento.refresh_from_db()
+        self.assertEqual(documento.pago_venta_id, pago.pk)
+
+    def test_backfill_no_infiere_vinculo_por_monto_o_fecha_en_dry_run(self):
+        from django.core.management import call_command
+
+        cliente = self._cliente('Cliente Backfill Ambiguo')
+        venta = self._venta_credito(cliente, '1000.00')
+        PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 7, 16),
+            monto_pago=Money('1000.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+            folio_rep='REP-OTRO',
+            uuid_rep='BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB',
+        )
+        documento = DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.PAGO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.RECIBO_PAGO,
+            folio='REP-SIN-PAGO',
+            uuid='CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC',
+            monto=Money('1000.00', 'MXN'),
+            venta=venta,
+        )
+
+        call_command('backfill_cfdi_detalle_reps', cliente_id=cliente.pk, dry_run=True)
+
+        documento.refresh_from_db()
+        self.assertIsNone(documento.pago_venta_id)
+
+    def test_backfill_dry_run_no_persiste_vinculo_uuid_exacto(self):
+        from django.core.management import call_command
+
+        cliente = self._cliente('Cliente Backfill Dry Run Exacto')
+        venta = self._venta_credito(cliente, '1000.00')
+        PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 7, 16),
+            monto_pago=Money('1000.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+            folio_rep='REP-DRY-RUN',
+            uuid_rep='DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDDDD',
+        )
+        documento = DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.PAGO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.RECIBO_PAGO,
+            folio='REP-DRY-RUN',
+            uuid='DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDDDD',
+            monto=Money('1000.00', 'MXN'),
+            venta=venta,
+        )
+
+        call_command('backfill_cfdi_detalle_reps', cliente_id=cliente.pk, dry_run=True)
+
+        documento.refresh_from_db()
+        self.assertIsNone(documento.pago_venta_id)
+
+    def test_backfill_no_asocia_venta_de_otro_cliente(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.core.management import call_command
+        from django.test.utils import override_settings
+        from tempfile import TemporaryDirectory
+
+        cliente_rep = self._cliente('Cliente Backfill receptor')
+        cliente_factura = self._cliente('Cliente Backfill factura')
+        venta = self._venta_credito(cliente_factura, '162480.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente_factura,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL,
+            uuid='28C06FD3-D87D-45C5-8C4D-D4927FCD3A64',
+            monto=Money('162480.00', 'MXN'),
+            venta=venta,
+        )
+        parsed = parse_cfdi(XML_RECIBO_PAGO_20.encode())
+        PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 7, 16),
+            monto_pago=Money('162480.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+            uuid_rep=parsed['uuid'],
+        )
+        with TemporaryDirectory() as media_root, override_settings(
+            MEDIA_ROOT=media_root,
+        ):
+            documento = DocumentoCFDI.objects.create(
+                cliente=cliente_rep,
+                tipo=DocumentoCFDI.TipoDocumento.PAGO,
+                subtipo=DocumentoCFDI.SubtipoDocumento.RECIBO_PAGO,
+                uuid=parsed['uuid'],
+                monto=Money('162480.00', 'MXN'),
+                archivo_xml=SimpleUploadedFile(
+                    'rep-otro-cliente.xml', XML_RECIBO_PAGO_20.encode(),
+                    content_type='application/xml',
+                ),
+            )
+
+            call_command(
+                'backfill_cfdi_detalle_reps', cliente_id=cliente_rep.pk,
+            )
+
+        documento.refresh_from_db()
+        self.assertIsNone(documento.venta_id)
+        self.assertIsNone(documento.pago_venta_id)
+        self.assertEqual(
+            documento.detalle_complemento['vinculo_pago']['estado'],
+            'cliente_documento_discordante',
+        )
+
+    def test_backfill_no_persiste_detalle_si_uuid_xml_no_coincide_o_falta(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.core.management import call_command
+        from django.test.utils import override_settings
+        from tempfile import TemporaryDirectory
+
+        cliente = self._cliente('Cliente Backfill XML discordante')
+        xml_sin_uuid = XML_RECIBO_PAGO_20.replace(
+            'UUID="10BEF933-60EF-45B5-AB78-40C7D9A6246D"\n      FechaTimbrado',
+            'FechaTimbrado',
+        ).encode()
+        with TemporaryDirectory() as media_root, override_settings(
+            MEDIA_ROOT=media_root,
+        ):
+            documento_discordante = DocumentoCFDI.objects.create(
+                cliente=cliente,
+                tipo=DocumentoCFDI.TipoDocumento.PAGO,
+                subtipo=DocumentoCFDI.SubtipoDocumento.RECIBO_PAGO,
+                uuid='AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA',
+                monto=Money('1000.00', 'MXN'),
+                archivo_xml=SimpleUploadedFile(
+                    'rep-uuid-distinto.xml', XML_RECIBO_PAGO_20.encode(),
+                    content_type='application/xml',
+                ),
+            )
+            documento_sin_uuid = DocumentoCFDI.objects.create(
+                cliente=cliente,
+                tipo=DocumentoCFDI.TipoDocumento.PAGO,
+                subtipo=DocumentoCFDI.SubtipoDocumento.RECIBO_PAGO,
+                uuid='BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB',
+                monto=Money('1000.00', 'MXN'),
+                archivo_xml=SimpleUploadedFile(
+                    'rep-sin-uuid.xml', xml_sin_uuid,
+                    content_type='application/xml',
+                ),
+            )
+
+            call_command('backfill_cfdi_detalle_reps', cliente_id=cliente.pk)
+
+        documento_discordante.refresh_from_db()
+        documento_sin_uuid.refresh_from_db()
+        self.assertEqual(documento_discordante.detalle_complemento, {})
+        self.assertEqual(documento_sin_uuid.detalle_complemento, {})
+
+    def test_backfill_reporta_uuid_docto_sin_coincidencia(self):
+        from io import StringIO
+        from tempfile import TemporaryDirectory
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.test.utils import override_settings
+        from django.core.management import call_command
+
+        cliente = self._cliente('Cliente Backfill UUID Docto faltante')
+        parsed = parse_cfdi(XML_RECIBO_PAGO_20.encode())
+        salida = StringIO()
+        with TemporaryDirectory() as media_root, override_settings(
+            MEDIA_ROOT=media_root,
+        ):
+            DocumentoCFDI.objects.create(
+                cliente=cliente,
+                tipo=DocumentoCFDI.TipoDocumento.PAGO,
+                subtipo=DocumentoCFDI.SubtipoDocumento.RECIBO_PAGO,
+                uuid=parsed['uuid'],
+                monto=Money('1000.00', 'MXN'),
+                archivo_xml=SimpleUploadedFile(
+                    'rep.xml', XML_RECIBO_PAGO_20.encode(),
+                    content_type='application/xml',
+                ),
+            )
+
+            call_command('backfill_cfdi_detalle_reps', dry_run=True, stdout=salida)
+
+        self.assertIn('1 UUID sin coincidencia', salida.getvalue())
+
+    def test_importar_rep_guarda_todos_los_detalles_de_pago(self):
+        cliente = self._cliente('Cliente REP multipago')
+        venta = self._venta_credito(cliente, '162480.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL,
+            uuid='28C06FD3-D87D-45C5-8C4D-D4927FCD3A64',
+            monto=Money('162480.00', 'MXN'),
+            venta=venta,
+        )
+        segundo_pago = '''
+      <pago20:Pago FechaPago="2026-08-16T09:30:00" FormaDePagoP="03"
+          MonedaP="USD" TipoCambioP="18.0000" Monto="100.00">
+        <pago20:DoctoRelacionado
+          IdDocumento="28C06FD3-D87D-45C5-8C4D-D4927FCD3A64"
+          Serie="B" Folio="2325" MonedaDR="MXN" EquivalenciaDR="18.000000"
+          NumParcialidad="2" ImpSaldoAnt="162480.00" ImpPagado="1800.00"
+          ImpSaldoInsoluto="160680.00" />
+      </pago20:Pago>
+        '''
+        xml = XML_RECIBO_PAGO_20.replace(
+            '</pago20:Pagos>', segundo_pago + '</pago20:Pagos>'
+        )
+        parsed = parse_cfdi(xml.encode())
+
+        _pago, documento, _subtipo = importar_cfdi(
+            parsed, cliente=cliente, cuenta=self.cuenta,
+        )
+
+        detalle = documento.detalle_complemento
+        self.assertEqual(detalle['relacionados'], [])
+        self.assertEqual(len(detalle['pagos']), 2)
+        self.assertEqual(detalle['pagos'][1]['fecha_pago'], '2026-08-16')
+        self.assertEqual(detalle['pagos'][1]['monto'], '100.00')
+        self.assertEqual(detalle['pagos'][1]['moneda'], 'USD')
+        docto = detalle['pagos'][1]['doctos'][0]
+        self.assertEqual(
+            docto['uuid'], '28C06FD3-D87D-45C5-8C4D-D4927FCD3A64'
+        )
+        self.assertEqual(docto['imp_pagado'], '1800.00')
+        self.assertEqual(docto['saldo_insoluto'], '160680.00')
+        self.assertEqual(docto['equivalencia'], '18.000000')
+
+    def test_importar_rep_multipago_no_crea_pago_operativo_sintetico(self):
+        cliente = self._cliente('Cliente REP multipago sin desglose operativo')
+        venta = self._venta_credito(cliente, '200000.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL,
+            uuid='28C06FD3-D87D-45C5-8C4D-D4927FCD3A64',
+            monto=Money('200000.00', 'MXN'),
+            venta=venta,
+        )
+        segundo_pago = '''
+      <pago20:Pago FechaPago="2026-08-16T09:30:00" FormaDePagoP="03"
+          MonedaP="USD" TipoCambioP="18.0000" Monto="100.00">
+        <pago20:DoctoRelacionado
+          IdDocumento="28C06FD3-D87D-45C5-8C4D-D4927FCD3A64"
+          Serie="B" Folio="2325" MonedaDR="MXN" EquivalenciaDR="18.000000"
+          NumParcialidad="2" ImpSaldoAnt="200000.00" ImpPagado="1800.00"
+          ImpSaldoInsoluto="35720.00" />
+      </pago20:Pago>
+        '''
+        xml = XML_RECIBO_PAGO_20.replace(
+            'ImpSaldoAnt="162480.00" ImpPagado="162480.00" ImpSaldoInsoluto="0"',
+            'ImpSaldoAnt="200000.00" ImpPagado="162480.00" ImpSaldoInsoluto="37520.00"',
+        ).replace('</pago20:Pagos>', segundo_pago + '</pago20:Pagos>')
+        parsed = parse_cfdi(xml.encode())
+
+        pago, documento, _subtipo = importar_cfdi(
+            parsed, cliente=cliente, cuenta=self.cuenta,
+        )
+
+        self.assertIsNone(pago)
+        self.assertEqual(PagoVenta.objects.filter(venta=venta).count(), 0)
+        self.assertEqual(len(documento.detalle_complemento['pagos']), 2)
+        self.assertEqual(
+            documento.detalle_complemento['vinculo_pago']['estado'],
+            'multipago_revision',
+        )
+
+    def test_importar_rep_resuelve_la_factura_docto_antes_del_cfdi_sustituido(self):
+        cliente = self._cliente('Cliente REP sustitución')
+        venta_anterior = self._venta_credito(cliente, '1000.00')
+        documento_sustituido = DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.PAGO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.RECIBO_PAGO,
+            uuid='BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB',
+            monto=Money('1000.00', 'MXN'),
+            venta=venta_anterior,
+        )
+        venta_facturada = self._venta_credito(cliente, '162480.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL,
+            uuid='28C06FD3-D87D-45C5-8C4D-D4927FCD3A64',
+            monto=Money('162480.00', 'MXN'),
+            venta=venta_facturada,
+        )
+        xml = XML_RECIBO_PAGO_20.replace(
+            '<cfdi:Receptor',
+            '<cfdi:CfdiRelacionados TipoRelacion="04">'
+            '<cfdi:CfdiRelacionado UUID="BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB"/>'
+            '</cfdi:CfdiRelacionados><cfdi:Receptor',
+        )
+        parsed = parse_cfdi(xml.encode())
+
+        _pago, documento, _subtipo = importar_cfdi(
+            parsed, cliente=cliente, cuenta=self.cuenta,
+        )
+
+        self.assertEqual(documento.venta_id, venta_facturada.pk)
+        self.assertNotEqual(documento.venta_id, venta_anterior.pk)
+        self.assertEqual(documento.cfdi_relacionado_id, documento_sustituido.pk)
+
+    def test_importar_rep_con_doctos_de_varias_ventas_requiere_revision(self):
+        cliente = self._cliente('Cliente REP varias ventas')
+        venta_uno = self._venta_credito(cliente, '162480.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL,
+            uuid='28C06FD3-D87D-45C5-8C4D-D4927FCD3A64',
+            monto=Money('162480.00', 'MXN'),
+            venta=venta_uno,
+        )
+        venta_dos = self._venta_credito(cliente, '500.00')
+        segundo_docto = '''
+        <pago20:DoctoRelacionado
+          IdDocumento="CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC"
+          Serie="B" Folio="OTRA" MonedaDR="MXN" EquivalenciaDR="1"
+          NumParcialidad="1" ImpSaldoAnt="500.00" ImpPagado="500.00"
+          ImpSaldoInsoluto="0.00" />
+        '''
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo=DocumentoCFDI.TipoDocumento.INGRESO,
+            subtipo=DocumentoCFDI.SubtipoDocumento.VENTA_NACIONAL,
+            uuid='CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC',
+            monto=Money('500.00', 'MXN'),
+            venta=venta_dos,
+        )
+        xml = XML_RECIBO_PAGO_20.replace(
+            '</pago20:Pago>', segundo_docto + '</pago20:Pago>'
+        )
+        parsed = parse_cfdi(xml.encode())
+
+        pago, documento, _subtipo = importar_cfdi(
+            parsed, cliente=cliente, cuenta=self.cuenta,
+        )
+
+        self.assertIsNone(pago)
+        self.assertIsNone(documento.venta_id)
+        self.assertEqual(
+            documento.detalle_complemento['vinculo_pago']['estado'],
+            'multiples_ventas_revision',
+        )
+        self.assertEqual(PagoVenta.objects.filter(venta__cliente=cliente).count(), 0)
+
+    def test_pago_20_sin_factura_relacionada_se_conserva_pendiente(self):
         cliente = self._cliente('EMSEGA MARKET sin factura')
         parsed = parse_cfdi(XML_RECIBO_PAGO_20.encode())
 
-        with self.assertRaisesMessage(
-            ValueError,
-            'Importa primero la factura y después su complemento de pago.',
-        ):
-            importar_cfdi(parsed, cliente=cliente, cuenta=self.cuenta)
+        pago, documento, _subtipo = importar_cfdi(
+            parsed, cliente=cliente, cuenta=self.cuenta,
+        )
+
+        self.assertIsNone(pago)
+        self.assertIsNone(documento.venta_id)
+        self.assertIsNone(documento.pago_venta_id)
+        self.assertEqual(
+            documento.detalle_complemento['vinculo_pago']['estado'],
+            'uuid_documento_no_encontrado',
+        )
 
     def test_reimportar_pago_20_repara_documento_incompleto(self):
         cliente = self._cliente('EMSEGA MARKET reparación')
@@ -1098,6 +1739,728 @@ class CFDIImportServiceTest(ReporteCobranzaBaseTest):
 
 class ConciliacionCFDITest(ReporteCobranzaBaseTest):
 
+    def test_conciliacion_filtra_rep_por_fecha_pago(self):
+        from ventas.services.conciliacion_service import (
+            conciliacion_cliente,
+            pagos_rep_por_moneda,
+        )
+
+        cliente = self._cliente('Cliente REP por fecha de pago')
+        rep_dentro = DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='P',
+            subtipo='recibo_pago',
+            uuid='REP-FECHA-DENTRO',
+            fecha_emision=date(2026, 1, 10),
+            monto=Money('900.00', 'MXN'),
+            detalle_complemento={
+                'pagos': [
+                    {
+                        'fecha_pago': '2026-03-15',
+                        'doctos': [
+                            {'uuid': 'FACTURA-A', 'imp_pagado': '100.00', 'moneda': 'MXN'},
+                        ],
+                    },
+                    {
+                        'fecha_pago': '2026-04-01',
+                        'doctos': [
+                            {'uuid': 'FACTURA-A', 'imp_pagado': '200.00', 'moneda': 'MXN'},
+                        ],
+                    },
+                ],
+            },
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='P',
+            subtipo='recibo_pago',
+            uuid='REP-FECHA-FUERA',
+            fecha_emision=date(2026, 3, 15),
+            monto=Money('50.00', 'MXN'),
+            detalle_complemento={
+                'pagos': [
+                    {
+                        'fecha_pago': '2026-02-15',
+                        'doctos': [
+                            {'uuid': 'FACTURA-B', 'imp_pagado': '50.00', 'moneda': 'MXN'},
+                        ],
+                    },
+                ],
+            },
+        )
+        periodo = cliente.documentos_cfdi.filter(subtipo='recibo_pago')
+
+        por_moneda = pagos_rep_por_moneda(
+            periodo, date(2026, 3, 1), date(2026, 3, 31),
+        )
+        fila = conciliacion_cliente(
+            cliente, date(2026, 3, 1), date(2026, 3, 31),
+        )
+
+        self.assertEqual(por_moneda, {'MXN': Decimal('100.00')})
+        self.assertAlmostEqual(fila['detalle']['recibos_pago']['MXN'], 100.00)
+        self.assertEqual(
+            fila['rep_desglose'][0]['fecha_fuente'], 'FechaPago',
+        )
+        self.assertEqual(fila['rep_desglose'][0]['fecha_pago'], date(2026, 3, 15))
+
+    def test_rep_multimoneda_conserva_moneda_de_aplicacion(self):
+        from ventas.services.conciliacion_service import pagos_rep_por_moneda
+
+        cliente = self._cliente('Cliente REP multimoneda aplicada')
+        rep = DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='P',
+            subtipo='recibo_pago',
+            uuid='REP-MULTIMONEDA',
+            monto=Money('22157.78', 'USD'),
+            moneda='USD',
+            detalle_complemento={
+                'pagos': [
+                    {
+                        'fecha_pago': '2026-03-15',
+                        'monto': '22157.78',
+                        'moneda': 'USD',
+                        'doctos': [
+                            {'uuid': 'FACTURA-MXN', 'imp_pagado': '398840.00', 'moneda': 'MXN'},
+                            {'uuid': 'FACTURA-USD', 'imp_pagado': '100.00', 'moneda': 'USD'},
+                        ],
+                    },
+                ],
+            },
+        )
+
+        por_moneda = pagos_rep_por_moneda([rep])
+
+        self.assertEqual(
+            por_moneda,
+            {'MXN': Decimal('398840.00'), 'USD': Decimal('100.00')},
+        )
+
+    def test_conciliacion_historico_rep_usa_fecha_emision_y_marca_respaldo(self):
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente REP histórico sin detalle')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='P',
+            subtipo='recibo_pago',
+            uuid='REP-HISTORICO-SIN-JSON',
+            fecha_emision=date(2026, 3, 15),
+            monto=Money('250.00', 'MXN'),
+            moneda='MXN',
+        )
+
+        fila = conciliacion_cliente(
+            cliente, date(2026, 3, 1), date(2026, 3, 31),
+        )
+
+        self.assertAlmostEqual(fila['detalle']['recibos_pago']['MXN'], 250.00)
+        rep = fila['rep_desglose'][0]
+        self.assertEqual(rep['fecha_fuente'], 'fecha_emision')
+        self.assertTrue(rep['es_legacy'])
+        self.assertTrue(rep['requiere_revision'])
+
+    def test_rep_exacto_no_se_resta_dos_veces_del_pago_operativo(self):
+        import json
+
+        from ventas.services.conciliacion_service import (
+            _rehidratar_fila,
+            _serializar_fila,
+            conciliacion_cliente,
+        )
+
+        cliente = self._cliente('Cliente REP exacto aplicado parcialmente')
+        venta = self._venta_credito(cliente, '446880.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            uuid='FACTURA-REP-EXACTO',
+            monto=Money('446880.00', 'MXN'),
+            venta=venta,
+        )
+        pago = PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 7, 3),
+            monto_pago=Money('446880.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+            uuid_rep='REP-EXACTO-PARCIAL',
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='P',
+            subtipo='recibo_pago',
+            uuid='REP-EXACTO-PARCIAL',
+            fecha_emision=date(2026, 7, 3),
+            monto=Money('446880.00', 'MXN'),
+            venta=venta,
+            pago_venta=pago,
+            detalle_complemento={
+                'vinculo_pago': {'estado': 'uuid_coincidente'},
+                'pagos': [
+                    {
+                        'fecha_pago': '2026-07-03',
+                        'doctos': [
+                            {
+                                'uuid': 'FACTURA-REP-EXACTO',
+                                'imp_pagado': '398840.00',
+                                'saldo_insoluto': '48040.00',
+                                'moneda': 'MXN',
+                            },
+                        ],
+                    },
+                ],
+            },
+        )
+
+        fila = conciliacion_cliente(cliente)
+        rep = fila['rep_desglose'][0]
+        serializada = _serializar_fila(fila)
+        json.dumps(serializada)
+        rehidratada = _rehidratar_fila(serializada, cliente)
+
+        self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], 48040.00)
+        self.assertAlmostEqual(rep['diferencia_operativo_fiscal'], 48040.00)
+        self.assertEqual(rep['estado_vinculo'], 'uuid_coincidente')
+        self.assertEqual(
+            rehidratada['rep_desglose'][0]['fecha_pago'], date(2026, 7, 3),
+        )
+
+    def test_rep_exacto_sin_docto_no_oculta_pago_operativo(self):
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente REP sin DoctoRelacionado')
+        venta = self._venta_credito(cliente, '1000.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            monto=Money('1000.00', 'MXN'),
+            venta=venta,
+        )
+        pago = PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 7, 3),
+            monto_pago=Money('1000.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+            uuid_rep='REP-SIN-DOCTO',
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='P',
+            subtipo='recibo_pago',
+            uuid='REP-SIN-DOCTO',
+            monto=Money('1000.00', 'MXN'),
+            venta=venta,
+            pago_venta=pago,
+            detalle_complemento={
+                'pagos': [{'fecha_pago': '2026-07-03', 'doctos': []}],
+            },
+        )
+
+        fila = conciliacion_cliente(cliente)
+
+        self.assertAlmostEqual(fila['detalle']['cobros_contado']['MXN'], 1000.00)
+        self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], 0.00)
+
+    def test_rep_con_pago_exacto_y_docto_de_otra_venta_sigue_pendiente(self):
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente REP Docto de otra venta')
+        venta_pago = self._venta_credito(cliente, '1000.00')
+        venta_docto = self._venta_credito(cliente, '2000.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            uuid='FACTURA-VENTA-PAGO',
+            monto=Money('1000.00', 'MXN'),
+            venta=venta_pago,
+        )
+        factura_docto = DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            uuid='FACTURA-OTRA-VENTA',
+            monto=Money('2000.00', 'MXN'),
+            venta=venta_docto,
+        )
+        pago = PagoVenta.objects.create(
+            venta=venta_pago,
+            fecha_pago=date(2026, 7, 3),
+            monto_pago=Money('100.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+            uuid_rep='REP-DOCTO-CRUZADO',
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='P',
+            subtipo='recibo_pago',
+            uuid='REP-DOCTO-CRUZADO',
+            monto=Money('100.00', 'MXN'),
+            venta=venta_pago,
+            pago_venta=pago,
+            detalle_complemento={
+                'vinculo_pago': {'estado': 'uuid_coincidente'},
+                'pagos': [{
+                    'fecha_pago': '2026-07-03',
+                    'doctos': [{
+                        'uuid': 'FACTURA-OTRA-VENTA',
+                        'imp_pagado': '100.00',
+                        'saldo_insoluto': '1900.00',
+                        'moneda': 'MXN',
+                    }],
+                }],
+            },
+        )
+
+        fila = conciliacion_cliente(cliente)
+        rep = next(
+            item for item in fila['rep_desglose']
+            if item['uuid_factura'] == factura_docto.uuid
+        )
+
+        self.assertEqual(rep['documento_factura_id'], factura_docto.pk)
+        self.assertEqual(rep['estado_vinculo'], 'revision_requerida')
+        self.assertEqual(rep['motivo_vinculo'], 'venta_documento_discordante')
+        self.assertTrue(rep['requiere_revision'])
+
+    def test_rep_con_pago_exacto_y_docto_no_encontrado_sigue_pendiente(self):
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente REP Docto faltante')
+        venta = self._venta_credito(cliente, '1000.00')
+        pago = PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 7, 3),
+            monto_pago=Money('100.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+            uuid_rep='REP-DOCTO-FALTANTE',
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='P',
+            subtipo='recibo_pago',
+            uuid='REP-DOCTO-FALTANTE',
+            monto=Money('100.00', 'MXN'),
+            venta=venta,
+            pago_venta=pago,
+            detalle_complemento={
+                'vinculo_pago': {'estado': 'uuid_coincidente'},
+                'pagos': [{
+                    'fecha_pago': '2026-07-03',
+                    'doctos': [{
+                        'uuid': 'FACTURA-ELIMINADA',
+                        'imp_pagado': '100.00',
+                        'moneda': 'MXN',
+                    }],
+                }],
+            },
+        )
+
+        rep = conciliacion_cliente(cliente)['rep_desglose'][0]
+
+        self.assertEqual(rep['estado_vinculo'], 'revision_requerida')
+        self.assertEqual(rep['motivo_vinculo'], 'uuid_documento_no_encontrado')
+        self.assertTrue(rep['requiere_revision'])
+
+    def test_bga_rep_parcial_muestra_diferencia_y_vinculo_pendiente(self):
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente BGA diferencia REP')
+        venta = self._venta_credito(cliente, '446880.00')
+        factura = DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            uuid='FACTURA-BGA-446880',
+            monto=Money('446880.00', 'MXN'),
+            moneda='MXN',
+            venta=venta,
+        )
+        PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 7, 3),
+            monto_pago=Money('446880.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+            uuid_rep='REP-BGA-UUID-NO-COINCIDENTE',
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='P',
+            subtipo='recibo_pago',
+            uuid='REP-BGA-UUID',
+            fecha_emision=date(2026, 7, 3),
+            monto=Money('398840.00', 'MXN'),
+            moneda='MXN',
+            venta=venta,
+            detalle_complemento={
+                'vinculo_pago': {'estado': 'no_encontrado'},
+                'pagos': [
+                    {
+                        'fecha_pago': '2026-07-03',
+                        'monto': '398840.00',
+                        'moneda': 'MXN',
+                        'doctos': [
+                            {
+                                'uuid': 'FACTURA-BGA-446880',
+                                'imp_pagado': '398840.00',
+                                'saldo_insoluto': '48040.00',
+                                'moneda': 'MXN',
+                            },
+                        ],
+                    },
+                ],
+            },
+        )
+
+        fila = conciliacion_cliente(cliente)
+
+        rep = fila['rep_desglose'][0]
+        self.assertAlmostEqual(rep['monto_operativo'], 446880.00)
+        self.assertAlmostEqual(rep['monto_rep_aplicado'], 398840.00)
+        self.assertAlmostEqual(rep['diferencia_operativo_fiscal'], 48040.00)
+        self.assertAlmostEqual(rep['imp_saldo_insoluto'], 48040.00)
+        self.assertEqual(rep['documento_factura_id'], factura.pk)
+        self.assertEqual(rep['folio_rep'], '')
+        self.assertEqual(rep['estado_vinculo'], 'revision_requerida')
+        # El saldo insoluto declarado en el REP sigue pendiente; no debe
+        # contabilizarse como cobro de contado / sin REP solo porque el
+        # PagoVenta operativo fue registrado por el importe total.
+        self.assertAlmostEqual(
+            fila['detalle']['cobros_contado'].get('MXN', 0.00), 0.00,
+        )
+        self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], 48040.00)
+
+    def test_rep_parcial_sin_saldo_insoluto_lo_deriva_de_saldo_anterior(self):
+        """Si el XML/importación dejó saldo_insoluto vacío pero sí guardó
+        ImpSaldoAnt, el sistema debe derivar el saldo insoluto y no contar
+        ese importe como cobro de contado / sin REP."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente REP sin saldo insoluto guardado')
+        venta = self._venta_credito(cliente, '446880.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            uuid='FACTURA-SIN-SALDO-INS',
+            monto=Money('446880.00', 'MXN'),
+            moneda='MXN',
+            venta=venta,
+        )
+        PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 7, 3),
+            monto_pago=Money('446880.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='P',
+            subtipo='recibo_pago',
+            uuid='REP-SIN-SALDO-INS',
+            fecha_emision=date(2026, 7, 3),
+            monto=Money('398840.00', 'MXN'),
+            moneda='MXN',
+            venta=venta,
+            detalle_complemento={
+                'vinculo_pago': {'estado': 'no_encontrado'},
+                'pagos': [
+                    {
+                        'fecha_pago': '2026-07-03',
+                        'monto': '398840.00',
+                        'moneda': 'MXN',
+                        'doctos': [
+                            {
+                                'uuid': 'FACTURA-SIN-SALDO-INS',
+                                'imp_pagado': '398840.00',
+                                'saldo_anterior': '446880.00',
+                                'saldo_insoluto': '',
+                                'moneda': 'MXN',
+                            },
+                        ],
+                    },
+                ],
+            },
+        )
+
+        fila = conciliacion_cliente(cliente)
+
+        rep = fila['rep_desglose'][0]
+        self.assertAlmostEqual(rep['imp_saldo_insoluto'], 48040.00)
+        self.assertAlmostEqual(
+            fila['detalle']['cobros_contado'].get('MXN', 0.00), 0.00,
+        )
+        self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], 48040.00)
+
+    def _venta_rep_legacy(self, nombre, pagos_operativos, rep_monto):
+        cliente = self._cliente(nombre)
+        venta = self._venta_credito(cliente, '446880.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            uuid=f'FACTURA-{nombre}', monto=Money('446880.00', 'MXN'),
+            moneda='MXN', venta=venta,
+        )
+        for monto in pagos_operativos:
+            PagoVenta.objects.create(
+                venta=venta, fecha_pago=date(2026, 6, 26),
+                monto_pago=Money(monto, 'MXN'), cuenta_destino=self.cuenta,
+                metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+                uuid_rep='REP-LEGACY-OTRO-UUID',
+            )
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='P', subtipo='recibo_pago',
+            uuid=f'REP-{nombre}', fecha_emision=date(2026, 10, 10),
+            monto=Money(rep_monto, 'MXN'), moneda='MXN', venta=venta,
+            detalle_complemento={},
+        )
+        return cliente
+
+    def test_rep_legacy_sin_detalle_no_cuenta_saldo_pendiente_como_cobro(self):
+        """REP histórico sin detalle XML (caso BGA folio 2389): la diferencia
+        contra el pago operativo es saldo pendiente estimado, no cobro."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._venta_rep_legacy(
+            'BGA-LEGACY', ['446880.00'], '398840.00'
+        )
+        fila = conciliacion_cliente(cliente)
+
+        self.assertAlmostEqual(
+            fila['detalle']['cobros_contado'].get('MXN', 0.00), 0.00,
+        )
+        self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], 48040.00)
+
+    def test_rep_legacy_sin_detalle_descuenta_notas_credito_del_estimado(self):
+        """El saldo estimado considera notas de crédito: lo cobrado por encima
+        de ese saldo sí sigue contando como cobro sin REP."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._venta_rep_legacy(
+            'LEGACY-NC', ['446880.00'], '398840.00'
+        )
+        venta = cliente.ventas_set.get()
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='E', subtipo='nota_credito',
+            uuid='NC-LEGACY', monto=Money('20000.00', 'MXN'),
+            moneda='MXN', venta=venta,
+        )
+        fila = conciliacion_cliente(cliente)
+
+        # Estimado: 446,880 − 20,000 − 398,840 = 28,040 pendiente.
+        self.assertAlmostEqual(fila['detalle']['cobros_contado']['MXN'], 20000.00)
+        desglose = fila['cobros_contado_desglose']['MXN'][0]
+        self.assertTrue(desglose['saldo_insoluto_estimado'])
+        self.assertAlmostEqual(desglose['saldo_insoluto_rep'], 28040.00)
+        self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], 8040.00)
+
+    def test_rep_parcial_multiples_pagos_usa_menor_saldo_insoluto(self):
+        """Dos REPs parciales sobre la misma factura: el saldo insoluto a
+        usar es el más reciente (menor), no la suma de ambos."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente REP parcial multipago')
+        venta = self._venta_credito(cliente, '500000.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            uuid='FACTURA-MULTI-REP',
+            monto=Money('500000.00', 'MXN'),
+            moneda='MXN',
+            venta=venta,
+        )
+        PagoVenta.objects.create(
+            venta=venta,
+            fecha_pago=date(2026, 7, 3),
+            monto_pago=Money('500000.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+        )
+        for uuid_rep, imp_pagado, saldo_insoluto in (
+            ('REP-PARCIAL-1', '200000.00', '300000.00'),
+            ('REP-PARCIAL-2', '150000.00', '150000.00'),
+        ):
+            DocumentoCFDI.objects.create(
+                cliente=cliente,
+                tipo='P',
+                subtipo='recibo_pago',
+                uuid=uuid_rep,
+                fecha_emision=date(2026, 7, 3),
+                monto=Money(imp_pagado, 'MXN'),
+                moneda='MXN',
+                venta=venta,
+                detalle_complemento={
+                    'vinculo_pago': {'estado': 'no_encontrado'},
+                    'pagos': [{
+                        'fecha_pago': '2026-07-03',
+                        'monto': imp_pagado,
+                        'moneda': 'MXN',
+                        'doctos': [{
+                            'uuid': 'FACTURA-MULTI-REP',
+                            'imp_pagado': imp_pagado,
+                            'saldo_insoluto': saldo_insoluto,
+                            'moneda': 'MXN',
+                        }],
+                    }],
+                },
+            )
+
+        fila = conciliacion_cliente(cliente)
+
+        self.assertAlmostEqual(
+            fila['detalle']['recibos_pago']['MXN'], 350000.00,
+        )
+        self.assertAlmostEqual(
+            fila['detalle']['cobros_contado'].get('MXN', 0.00), 0.00,
+        )
+        self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], 150000.00)
+
+    def test_filtro_sucursal_excluye_ventas_y_anticipos_de_otra_sucursal(self):
+        """Al pasar sucursal_id solo se concilian documentos, pagos y ventas
+        de esa sucursal; los anticipos se excluyen."""
+        from catalogo.models import Sucursal
+        from ventas.services.conciliacion_service import (
+            conciliacion_cliente,
+            conciliacion_global,
+        )
+
+        otra_sucursal = Sucursal.objects.create(
+            nombre='Otra Sucursal', id_estado=self.estado,
+        )
+        cliente = self._cliente('Cliente Dos Sucursales')
+
+        # Sucursal A: factura de 10,000 con REP de 4,000
+        venta_a = Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=self.sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Nacional',
+            tipo_registro='VENTA',
+            modalidad_pago='Credito',
+            monto=Money('10000.00', 'MXN'),
+            monto_pagado=Money('0.00', 'MXN'),
+            cantidad=Decimal('100.000'),
+            fecha_salida_manifiesto=date(2026, 2, 1),
+            fecha_deposito=date(2026, 2, 1),
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            uuid='FACTURA-SUC-A',
+            monto=Money('10000.00', 'MXN'),
+            moneda='MXN',
+            venta=venta_a,
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='P',
+            subtipo='recibo_pago',
+            uuid='REP-SUC-A',
+            fecha_emision=date(2026, 2, 1),
+            monto=Money('4000.00', 'MXN'),
+            moneda='MXN',
+            venta=venta_a,
+            detalle_complemento={
+                'pagos': [{
+                    'fecha_pago': '2026-02-01',
+                    'doctos': [{
+                        'uuid': 'FACTURA-SUC-A',
+                        'imp_pagado': '4000.00',
+                        'saldo_insoluto': '6000.00',
+                        'moneda': 'MXN',
+                    }],
+                }],
+            },
+        )
+
+        # Sucursal B: factura de 5,000 sin REP
+        venta_b = Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=otra_sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Nacional',
+            tipo_registro='VENTA',
+            modalidad_pago='Credito',
+            monto=Money('5000.00', 'MXN'),
+            monto_pagado=Money('0.00', 'MXN'),
+            cantidad=Decimal('100.000'),
+            fecha_salida_manifiesto=date(2026, 2, 1),
+            fecha_deposito=date(2026, 2, 1),
+        )
+        DocumentoCFDI.objects.create(
+            cliente=cliente,
+            tipo='I',
+            subtipo='venta_nacional',
+            uuid='FACTURA-SUC-B',
+            monto=Money('5000.00', 'MXN'),
+            moneda='MXN',
+            venta=venta_b,
+        )
+
+        # Anticipo sin sucursal: 2,000
+        Anticipo.objects.create(
+            cliente=cliente,
+            cuenta=self.cuenta,
+            monto=Money('2000.00', 'MXN'),
+            fecha=date(2026, 2, 1),
+            estado_anticipo='Pendiente',
+        )
+
+        # Sin filtro: 15,000 facturado - 4,000 REP - 2,000 anticipo = 9,000
+        fila_total = conciliacion_cliente(cliente)
+        self.assertAlmostEqual(
+            fila_total['detalle']['facturado']['MXN'], 15000.00
+        )
+        self.assertAlmostEqual(
+            fila_total['detalle']['recibos_pago']['MXN'], 4000.00
+        )
+        self.assertAlmostEqual(
+            fila_total['detalle']['anticipos_disponibles']['MXN'], 2000.00
+        )
+        self.assertAlmostEqual(fila_total['saldo_por_moneda']['MXN'], 9000.00)
+
+        # Filtro sucursal A: 10,000 - 4,000 = 6,000 (anticipo excluido)
+        fila_a = conciliacion_cliente(
+            cliente, sucursal_id=self.sucursal.id
+        )
+        self.assertAlmostEqual(fila_a['detalle']['facturado']['MXN'], 10000.00)
+        self.assertAlmostEqual(fila_a['detalle']['recibos_pago']['MXN'], 4000.00)
+        self.assertNotIn('MXN', fila_a['detalle']['anticipos_disponibles'])
+        self.assertAlmostEqual(fila_a['saldo_por_moneda']['MXN'], 6000.00)
+        self.assertEqual(fila_a['documentos_sin_venta'], 0)
+
+        # Filtro sucursal B: 5,000 sin REP = 5,000 (anticipo excluido)
+        fila_b = conciliacion_cliente(
+            cliente, sucursal_id=otra_sucursal.id
+        )
+        self.assertAlmostEqual(fila_b['detalle']['facturado']['MXN'], 5000.00)
+        self.assertNotIn('MXN', fila_b['detalle']['recibos_pago'])
+        self.assertNotIn('MXN', fila_b['detalle']['anticipos_disponibles'])
+        self.assertAlmostEqual(fila_b['saldo_por_moneda']['MXN'], 5000.00)
+
+        # conciliacion_global respeta el filtro de sucursal
+        filas_global = conciliacion_global(sucursal_id=self.sucursal.id)
+        fila_global = next(
+            f for f in filas_global if f['cliente'].id == cliente.id
+        )
+        self.assertAlmostEqual(
+            fila_global['saldo_por_moneda']['MXN'], 6000.00
+        )
+
     def test_saldo_conciliado_agrega_ingresos_y_egresos(self):
         cliente = self._cliente('Cliente Conciliación')
 
@@ -1207,16 +2570,36 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
             cuenta_destino=self.cuenta,
             metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
         )
-        recibo = DocumentoCFDI.objects.create(
+        DocumentoCFDI.objects.create(
             cliente=cliente, tipo='P', subtipo='recibo_pago',
             folio='REP-100', uuid='33333333-3333-3333-3333-333333333333',
             monto=Money('100.00', 'MXN'), venta=venta_con_pago,
             pago_venta=pago,
         )
 
+        # Pago operativo sin ningún REP: sí es cobro sin REP.
+        venta_pago_sin_rep = self._venta_credito(cliente, '2000.00')
+        Ventas.objects.filter(pk=venta_pago_sin_rep.pk).update(carga='CARGA-SIN-REP')
+        factura_sin_rep = DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            folio='F-2000', uuid='44444444-4444-4444-4444-444444444444',
+            monto=Money('2000.00', 'MXN'), venta=venta_pago_sin_rep,
+        )
+        PagoVenta.objects.create(
+            venta=venta_pago_sin_rep,
+            fecha_pago=date(2026, 3, 4),
+            monto_pago=Money('300.00', 'MXN'),
+            cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+        )
+
         fila = conciliacion_cliente(cliente)
         desglose = fila['cobros_contado_desglose']['MXN']
         por_venta = {item['venta_id']: item for item in desglose}
+
+        # REP histórico (sin XML) por 100 sobre factura de 5000: los 300
+        # restantes del pago operativo quedan como saldo pendiente estimado.
+        self.assertNotIn(venta_con_pago.pk, por_venta)
 
         self.assertAlmostEqual(fila['detalle']['cobros_contado']['MXN'], 1540.00)
         self.assertAlmostEqual(sum(item['monto'] for item in desglose), 1540.00)
@@ -1231,15 +2614,16 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
         sin_cfdi = por_venta[venta_sin_cfdi.pk]
         self.assertEqual(sin_cfdi['documentos_cfdi'], [])
 
-        pago_sin_rep = por_venta[venta_con_pago.pk]
+        pago_sin_rep = por_venta[venta_pago_sin_rep.pk]
         self.assertEqual(pago_sin_rep['tipo'], 'pago_sin_rep')
-        self.assertEqual(pago_sin_rep['referencia'], 'CARGA-CREDITO')
+        self.assertEqual(pago_sin_rep['referencia'], 'CARGA-SIN-REP')
         self.assertEqual(pago_sin_rep['fechas'], [date(2026, 3, 4)])
         self.assertAlmostEqual(pago_sin_rep['monto'], 300.00)
         self.assertEqual(
             {doc['id'] for doc in pago_sin_rep['documentos_cfdi']},
-            {factura_credito.pk, recibo.pk},
+            {factura_sin_rep.pk},
         )
+        self.assertTrue(factura_credito.pk)
 
 
     def test_venta_credito_pagada_por_rep_no_resta_doble(self):
@@ -1272,6 +2656,141 @@ class ConciliacionCFDITest(ReporteCobranzaBaseTest):
 
 
 class ConciliacionOrigenTemplateTest(SimpleTestCase):
+
+    def _render_rep_row(self, fila):
+        from django.contrib.auth.models import AnonymousUser
+        from django.template.loader import render_to_string
+        from django.test import RequestFactory, override_settings
+        from django.utils import translation
+
+        request = RequestFactory().get('/admin/')
+        request.user = AnonymousUser()
+        with override_settings(ROOT_URLCONF='ventas.tests'), \
+                translation.override('es-MX'):
+            return render_to_string(
+                'admin/ventas/conciliacion.html',
+                {
+                    'title': 'Conciliación',
+                    'site_title': 'Admin',
+                    'filas': [fila],
+                    'clientes': [],
+                    'monedas': ['MXN'],
+                    'estado_saldo_choices': [],
+                    'incidencia_choices': [],
+                    'fecha_inicio': '',
+                    'fecha_fin': '',
+                    'selected_cliente_id': '',
+                    'selected_moneda': 'MXN',
+                    'selected_estado_saldo': '',
+                    'selected_incidencia': '',
+                },
+                request=request,
+            )
+
+    def _rep_fila(self, rep):
+        cliente = SimpleNamespace(id=88, nombre='Cliente BGA')
+        return {
+            'cliente': cliente,
+            'detalle': {
+                'facturado': {'MXN': 446880.00},
+                'notas_cargo': {},
+                'notas_credito': {},
+                'recibos_pago': {'MXN': rep['monto_rep_aplicado']},
+                'cobros_contado': {'MXN': 0.00},
+                'anticipos_disponibles': {},
+            },
+            'cobros_contado_desglose': {
+                'MXN': [{
+                    'tipo': 'pago_sin_rep',
+                    'venta_id': 741,
+                    'referencia': 'BGA-VENTA',
+                    'fechas': [date(2026, 7, 3)],
+                    'monto': 0.00,
+                    'moneda': 'MXN',
+                    'monto_operativo': 446880.00,
+                    'rep_aplicado': 398840.00,
+                    'saldo_insoluto_rep': 48040.00,
+                    'diferencia_operativo_fiscal': 0.00,
+                    'estado_vinculo': 'revision_requerida',
+                    'requiere_revision': True,
+                    'fuente_fecha_rep': 'FechaPago',
+                    'uuids_rep': [rep['uuid_rep']],
+                    'documentos_cfdi': [],
+                }],
+            },
+            'rep_desglose': [rep],
+            'rep_desglose_por_moneda': {'MXN': [rep]},
+            'pagos_mxn': 446880.00,
+            'saldo_por_moneda': {'MXN': 48040.00},
+            'total_documentos': 2,
+            'documentos_sin_venta': 0,
+            'sin_venta_detalle': [],
+        }
+
+    def test_desglose_bga_muestra_pago_rep_y_referencia_eliminada(self):
+        rep = {
+            'documento_id': 52,
+            'uuid_rep': 'REP-BGA-UUID',
+            'folio_rep': '',
+            'uuid_factura': 'FACTURA-BGA-UUID',
+            'documento_factura_id': 61,
+            'venta_id': 741,
+            'fecha_pago': date(2026, 7, 3),
+            'fecha_fuente': 'FechaPago',
+            'es_legacy': False,
+            'monto_rep_aplicado': 398840.00,
+            'moneda': 'MXN',
+            'imp_saldo_insoluto': 48040.00,
+            'monto_operativo': 446880.00,
+            'moneda_operativa': 'MXN',
+            'diferencia_operativo_fiscal': 48040.00,
+            'estado_vinculo': 'revision_requerida',
+            'motivo_vinculo': 'no_encontrado',
+            'requiere_revision': True,
+        }
+
+        html = self._render_rep_row(self._rep_fila(rep))
+
+        self.assertIn('Pago operativo', html)
+        self.assertIn('REP aplicado', html)
+        self.assertIn('Diferencia operativo-fiscal', html)
+        self.assertIn('Saldo insoluto REP', html)
+        self.assertIn('Remanente según REP', html)
+        self.assertIn('Revisión requerida', html)
+        self.assertIn('UUID no encontrado', html)
+        self.assertIn('Folio REP no registrado', html)
+        self.assertIn('Fecha de Pago', html)
+        self.assertIn('446,880.00', html)
+        self.assertIn('398,840.00', html)
+        self.assertIn('48,040.00', html)
+        self.assertIn('admin/ventas/documentocfdi/61/change/', html)
+
+    def test_historico_marca_fecha_emision_como_respaldo(self):
+        rep = {
+            'documento_id': 70,
+            'uuid_rep': 'REP-HISTORICO',
+            'folio_rep': '',
+            'uuid_factura': '',
+            'documento_factura_id': None,
+            'venta_id': None,
+            'fecha_pago': date(2026, 3, 15),
+            'fecha_fuente': 'fecha_emision',
+            'es_legacy': True,
+            'monto_rep_aplicado': 250.00,
+            'moneda': 'MXN',
+            'imp_saldo_insoluto': None,
+            'monto_operativo': None,
+            'moneda_operativa': '',
+            'diferencia_operativo_fiscal': None,
+            'estado_vinculo': 'revision_requerida',
+            'motivo_vinculo': 'no_encontrado',
+            'requiere_revision': True,
+        }
+
+        html = self._render_rep_row(self._rep_fila(rep))
+
+        self.assertIn('Fecha de emisión (respaldo)', html)
+        self.assertIn('Monto histórico', html)
 
     def test_cobro_contado_expone_origen_y_avisa_si_no_hay_cfdi(self):
         from django.template.loader import render_to_string
@@ -1519,6 +3038,78 @@ class ConciliacionVistaFiltrosTest(ReporteCobranzaBaseTest):
             'mixto',
             [value for value, _label in response.context_data['estado_saldo_choices']],
         )
+
+    def test_vista_aplica_filtro_sucursal_y_excluye_anticipos(self):
+        from catalogo.models import Sucursal
+        from django.contrib.auth.models import AnonymousUser
+        from django.core.cache import cache
+        from django.test import RequestFactory
+
+        cache.clear()
+        otra_sucursal = Sucursal.objects.create(
+            nombre='Vista Sucursal B', id_estado=self.estado,
+        )
+        cliente = self._cliente('Cliente Vista Sucursal')
+
+        Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=self.sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Nacional',
+            tipo_registro='VENTA',
+            modalidad_pago='Contado',
+            monto=Money('300.00', 'MXN'),
+            cantidad=Decimal('10.000'),
+            fecha_salida_manifiesto=date(2026, 2, 1),
+            fecha_deposito=date(2026, 2, 1),
+        )
+        Ventas.objects.create(
+            cliente=cliente,
+            sucursal_id=otra_sucursal,
+            producto=self.producto,
+            agente_id=self.agente,
+            cuenta=self.cuenta,
+            tipo_venta='Nacional',
+            tipo_registro='VENTA',
+            modalidad_pago='Contado',
+            monto=Money('700.00', 'MXN'),
+            cantidad=Decimal('10.000'),
+            fecha_salida_manifiesto=date(2026, 2, 1),
+            fecha_deposito=date(2026, 2, 1),
+        )
+        Anticipo.objects.create(
+            cliente=cliente,
+            cuenta=self.cuenta,
+            monto=Money('1000.00', 'MXN'),
+            fecha=date(2026, 2, 1),
+            estado_anticipo='Pendiente',
+        )
+
+        request = RequestFactory().get('/admin/', {
+            'sucursal_id': str(self.sucursal.id),
+        })
+        request.user = AnonymousUser()
+        model_admin = ClienteAdmin(Cliente, admin.site)
+
+        response = model_admin.conciliacion_view(request)
+
+        self.assertEqual(
+            response.context_data['selected_sucursal_id'],
+            str(self.sucursal.id),
+        )
+        self.assertTrue(response.context_data['filtro_sucursal_activo'])
+        self.assertEqual(
+            [fila['cliente'].pk for fila in response.context_data['filas']],
+            [cliente.pk],
+        )
+        # Solo la venta de la sucursal seleccionada; anticipo excluido
+        fila = response.context_data['filas'][0]
+        self.assertAlmostEqual(
+            fila['detalle']['cobros_contado']['MXN'], 300.00
+        )
+        self.assertNotIn('MXN', fila['detalle']['anticipos_disponibles'])
 
 
 class CobradoMxnOrigenTest(ReporteCobranzaBaseTest):

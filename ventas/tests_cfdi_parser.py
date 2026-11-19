@@ -260,6 +260,37 @@ class CFDIParserTest(SimpleTestCase):
             ['28C06FD3-D87D-45C5-8C4D-D4927FCD3A64'],
         )
 
+    def test_parse_pagos20_preserva_todos_los_pagos_y_campos_docto_relacionado(self):
+        segundo_pago = '''
+      <pago20:Pago FechaPago="2026-08-16T09:30:00" FormaDePagoP="03"
+          MonedaP="USD" TipoCambioP="18.0000" Monto="100.00">
+        <pago20:DoctoRelacionado
+          IdDocumento="28C06FD3-D87D-45C5-8C4D-D4927FCD3A64"
+          Serie="B" Folio="2318" MonedaDR="MXN" EquivalenciaDR="18.000000"
+          NumParcialidad="2" ImpSaldoAnt="162480.00" ImpPagado="1800.00"
+          ImpSaldoInsoluto="160680.00" />
+      </pago20:Pago>
+        '''
+        xml = XML_RECIBO_PAGO_20.replace(
+            '</pago20:Pagos>', segundo_pago + '</pago20:Pagos>'
+        )
+
+        parsed = parse_cfdi(xml.encode())
+
+        self.assertEqual(len(parsed['pagos']), 2)
+        self.assertEqual(parsed['pagos'][0]['fecha'], date(2026, 7, 16))
+        self.assertEqual(parsed['pagos'][1]['fecha'], date(2026, 8, 16))
+        self.assertEqual(parsed['pagos'][1]['monto'], Decimal('100.00'))
+        self.assertEqual(parsed['pagos'][1]['moneda'], 'USD')
+        docto = parsed['pagos'][1]['doctos'][0]
+        self.assertEqual(docto['uuid'], '28C06FD3-D87D-45C5-8C4D-D4927FCD3A64')
+        self.assertEqual(docto['pagado'], Decimal('1800.00'))
+        self.assertEqual(docto['saldo_anterior'], '162480.00')
+        self.assertEqual(docto['saldo_insoluto'], '160680.00')
+        self.assertEqual(docto['parcialidad'], '2')
+        self.assertEqual(docto['moneda'], 'MXN')
+        self.assertEqual(docto['equivalencia'], '18.000000')
+
     def test_multiples_conceptos(self):
         parsed = parse_cfdi(XML_MULTI_CONCEPTOS.encode())
         self.assertEqual(len(parsed['conceptos']), 2)
