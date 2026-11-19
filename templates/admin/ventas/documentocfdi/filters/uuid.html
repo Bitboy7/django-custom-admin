@@ -1,0 +1,24 @@
+{% load i18n %}
+<div class="form-group uuid-filtro-grupo" title="{% trans 'Filtrar por UUID (folio fiscal)' %}">
+  <input type="search" name="uuid_q" class="form-control uuid-filtro-input"
+         value="{{ spec.used_parameters.uuid_q }}"
+         placeholder="UUID" aria-label="{% trans 'Filtrar por UUID' %}"
+         autocomplete="off" spellcheck="false">
+</div>
+<script>
+(function () {
+  var input = document.querySelector('.uuid-filtro-input');
+  if (!input) return;
+  function navegar() {
+    var params = new URLSearchParams(window.location.search);
+    var valor = input.value.trim();
+    if (valor) { params.set('uuid_q', valor); } else { params.delete('uuid_q'); }
+    params.delete('p');
+    window.location.search = params.toString();
+  }
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); navegar(); }
+  });
+  input.addEventListener('change', navegar);
+})();
+</script>

@@ -3904,6 +3904,35 @@ class ObligacionFiscalAdmin(ModelAdmin):
 # DOCUMENTOS CFDI
 # =============================================================================
 
+class UUIDDocumentoCFDIFilter(admin.ListFilter):
+    """Filtro de texto por UUID (coincidencia parcial, sin distinguir mayúsculas)."""
+    title = 'UUID'
+    parameter_name = 'uuid_q'
+    template = 'admin/ventas/documentocfdi/filters/uuid.html'
+
+    def __init__(self, request, params, model, model_admin):
+        super().__init__(request, params, model, model_admin)
+        value = params.pop(self.parameter_name, None)
+        if isinstance(value, (list, tuple)):
+            value = value[-1] if value else None
+        self.used_parameters[self.parameter_name] = (value or '').strip()
+
+    def has_output(self):
+        return True
+
+    def expected_parameters(self):
+        return [self.parameter_name]
+
+    def choices(self, changelist):
+        return []
+
+    def queryset(self, request, queryset):
+        valor = self.used_parameters.get(self.parameter_name)
+        if valor:
+            return queryset.filter(uuid__icontains=valor)
+        return queryset
+
+
 @admin.register(DocumentoCFDI)
 class DocumentoCFDIAdmin(ModelAdmin):
     change_list_template = 'admin/ventas/documentocfdi/change_list.html'
@@ -3911,7 +3940,12 @@ class DocumentoCFDIAdmin(ModelAdmin):
         'subtipo', 'folio', 'uuid', 'get_cliente', 'fecha_emision', 'monto',
         'estado', 'pdf_preview',
     )
-    list_filter = ('tipo', 'subtipo', 'estado', 'fecha_emision')
+    list_filter = (
+        'tipo',
+        ('cliente', admin.RelatedOnlyFieldListFilter),
+        UUIDDocumentoCFDIFilter,
+        'fecha_emision',
+    )
     search_fields = ('folio', 'uuid', 'cliente__nombre', 'venta__carga')
     date_hierarchy = 'fecha_emision'
     list_per_page = 30
