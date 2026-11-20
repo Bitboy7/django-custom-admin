@@ -292,7 +292,7 @@
                     <td><span class="date-value">{{ p.parsed.fecha_emision_cfdi|default:"—" }}</span></td>
                     <td><span class="money-value">{{ p.parsed.monto }} {{ p.parsed.moneda_venta }}</span></td>
                     <td>
-                      <select name="cliente_{{ forloop.counter0 }}" data-cliente-select="{{ forloop.counter0 }}" class="bulk-select" {% if p.duplicado %}disabled{% endif %}>
+                      <select name="cliente_{{ forloop.counter0 }}" data-cliente-select="{{ forloop.counter0 }}" class="bulk-select bulk-select--cliente" {% if p.cliente %}title="{{ p.cliente.nombre }}"{% endif %} {% if p.duplicado %}disabled{% endif %}>
                         <option value="">— sin cliente —</option>
                         {% for cliente in clientes %}
                           <option value="{{ cliente.pk }}"
@@ -300,6 +300,9 @@
                                   {% if p.cliente and p.cliente.pk == cliente.pk %}selected{% endif %}>{{ cliente.nombre }}</option>
                         {% endfor %}
                       </select>
+                      {% if p.cliente and p.receptor_nombre %}
+                        <p class="client-receptor"><span>Receptor en el CFDI</span> {{ p.receptor_nombre }}</p>
+                      {% endif %}
 
                       {% if p.duplicado %}
                         <p class="duplicate-note"><i class="fas fa-clone" aria-hidden="true"></i> {{ p.duplicado }}</p>

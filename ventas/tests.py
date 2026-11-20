@@ -1508,6 +1508,18 @@ class CFDIImportServiceTest(ReporteCobranzaBaseTest):
 
         self.assertEqual(match_cliente(parsed), cliente)
 
+    def test_match_cliente_palabra_suelta_no_asigna_cliente(self):
+        self._cliente('COMERCIALIZADORA DE MANGOS LOS GORDITOS')
+        parsed = {'_receptor_nombre': 'COMERCIALIZADORA DE FRUTAS NATA'}
+
+        self.assertIsNone(match_cliente(parsed))
+
+    def test_match_cliente_nombre_completo_ignora_acentos_y_puntuacion(self):
+        cliente = self._cliente('Comercializadora de Frutas Ñata, S.A.')
+        parsed = {'_receptor_nombre': 'COMERCIALIZADORA DE FRUTAS NATA S A'}
+
+        self.assertEqual(match_cliente(parsed), cliente)
+
     def test_match_cliente_extranjero_usa_registro_fiscal(self):
         cliente = self._cliente('Panorama Produce LTD')
         cliente.rfc = Cliente.RFC_GENERICO_EXTRANJERO
@@ -4140,3 +4152,4 @@ class ReportesExportTest(ReporteCobranzaBaseTest):
             'Cobros contado-sin REP', 'Aplicaciones REP',
         ])
         self.assertTrue(pdf.content.startswith(b'%PDF'))
+

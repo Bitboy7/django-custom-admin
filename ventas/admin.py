@@ -1084,27 +1084,13 @@ class VentasAdmin(ModelAdmin):
 
                 es_servicio = subtipo == 'ingreso_servicio'
 
-                # Try to find best client match against receptor nombre
+                # Cliente por RFC / registro fiscal o razón social completa. No se
+                # adivina por palabras sueltas: un cliente equivocado
+                # preseleccionado se importaría sin que nadie lo note.
+                from .services.cfdi_import_service import match_cliente
                 receptor_nombre = parsed.get('_receptor_nombre', '')
-                cliente_inicial = None
-                cliente_sugerido_nombre = ''
-                if receptor_nombre:
-                    # 1) Exact full-name match (case-insensitive)
-                    qs = Cliente.objects.filter(nombre__iexact=receptor_nombre, activo=True)
-                    if qs.exists():
-                        cliente_inicial = qs.first()
-                    else:
-                        # 2) Try each significant word (len > 3) from receptor against DB names
-                        words = [w for w in receptor_nombre.split() if len(w) > 3]
-                        for word in words:
-                            qs = Cliente.objects.filter(nombre__icontains=word, activo=True)
-                            if qs.count() == 1:
-                                cliente_inicial = qs.first()
-                                break
-                            elif qs.exists():
-                                cliente_inicial = qs.first()
-                                # keep searching for a more specific match
-                    cliente_sugerido_nombre = receptor_nombre
+                cliente_inicial = match_cliente(parsed)
+                cliente_sugerido_nombre = receptor_nombre or ''
 
                 # Detect product by scanning DB varieties against the CFDI description
                 descripcion_cfdi = parsed.get('descripcion', '')

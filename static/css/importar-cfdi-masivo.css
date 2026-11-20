@@ -786,8 +786,37 @@ body #content-main {
 .bulk-table {
   border-collapse: separate;
   border-spacing: 0;
-  min-width: 1180px;
+  min-width: 1400px;
   width: 100%;
+}
+
+/* Columna Cliente: ancho suficiente para razones sociales largas. */
+.bulk-table th:nth-child(6),
+.bulk-table td:nth-child(6) {
+  min-width: 22rem;
+  width: 26%;
+}
+
+.bulk-select--cliente {
+  text-overflow: ellipsis;
+}
+
+/* Razón social tal como viene en el XML: permite detectar de un vistazo un
+   cliente preseleccionado que no coincide con el receptor del CFDI. */
+.client-receptor {
+  color: var(--text-muted, #586f7c);
+  font-size: .68rem;
+  line-height: 1.35;
+  margin: .35rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.client-receptor span {
+  display: block;
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
 }
 
 .bulk-table th {

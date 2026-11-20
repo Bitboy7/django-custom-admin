@@ -13,6 +13,7 @@ PagoVenta / DocumentoCFDI, conforme a la taxonomía del cliente:
 """
 import json
 import re
+import unicodedata
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
@@ -85,6 +86,14 @@ def parsed_from_json(data):
     return conv(json.loads(data))
 
 
+def _normalizar_nombre(valor):
+    """Razón social en mayúsculas, sin acentos, puntuación ni espacios extra."""
+    texto = unicodedata.normalize('NFKD', str(valor or ''))
+    texto = ''.join(c for c in texto if not unicodedata.combining(c))
+    texto = re.sub(r'[^A-Za-z0-9&]+', ' ', texto)
+    return ' '.join(texto.upper().split())
+
+
 def match_cliente(parsed):
     """Busca al receptor por su identidad fiscal y después por razón social."""
     nombre = (parsed.get('_receptor_nombre') or '').strip()
@@ -117,11 +126,15 @@ def match_cliente(parsed):
     if qs.exists():
         return qs.first()
 
-    words = [w for w in nombre.split() if len(w) > 3]
-    for word in words:
-        qs = Cliente.objects.filter(nombre__icontains=word, activo=True)
-        if qs.count() == 1:
-            return qs.first()
+    # Coincidencia por razón social completa, sin distinguir mayúsculas,
+    # acentos ni puntuación. Nunca se asigna por una palabra suelta: un cliente
+    # equivocado preseleccionado es peor que dejarlo sin reconocer, porque se
+    # importa sin que nadie lo note.
+    objetivo = _normalizar_nombre(nombre)
+    if objetivo:
+        for cliente in Cliente.objects.filter(activo=True).only('id', 'nombre'):
+            if _normalizar_nombre(cliente.nombre) == objetivo:
+                return Cliente.objects.get(pk=cliente.pk)
     return None
 
 
