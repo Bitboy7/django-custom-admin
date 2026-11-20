@@ -63,6 +63,7 @@ def _es_nota_que_afecta_saldo(subtipo, DocumentoCFDI):
     return subtipo in (
         DocumentoCFDI.SubtipoDocumento.NOTA_CARGO,
         DocumentoCFDI.SubtipoDocumento.NOTA_CREDITO,
+        DocumentoCFDI.SubtipoDocumento.DESCUENTO,
     )
 
 

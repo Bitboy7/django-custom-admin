@@ -806,7 +806,10 @@ class Ventas(models.Model):
                 continue
             if doc.subtipo == DocumentoCFDI.SubtipoDocumento.NOTA_CARGO:
                 cargos += doc.monto.amount
-            elif doc.subtipo == DocumentoCFDI.SubtipoDocumento.NOTA_CREDITO:
+            elif doc.subtipo in (
+                DocumentoCFDI.SubtipoDocumento.NOTA_CREDITO,
+                DocumentoCFDI.SubtipoDocumento.DESCUENTO,
+            ):
                 creditos += doc.monto.amount
 
         return (
@@ -1799,6 +1802,7 @@ class DocumentoCFDI(models.Model):
         NOTA_CARGO = 'nota_cargo', 'Nota de Cargo'
         REMANENTE_ANTICIPO = 'remanente_anticipo', 'Remanente de Anticipo'
         NOTA_CREDITO = 'nota_credito', 'Nota de Crédito'
+        DESCUENTO = 'descuento', 'Descuento'
         RECIBO_PAGO = 'recibo_pago', 'Recibo Electrónico de Pago'
 
     class EstadoDocumento(models.TextChoices):
@@ -1860,6 +1864,12 @@ class DocumentoCFDI(models.Model):
     archivo_xml = models.FileField(upload_to='cfdi/xml/%Y/%m/', blank=True, null=True)
     archivo_pdf = models.FileField(upload_to='cfdi/pdf/%Y/%m/', blank=True, null=True)
 
+    descripcion = models.TextField(
+        blank=True, default='',
+        verbose_name='Descripción',
+        help_text='Descripción libre del documento (por ejemplo, motivo de un descuento).',
+    )
+
     # Conceptos del CFDI (bienes o servicios, cantidades y claves SAT)
     conceptos = models.JSONField(
         default=list, blank=True,
@@ -1890,6 +1900,7 @@ class DocumentoCFDI(models.Model):
             and self.subtipo in (
                 self.SubtipoDocumento.NOTA_CARGO,
                 self.SubtipoDocumento.NOTA_CREDITO,
+                self.SubtipoDocumento.DESCUENTO,
             )
         )
 

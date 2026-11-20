@@ -4066,7 +4066,7 @@ class DocumentoCFDIAdmin(ModelAdmin):
 
     fieldsets = (
         ('Clasificación', {
-            'fields': ('tipo', 'subtipo', 'estado')
+            'fields': ('tipo', 'subtipo', 'estado', 'descripcion')
         }),
         ('Identificación SAT', {
             'fields': ('serie', 'folio', 'uuid', 'fecha_emision', 'fecha_timbrado')

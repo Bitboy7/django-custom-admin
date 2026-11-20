@@ -429,6 +429,7 @@ SUBIPO_TO_TIPO = {
     'nota_cargo': 'I',
     'remanente_anticipo': 'I',
     'nota_credito': 'E',
+    'descuento': 'E',
     'recibo_pago': 'P',
 }
 

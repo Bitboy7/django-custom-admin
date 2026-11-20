@@ -56,6 +56,10 @@ INGRESOS_VENTA = [
     'otros_ingresos',
 ]
 
+# Documentos que reducen el saldo por cobrar. Un descuento se concilia como un
+# crédito más: se suma en la columna de notas de crédito y resta del saldo.
+CREDITOS_VENTA = ['nota_credito', 'descuento']
+
 
 def _sum_por_moneda(docs, subtipos):
     resultado = defaultdict(float)
@@ -304,7 +308,7 @@ def _saldo_insoluto_estimado_venta(venta, moneda, fecha_fin=None):
         monto = _decimal(doc.monto.amount)
         if doc.subtipo in INGRESOS_VENTA or doc.subtipo == 'nota_cargo':
             saldo += monto
-        elif doc.subtipo == 'nota_credito':
+        elif doc.subtipo in CREDITOS_VENTA:
             saldo -= monto
     return max(Decimal('0'), saldo)
 
@@ -676,7 +680,7 @@ def _calcular_sin_memo(
     detalle = {
         'facturado': _sum_por_moneda(docs, INGRESOS_VENTA),
         'notas_cargo': _sum_por_moneda(docs, ['nota_cargo']),
-        'notas_credito': _sum_por_moneda(docs, ['nota_credito']),
+        'notas_credito': _sum_por_moneda(docs, CREDITOS_VENTA),
         'recibos_pago': {
             moneda: float(monto) for moneda, monto in rep_por_moneda.items()
         },

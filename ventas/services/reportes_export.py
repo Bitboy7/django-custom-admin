@@ -202,7 +202,10 @@ def datos_reporte_ventas(ventas_qs, cfdi_qs=None, hoy=None):
             item['n'] += 1
             if doc.tipo == DocumentoCFDI.TipoDocumento.INGRESO:
                 item['facturado'] += importe
-            elif doc.subtipo == DocumentoCFDI.SubtipoDocumento.NOTA_CREDITO:
+            elif doc.subtipo in (
+                DocumentoCFDI.SubtipoDocumento.NOTA_CREDITO,
+                DocumentoCFDI.SubtipoDocumento.DESCUENTO,
+            ):
                 item['notas_credito'] += importe
             elif doc.tipo == DocumentoCFDI.TipoDocumento.PAGO:
                 item['rep'] += importe

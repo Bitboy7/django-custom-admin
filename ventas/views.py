@@ -460,7 +460,10 @@ def build_ventas_balances_context(request):
     cfdi_qs = DocumentoCFDI.objects.filter(cfdi_filters)
     cfdi_totals = cfdi_qs.aggregate(
         total_facturado=Sum('monto', filter=Q(tipo=DocumentoCFDI.TipoDocumento.INGRESO)),
-        total_notas_credito=Sum('monto', filter=Q(subtipo=DocumentoCFDI.SubtipoDocumento.NOTA_CREDITO)),
+        total_notas_credito=Sum('monto', filter=Q(subtipo__in=[
+            DocumentoCFDI.SubtipoDocumento.NOTA_CREDITO,
+            DocumentoCFDI.SubtipoDocumento.DESCUENTO,
+        ])),
         total_recibos_pago=Sum('monto', filter=Q(tipo=DocumentoCFDI.TipoDocumento.PAGO)),
         numero_cfdis=Count('id'),
     )
