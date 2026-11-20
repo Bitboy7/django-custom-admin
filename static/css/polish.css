@@ -74,15 +74,15 @@ html body aside#jazzy-sidebar { view-transition-name: app-sidebar; }
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   2. RELIEVE TÁCTIL EN BOTONES
+   2. BOTONES PLANOS (Material)
    ═══════════════════════════════════════════════════════════════ */
 
 /*
- * El degradado es translúcido (blanco arriba, sombra abajo) para
- * funcionar sobre cualquier color base y en ambos temas, sin
- * reemplazar el color de marca que ya fija cada variante. Los valores
- * del relieve se exponen como variables para que el tema oscuro solo
- * redefina las sombras, sin pelearse con los estados hover/active.
+ * Relleno sólido, sin degradado y sin sombra en reposo. El feedback
+ * es tonal: hover aclara/oscurece el relleno, active lo oscurece más.
+ * La elevación (sombra) se reserva para hover en botones rellenos.
+ * Se excluyen variantes de borde (secondary, default, danger, outline)
+ * y DataTables, que definen su propio acabado.
  */
 .btn:not(.btn-secondary):not(.btn-default):not(.btn-danger):not(.btn-outline),
 input[type="submit"],
@@ -91,49 +91,16 @@ body .button,
 body .actions .button,
 .btn-export-pdf,
 .btn-submit {
-  --relief-hi: rgba(255, 255, 255, 0.28);
-  --relief-shade: rgba(0, 0, 0, 0.08);
-  --relief-raise-1: rgba(15, 31, 53, 0.20);
-  --relief-raise-2: rgba(15, 31, 53, 0.10);
-  --relief-hover-hi: rgba(255, 255, 255, 0.34);
-  --relief-hover-1: rgba(15, 31, 53, 0.20);
-  --relief-hover-2: rgba(15, 31, 53, 0.16);
-  --relief-press: rgba(10, 20, 30, 0.28);
-  --relief-press-shade: rgba(0, 0, 0, 0.10);
-
   position: relative;
+  background-image: none !important;
+  box-shadow: none !important;
   transition:
-    transform var(--duration-fast, 150ms) var(--ease-default, ease),
     box-shadow var(--duration-fast, 150ms) var(--ease-default, ease),
     background-color var(--duration-fast, 150ms) var(--ease-default, ease),
     border-color var(--duration-fast, 150ms) var(--ease-default, ease),
     filter var(--duration-fast, 150ms) var(--ease-default, ease);
 }
 
-/* Relieve en reposo: highlight superior + sombra inferior + alzado.
-   Se excluyen las variantes planas/borde (secondary, default, danger,
-   outline) y los botones DataTables, que definen su propio acabado. */
-.btn:not(.btn-secondary):not(.btn-default):not(.btn-danger):not(.btn-outline),
-input[type="submit"],
-input[type="button"],
-body .button,
-body .actions .button,
-.btn-export-pdf,
-.btn-submit {
-  background-image: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.20) 0%,
-    rgba(255, 255, 255, 0.05) 48%,
-    rgba(13, 24, 34, 0.10) 100%
-  ) !important;
-  box-shadow:
-    inset 0 1px 0 var(--relief-hi),
-    inset 0 -1px 0 var(--relief-shade),
-    0 1px 2px var(--relief-raise-1),
-    0 3px 7px var(--relief-raise-2) !important;
-}
-
-/* Hover: se eleva 1px y la sombra se abre. */
 .btn:not(.btn-secondary):not(.btn-default):not(.btn-danger):not(.btn-outline):hover,
 input[type="submit"]:hover,
 input[type="button"]:hover,
@@ -141,15 +108,9 @@ body .button:hover,
 body .actions .button:hover,
 .btn-export-pdf:hover,
 .btn-submit:hover {
-  transform: translateY(-1px) !important;
-  box-shadow:
-    inset 0 1px 0 var(--relief-hover-hi),
-    inset 0 -1px 0 var(--relief-shade),
-    0 2px 4px var(--relief-hover-1),
-    0 7px 16px var(--relief-hover-2) !important;
+  box-shadow: 0 1px 2px rgba(31, 47, 56, 0.24), 0 1px 3px 1px rgba(31, 47, 56, 0.12) !important;
 }
 
-/* Activo: se hunde — el relieve se invierte. */
 .btn:not(.btn-secondary):not(.btn-default):not(.btn-danger):not(.btn-outline):active,
 input[type="submit"]:active,
 input[type="button"]:active,
@@ -157,46 +118,15 @@ body .button:active,
 body .actions .button:active,
 .btn-export-pdf:active,
 .btn-submit:active {
-  transform: translateY(0) !important;
-  box-shadow:
-    inset 0 2px 4px var(--relief-press),
-    inset 0 1px 0 var(--relief-press-shade) !important;
+  box-shadow: none !important;
+  filter: brightness(0.94);
 }
 
-/*
- * Tema oscuro: todo el relieve se recalcula. Al tocar solo las
- * variables, hover y active siguen funcionando sin conflictos de
- * especificidad.
- */
-html[data-theme="dark"] .btn:not(.btn-secondary):not(.btn-default):not(.btn-danger):not(.btn-outline),
-html[data-theme="dark"] input[type="submit"],
-html[data-theme="dark"] input[type="button"],
-html[data-theme="dark"] body .button,
-html[data-theme="dark"] body .actions .button,
-html[data-theme="dark"] .btn-export-pdf,
-html[data-theme="dark"] .btn-submit {
-  --relief-hi: rgba(255, 255, 255, 0.14);
-  --relief-shade: rgba(0, 0, 0, 0.28);
-  --relief-raise-1: rgba(0, 0, 0, 0.45);
-  --relief-raise-2: rgba(0, 0, 0, 0.30);
-  --relief-hover-hi: rgba(255, 255, 255, 0.20);
-  --relief-hover-1: rgba(0, 0, 0, 0.45);
-  --relief-hover-2: rgba(0, 0, 0, 0.40);
-  --relief-press: rgba(0, 0, 0, 0.50);
-  --relief-press-shade: rgba(0, 0, 0, 0.35);
-}
-
-/* Botones fantasma / enlace: planos a propósito, sin relieve. */
+/* Botones fantasma / enlace y deshabilitados: sin elevación. */
 .btn-ghost,
 .btn-link,
 .btn.btn-ghost,
-.btn.btn-link {
-  background-image: none !important;
-  box-shadow: none !important;
-  transform: none !important;
-}
-
-/* Deshabilitados: sin relieve ni elevación. */
+.btn.btn-link,
 .btn:disabled,
 .btn.disabled,
 input[type="submit"]:disabled,
@@ -205,7 +135,7 @@ body .button:disabled,
 .dt-buttons .dt-button.disabled {
   box-shadow: none !important;
   background-image: none !important;
-  transform: none !important;
+  filter: none !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -220,22 +150,5 @@ body .button:disabled,
   body .content-wrapper,
   body .page-content {
     animation: none !important;
-  }
-
-  .btn:hover,
-  input[type="submit"]:hover,
-  input[type="button"]:hover,
-  body .button:hover,
-  body .actions .button:hover,
-  .btn-export-pdf:hover,
-  .btn-submit:hover,
-  .btn:active,
-  input[type="submit"]:active,
-  input[type="button"]:active,
-  body .button:active,
-  body .actions .button:active,
-  .btn-export-pdf:active,
-  .btn-submit:active {
-    transform: none !important;
   }
 }

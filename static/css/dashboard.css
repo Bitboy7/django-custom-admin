@@ -64,22 +64,19 @@
   background: var(--surface-card) !important;
   border-radius: var(--radius-lg);
   padding: var(--space-6);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   border: 1px solid var(--border-default);
-  border-left: 4px solid var(--brand-teal);
-  transition: all var(--duration-fast) var(--ease-default);
+  border-top: 3px solid var(--brand-teal);
+  transition: background-color var(--duration-fast) var(--ease-default);
   position: relative;
   overflow: hidden;
 }
-.kpi-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-}
-.kpi-card--primary { border-left-color: var(--brand-teal); }
-.kpi-card--success { border-left-color: var(--accent-green); }
-.kpi-card--warning { border-left-color: var(--accent-amber); }
-.kpi-card--danger  { border-left-color: var(--accent-red); }
-.kpi-card--info    { border-left-color: var(--accent-blue); }
+.kpi-card:hover { background: var(--surface-hover) !important; }
+.kpi-card--primary { border-top-color: var(--brand-teal); }
+.kpi-card--success { border-top-color: var(--accent-green); }
+.kpi-card--warning { border-top-color: var(--accent-amber); }
+.kpi-card--danger  { border-top-color: var(--accent-red); }
+.kpi-card--info    { border-top-color: var(--accent-blue); }
 
 .kpi-card .kpi-header {
   display: flex;
@@ -128,7 +125,7 @@
 }
 
 /* Alias for backward compat */
-.metric-card { border-left-color: var(--brand-teal) !important; background: var(--surface-card) !important; border-radius: var(--radius-lg) !important; padding: var(--space-5) !important; box-shadow: var(--shadow-sm) !important; border: 1px solid var(--border-default) !important; }
+.metric-card { background: var(--surface-card) !important; border-radius: var(--radius-lg) !important; padding: var(--space-5) !important; box-shadow: none !important; border: 1px solid var(--border-default) !important; }
 .metric-value { font-size: var(--font-size-2xl); font-weight: 700; color: var(--text-primary) !important; line-height: 1.2; }
 .metric-label { color: var(--text-muted) !important; font-size: var(--font-size-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
 
@@ -219,7 +216,7 @@
   background: var(--surface-card) !important;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   cursor: pointer;
   text-decoration: none;
   color: var(--text-primary);
@@ -232,8 +229,7 @@
 }
 .quick-action:hover {
   border-color: var(--brand-teal);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  background: var(--surface-hover) !important;
   color: var(--brand-teal-dark);
 }
 .quick-action .action-icon {
@@ -248,13 +244,10 @@
 }
 
 #tw-dashboard .dash-card {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)) top/100% 42px no-repeat,
-    var(--surface-card);
+  background: var(--surface-card);
   border: 1px solid var(--border-default);
-  border: 1px solid color-mix(in srgb, var(--border-default) 86%, var(--surface-card));
   border-radius: var(--radius-md);
-  box-shadow: 0 1px 2px rgba(47, 69, 80, 0.06), 0 12px 28px rgba(47, 69, 80, 0.05);
+  box-shadow: none;
 }
 
 #tw-dashboard .dash-text {
@@ -288,9 +281,7 @@
   background: color-mix(in srgb, var(--surface-card) 76%, var(--light-blue));
   border-color: var(--light-blue);
   border-color: color-mix(in srgb, var(--light-blue) 70%, var(--blue-slate));
-  box-shadow: 0 8px 18px rgba(47, 69, 80, 0.08);
   color: var(--text-primary);
-  transform: translateY(-1px);
 }
 
 #tw-dashboard .dash-status-success {
@@ -419,7 +410,7 @@
 [data-theme="dark"] #tw-dashboard .dash-card {
   background: var(--surface-card);
   border-color: var(--border-default);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
+  box-shadow: none;
 }
 
 [data-theme="dark"] #tw-dashboard .dash-btn {
