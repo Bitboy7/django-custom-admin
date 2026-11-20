@@ -109,32 +109,80 @@
     setTimeout(function () { if (btn) btn.disabled = false; }, 2000);
   }
 
+  function setHidden(id, hidden) {
+    var el = document.getElementById(id);
+    if (el) el.classList.toggle("is-hidden", hidden);
+  }
+
+  function clearValue(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = "";
+  }
+
+  function checkedValue(name) {
+    var el = document.querySelector('input[name="' + name + '"]:checked');
+    return el ? el.value : "";
+  }
+
+  function clearMonthSelection() {
+    clearValue("months");
+    document.querySelectorAll(".month-checkbox").forEach(function (cb) {
+      cb.checked = false;
+    });
+    var all = document.getElementById("month-all");
+    if (all) all.checked = true;
+    var text = document.getElementById("month-selector-text");
+    if (text) text.textContent = "Todos los meses";
+  }
+
+  // Sincroniza la visibilidad de los controles de fecha con el período y el
+  // modo elegidos. Año y Meses solo aplican a "Año y meses" (mensual) y a
+  // semanal; en Diario y en "Rango de meses" se ocultan porque no se usan.
+  function syncDateFilters() {
+    var periodo = (document.getElementById("periodo") || {}).value;
+    var esDiario = periodo === "diario";
+    var esMensual = periodo === "mensual";
+    var esRangoMes = esMensual && checkedValue("tipo_mes") === "rango";
+    var esRangoFecha = checkedValue("tipo_fecha") === "rango";
+
+    setHidden("filtro-diario-opciones", !esDiario);
+    setHidden("filtro-mensual-opciones", !esMensual);
+    setHidden("campo-dia-especifico", esRangoFecha);
+    setHidden("campos-rango-fechas", !esRangoFecha);
+    setHidden("campos-rango-meses", !esRangoMes);
+    setHidden("filtro-year-wrap", esDiario || esRangoMes);
+    setHidden("filtro-meses-wrap", esDiario || esRangoMes);
+  }
+
   function initPeriodControls() {
-    if (!window.jQuery) return;
-    $("#periodo").on("change", function () {
-      if ($(this).val() === "diario") {
-        $("#filtro-diario-opciones").slideDown(300);
-      } else {
-        $("#filtro-diario-opciones").slideUp(300);
-      }
+    var periodo = document.getElementById("periodo");
+    if (periodo) periodo.addEventListener("change", syncDateFilters);
+
+    document.querySelectorAll('input[name="tipo_fecha"]').forEach(function (radio) {
+      radio.addEventListener("change", function () {
+        if (this.value === "dia") {
+          clearValue("fecha_inicio");
+          clearValue("fecha_fin");
+        } else {
+          clearValue("dia");
+        }
+        syncDateFilters();
+      });
     });
 
-    $('input[name="tipo_fecha"]').on("change", function () {
-      if ($(this).val() === "dia") {
-        $("#campo-dia-especifico").slideDown(300);
-        $("#campos-rango-fechas").slideUp(300);
-        $("#fecha_inicio").val("");
-        $("#fecha_fin").val("");
-      } else {
-        $("#campo-dia-especifico").slideUp(300);
-        $("#campos-rango-fechas").slideDown(300);
-        $("#dia").val("");
-      }
+    document.querySelectorAll('input[name="tipo_mes"]').forEach(function (radio) {
+      radio.addEventListener("change", function () {
+        if (this.value === "rango") {
+          clearMonthSelection();
+        } else {
+          clearValue("mes_inicio");
+          clearValue("mes_fin");
+        }
+        syncDateFilters();
+      });
     });
 
-    if ($("#periodo").val() !== "diario") {
-      $("#filtro-diario-opciones").hide();
-    }
+    syncDateFilters();
   }
 
   function bindExportButton() {

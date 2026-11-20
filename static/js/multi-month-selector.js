@@ -78,6 +78,10 @@ function initializeMultiMonthSelector() {
 
       selectedMonths.sort((a, b) => a - b);
       updateDisplayText();
+      // Mantener el campo oculto sincronizado: si el usuario envía el
+      // formulario sin pulsar "Aplicar" en el desplegable, los meses
+      // marcados también deben enviarse.
+      monthInput.value = selectedMonths.join(",");
     });
   });
 

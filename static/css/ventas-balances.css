@@ -275,6 +275,8 @@ div.dataTables_wrapper div.dataTables_length select {
 .btn-export-pdf i {
   color: #b85450;
 }
+a.btn-export-pdf { text-decoration: none; }
+.btn-export-pdf .fa-file-excel { color: #1d6f42; }
 .btn-export-pdf:hover,
 .btn-export-pdf:focus-visible {
   border-color: #b8c0cc;
