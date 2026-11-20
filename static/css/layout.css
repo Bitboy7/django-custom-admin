@@ -2,8 +2,12 @@
  * ═══════════════════════════════════════════════════════════════
  *  LAYOUT — Navbar, Sidebar, Breadcrumbs, Content
  *
- *  Compatible con Jazzmin admin theme.
- *  Skills: ui-ux-pro-max (nav patterns, touch, a11y)
+ *  Dirección: plano / Material. Sin degradados, sin sombras de
+ *  reposo, sin bordes laterales de acento. La jerarquía la dan el
+ *  tono (tonal fill), el peso tipográfico y una línea de 1px.
+ *  Navbar y sidebar comparten la misma superficie y la misma altura
+ *  de cabecera (--navbar-height) para leerse como un solo marco en "L".
+ *  Compatible con Jazzmin / AdminLTE.
  * ═══════════════════════════════════════════════════════════════
  */
 
@@ -16,9 +20,11 @@ html body .navbar-white,
 html body .navbar-light {
   background: var(--navbar-bg, #1f2f38) !important;
   background-color: var(--navbar-bg, #1f2f38) !important;
+  border: 0 !important;
   border-bottom: 1px solid var(--navbar-border, rgba(255, 255, 255, 0.08)) !important;
-  box-shadow: var(--navbar-shadow, 0 1px 8px rgba(0, 0, 0, 0.25)) !important;
+  box-shadow: none !important;
   min-height: var(--navbar-height) !important;
+  padding-block: 0 !important;
   position: sticky;
   top: 0;
   z-index: var(--z-navbar);
@@ -35,10 +41,15 @@ html body .main-header.navbar .navbar-nav .nav-link {
   font-family: var(--font-body);
   font-size: var(--font-size-sm);
   font-weight: 500;
-  padding: var(--space-2) var(--space-4) !important;
+  padding: 0 var(--space-4) !important;
   border-radius: var(--radius-md);
-  transition: all var(--duration-fast) var(--ease-default);
-  min-height: 44px;
+  border: 0;
+  box-shadow: none !important;
+  background-image: none !important;
+  transition:
+    background-color var(--duration-fast) var(--ease-default),
+    color var(--duration-fast) var(--ease-default);
+  min-height: 40px;
   display: flex;
   align-items: center;
 }
@@ -47,12 +58,18 @@ html body #jazzy-navbar .navbar-nav .nav-link:focus,
 html body .main-header.navbar .navbar-nav .nav-link:hover,
 html body .main-header.navbar .navbar-nav .nav-link:focus {
   color: var(--navbar-text-active, #fff) !important;
-  background: var(--navbar-bg-hover, rgba(184, 219, 217, 0.16)) !important;
+  background: var(--navbar-bg-hover) !important;
+}
+html body #jazzy-navbar .navbar-nav .nav-link:focus-visible,
+html body #jazzy-navbar .btn-navbar:focus-visible,
+html body aside#jazzy-sidebar .nav-link:focus-visible {
+  outline: 2px solid var(--brand-teal-light, #b8dbd9);
+  outline-offset: -2px;
 }
 html body #jazzy-navbar .navbar-nav .nav-link.active,
 html body .main-header.navbar .navbar-nav .nav-link.active {
   color: var(--navbar-text-active, #fff) !important;
-  background: var(--navbar-bg-hover, rgba(184, 219, 217, 0.16)) !important;
+  background: var(--navbar-bg-active) !important;
 }
 html body #jazzy-navbar .navbar-nav .nav-link i,
 html body #jazzy-navbar .navbar-nav .nav-link svg,
@@ -61,12 +78,15 @@ html body #jazzy-navbar .btn-navbar i {
   color: var(--navbar-text, rgba(244, 244, 249, 0.9)) !important;
 }
 
-/* Brand lockup — the uploaded company logo sits on a light plate so it stays
-   legible over the dark sidebar no matter the logo's own colours. */
+/* ── Brand lockup ──────────────────────────────────────────────────
+   Misma superficie y misma altura que la navbar; la línea inferior de
+   1px continúa la de la navbar. El logo va sobre una placa clara plana
+   para leerse sobre fondo oscuro con cualquier logo subido. */
 body .brand-link {
   background: var(--sidebar-brand-bg) !important;
-  border-bottom: 1px solid var(--sidebar-brand-border, var(--sidebar-border)) !important;
-  padding: var(--space-2) var(--space-4) !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--sidebar-border) !important;
+  padding: 0 var(--space-4) !important;
   font-family: var(--font-display);
   font-weight: 600;
   font-size: var(--font-size-md);
@@ -75,24 +95,10 @@ body .brand-link {
   display: flex !important;
   align-items: center;
   gap: var(--space-3);
-  min-height: 72px;
+  height: var(--navbar-height);
+  min-height: var(--navbar-height);
+  box-sizing: border-box;
   position: relative;
-}
-body .brand-link::after {
-  content: "";
-  position: absolute;
-  left: var(--space-4);
-  right: var(--space-4);
-  bottom: -1px;
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--brand-teal-light, #b8dbd9) 50%,
-    transparent 100%
-  );
-  opacity: 0.55;
-  pointer-events: none;
 }
 body .brand-text {
   display: block !important;
@@ -108,24 +114,20 @@ body .brand-text {
   color: var(--sidebar-brand-text) !important;
 }
 
-/* Company logo (loaded from SiteConfiguration.company_logo). The logo sits as
-   an emblem beside the short company name written in the brand area. */
 body .brand-link .brand-image,
 body .brand-link img {
   display: block !important;
   width: auto !important;
-  height: 52px;
-  max-height: 52px !important;
-  max-width: 160px;
-  padding: 4px 10px;
+  height: 40px;
+  max-height: 40px !important;
+  max-width: 150px;
+  padding: 3px 8px;
   object-fit: contain;
   background: #ffffff;
-  border-radius: 10px !important;
+  border-radius: var(--radius-md) !important;
   opacity: 1 !important;
   flex-shrink: 0;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.14),
-    0 6px 14px rgba(0, 0, 0, 0.22);
+  box-shadow: none !important;
 }
 
 /* Collapsed sidebar: keep the logo mark inside the narrow rail */
@@ -139,118 +141,100 @@ html body.sidebar-collapse aside#jazzy-sidebar .brand-link .brand-text {
 }
 html body.sidebar-collapse aside#jazzy-sidebar .brand-link img.brand-image,
 html body.sidebar-collapse aside#jazzy-sidebar .brand-link img {
-  width: auto !important;
-  height: 36px !important;
-  max-height: 36px !important;
+  height: 32px !important;
+  max-height: 32px !important;
   max-width: 40px;
   padding: 3px 4px;
 }
 
-/* Navbar search */
+/* Navbar search (base) */
 body .form-control-navbar {
-  background: var(--navbar-control-bg, rgba(255, 255, 255, 0.07)) !important;
-  border: 1px solid var(--navbar-control-border, rgba(255, 255, 255, 0.14)) !important;
+  background: var(--navbar-control-bg) !important;
+  border: 1px solid transparent !important;
   color: var(--navbar-text-active, #fff) !important;
   border-radius: var(--radius-md) !important;
+  box-shadow: none !important;
   font-family: var(--font-body);
   font-size: var(--font-size-sm);
   padding: var(--space-2) var(--space-4);
-  transition: all var(--duration-fast) var(--ease-default);
+  transition:
+    background-color var(--duration-fast) var(--ease-default),
+    border-color var(--duration-fast) var(--ease-default);
 }
 body .form-control-navbar::placeholder {
-  color: rgba(255, 255, 255, 0.35) !important;
+  color: rgba(244, 244, 249, 0.62) !important;
 }
 body .form-control-navbar:focus {
-  background: rgba(255, 255, 255, 0.12) !important;
-  border-color: var(--brand-teal) !important;
-  box-shadow: 0 0 0 3px rgba(88, 111, 124, 0.25) !important;
+  background: var(--navbar-control-bg-focus) !important;
+  border-color: var(--brand-teal-light) !important;
+  box-shadow: none !important;
 }
 
-/* ── Professional navbar layout ───────────────────────────────── */
+/* ── Navbar layout ─────────────────────────────────────────────── */
 html body #jazzy-navbar .container-fluid {
   gap: var(--space-2);
   padding-inline: var(--space-4);
 }
-
 html body #jazzy-navbar .navbar-nav {
   align-items: center;
   gap: var(--space-1);
 }
-
 html body #jazzy-navbar .navbar-nav > .nav-item > .nav-link {
   position: relative;
 }
 
-/* Menu toggle — square target, never a stretched link */
+/* Menu toggle — circular target */
 html body #jazzy-navbar .nav-link[data-lte-toggle="sidebar"] {
   width: 40px;
-  min-height: 40px !important;
   padding: 0 !important;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: var(--radius-full);
 }
 html body #jazzy-navbar .nav-link[data-lte-toggle="sidebar"] i {
   font-size: 1rem;
 }
 
-/* Active page marker for top navigation */
+/* Current section marker: tonal fill only (no underline) */
 html body #jazzy-navbar .navbar-nav > .nav-item > .nav-link.jaz-nav-current {
   color: var(--navbar-text-active, #fff) !important;
-  background: rgba(184, 219, 217, 0.12) !important;
-}
-html body #jazzy-navbar .navbar-nav > .nav-item > .nav-link.jaz-nav-current::after {
-  content: "";
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 6px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--brand-teal-light, #b8dbd9);
+  background: var(--navbar-bg-active) !important;
+  font-weight: 600;
 }
 html body #jazzy-navbar .jaz-topmenu-item > .nav-link i {
   margin-right: var(--space-2);
-  font-size: 0.78rem;
-  opacity: 0.85;
+  font-size: 0.8rem;
+  opacity: 0.9;
 }
 
 /* Vertical separators between navigation groups */
 html body #jazzy-navbar .jaz-nav-divider {
   width: 1px;
-  height: 22px;
-  margin: 0 var(--space-1);
+  height: 24px;
+  margin: 0 var(--space-2);
   padding: 0;
   align-self: center;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--navbar-border);
 }
 
-/* Compact, consistent utility buttons */
+/* Utility icon buttons: circular, 40px */
 html body #jazzy-navbar .navbar-nav .nav-link.jaz-utility,
-html body #jazzy-navbar .navbar-nav .nav-link.btn.jaz-utility {
+html body #jazzy-navbar .navbar-nav .nav-link.btn.jaz-utility,
+html body #jazzy-navbar .theme-toggle {
   width: 40px;
+  height: 40px;
   min-height: 40px !important;
   padding: 0 !important;
   justify-content: center;
-  border-radius: 10px !important;
+  border-radius: var(--radius-full) !important;
 }
 html body #jazzy-navbar .navbar-nav .nav-link.jaz-utility i,
 html body #jazzy-navbar .navbar-nav .nav-link.btn.jaz-utility i {
   font-size: 0.95rem;
 }
-html body #jazzy-navbar .navbar-nav .nav-link.btn.jaz-avatar-btn {
-  padding: 3px 10px 3px 3px !important;
-  min-height: 40px !important;
-  border-radius: var(--radius-full) !important;
-}
-html body #jazzy-navbar .theme-toggle {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-}
 
-/* Search — pill field with icon, keyboard hint and a round submit */
+/* Search — tonal field, keyboard hint, inline submit */
 html body #jazzy-navbar form.d-flex {
-  flex: 0 1 340px;
+  flex: 0 1 360px;
   min-width: 170px;
   margin-left: auto !important;
   margin-right: var(--space-2) !important;
@@ -269,16 +253,13 @@ html body #jazzy-navbar .form-control-navbar {
   padding-left: 2.5rem !important;
   padding-right: 5rem !important;
 }
-html body #jazzy-navbar .form-control-navbar::placeholder {
-  color: rgba(244, 244, 249, 0.64) !important;
-}
 html body #jazzy-navbar .jaz-search-icon {
   position: absolute;
   left: 14px;
   top: 50%;
   z-index: 2;
   transform: translateY(-50%);
-  color: rgba(244, 244, 249, 0.55);
+  color: rgba(244, 244, 249, 0.62);
   font-size: 0.8rem;
   pointer-events: none;
 }
@@ -289,10 +270,10 @@ html body #jazzy-navbar .jaz-search-kbd {
   z-index: 2;
   transform: translateY(-50%);
   padding: 2px 6px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.1);
-  color: rgba(244, 244, 249, 0.7);
+  color: rgba(244, 244, 249, 0.75);
   font-family: var(--font-body);
   font-size: 10px;
   font-weight: 600;
@@ -309,16 +290,17 @@ html body #jazzy-navbar .btn-navbar {
   justify-content: center;
   width: 32px;
   height: 32px;
+  min-height: 32px !important;
   padding: 0 !important;
   transform: translateY(-50%);
   border: 0 !important;
-  border-radius: 50% !important;
+  border-radius: var(--radius-full) !important;
   background: transparent !important;
-  color: rgba(244, 244, 249, 0.7) !important;
+  color: rgba(244, 244, 249, 0.75) !important;
 }
 html body #jazzy-navbar .btn-navbar:hover,
 html body #jazzy-navbar .btn-navbar:focus-visible {
-  background: rgba(184, 219, 217, 0.16) !important;
+  background: var(--navbar-bg-hover) !important;
   color: #fff !important;
 }
 
@@ -337,16 +319,16 @@ html body #jazzy-navbar .jaz-navbar-brand .jaz-brand-plate {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 36px;
-  padding: 3px 9px;
-  border-radius: 9px;
+  height: 34px;
+  padding: 3px 8px;
+  border-radius: var(--radius-md);
   background: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  box-shadow: none;
 }
 html body #jazzy-navbar .jaz-navbar-brand img {
   display: block;
   width: auto;
-  height: 30px;
+  height: 28px;
   max-width: 112px;
   object-fit: contain;
 }
@@ -359,7 +341,7 @@ html body #jazzy-navbar .jaz-navbar-brand img {
   z-index: 2000;
   padding: 10px 14px;
   transform: translateY(-160%);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--brand-teal-light, #b8dbd9);
   color: #0b1c22;
   font-family: var(--font-body);
@@ -399,12 +381,6 @@ html body #jazzy-navbar .jaz-navbar-brand img {
   html body #jazzy-navbar .navbar-nav.ms-auto {
     margin-left: auto !important;
   }
-  body .brand-link .brand-image,
-  body .brand-link img {
-    height: 46px;
-    max-height: 46px !important;
-    max-width: 140px;
-  }
 }
 
 /* ── Avatar pill in navbar ────────────────────────────────────── */
@@ -415,43 +391,40 @@ body .jaz-avatar-btn {
   padding: 3px 12px 3px 3px !important;
   border-radius: var(--radius-full) !important;
   cursor: pointer !important;
-  transition:
-    background var(--duration-fast) var(--ease-default),
-    box-shadow var(--duration-fast) var(--ease-default);
-  min-height: 44px;
+  min-height: 40px;
+  transition: background-color var(--duration-fast) var(--ease-default);
 }
 body .jaz-avatar-btn:hover,
 body .jaz-avatar-btn:focus-visible {
-  background: rgba(88, 111, 124, 0.18) !important;
-  box-shadow: 0 0 0 2px rgba(88, 111, 124, 0.4) !important;
-  outline: none;
+  background: var(--navbar-bg-hover) !important;
+  box-shadow: none !important;
 }
 body .jaz-avatar-img {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(88, 111, 124, 0.7);
+  border: 0;
   flex-shrink: 0;
 }
-body .jaz-avatar-initials {
-  width: 30px;
-  height: 30px;
+/* Iniciales: relleno sólido de la paleta, sin degradado */
+body .jaz-avatar-initials,
+body .profile-mini-initials {
   border-radius: 50%;
-  background: linear-gradient(
-    135deg,
-    var(--brand-teal) 0%,
-    var(--brand-teal-dark) 100%
-  );
-  color: #fff;
+  background: var(--light-blue);
+  color: var(--charcoal-blue-dark);
   font-family: var(--font-body);
-  font-size: var(--font-size-xs);
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  letter-spacing: 0.05em;
+}
+body .jaz-avatar-initials {
+  width: 32px;
+  height: 32px;
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.04em;
 }
 body .jaz-avatar-name {
   color: var(--text-on-dark);
@@ -478,7 +451,6 @@ body .jaz-avatar-btn[aria-expanded="true"] .jaz-avatar-chevron {
     display: none !important;
   }
   body .jaz-avatar-btn {
-    min-height: 40px;
     padding: 3px 8px 3px 3px !important;
   }
 }
@@ -491,7 +463,7 @@ body .jaz-dd-card {
   padding: var(--space-4) var(--space-5) !important;
   text-decoration: none !important;
   color: var(--text-primary) !important;
-  transition: background var(--duration-fast) var(--ease-default);
+  transition: background-color var(--duration-fast) var(--ease-default);
   border-radius: var(--radius-md);
 }
 body .jaz-dd-card:hover {
@@ -505,18 +477,8 @@ body .profile-mini-initials {
   object-fit: cover;
   flex-shrink: 0;
 }
-body .profile-mini-avatar {
-  border: 2px solid var(--border-default);
-}
 body .profile-mini-initials {
-  background: linear-gradient(135deg, var(--brand-teal) 0%, var(--brand-teal-dark) 100%);
-  color: #fff;
-  font-family: var(--font-body);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  font-size: var(--font-size-sm);
 }
 body .jaz-dd-meta {
   display: flex;
@@ -553,10 +515,12 @@ body .jaz-dd-edit-btn {
   justify-content: center;
   color: var(--text-muted);
   font-size: var(--font-size-xs);
-  transition: all var(--duration-fast) var(--ease-default);
+  transition:
+    background-color var(--duration-fast) var(--ease-default),
+    color var(--duration-fast) var(--ease-default);
 }
 body .jaz-dd-card:hover .jaz-dd-edit-btn {
-  background: var(--brand-teal);
+  background: var(--action-primary);
   color: #fff;
 }
 body .jaz-logout-btn {
@@ -574,18 +538,22 @@ body .jaz-logout-btn {
   border: none !important;
   cursor: pointer;
   min-height: 40px;
-  transition: background var(--duration-fast) var(--ease-default);
+  transition: background-color var(--duration-fast) var(--ease-default);
 }
 body .jaz-logout-btn:hover {
   background: var(--accent-red-bg) !important;
 }
 
-/* Nuclear: force dropdown-menu visibility over Tailwind preflight */
+/* Dropdowns: visibilidad sobre el preflight de Tailwind. Único elemento
+   del marco con elevación; el resto es plano. */
 body .dropdown-menu {
   display: none;
   list-style: none !important;
   padding: var(--space-1) !important;
   margin: 0 !important;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 body .dropdown-menu.show {
   display: block !important;
@@ -604,8 +572,11 @@ body .dropdown-menu .dropdown-divider {
   border: none;
 }
 
-/* ── Sidebar — siempre fondo oscuro, texto claro ──────────────── */
-/* Nuclear: anula bg-body-secondary de Bootstrap y data-bs-theme */
+/* ── Sidebar — superficie plana oscura ─────────────────────────────
+   Estilo Material "navigation drawer": ítems de 44px con radio 8px,
+   estado activo = relleno tonal, sin borde lateral. Un grupo abierto
+   solo cambia el color del texto; únicamente la página actual lleva
+   relleno, para ubicarse de un vistazo. */
 html body aside#jazzy-sidebar,
 html body aside#jazzy-sidebar.bg-body-secondary,
 html body aside#jazzy-sidebar[data-bs-theme],
@@ -617,185 +588,165 @@ html body .sidebar {
   background-image: none !important;
   font-family: var(--font-body);
   scrollbar-width: thin;
-  scrollbar-color: var(--sidebar-text-header, rgba(244,244,249,0.45)) transparent;
+  scrollbar-color: var(--sidebar-scrollbar) transparent;
 }
 html body .main-sidebar,
 html body aside#jazzy-sidebar {
-  border-right: 1px solid var(--sidebar-border, rgba(255,255,255,0.08)) !important;
-  border-color: var(--sidebar-border, rgba(255,255,255,0.08)) !important;
+  border-right: 1px solid var(--sidebar-border) !important;
+  box-shadow: none !important;
 }
 body .sidebar::-webkit-scrollbar {
   width: 4px;
 }
 body .sidebar::-webkit-scrollbar-thumb {
-  background: var(--sidebar-text-header);
+  background: var(--sidebar-scrollbar);
   border-radius: var(--radius-full);
 }
 
+html body aside#jazzy-sidebar :is(.nav-sidebar, .sidebar-menu) {
+  padding: var(--space-3) var(--space-3) var(--space-6);
+}
+html body aside#jazzy-sidebar :is(.nav-sidebar, .sidebar-menu) > .nav-item {
+  margin: 2px 0;
+}
+
 /* Section headers */
-body .nav-sidebar .nav-header {
+html body aside#jazzy-sidebar :is(.nav-sidebar, .sidebar-menu) .nav-header {
   color: var(--sidebar-text-header) !important;
   font-family: var(--font-body);
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: 0.6875rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: var(--space-4) var(--space-5) var(--space-2) !important;
+  letter-spacing: 0.08em;
+  padding: var(--space-5) var(--space-3) var(--space-2) !important;
 }
 
 /* Parent items */
-body .nav-sidebar .nav-item > .nav-link {
+html body aside#jazzy-sidebar :is(.nav-sidebar, .sidebar-menu) > .nav-item > .nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  margin: 0 !important;
+  padding: 0 var(--space-3) !important;
+  border: 0 !important;
+  border-radius: var(--radius-md) !important;
+  background: transparent !important;
+  box-shadow: none !important;
   color: var(--sidebar-text) !important;
   font-family: var(--font-body);
   font-size: var(--font-size-sm);
   font-weight: 500;
-  border-radius: var(--radius-md) !important;
-  margin: 1px var(--space-2) !important;
-  padding: var(--space-2) var(--space-4) !important;
-  min-height: 44px;
-  border-left: 3px solid transparent !important;
-  transition: all var(--duration-fast) var(--ease-default);
+  transition:
+    background-color var(--duration-fast) var(--ease-default),
+    color var(--duration-fast) var(--ease-default);
+}
+html body aside#jazzy-sidebar :is(.nav-sidebar, .sidebar-menu) > .nav-item > .nav-link > p {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+  margin: 0 !important;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
-body .nav-sidebar .nav-item > .nav-link p,
-body .nav-sidebar .nav-item > .nav-link i,
-body .nav-sidebar .nav-item > .nav-link .right,
-body .nav-sidebar .nav-item > .nav-link .nav-icon {
-  color: var(--sidebar-text) !important;
+html body aside#jazzy-sidebar :is(.nav-sidebar, .sidebar-menu) > .nav-item > .nav-link .nav-icon {
+  width: 20px;
+  margin: 0 !important;
+  flex-shrink: 0;
+  font-size: 1rem;
+  text-align: center;
 }
-body .nav-sidebar .nav-item > .nav-link:hover {
+html body aside#jazzy-sidebar :is(.nav-sidebar, .sidebar-menu) > .nav-item > .nav-link .right,
+html body aside#jazzy-sidebar :is(.nav-sidebar, .sidebar-menu) > .nav-item > .nav-link .nav-arrow {
+  position: static;
+  float: none;
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+html body aside#jazzy-sidebar :is(.nav-sidebar, .sidebar-menu) > .nav-item > .nav-link p,
+html body aside#jazzy-sidebar :is(.nav-sidebar, .sidebar-menu) > .nav-item > .nav-link i,
+html body aside#jazzy-sidebar :is(.nav-sidebar, .sidebar-menu) > .nav-item > .nav-link .right,
+html body aside#jazzy-sidebar :is(.nav-sidebar, .sidebar-menu) > .nav-item > .nav-link .nav-icon {
+  color: inherit !important;
+}
+html body aside#jazzy-sidebar :is(.nav-sidebar, .sidebar-menu) > .nav-item > .nav-link:hover {
   background: var(--sidebar-hover-bg) !important;
   color: var(--sidebar-active-text) !important;
-  border-left-color: var(--brand-teal) !important;
 }
-body .nav-sidebar .nav-item > .nav-link:hover p,
-body .nav-sidebar .nav-item > .nav-link:hover i,
-body .nav-sidebar .nav-item > .nav-link:hover .right,
-body .nav-sidebar .nav-item > .nav-link:hover .nav-icon {
+/* Grupo abierto: solo texto brillante */
+html body aside#jazzy-sidebar :is(.nav-sidebar, .sidebar-menu) > .nav-item.menu-open > .nav-link {
   color: var(--sidebar-active-text) !important;
 }
-body .nav-sidebar .nav-item > .nav-link.active,
-body .nav-sidebar .nav-item.menu-open > .nav-link {
+/* Página actual: relleno tonal */
+html body aside#jazzy-sidebar :is(.nav-sidebar, .sidebar-menu) > .nav-item > .nav-link.active {
   background: var(--sidebar-active-bg) !important;
   color: var(--sidebar-active-text) !important;
-  border-left-color: var(--brand-teal) !important;
-  box-shadow: inset 0 0 0 1px rgba(184, 219, 217, 0.28);
-  font-weight: 650;
-}
-body .nav-sidebar .nav-item > .nav-link.active p,
-body .nav-sidebar .nav-item > .nav-link.active i,
-body .nav-sidebar .nav-item > .nav-link.active .right,
-body .nav-sidebar .nav-item > .nav-link.active .nav-icon,
-body .nav-sidebar .nav-item.menu-open > .nav-link p,
-body .nav-sidebar .nav-item.menu-open > .nav-link i,
-body .nav-sidebar .nav-item.menu-open > .nav-link .right,
-body .nav-sidebar .nav-item.menu-open > .nav-link .nav-icon {
-  color: var(--sidebar-active-text) !important;
+  font-weight: 600;
 }
 
-/* Child items */
-body .nav-treeview .nav-item > .nav-link {
-  color: var(--sidebar-child-text) !important;
-  font-size: var(--font-size-xs);
-  padding-left: 2.25rem !important;
-  border-left: 2px solid transparent !important;
-  margin: 0 var(--space-2) !important;
-  border-radius: var(--radius-sm) !important;
-  min-height: 40px;
+/* Child items — alineados con el texto del padre (12 + 20 + 12 = 44px) */
+html body aside#jazzy-sidebar .nav-treeview {
+  padding: 2px 0 var(--space-2);
+}
+html body aside#jazzy-sidebar .nav-treeview > .nav-item > .nav-link {
   display: flex;
   align-items: center;
-}
-body .nav-treeview .nav-item > .nav-link p,
-body .nav-treeview .nav-item > .nav-link i,
-body .nav-treeview .nav-item > .nav-link .nav-icon {
+  min-height: 40px;
+  margin: 1px 0 !important;
+  padding: 0 var(--space-3) 0 44px !important;
+  border: 0 !important;
+  border-radius: var(--radius-md) !important;
+  background: transparent !important;
+  box-shadow: none !important;
   color: var(--sidebar-child-text) !important;
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  transition:
+    background-color var(--duration-fast) var(--ease-default),
+    color var(--duration-fast) var(--ease-default);
 }
-body .nav-treeview .nav-item > .nav-link:hover {
+html body aside#jazzy-sidebar .nav-treeview > .nav-item > .nav-link .nav-icon {
+  display: none !important;
+}
+html body aside#jazzy-sidebar .nav-treeview > .nav-item > .nav-link p,
+html body aside#jazzy-sidebar .nav-treeview > .nav-item > .nav-link i {
+  margin: 0;
+  color: inherit !important;
+  line-height: 1.25;
+  white-space: normal;
+}
+html body aside#jazzy-sidebar .nav-treeview > .nav-item > .nav-link:hover {
   background: var(--sidebar-hover-bg) !important;
   color: var(--sidebar-active-text) !important;
-  border-left-color: var(--brand-teal) !important;
 }
-body .nav-treeview .nav-item > .nav-link:hover p,
-body .nav-treeview .nav-item > .nav-link:hover i,
-body .nav-treeview .nav-item > .nav-link:hover .nav-icon {
+html body aside#jazzy-sidebar .nav-treeview > .nav-item > .nav-link.active {
+  background: var(--sidebar-active-bg) !important;
   color: var(--sidebar-active-text) !important;
-}
-body .nav-treeview .nav-item > .nav-link.active {
-  background: var(--brand-teal) !important;
-  color: var(--sidebar-active-text) !important;
-  border-left-color: rgba(255, 255, 255, 0.6) !important;
-  font-weight: 600 !important;
-}
-body .nav-treeview .nav-item > .nav-link.active p,
-body .nav-treeview .nav-item > .nav-link.active i,
-body .nav-treeview .nav-item > .nav-link.active .nav-icon {
-  color: var(--sidebar-active-text) !important;
+  font-weight: 600;
 }
 
-/* High-specificity guard against AdminLTE/Tailwind low-contrast sidebar states. */
-html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link,
-html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link p,
-html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link i,
-html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link .right,
-html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link .nav-icon {
-  color: var(--sidebar-text, rgba(244,244,249,0.88)) !important;
+/* Rail colapsado: solo iconos, centrados */
+html body.sidebar-collapse aside#jazzy-sidebar:not(:hover) :is(.nav-sidebar, .sidebar-menu) > .nav-item > .nav-link {
+  justify-content: center;
+  gap: 0;
+  padding-inline: 0 !important;
 }
 
-html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link:hover,
-html body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link,
-html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active {
-  background: var(--sidebar-active-bg, rgba(184, 219, 217, 0.18)) !important;
-  border-left-color: var(--brand-teal-light, #b8dbd9) !important;
-  color: var(--sidebar-active-text, #fff) !important;
-}
-
-html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link:hover p,
-html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link:hover i,
-html body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link p,
-html body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link i,
-html body aside#jazzy-sidebar .nav-sidebar > .nav-item.menu-open > .nav-link .right,
-html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active p,
-html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active i,
-html body aside#jazzy-sidebar .nav-sidebar > .nav-item > .nav-link.active .right {
-  color: var(--sidebar-active-text, #fff) !important;
-}
-
-/* ── Nuclear: todo texto dentro de #jazzy-sidebar -> claro ───── */
-html body aside#jazzy-sidebar,
+/* Red de seguridad: sea cual sea el marcado de Jazzmin/AdminLTE, el texto
+   de la sidebar nunca hereda el color oscuro del contenido. */
 html body aside#jazzy-sidebar .nav-link,
 html body aside#jazzy-sidebar .nav-link p,
-html body aside#jazzy-sidebar .nav-link i,
-html body aside#jazzy-sidebar .nav-item,
-html body aside#jazzy-sidebar .nav-item > a,
-html body aside#jazzy-sidebar .nav-header,
-html body aside#jazzy-sidebar .brand-link,
-html body aside#jazzy-sidebar .brand-text,
-html body aside#jazzy-sidebar .user-panel,
-html body aside#jazzy-sidebar .user-panel a,
-html body aside#jazzy-sidebar .user-panel .info {
-  color: var(--sidebar-text, rgba(244,244,249,0.88)) !important;
+html body aside#jazzy-sidebar .nav-link i {
+  color: inherit;
 }
-html body aside#jazzy-sidebar .brand-link {
-  background: var(--sidebar-brand-bg, linear-gradient(135deg, #2f4550 0%, #1f2f38 100%)) !important;
-}
-html body aside#jazzy-sidebar .nav-treeview .nav-link,
-html body aside#jazzy-sidebar .nav-treeview .nav-link p,
-html body aside#jazzy-sidebar .nav-treeview .nav-link i {
-  color: var(--sidebar-child-text, rgba(244,244,249,0.6)) !important;
-}
-html body aside#jazzy-sidebar .nav-link.active,
-html body aside#jazzy-sidebar .nav-link.active p,
-html body aside#jazzy-sidebar .nav-link.active i,
-html body aside#jazzy-sidebar .menu-open > .nav-link,
-html body aside#jazzy-sidebar .menu-open > .nav-link p,
-html body aside#jazzy-sidebar .menu-open > .nav-link i {
-  color: var(--sidebar-active-text, #fff) !important;
-}
-html body aside#jazzy-sidebar .nav-link:hover,
-html body aside#jazzy-sidebar .nav-link:hover p,
-html body aside#jazzy-sidebar .nav-link:hover i {
-  color: var(--sidebar-active-text, #fff) !important;
+html body aside#jazzy-sidebar .nav-header {
+  color: var(--sidebar-text-header) !important;
 }
 
 /* User panel — hidden */
