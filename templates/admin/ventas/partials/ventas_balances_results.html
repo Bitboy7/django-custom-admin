@@ -82,14 +82,23 @@
 
 </div>
 
-{# ── Botón exportar PDF ── #}
-<div class="flex items-center justify-between mb-3" data-tour="exports">
+{# ── Reportes con los filtros actuales ── #}
+<div class="flex items-center justify-between flex-wrap gap-2 mb-3" data-tour="exports">
   <span class="balances-results-heading">
     <i class="fas fa-chart-line" aria-hidden="true"></i> Análisis visual
   </span>
-  <button type="button" id="btn-export-pdf" class="btn-export-pdf">
-    <i class="fas fa-file-pdf"></i> Exportar PDF
-  </button>
+  {% if export_xlsx_url %}
+  <div class="flex items-center gap-2 flex-wrap" role="group" aria-label="Generar reporte con los filtros actuales">
+    <a class="btn-export-pdf" href="{{ export_xlsx_url }}?{{ request.GET.urlencode }}"
+       title="Resumen, tendencia mensual, clientes ABC, antigüedad de cartera, productos, sucursales, ventas sin CFDI y detalle">
+      <i class="fas fa-file-excel" aria-hidden="true"></i> Reporte Excel
+    </a>
+    <a class="btn-export-pdf" href="{{ export_pdf_url }}?{{ request.GET.urlencode }}"
+       title="Reporte ejecutivo con hallazgos clave, indicadores y antigüedad de cartera">
+      <i class="fas fa-file-pdf" aria-hidden="true"></i> Reporte PDF
+    </a>
+  </div>
+  {% endif %}
 </div>
 
 {# ── Gráficos: Modalidad + Estados ── #}

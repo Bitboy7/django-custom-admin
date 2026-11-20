@@ -386,15 +386,76 @@ def crear_producto_desde_cfdi(parsed):
     return producto, True
 
 
-def resolver_venta(parsed):
-    """Resuelve la venta padre a partir de los UUIDs relacionados."""
-    relacionados = parsed.get('relacionados') or []
+def resolver_venta(parsed, cliente=None):
+    """Resuelve la venta padre a partir de los UUIDs relacionados.
+
+    Solo vincula cuando los UUID relacionados apuntan a una única venta (del
+    mismo cliente, si se indica). Si una nota relaciona facturas de varias
+    ventas, asignarla completa a la primera dejaba esa venta con saldo
+    negativo o "Pagado" de más; queda sin venta para revisión manual y la
+    conciliación la sigue restando a nivel cliente.
+    """
+    relacionados = [
+        str(uuid).strip().upper()
+        for uuid in (parsed.get('relacionados') or []) if uuid
+    ]
     if not relacionados:
         return None
-    doc = DocumentoCFDI.objects.filter(
-        uuid__in=relacionados, venta__isnull=False
-    ).select_related('venta').first()
-    return doc.venta if doc else None
+    return _venta_unica_de_uuids(relacionados, cliente)
+
+
+def _venta_unica_de_uuids(uuids, cliente=None):
+    from django.db.models import Q
+
+    filtro = Q()
+    for uuid in uuids:
+        filtro |= Q(uuid__iexact=uuid)
+    documentos = DocumentoCFDI.objects.filter(
+        filtro, venta__isnull=False
+    ).select_related('venta')
+    ventas = {doc.venta_id: doc.venta for doc in documentos}
+    if len(ventas) != 1:
+        return None
+    venta = next(iter(ventas.values()))
+    if cliente is not None and venta.cliente_id != cliente.pk:
+        return None
+    return venta
+
+
+def vincular_notas_pendientes(documento):
+    """Vincula notas de crédito/cargo importadas antes que su factura.
+
+    Al importar una factura, busca notas vigentes del mismo cliente sin venta
+    cuyo ``CfdiRelacionado`` incluya el UUID de esta factura y las asigna a
+    la venta (y como ``cfdi_relacionado``). Retorna las notas vinculadas.
+    """
+    if not (documento.uuid and documento.venta_id):
+        return []
+    uuid_factura = documento.uuid.strip().upper()
+    vinculadas = []
+    pendientes = DocumentoCFDI.objects.filter(
+        cliente_id=documento.cliente_id,
+        venta__isnull=True,
+        subtipo__in=('nota_credito', 'nota_cargo'),
+    )
+    for nota in pendientes:
+        relacionados = [
+            str(uuid).strip().upper()
+            for uuid in ((nota.detalle_complemento or {}).get('relacionados') or [])
+            if uuid
+        ]
+        if uuid_factura not in relacionados:
+            continue
+        venta = _venta_unica_de_uuids(relacionados, documento.cliente)
+        if venta is None:
+            continue
+        nota.venta = venta
+        if nota.cfdi_relacionado_id is None and len(relacionados) == 1:
+            nota.cfdi_relacionado = documento
+        # save() dispara las señales que recalculan el estado de cobranza.
+        nota.save(update_fields=['venta', 'cfdi_relacionado', 'actualizado_en'])
+        vinculadas.append(nota)
+    return vinculadas
 
 
 def resolver_documentos_relacionados(uuids):
@@ -716,6 +777,13 @@ def _crear_anticipo(parsed, cliente, cuenta):
             'No se puede crear un anticipo con monto menor o igual a cero.'
         )
 
+    duplicado = Anticipo.duplicado_por_uuid(parsed.get('uuid'))
+    if duplicado is not None:
+        raise ValueError(
+            f"El CFDI de anticipo {parsed.get('uuid')} ya está registrado "
+            f"como anticipo #{duplicado.pk}."
+        )
+
     anticipo = Anticipo.objects.create(
         cliente=cliente,
         cuenta=cuenta,
@@ -879,6 +947,7 @@ def importar_cfdi(parsed, *, cliente=None, producto=None, sucursal=None, cuenta=
             termino_credito=termino_credito,
         )
         doc = crear_documento(parsed, cliente=cliente, venta=venta, subtipo=subtipo, **kwargs_doc)
+        vincular_notas_pendientes(doc)
         return venta, doc, subtipo
 
     if subtipo == 'ingreso_mixto':
@@ -888,8 +957,12 @@ def importar_cfdi(parsed, *, cliente=None, producto=None, sucursal=None, cuenta=
         )
 
     if subtipo in ('nota_cargo', 'nota_credito'):
-        venta = resolver_venta(parsed)
-        doc = crear_documento(parsed, cliente=cliente, venta=venta, subtipo=subtipo, **kwargs_doc)
+        venta = resolver_venta(parsed, cliente=cliente)
+        doc = crear_documento(
+            parsed, cliente=cliente, venta=venta, subtipo=subtipo,
+            cfdi_relacionado=_resolver_cfdi_relacionado(parsed, cliente=cliente),
+            **kwargs_doc,
+        )
         return doc, doc, subtipo
 
     if subtipo == 'remanente_anticipo':

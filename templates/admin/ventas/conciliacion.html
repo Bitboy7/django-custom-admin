@@ -134,6 +134,16 @@
       {% if filtros_activos %}
       <a class="conc-filter-clear" href="?">Limpiar</a>
       {% endif %}
+      <span class="conc-export" role="group" aria-label="Descargar reporte con los filtros actuales">
+        <a class="conc-export-btn" href="{% url 'admin:ventas_cliente_conciliacion_excel' %}{% if export_query %}?{{ export_query }}{% endif %}"
+           title="Resumen por moneda, conciliación por cliente, concentración de cartera, incidencias, cobros sin REP y aplicaciones REP">
+          <i class="fas fa-file-excel" aria-hidden="true"></i> Excel
+        </a>
+        <a class="conc-export-btn" href="{% url 'admin:ventas_cliente_conciliacion_pdf' %}{% if export_query %}?{{ export_query }}{% endif %}"
+           title="Reporte ejecutivo con hallazgos, totales, conciliación por cliente e incidencias">
+          <i class="fas fa-file-pdf" aria-hidden="true"></i> PDF
+        </a>
+      </span>
     </form>
     <p class="conc-filter-help">
       La moneda filtra los clientes con movimientos; los importes conservan su desglose completo.

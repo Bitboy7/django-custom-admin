@@ -329,6 +329,16 @@ class Anticipo(models.Model):
             raise ValidationError({
                 'monto_aplicado': 'El monto aplicado no puede exceder el monto total del anticipo.'
             })
+
+        # Un CFDI de anticipo solo puede registrarse una vez: un duplicado
+        # duplica el saldo a favor del cliente en la conciliación.
+        duplicado = Anticipo.duplicado_por_uuid(self.uuid_cfdi, excluir_pk=self.pk)
+        if duplicado is not None:
+            raise ValidationError({
+                'uuid_cfdi': (
+                    f'Ya existe el anticipo #{duplicado.pk} con este UUID de CFDI.'
+                )
+            })
         
         # Validar fecha no futura
         if self.fecha > timezone.now().date():
@@ -342,6 +352,19 @@ class Anticipo(models.Model):
                 'estado_anticipo': 'No se puede marcar como Aplicado si aún existe saldo disponible.'
             })
     
+    @classmethod
+    def duplicado_por_uuid(cls, uuid_cfdi, excluir_pk=None):
+        """Anticipo no cancelado con el mismo UUID de CFDI, si existe."""
+        uuid_cfdi = (uuid_cfdi or '').strip()
+        if not uuid_cfdi:
+            return None
+        qs = cls.objects.filter(uuid_cfdi__iexact=uuid_cfdi).exclude(
+            estado_anticipo=cls.Estado_anticipo.Cancelado
+        )
+        if excluir_pk:
+            qs = qs.exclude(pk=excluir_pk)
+        return qs.order_by('pk').first()
+
     def puede_ser_aplicado(self):
         """Verifica si el anticipo está disponible para ser aplicado"""
         return self.saldo_disponible() > 0
@@ -411,14 +434,49 @@ class Anticipo(models.Model):
                     'El cliente debe coincidir.'
                 )
             
-            # Marcar anticipo como aplicado
-            self.estado_anticipo = self.Estado_anticipo.Aplicado
-            self.save(update_fields=['estado_anticipo'])
-            
+            if venta.modalidad_pago != Ventas.ModalidadPago.CREDITO:
+                raise ValidationError(
+                    'Solo se pueden aplicar anticipos a ventas a crédito.'
+                )
+
+            if str(self.monto.currency) != str(venta.monto.currency):
+                raise ValidationError(
+                    'El anticipo y la venta están en monedas distintas; '
+                    'aplícalo manualmente con el tipo de cambio.'
+                )
+
+            # Se aplica solo lo que la venta debe (incluye notas de crédito y
+            # cargo) y se registra como pago, para que el saldo de la venta y
+            # el saldo disponible del anticipo cuadren entre sí. Antes se
+            # marcaba "Aplicado" sin monto: el remanente del anticipo se perdía
+            # y la venta seguía mostrando el saldo completo.
+            abono = min(
+                Decimal(str(self.saldo_disponible())),
+                Decimal(str(venta.saldo_por_cobrar())),
+            ).quantize(Decimal('0.01'))
+            if abono <= 0:
+                raise ValidationError('La venta no tiene saldo pendiente.')
+
+            PagoVenta.objects.create(
+                venta=venta,
+                fecha_pago=timezone.now().date(),
+                monto_pago=Money(abono, venta.monto.currency),
+                cuenta_destino=self.cuenta,
+                metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+                referencia=f'ANTICIPO-{self.pk}',
+                notas='Aplicación de anticipo.',
+            )
+            self.registrar_aplicacion(abono)
+            self.save(update_fields=[
+                'monto_aplicado', 'monto_aplicado_currency', 'estado_anticipo',
+            ])
+
             # Asignar anticipo a la venta
-            venta.anticipo = self
-            venta.save(update_fields=['anticipo'])
-            
+            venta.refresh_from_db()
+            if not venta.anticipo_id:
+                venta.anticipo = self
+                venta.save(update_fields=['anticipo'])
+
             # Auditoría
             self._registrar_aplicacion(venta)
     
@@ -734,12 +792,17 @@ class Ventas(models.Model):
           - notas de crédito (DocumentoCFDI vigentes) - pagos recibidos.
 
         Fuente de verdad única para el saldo. Las notas de cargo suman y las
-        notas de crédito restan, conforme a la regla de negocio fiscal.
+        notas de crédito restan, conforme a la regla de negocio fiscal. Solo
+        cuentan las notas en la moneda de la venta: restar una nota en USD a
+        una venta en MXN (o al revés) mezclaría importes sin tipo de cambio.
         """
+        moneda_venta = str(self.monto.currency)
         cargos = Decimal('0')
         creditos = Decimal('0')
         for doc in self.documentos_cfdi.all():
             if doc.estado != DocumentoCFDI.EstadoDocumento.VIGENTE:
+                continue
+            if (doc.moneda or 'MXN') != moneda_venta:
                 continue
             if doc.subtipo == DocumentoCFDI.SubtipoDocumento.NOTA_CARGO:
                 cargos += doc.monto.amount

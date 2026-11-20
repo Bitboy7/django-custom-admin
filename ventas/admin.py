@@ -398,11 +398,68 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
                 self.admin_site.admin_view(self.conciliacion_view),
                 name='%s_%s_conciliacion' % (self.model._meta.app_label, self.model._meta.model_name),
             ),
+            path(
+                'conciliacion/export-excel/',
+                self.admin_site.admin_view(self.conciliacion_excel_view),
+                name='%s_%s_conciliacion_excel' % (self.model._meta.app_label, self.model._meta.model_name),
+            ),
+            path(
+                'conciliacion/export-pdf/',
+                self.admin_site.admin_view(self.conciliacion_pdf_view),
+                name='%s_%s_conciliacion_pdf' % (self.model._meta.app_label, self.model._meta.model_name),
+            ),
         ]
         return custom_urls + urls
 
     def conciliacion_view(self, request):
         """Vista de conciliación de CFDI por cliente con filtros de auditoría."""
+        datos = self._conciliacion_filtrada(request)
+        context = dict(
+            self.admin_site.each_context(request),
+            title='Conciliación de CFDI por cliente',
+            opts=self.model._meta,
+            **{k: v for k, v in datos.items() if k != 'filtros_texto'},
+        )
+        return TemplateResponse(request, 'admin/ventas/conciliacion.html', context)
+
+    def _conciliacion_reporte(self, request):
+        from .services.reportes_export import datos_reporte_conciliacion
+
+        datos = self._conciliacion_filtrada(request)
+        return datos_reporte_conciliacion(datos['filas']), datos['filtros_texto']
+
+    def conciliacion_excel_view(self, request):
+        """Descarga la conciliación filtrada en Excel (resumen, incidencias, REP)."""
+        from datetime import date
+        from .services.reportes_export import reporte_conciliacion_xlsx
+
+        datos, filtros = self._conciliacion_reporte(request)
+        response = HttpResponse(
+            reporte_conciliacion_xlsx(datos, filtros),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = (
+            f'attachment; filename="conciliacion_cfdi_{date.today():%Y%m%d}.xlsx"'
+        )
+        return response
+
+    def conciliacion_pdf_view(self, request):
+        """Descarga la conciliación filtrada en PDF ejecutivo."""
+        from datetime import date
+        from .services.reportes_export import reporte_conciliacion_pdf
+
+        datos, filtros = self._conciliacion_reporte(request)
+        response = HttpResponse(reporte_conciliacion_pdf(datos, filtros), content_type='application/pdf')
+        response['Content-Disposition'] = (
+            f'attachment; filename="conciliacion_cfdi_{date.today():%Y%m%d}.pdf"'
+        )
+        return response
+
+    def _conciliacion_filtrada(self, request):
+        """Lee los filtros de la conciliación y devuelve filas y opciones.
+
+        Fuente única para la pantalla y las descargas Excel/PDF.
+        """
         from datetime import date
         from catalogo.models import Sucursal
         from .services.conciliacion_service import (
@@ -480,16 +537,32 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
             selected_estado_saldo,
             selected_incidencia,
         ))
-        context = dict(
-            self.admin_site.each_context(request),
+        clientes = Cliente.objects.filter(activo=True).order_by('nombre')
+        sucursales = Sucursal.objects.all().order_by('nombre')
+        filtros_texto = []
+        cliente_sel = next((c for c in clientes if str(c.id) == cliente_raw), None)
+        if cliente_sel:
+            filtros_texto.append(('Cliente', cliente_sel.nombre))
+        sucursal_sel = next((x for x in sucursales if x.id == selected_sucursal_id), None)
+        if sucursal_sel:
+            filtros_texto.append(('Sucursal', sucursal_sel.nombre))
+        if inicio_raw or fin_raw:
+            filtros_texto.append(('Periodo', f"{inicio_raw or 'inicio'} a {fin_raw or 'hoy'}"))
+        if selected_moneda:
+            filtros_texto.append(('Moneda', selected_moneda))
+        if selected_estado_saldo:
+            filtros_texto.append(('Estado del saldo', dict(estado_saldo_choices)[selected_estado_saldo]))
+        if selected_incidencia:
+            filtros_texto.append(('Incidencias', dict(incidencia_choices)[selected_incidencia]))
+        return dict(
             filas=filas,
-            title='Conciliación de CFDI por cliente',
-            opts=self.model._meta,
+            filtros_texto=filtros_texto,
+            export_query=request.GET.urlencode(),
             fecha_inicio=inicio_raw,
             fecha_fin=fin_raw,
-            clientes=Cliente.objects.filter(activo=True).order_by('nombre'),
+            clientes=clientes,
             selected_cliente_id=cliente_raw,
-            sucursales=Sucursal.objects.all().order_by('nombre'),
+            sucursales=sucursales,
             selected_sucursal_id=sucursal_raw,
             monedas=monedas,
             selected_moneda=selected_moneda,
@@ -500,7 +573,6 @@ class ClienteAdmin(ImportExportModelAdmin, ModelAdmin):
             filtros_activos=filtros_activos,
             filtro_sucursal_activo=bool(selected_sucursal_id),
         )
-        return TemplateResponse(request, 'admin/ventas/conciliacion.html', context)
     
     def reporte_cliente_completo(self, request, client_id):
         """Genera un reporte completo del cliente con todas sus transacciones."""
@@ -723,6 +795,11 @@ class VentasAdmin(ModelAdmin):
                 'balances/export/',
                 self.admin_site.admin_view(self.exportar_balances_xlsx_admin_view),
                 name='ventas_exportar_balances_xlsx',
+            ),
+            path(
+                'balances/export/pdf/',
+                self.admin_site.admin_view(self.exportar_balances_pdf_admin_view),
+                name='ventas_exportar_balances_pdf',
             ),
             path(
                 'reporte-cobranza/',
@@ -2047,6 +2124,8 @@ class VentasAdmin(ModelAdmin):
             'opts': self.model._meta,
             'has_view_permission': self.has_view_permission(request),
             'months': FilterOptionsProvider.get_months_list(),
+            'export_xlsx_url': reverse('admin:ventas_exportar_balances_xlsx'),
+            'export_pdf_url': reverse('admin:ventas_exportar_balances_pdf'),
         })
 
         results_html = render_to_string(
@@ -2102,6 +2181,11 @@ class VentasAdmin(ModelAdmin):
         """Exporta los balances filtrados a XLSX desde el admin."""
         from ventas.views import exportar_balances_xlsx
         return exportar_balances_xlsx(request)
+
+    def exportar_balances_pdf_admin_view(self, request):
+        """Exporta el análisis de ventas filtrado a PDF desde el admin."""
+        from ventas.views import exportar_balances_pdf
+        return exportar_balances_pdf(request)
 
     def reporte_cobranza_admin_view(self, request):
         """Vista del Reporte Global de Cobranza integrada en el admin de Django."""
@@ -3242,7 +3326,11 @@ class AnticipoAdmin(ImportExportModelAdmin, ModelAdmin):
                         if saldo_anticipo <= Decimal('0'):
                             break
 
-                        saldo_venta = Decimal(str(venta.monto.amount)) - Decimal(str(venta.monto_pagado.amount))
+                        # Solo ventas en la moneda del anticipo; el saldo
+                        # incluye notas de crédito/cargo para no sobreaplicar.
+                        if str(venta.monto.currency) != str(anticipo_bloqueado.monto.currency):
+                            continue
+                        saldo_venta = Decimal(str(venta.saldo_por_cobrar()))
                         if saldo_venta <= Decimal('0'):
                             continue
 

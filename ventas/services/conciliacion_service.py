@@ -11,10 +11,45 @@ los modelos operativos (Ventas/PagoVenta/Anticipo) y produce, por cliente:
   - Detección de documentos no vinculados a una venta (posible deriva).
 """
 from collections import defaultdict
+from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 from ..models import DocumentoCFDI
+
+# Memoria de búsquedas de factura por UUID durante un cálculo. Cada
+# DoctoRelacionado de un REP se consultaba varias veces (vínculo, agrupación y
+# auditoría); con REP con detalle XML eso multiplicaba las consultas.
+_facturas_por_uuid = ContextVar('conciliacion_facturas_por_uuid', default=None)
+
+
+@contextmanager
+def _memo_facturas():
+    """Activa la memoria de facturas por UUID mientras dura el bloque."""
+    if _facturas_por_uuid.get() is not None:
+        yield
+        return
+    token = _facturas_por_uuid.set({})
+    try:
+        yield
+    finally:
+        _facturas_por_uuid.reset(token)
+
+
+def _facturas_con_uuid(uuid_factura):
+    """Hasta dos DocumentoCFDI con ese UUID (dos = ambiguo)."""
+    clave = (uuid_factura or '').strip().upper()
+    memo = _facturas_por_uuid.get()
+    if memo is not None and clave in memo:
+        return memo[clave]
+    facturas = list(
+        DocumentoCFDI.objects.filter(uuid__iexact=clave)
+        .select_related('venta')[:2]
+    )
+    if memo is not None:
+        memo[clave] = facturas
+    return facturas
 
 INGRESOS_VENTA = [
     'venta_nacional', 'venta_exportacion', 'ingreso_servicio',
@@ -144,12 +179,7 @@ def _rep_documento_en_rango(documento, fecha_inicio=None, fecha_fin=None):
 def _documento_factura_del_movimiento_rep(movimiento):
     uuid_factura = movimiento.get('uuid_factura')
     if uuid_factura:
-        from ..models import DocumentoCFDI
-
-        documentos = list(
-            DocumentoCFDI.objects.filter(uuid__iexact=uuid_factura)
-            .select_related('venta')[:2]
-        )
+        documentos = _facturas_con_uuid(uuid_factura)
         if len(documentos) == 1:
             return documentos[0]
     return None
@@ -206,12 +236,7 @@ def _estado_vinculo_rep(documento):
         uuid_factura = (docto.get('uuid') or '').strip()
         if not uuid_factura:
             return 'uuid_documento_no_encontrado'
-        from ..models import DocumentoCFDI
-
-        facturas = list(
-            DocumentoCFDI.objects.filter(uuid__iexact=uuid_factura)
-            .select_related('venta')[:2]
-        )
+        facturas = _facturas_con_uuid(uuid_factura)
         if not facturas:
             return 'uuid_documento_no_encontrado'
         if len(facturas) > 1:
@@ -507,14 +532,14 @@ def _rep_aplicado_detalle(documentos, fecha_inicio=None, fecha_fin=None):
                     monto_operativo = float(pago.monto_pago.amount)
                     usados_operativo.add(clave)
             elif venta_id:
-                from ..models import Ventas
+                from ..models import PagoVenta
 
-                pagos = _en_rango(
-                    Ventas.objects.get(pk=venta_id).pagos.all(),
-                    'fecha_pago', fecha_inicio, fecha_fin,
-                )
                 clave = (venta_id, movimiento['moneda'])
                 if clave not in usados_operativo:
+                    pagos = _en_rango(
+                        PagoVenta.objects.filter(venta_id=venta_id),
+                        'fecha_pago', fecha_inicio, fecha_fin,
+                    )
                     total_operativo = sum(
                         (p.monto_pago.amount for p in pagos
                          if str(p.monto_pago.currency) == movimiento['moneda']),
@@ -627,6 +652,16 @@ def _calcular(
     sucursal. Los anticipos no tienen sucursal, por lo que se excluyen cuando
     este filtro está activo.
     """
+    with _memo_facturas():
+        return _calcular_sin_memo(
+            cliente, fecha_inicio, fecha_fin, incluir_cobros_detalle,
+            sucursal_id,
+        )
+
+
+def _calcular_sin_memo(
+    cliente, fecha_inicio, fecha_fin, incluir_cobros_detalle, sucursal_id,
+):
     docs = _documentos_en_periodo(
         cliente, fecha_inicio, fecha_fin, sucursal_id=sucursal_id
     )

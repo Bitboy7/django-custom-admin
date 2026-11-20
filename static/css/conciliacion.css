@@ -803,6 +803,38 @@ html[data-theme="dark"] .conc-help-trigger[aria-expanded="true"] {
   text-decoration: none;
 }
 .conc-filter-clear:hover { color: var(--accent-red); text-decoration: underline; }
+/* Descargas del reporte con los filtros actuales */
+.conc-export {
+  display: inline-flex;
+  gap: var(--space-2);
+  margin-left: auto;
+  align-self: flex-end;
+}
+.conc-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+}
+.conc-export-btn:hover,
+.conc-export-btn:focus-visible {
+  border-color: var(--action-primary);
+  color: var(--action-primary);
+}
+.conc-export-btn .fa-file-excel { color: #1d6f42; }
+.conc-export-btn .fa-file-pdf { color: #b85450; }
+@media (max-width: 767px) {
+  .conc-export { width: 100%; margin-left: 0; }
+  .conc-export-btn { flex: 1 1 0; justify-content: center; }
+}
 .conc-filter-help {
   margin: calc(-1 * var(--space-2)) var(--space-5) var(--space-4);
   color: var(--text-muted);

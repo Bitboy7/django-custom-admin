@@ -3538,3 +3538,605 @@ class VentasBalancesContextTest(ReporteCobranzaBaseTest):
         self.assertAlmostEqual(ctx['total_ventas'], 1200.00)
         self.assertEqual(len(ctx['balances']), 1)
         self.assertAlmostEqual(ctx['balances'][0]['total_ventas'], 1200.00)
+
+    def _ventas_varios_meses(self, nombre):
+        cliente = self._cliente(nombre)
+        for fecha, monto in (
+            (date(2025, 11, 15), '100.00'),
+            (date(2025, 12, 15), '200.00'),
+            (date(2026, 1, 15), '400.00'),
+            (date(2026, 3, 15), '800.00'),
+        ):
+            self._venta_credito(cliente, monto, fecha=fecha)
+        return cliente
+
+    def test_meses_directos_respetan_el_anio(self):
+        cliente = self._ventas_varios_meses('Cliente Meses Directos')
+
+        ctx = self._context(
+            cliente_id=str(cliente.pk), year='2026', periodo='mensual',
+            months='1,3',
+        )
+
+        self.assertAlmostEqual(ctx['total_ventas'], 1200.00)
+
+    def test_rango_de_meses_cruza_anios_e_ignora_anio_y_meses(self):
+        cliente = self._ventas_varios_meses('Cliente Rango Meses')
+
+        ctx = self._context(
+            cliente_id=str(cliente.pk), year='2024', months='6',
+            periodo='mensual', tipo_mes='rango',
+            mes_inicio='2025-12', mes_fin='2026-01',
+        )
+
+        self.assertAlmostEqual(ctx['total_ventas'], 600.00)
+        self.assertEqual(ctx['selected_mes_inicio'], '2025-12')
+        self.assertEqual(ctx['tipo_mes'], 'rango')
+
+    def test_rango_de_meses_sin_mes_final_llega_hasta_hoy(self):
+        cliente = self._ventas_varios_meses('Cliente Rango Hasta Hoy')
+
+        ctx = self._context(
+            cliente_id=str(cliente.pk), periodo='mensual', tipo_mes='rango',
+            mes_inicio='2025-12',
+        )
+
+        self.assertAlmostEqual(ctx['total_ventas'], 1400.00)
+
+    def test_rango_de_meses_sin_mes_inicial_toma_todo_hasta_el_mes_final(self):
+        cliente = self._ventas_varios_meses('Cliente Rango Hasta Mes')
+
+        ctx = self._context(
+            cliente_id=str(cliente.pk), periodo='mensual', tipo_mes='rango',
+            mes_fin='2025-12',
+        )
+
+        self.assertAlmostEqual(ctx['total_ventas'], 300.00)
+
+    def test_rango_de_meses_de_agosto_2025_a_diciembre_2026(self):
+        cliente = self._ventas_varios_meses('Cliente Rango Ago-Dic')
+
+        ctx = self._context(
+            cliente_id=str(cliente.pk), year='2026', periodo='mensual',
+            tipo_mes='rango', mes_inicio='2025-08', mes_fin='2026-12',
+        )
+
+        self.assertAlmostEqual(ctx['total_ventas'], 1500.00)
+
+    def test_rango_de_meses_invertido_se_normaliza(self):
+        cliente = self._ventas_varios_meses('Cliente Rango Invertido')
+
+        ctx = self._context(
+            cliente_id=str(cliente.pk), periodo='mensual', tipo_mes='rango',
+            mes_inicio='2026-03', mes_fin='2025-12',
+        )
+
+        self.assertAlmostEqual(ctx['total_ventas'], 1400.00)
+
+    def test_rango_de_meses_solo_aplica_en_periodo_mensual(self):
+        cliente = self._ventas_varios_meses('Cliente Rango Semanal')
+
+        ctx = self._context(
+            cliente_id=str(cliente.pk), year='2026', periodo='semanal',
+            tipo_mes='rango', mes_inicio='2025-11', mes_fin='2025-12',
+        )
+
+        self.assertAlmostEqual(ctx['total_ventas'], 1200.00)
+
+    def test_rango_de_fechas_con_solo_inicio(self):
+        cliente = self._ventas_varios_meses('Cliente Fecha Desde')
+
+        ctx = self._context(
+            cliente_id=str(cliente.pk), periodo='diario', tipo_fecha='rango',
+            fecha_inicio='2025-12-01',
+        )
+
+        self.assertAlmostEqual(ctx['total_ventas'], 1400.00)
+
+    def test_diario_sin_fechas_usa_el_anio(self):
+        cliente = self._ventas_varios_meses('Cliente Diario Sin Fecha')
+
+        ctx = self._context(
+            cliente_id=str(cliente.pk), year='2025', periodo='diario',
+            tipo_fecha='dia',
+        )
+
+        self.assertAlmostEqual(ctx['total_ventas'], 300.00)
+
+    def test_rango_de_meses_filtra_cfdi(self):
+        cliente = self._ventas_varios_meses('Cliente Rango CFDI')
+        for fecha, monto in ((date(2025, 12, 5), '50.00'), (date(2026, 3, 5), '70.00')):
+            DocumentoCFDI.objects.create(
+                cliente=cliente, tipo='I', subtipo='venta_nacional',
+                fecha_emision=fecha, monto=Money(monto, 'MXN'), moneda='MXN',
+            )
+
+        ctx = self._context(
+            cliente_id=str(cliente.pk), periodo='mensual', tipo_mes='rango',
+            mes_inicio='2025-12', mes_fin='2026-01',
+        )
+
+        self.assertAlmostEqual(ctx['total_facturado_cfdi'], 50.00)
+        self.assertEqual(ctx['numero_cfdis'], 1)
+
+
+class ReglasNotasAnticiposRepTest(ReporteCobranzaBaseTest):
+    """Reglas de negocio de notas de crédito, anticipos y REP.
+
+    Cada prueba cuadra el saldo operativo de la venta contra la conciliación
+    fiscal del cliente para detectar dobles descuentos o saldos perdidos.
+    """
+
+    def _factura(self, cliente, venta, monto, uuid, moneda='MXN'):
+        return DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='venta_nacional',
+            uuid=uuid, fecha_emision=date(2026, 2, 1),
+            monto=Money(monto, moneda), moneda=moneda, venta=venta,
+        )
+
+    def _nota_credito(self, cliente, monto, venta=None, uuid=None,
+                      relacionados=None, moneda='MXN'):
+        return DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='E', subtipo='nota_credito',
+            uuid=uuid, fecha_emision=date(2026, 2, 10),
+            monto=Money(monto, moneda), moneda=moneda, venta=venta,
+            detalle_complemento=(
+                {'relacionados': relacionados} if relacionados else {}
+            ),
+        )
+
+    def _pago(self, venta, monto, uuid_rep=None):
+        return PagoVenta.objects.create(
+            venta=venta, fecha_pago=date(2026, 2, 15),
+            monto_pago=Money(monto, 'MXN'), cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA, uuid_rep=uuid_rep,
+        )
+
+    # -- Notas de crédito ---------------------------------------------------
+
+    def test_nota_credito_en_otra_moneda_no_resta_al_saldo_de_la_venta(self):
+        cliente = self._cliente('Cliente NC otra moneda')
+        venta = self._venta_credito(cliente, '1000.00')
+        self._nota_credito(cliente, '100.00', venta=venta, moneda='USD')
+
+        self.assertAlmostEqual(venta.saldo_por_cobrar(), 1000.00)
+
+    def test_saldo_de_venta_y_conciliacion_cuadran_con_nota_y_rep(self):
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente NC + REP')
+        venta = self._venta_credito(cliente, '1000.00')
+        self._factura(cliente, venta, '1000.00', 'FAC-NC-REP')
+        self._nota_credito(cliente, '100.00', venta=venta)
+        pago = self._pago(venta, '600.00', uuid_rep='REP-NC-REP')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='P', subtipo='recibo_pago',
+            uuid='REP-NC-REP', fecha_emision=date(2026, 2, 15),
+            monto=Money('600.00', 'MXN'), venta=venta, pago_venta=pago,
+            detalle_complemento={'pagos': [{
+                'fecha_pago': '2026-02-15',
+                'doctos': [{
+                    'uuid': 'FAC-NC-REP', 'imp_pagado': '600.00',
+                    'saldo_insoluto': '400.00', 'moneda': 'MXN',
+                }],
+            }]},
+        )
+
+        venta.refresh_from_db()
+        fila = conciliacion_cliente(cliente)
+
+        self.assertAlmostEqual(venta.saldo_por_cobrar(), 300.00)
+        self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], 300.00)
+        self.assertEqual(fila['detalle'].get('cobros_contado', {}), {})
+
+    def test_nota_sin_venta_resta_en_conciliacion_y_se_reporta(self):
+        """Caso Mario Israel: notas capturadas sin UUID ni venta."""
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente NC sin venta')
+        venta = self._venta_credito(cliente, '1000.00')
+        self._factura(cliente, venta, '1000.00', 'FAC-NC-SIN-VENTA')
+        self._pago(venta, '1000.00')
+        DocumentoCFDI.objects.create(
+            cliente=cliente, tipo='I', subtipo='otros_ingresos',
+            monto=Money('500.00', 'MXN'),
+        )
+        nota = self._nota_credito(cliente, '200.00')
+
+        fila = conciliacion_cliente(cliente)
+
+        self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], 300.00)
+        self.assertEqual(fila['documentos_sin_venta'], 1)
+        self.assertEqual(
+            fila['sin_venta_detalle'][0]['documentos'][0]['id'], nota.pk,
+        )
+
+    def test_resolver_venta_ignora_mayusculas_del_uuid(self):
+        from ventas.services.cfdi_import_service import resolver_venta
+
+        cliente = self._cliente('Cliente UUID minúsculas')
+        venta = self._venta_credito(cliente, '1000.00')
+        self._factura(
+            cliente, venta, '1000.00', 'ABCDEF01-0000-0000-0000-000000000001',
+        )
+
+        resultado = resolver_venta(
+            {'relacionados': ['abcdef01-0000-0000-0000-000000000001']},
+            cliente=cliente,
+        )
+
+        self.assertEqual(resultado, venta)
+
+    def test_resolver_venta_no_vincula_nota_de_varias_ventas(self):
+        from ventas.services.cfdi_import_service import resolver_venta
+
+        cliente = self._cliente('Cliente NC varias ventas')
+        venta_a = self._venta_credito(cliente, '1000.00')
+        venta_b = self._venta_credito(cliente, '1000.00')
+        self._factura(cliente, venta_a, '1000.00', 'FAC-MULTI-A')
+        self._factura(cliente, venta_b, '1000.00', 'FAC-MULTI-B')
+
+        resultado = resolver_venta(
+            {'relacionados': ['FAC-MULTI-A', 'FAC-MULTI-B']}, cliente=cliente,
+        )
+
+        self.assertIsNone(resultado)
+
+    def test_resolver_venta_no_vincula_factura_de_otro_cliente(self):
+        from ventas.services.cfdi_import_service import resolver_venta
+
+        cliente = self._cliente('Cliente NC propio')
+        otro = self._cliente('Cliente NC ajeno')
+        venta_otro = self._venta_credito(otro, '1000.00')
+        self._factura(otro, venta_otro, '1000.00', 'FAC-AJENA')
+
+        self.assertIsNone(
+            resolver_venta({'relacionados': ['FAC-AJENA']}, cliente=cliente)
+        )
+
+    def test_nota_importada_antes_que_su_factura_se_vincula_despues(self):
+        from ventas.services.cfdi_import_service import (
+            vincular_notas_pendientes,
+        )
+
+        cliente = self._cliente('Cliente NC antes que factura')
+        nota = self._nota_credito(
+            cliente, '250.00', uuid='NC-HUERFANA',
+            relacionados=['fac-llega-despues'],
+        )
+        venta = self._venta_credito(cliente, '1000.00')
+        factura = self._factura(cliente, venta, '1000.00', 'FAC-LLEGA-DESPUES')
+
+        vinculadas = vincular_notas_pendientes(factura)
+
+        nota.refresh_from_db()
+        venta.refresh_from_db()
+        self.assertEqual(vinculadas, [nota])
+        self.assertEqual(nota.venta_id, venta.pk)
+        self.assertEqual(nota.cfdi_relacionado_id, factura.pk)
+        self.assertAlmostEqual(venta.saldo_por_cobrar(), 750.00)
+
+    def test_vincular_notas_pendientes_no_toca_otro_cliente(self):
+        from ventas.services.cfdi_import_service import (
+            vincular_notas_pendientes,
+        )
+
+        cliente = self._cliente('Cliente factura nueva')
+        otro = self._cliente('Cliente nota ajena')
+        nota = self._nota_credito(
+            otro, '250.00', uuid='NC-AJENA', relacionados=['FAC-COMPARTIDA'],
+        )
+        venta = self._venta_credito(cliente, '1000.00')
+        factura = self._factura(cliente, venta, '1000.00', 'FAC-COMPARTIDA')
+
+        self.assertEqual(vincular_notas_pendientes(factura), [])
+        nota.refresh_from_db()
+        self.assertIsNone(nota.venta_id)
+
+    # -- Anticipos ----------------------------------------------------------
+
+    def test_anticipo_con_uuid_duplicado_no_pasa_validacion(self):
+        from django.core.exceptions import ValidationError
+
+        cliente = self._cliente('Cliente anticipo duplicado')
+        original = self._anticipo(cliente, '899713.20')
+        Anticipo.objects.filter(pk=original.pk).update(uuid_cfdi='UUID-ANT-1')
+        duplicado = Anticipo(
+            cliente=cliente, cuenta=self.cuenta,
+            monto=Money('899713.20', 'MXN'), fecha=date(2026, 1, 20),
+            uuid_cfdi='uuid-ant-1',
+        )
+
+        with self.assertRaises(ValidationError) as ctx:
+            duplicado.full_clean()
+        self.assertIn('uuid_cfdi', ctx.exception.message_dict)
+
+    def test_anticipo_cancelado_no_bloquea_el_uuid(self):
+        cliente = self._cliente('Cliente anticipo cancelado')
+        cancelado = self._anticipo(cliente, '100.00', estado='Cancelado')
+        Anticipo.objects.filter(pk=cancelado.pk).update(uuid_cfdi='UUID-ANT-2')
+
+        self.assertIsNone(Anticipo.duplicado_por_uuid('UUID-ANT-2'))
+
+    def test_importar_anticipo_duplicado_falla(self):
+        from ventas.services.cfdi_import_service import _crear_anticipo
+
+        cliente = self._cliente('Cliente importa anticipo dos veces')
+        parsed = {
+            'uuid': 'UUID-ANT-IMPORT', 'monto': Decimal('500.00'),
+            'moneda_venta': 'MXN', 'fecha_emision_cfdi': date(2026, 1, 20),
+        }
+        _crear_anticipo(parsed, cliente, self.cuenta)
+
+        with self.assertRaisesMessage(ValueError, 'ya está registrado'):
+            _crear_anticipo(parsed, cliente, self.cuenta)
+        self.assertEqual(
+            Anticipo.objects.filter(uuid_cfdi='UUID-ANT-IMPORT').count(), 1,
+        )
+
+    def test_aplicar_anticipo_registra_pago_y_conserva_remanente(self):
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        cliente = self._cliente('Cliente aplica anticipo')
+        anticipo = self._anticipo(cliente, '1500.00')
+        venta = self._venta_credito(cliente, '1000.00')
+        self._factura(cliente, venta, '1000.00', 'FAC-ANTICIPO')
+        self._nota_credito(cliente, '200.00', venta=venta)
+
+        anticipo.aplicar_a_venta(venta)
+
+        anticipo.refresh_from_db()
+        venta.refresh_from_db()
+        pago = venta.pagos.get()
+        self.assertEqual(pago.monto_pago, Money('800.00', 'MXN'))
+        self.assertEqual(pago.referencia, f'ANTICIPO-{anticipo.pk}')
+        self.assertEqual(anticipo.monto_aplicado, Money('800.00', 'MXN'))
+        self.assertAlmostEqual(anticipo.saldo_disponible(), 700.00)
+        self.assertEqual(anticipo.estado_anticipo, 'Pendiente')
+        self.assertEqual(venta.estado_cobranza, Ventas.EstadoCobranza.PAGADO)
+        self.assertEqual(venta.anticipo_id, anticipo.pk)
+        # 1000 facturado − 200 NC − 800 aplicado − 700 a favor = −700
+        fila = conciliacion_cliente(cliente)
+        self.assertAlmostEqual(fila['saldo_por_moneda']['MXN'], -700.00)
+
+    def test_aplicar_anticipo_en_otra_moneda_falla(self):
+        from django.core.exceptions import ValidationError
+
+        cliente = self._cliente('Cliente anticipo USD')
+        anticipo = self._anticipo(cliente, '1000.00')
+        venta = self._venta_credito(cliente, '1000.00', moneda='USD')
+
+        with self.assertRaises(ValidationError):
+            anticipo.aplicar_a_venta(venta)
+        self.assertFalse(venta.pagos.exists())
+
+    def test_accion_admin_no_sobreaplica_anticipo_a_venta_con_nota(self):
+        from ventas.admin import AnticipoAdmin
+
+        cliente = self._cliente('Cliente acción admin anticipo')
+        anticipo = self._anticipo(cliente, '1000.00')
+        venta = self._venta_credito(cliente, '1000.00')
+        self._nota_credito(cliente, '300.00', venta=venta)
+        modelo_admin = AnticipoAdmin(Anticipo, admin.site)
+        modelo_admin.message_user = lambda *args, **kwargs: None
+
+        modelo_admin.aplicar_anticipo_a_ventas_pendientes(
+            None, Anticipo.objects.filter(pk=anticipo.pk),
+        )
+
+        anticipo.refresh_from_db()
+        self.assertEqual(venta.pagos.get().monto_pago, Money('700.00', 'MXN'))
+        self.assertAlmostEqual(anticipo.saldo_disponible(), 300.00)
+
+    # -- REP: eficiencia ----------------------------------------------------
+
+    def test_busqueda_de_factura_por_uuid_se_memoriza_en_el_calculo(self):
+        from ventas.services.conciliacion_service import (
+            _facturas_con_uuid,
+            _memo_facturas,
+        )
+
+        cliente = self._cliente('Cliente memo UUID')
+        venta = self._venta_credito(cliente, '1000.00')
+        self._factura(cliente, venta, '1000.00', 'FAC-MEMO')
+
+        with _memo_facturas():
+            primera = _facturas_con_uuid('fac-memo')
+            with self.assertNumQueries(0):
+                segunda = _facturas_con_uuid('FAC-MEMO')
+        self.assertEqual(primera, segunda)
+        self.assertEqual(len(primera), 1)
+
+
+class ReportesExportTest(ReporteCobranzaBaseTest):
+    """Reportes Excel/PDF de Análisis de ventas y Conciliación.
+
+    Verifican que los indicadores salgan de los mismos filtros que la
+    pantalla, que no se mezclen monedas y que los archivos se generen.
+    """
+
+    HOY = date(2026, 6, 1)
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from django.test import RequestFactory
+
+        self.factory = RequestFactory()
+        self.user = get_user_model().objects.create_superuser(
+            'reportes', 'reportes@example.com', 'x'
+        )
+        self.cliente_a = self._cliente('Cliente Reporte A')
+        self.cliente_b = self._cliente('Cliente Reporte B')
+        # A: venta 1000 con factura, NC 200 y pago 300 -> saldo 500 por vencer
+        self.venta_a = self._venta_credito(self.cliente_a, '1000.00', fecha=date(2026, 3, 1))
+        DocumentoCFDI.objects.create(
+            cliente=self.cliente_a, tipo='I', subtipo='venta_nacional',
+            uuid='AAAA0000-0000-0000-0000-000000000001', folio='F-1',
+            fecha_emision=date(2026, 3, 1), monto=Money('1000.00', 'MXN'),
+            moneda='MXN', venta=self.venta_a,
+        )
+        DocumentoCFDI.objects.create(
+            cliente=self.cliente_a, tipo='E', subtipo='nota_credito',
+            uuid='AAAA0000-0000-0000-0000-000000000002',
+            fecha_emision=date(2026, 3, 5), monto=Money('200.00', 'MXN'),
+            moneda='MXN', venta=self.venta_a,
+        )
+        PagoVenta.objects.create(
+            venta=self.venta_a, fecha_pago=date(2026, 3, 31),
+            monto_pago=Money('300.00', 'MXN'), cuenta_destino=self.cuenta,
+            metodo_pago=PagoVenta.MetodoPago.TRANSFERENCIA,
+        )
+        # B: venta 500 sin CFDI, vencida hace más de 90 días
+        self.venta_b = self._venta_credito(self.cliente_b, '500.00', fecha=date(2026, 1, 10))
+        # B: venta en USD, no debe sumarse con MXN
+        self.venta_usd = self._venta_credito(
+            self.cliente_b, '80.00', fecha=date(2026, 2, 1), moneda='USD'
+        )
+        Ventas.objects.filter(pk=self.venta_a.pk).update(fecha_vencimiento=date(2026, 7, 1))
+        Ventas.objects.filter(pk=self.venta_b.pk).update(fecha_vencimiento=date(2026, 2, 1))
+        Ventas.objects.filter(pk=self.venta_usd.pk).update(fecha_vencimiento=date(2026, 5, 20))
+
+    def _request(self, query=''):
+        request = self.factory.get('/reporte/?' + query)
+        request.user = self.user
+        return request
+
+    def _datos(self, **filtro):
+        from ventas.services.reportes_export import datos_reporte_ventas
+        qs = Ventas.objects.filter(cliente__in=[self.cliente_a, self.cliente_b], **filtro)
+        return datos_reporte_ventas(qs, DocumentoCFDI.objects.none(), hoy=self.HOY)
+
+    # -- Datos del reporte de ventas ---------------------------------------
+
+    def test_kpis_por_moneda_sin_mezclar_divisas(self):
+        datos = self._datos()
+        mxn, usd = datos['kpis']['MXN'], datos['kpis']['USD']
+
+        self.assertAlmostEqual(mxn['ventas'], 1500.00)
+        self.assertAlmostEqual(mxn['cobrado'], 300.00)
+        self.assertAlmostEqual(mxn['cobranza_pct'], 0.20)
+        # Saldo neto de la nota de crédito: (1000 - 200 - 300) + 500
+        self.assertAlmostEqual(mxn['saldo'], 1000.00)
+        self.assertAlmostEqual(usd['ventas'], 80.00)
+        self.assertEqual(usd['n'], 1)
+
+    def test_antiguedad_de_cartera_usa_saldo_neto_y_dias_de_vencimiento(self):
+        datos = self._datos()
+        por_cliente = {(a['moneda'], a['cliente']): a for a in datos['antiguedad']}
+
+        a = por_cliente[('MXN', 'Cliente Reporte A')]
+        b = por_cliente[('MXN', 'Cliente Reporte B')]
+        usd = por_cliente[('USD', 'Cliente Reporte B')]
+        self.assertAlmostEqual(a['por_vencer'], 500.00)
+        self.assertAlmostEqual(b['d90_mas'], 500.00)   # venció el 1-feb, 120 días
+        self.assertAlmostEqual(usd['d1_30'], 80.00)    # venció el 20-may, 12 días
+        self.assertAlmostEqual(datos['kpis']['MXN']['vencido_90'], 500.00)
+
+    def test_ventas_sin_cfdi_y_dias_promedio_de_cobro(self):
+        datos = self._datos()
+
+        sin_cfdi = {d['id'] for d in datos['sin_cfdi']}
+        self.assertEqual(sin_cfdi, {self.venta_b.pk, self.venta_usd.pk})
+        # Pago de 300 a los 30 días de la venta
+        self.assertAlmostEqual(datos['kpis']['MXN']['dias_cobro'], 30.0)
+
+    def test_pareto_abc_y_tendencia_mensual(self):
+        datos = self._datos()
+        ranking = [r for r in datos['ranking'] if r['moneda'] == 'MXN']
+
+        self.assertEqual(ranking[0]['cliente'], 'Cliente Reporte A')
+        self.assertAlmostEqual(ranking[0]['participacion'], 1000 / 1500)
+        self.assertEqual(ranking[0]['clase'], 'A')
+        self.assertAlmostEqual(ranking[-1]['acumulado'], 1.0)
+        meses = [(t['moneda'], t['mes']) for t in datos['tendencia']]
+        self.assertEqual(meses, [('MXN', '2026-01'), ('MXN', '2026-03'), ('USD', '2026-02')])
+        self.assertTrue(datos['hallazgos'])
+
+    # -- Descargas de Análisis de ventas -----------------------------------
+
+    def test_excel_respeta_los_filtros_de_la_pantalla(self):
+        import io
+        import openpyxl
+        from ventas import views
+
+        query = f'cliente_id={self.cliente_a.pk}&periodo=mensual&tipo_mes=rango&mes_inicio=2026-01'
+        response = views.exportar_balances_xlsx(self._request(query))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('.xlsx', response['Content-Disposition'])
+        wb = openpyxl.load_workbook(io.BytesIO(response.content))
+        self.assertEqual(wb.sheetnames, [
+            'Resumen', 'Tendencia mensual', 'Clientes ABC', 'Antigüedad de cartera',
+            'Productos', 'Sucursales', 'Ventas sin CFDI', 'Detalle de ventas',
+        ])
+        detalle = wb['Detalle de ventas']
+        # Fila 1 título, fila 3 encabezados, datos desde la fila 4
+        ids = [detalle.cell(row=r, column=1).value for r in range(4, detalle.max_row + 1)]
+        self.assertEqual(ids, [self.venta_a.pk])
+        resumen = [c.value for row in wb['Resumen'].iter_rows() for c in row if c.value]
+        self.assertIn('Cliente Reporte A', resumen)
+
+    def test_pdf_de_ventas_se_genera(self):
+        from ventas import views
+
+        response = views.exportar_balances_pdf(self._request('periodo=mensual&year=2026'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertTrue(response.content.startswith(b'%PDF'))
+
+    def test_pantalla_enlaza_reportes_con_los_filtros_actuales(self):
+        from ventas import views
+
+        request = self._request(f'cliente_id={self.cliente_a.pk}&periodo=mensual')
+        request.META['HTTP_HX_REQUEST'] = 'true'
+        html = views.ventas_balances(request).content.decode()
+
+        self.assertIn(f'balances/export/pdf/?cliente_id={self.cliente_a.pk}', html)
+        self.assertIn(f'balances/export/?cliente_id={self.cliente_a.pk}', html)
+
+    # -- Conciliación -------------------------------------------------------
+
+    def _cliente_admin(self):
+        from django.contrib import admin as django_admin
+        from ventas.admin import ClienteAdmin
+        return ClienteAdmin(Cliente, django_admin.site)
+
+    def test_reporte_conciliacion_cuadra_con_la_conciliacion(self):
+        from ventas.services.conciliacion_service import conciliacion_cliente
+
+        DocumentoCFDI.objects.create(
+            cliente=self.cliente_b, tipo='E', subtipo='nota_credito',
+            fecha_emision=date(2026, 2, 10), monto=Money('50.00', 'MXN'), moneda='MXN',
+        )
+        datos, filtros = self._cliente_admin()._conciliacion_reporte(
+            self._request(f'cliente_id={self.cliente_b.pk}')
+        )
+
+        esperado = conciliacion_cliente(self.cliente_b)['saldo_por_moneda']
+        saldos = {r['moneda']: r['saldo'] for r in datos['resumen']}
+        self.assertEqual(saldos.keys(), esperado.keys())
+        for moneda, saldo in esperado.items():
+            self.assertAlmostEqual(saldos[moneda], saldo)
+        self.assertEqual(filtros, [('Cliente', 'Cliente Reporte B')])
+        tipos = {i['tipo'] for i in datos['incidencias']}
+        self.assertIn('Nota de Crédito sin venta', tipos)
+        nc = next(i for i in datos['incidencias'] if i['tipo'] == 'Nota de Crédito sin venta')
+        self.assertIn('sin UUID', nc['accion'])
+
+    def test_descargas_de_conciliacion(self):
+        import io
+        import openpyxl
+
+        cliente_admin = self._cliente_admin()
+        query = f'cliente_id={self.cliente_a.pk}'
+        xlsx = cliente_admin.conciliacion_excel_view(self._request(query))
+        pdf = cliente_admin.conciliacion_pdf_view(self._request(query))
+
+        self.assertEqual(xlsx.status_code, 200)
+        wb = openpyxl.load_workbook(io.BytesIO(xlsx.content))
+        self.assertEqual(wb.sheetnames, [
+            'Resumen', 'Conciliación', 'Concentración cartera', 'Incidencias',
+            'Cobros contado-sin REP', 'Aplicaciones REP',
+        ])
+        self.assertTrue(pdf.content.startswith(b'%PDF'))

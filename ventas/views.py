@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Sum, Count, Avg, Max, Min, Q
 from django.db.models.functions import Extract, TruncMonth, TruncWeek, TruncDate
@@ -130,16 +131,80 @@ def _get_available_years():
     return sorted(years, reverse=True)
 
 
-def _build_cfdi_filters(
-    selected_cliente_id,
-    selected_periodo,
-    selected_year,
-    selected_months,
-    selected_dia,
-    selected_fecha_inicio,
-    selected_fecha_fin,
-    tipo_fecha,
-):
+def _parse_fecha(valor):
+    """Convierte 'YYYY-MM-DD' en date; None si está vacío o es inválido."""
+    try:
+        return datetime.strptime((valor or '').strip(), '%Y-%m-%d').date()
+    except ValueError:
+        return None
+
+
+def _parse_mes(valor):
+    """Convierte 'YYYY-MM' en (primer_día, último_día); None si es inválido."""
+    import calendar
+
+    try:
+        year_str, month_str = (valor or '').strip().split('-', 1)
+        year, month = int(year_str), int(month_str)
+        if not (1 <= month <= 12 and 1900 <= year <= 9999):
+            return None
+    except (ValueError, TypeError):
+        return None
+    return date(year, month, 1), date(year, month, calendar.monthrange(year, month)[1])
+
+
+def _filtro_fechas_balances(campo, filtros):
+    """Q de fechas sobre ``campo`` según el período y modo elegidos.
+
+    - Diario: día específico o rango de fechas (acepta solo inicio o solo fin).
+    - Mensual con ``tipo_mes=rango``: rango de meses YYYY-MM, puede cruzar años.
+      Sin mes final abarca hasta hoy; sin mes inicial, todo hasta el mes final.
+    - En cualquier otro caso (o si los campos anteriores vienen vacíos): año
+      seleccionado y, opcionalmente, los meses marcados.
+    """
+    periodo = filtros['periodo']
+
+    if periodo == 'diario':
+        if filtros['tipo_fecha'] == 'rango':
+            inicio = _parse_fecha(filtros['fecha_inicio'])
+            fin = _parse_fecha(filtros['fecha_fin'])
+            if inicio and fin and inicio > fin:
+                inicio, fin = fin, inicio
+            q = Q()
+            if inicio:
+                q &= Q(**{f'{campo}__gte': inicio})
+            if fin:
+                q &= Q(**{f'{campo}__lte': fin})
+            if inicio or fin:
+                return q
+        else:
+            dia = _parse_fecha(filtros['dia'])
+            if dia:
+                return Q(**{campo: dia})
+
+    if periodo == 'mensual' and filtros['tipo_mes'] == 'rango':
+        inicio = _parse_mes(filtros['mes_inicio'])
+        fin = _parse_mes(filtros['mes_fin'])
+        if inicio and fin:
+            desde, hasta = min(inicio[0], fin[0]), max(inicio[1], fin[1])
+            return Q(**{f'{campo}__range': [desde, hasta]})
+        if inicio:
+            # Sin mes final: desde el mes inicial hasta la fecha actual.
+            return Q(**{f'{campo}__range': [inicio[0], date.today()]})
+        if fin:
+            # Sin mes inicial: todo lo registrado hasta el cierre del mes final.
+            return Q(**{f'{campo}__lte': fin[1]})
+
+    q = Q()
+    if filtros['year']:
+        q &= Q(**{f'{campo}__year': int(filtros['year'])})
+    months_int = [int(m) for m in filtros['months'] if m.isdigit()]
+    if months_int:
+        q &= Q(**{f'{campo}__month__in': months_int})
+    return q
+
+
+def _build_cfdi_filters(selected_cliente_id, filtros_fecha):
     """Construye filtros de DocumentoCFDI por cliente y rango de fechas.
 
     Se mantienen solo los filtros que se aplican de forma directa sobre el
@@ -152,32 +217,63 @@ def _build_cfdi_filters(
     if selected_cliente_id:
         cfdi_filters &= Q(cliente_id=selected_cliente_id)
 
-    if selected_periodo == 'diario':
-        if tipo_fecha == 'dia' and selected_dia:
-            try:
-                fecha_dia = datetime.strptime(selected_dia, '%Y-%m-%d').date()
-                cfdi_filters &= Q(fecha_emision=fecha_dia)
-            except ValueError:
-                pass
-        elif tipo_fecha == 'rango' and selected_fecha_inicio and selected_fecha_fin:
-            try:
-                fecha_inicio = datetime.strptime(selected_fecha_inicio, '%Y-%m-%d').date()
-                fecha_fin = datetime.strptime(selected_fecha_fin, '%Y-%m-%d').date()
-                cfdi_filters &= Q(fecha_emision__range=[fecha_inicio, fecha_fin])
-            except ValueError:
-                pass
-    else:
-        if selected_year:
-            try:
-                cfdi_filters &= Q(fecha_emision__year=int(selected_year))
-            except ValueError:
-                pass
-        if selected_months:
-            months_int = [int(m) for m in selected_months if m.isdigit()]
-            if months_int:
-                cfdi_filters &= Q(fecha_emision__month__in=months_int)
+    return cfdi_filters & _filtro_fechas_balances('fecha_emision', filtros_fecha)
 
-    return cfdi_filters
+
+def leer_filtros_balances(request):
+    """Lee y normaliza los filtros de la pantalla de balances desde ``GET``.
+
+    Fuente única para la pantalla y para los reportes Excel/PDF: así el
+    reporte descargado siempre corresponde a lo que el usuario ve.
+    """
+    tipo_mes = request.GET.get('tipo_mes', 'anio')
+    if tipo_mes != 'rango':
+        tipo_mes = 'anio'
+    f = {
+        'cliente_id': request.GET.get('cliente_id', ''),
+        'cuenta_id': request.GET.get('cuenta_id', ''),
+        'sucursal_id': request.GET.get('sucursal_id', ''),
+        'mercado_id': request.GET.get('mercado_id', ''),
+        'modalidad': request.GET.get('modalidad_pago', ''),
+        'estado': request.GET.get('estado_cobranza', ''),
+        'year': ''.join(
+            ch for ch in request.GET.get('year', '') if ch.isdigit()
+        ) or str(timezone.now().year),
+        'months': _parse_selected_months(request.GET),
+        'periodo': request.GET.get('periodo', 'mensual'),
+        'dia': request.GET.get('dia', ''),
+        'fecha_inicio': request.GET.get('fecha_inicio', ''),
+        'fecha_fin': request.GET.get('fecha_fin', ''),
+        'tipo_fecha': request.GET.get('tipo_fecha', 'dia'),
+        'tipo_mes': tipo_mes,
+        'mes_inicio': request.GET.get('mes_inicio', ''),
+        'mes_fin': request.GET.get('mes_fin', ''),
+    }
+    f['filtros_fecha'] = {
+        key: f[key] for key in (
+            'periodo', 'year', 'months', 'dia', 'fecha_inicio', 'fecha_fin',
+            'tipo_fecha', 'tipo_mes', 'mes_inicio', 'mes_fin',
+        )
+    }
+    return f
+
+
+def q_ventas_balances(f):
+    """Q de ``Ventas`` para los filtros leídos con ``leer_filtros_balances``."""
+    filters = Q()
+    if f['cliente_id']:
+        filters &= Q(cliente_id=f['cliente_id'])
+    if f['cuenta_id']:
+        filters &= Q(cuenta_id=f['cuenta_id'])
+    if f['sucursal_id']:
+        filters &= Q(sucursal_id=f['sucursal_id'])
+    if f['mercado_id']:
+        filters &= Q(mercado_destino_id=f['mercado_id'])
+    if f['modalidad']:
+        filters &= Q(modalidad_pago=f['modalidad'])
+    if f['estado']:
+        filters &= Q(estado_cobranza=f['estado'])
+    return filters & _filtro_fechas_balances('fecha_deposito', f['filtros_fecha'])
 
 
 def build_ventas_balances_context(request):
@@ -199,7 +295,27 @@ def build_ventas_balances_context(request):
     selected_fecha_inicio = request.GET.get('fecha_inicio', '')
     selected_fecha_fin = request.GET.get('fecha_fin', '')
     tipo_fecha = request.GET.get('tipo_fecha', 'dia')
-    
+
+    # Rango de meses (YYYY-MM) para período mensual
+    tipo_mes = request.GET.get('tipo_mes', 'anio')
+    if tipo_mes != 'rango':
+        tipo_mes = 'anio'
+    selected_mes_inicio = request.GET.get('mes_inicio', '')
+    selected_mes_fin = request.GET.get('mes_fin', '')
+
+    filtros_fecha = {
+        'periodo': selected_periodo,
+        'year': selected_year,
+        'months': selected_months,
+        'dia': selected_dia,
+        'fecha_inicio': selected_fecha_inicio,
+        'fecha_fin': selected_fecha_fin,
+        'tipo_fecha': tipo_fecha,
+        'tipo_mes': tipo_mes,
+        'mes_inicio': selected_mes_inicio,
+        'mes_fin': selected_mes_fin,
+    }
+
     # Obtener listas para los filtros
     clientes = Cliente.objects.filter(activo=True).order_by('nombre')
     cuentas = Cuenta.objects.select_related('id_banco').order_by('numero_cuenta')
@@ -225,6 +341,9 @@ def build_ventas_balances_context(request):
         'fecha_inicio':  selected_fecha_inicio,
         'fecha_fin':     selected_fecha_fin,
         'tipo_fecha':    tipo_fecha,
+        'tipo_mes':      tipo_mes,
+        'mes_inicio':    selected_mes_inicio,
+        'mes_fin':       selected_mes_fin,
     }
     _cached = VentasBalancesCache.get(_filter_params)
     if _cached is not None:
@@ -248,6 +367,9 @@ def build_ventas_balances_context(request):
             'selected_fecha_inicio': selected_fecha_inicio,
             'selected_fecha_fin':    selected_fecha_fin,
             'tipo_fecha':            tipo_fecha,
+            'tipo_mes':              tipo_mes,
+            'selected_mes_inicio':   selected_mes_inicio,
+            'selected_mes_fin':      selected_mes_fin,
             'modalidad_choices': Ventas.ModalidadPago.choices,
             'estado_choices':    Ventas.EstadoCobranza.choices,
             # Defaults para entradas cacheadas antes de la incorporación de métricas CFDI
@@ -259,52 +381,9 @@ def build_ventas_balances_context(request):
         return _cached
     # ── /Cache check ────────────────────────────────────────────────────────────
 
-    # Construir filtros base
-    filters = Q()
-    
-    # Filtros por selecciones
-    if selected_cliente_id:
-        filters &= Q(cliente_id=selected_cliente_id)
-    if selected_cuenta_id:
-        filters &= Q(cuenta_id=selected_cuenta_id)
-    if selected_sucursal_id:
-        filters &= Q(sucursal_id=selected_sucursal_id)
-    if selected_mercado_id:
-        filters &= Q(mercado_destino_id=selected_mercado_id)
-    if selected_modalidad:
-        filters &= Q(modalidad_pago=selected_modalidad)
-    if selected_estado:
-        filters &= Q(estado_cobranza=selected_estado)
-    
-    # Filtros de fecha según el período seleccionado
-    if selected_periodo == 'diario':
-        if tipo_fecha == 'dia' and selected_dia:
-            try:
-                fecha_dia = datetime.strptime(selected_dia, '%Y-%m-%d').date()
-                filters &= Q(fecha_deposito=fecha_dia)
-            except ValueError:
-                pass
-        elif tipo_fecha == 'rango' and selected_fecha_inicio and selected_fecha_fin:
-            try:
-                fecha_inicio = datetime.strptime(selected_fecha_inicio, '%Y-%m-%d').date()
-                fecha_fin = datetime.strptime(selected_fecha_fin, '%Y-%m-%d').date()
-                filters &= Q(fecha_deposito__range=[fecha_inicio, fecha_fin])
-            except ValueError:
-                pass
-    else:
-        # Filtro por año
-        if selected_year:
-            filters &= Q(fecha_deposito__year=int(selected_year))
-        
-        # Filtro por meses
-        if selected_months and len(selected_months) > 0:
-            try:
-                months_int = [int(m) for m in selected_months if m.isdigit()]
-                if months_int:
-                    filters &= Q(fecha_deposito__month__in=months_int)
-            except ValueError:
-                pass
-    
+    # Filtros base (misma fuente que los reportes Excel/PDF)
+    filters = q_ventas_balances(leer_filtros_balances(request))
+
     # Obtener ventas filtradas
     ventas_queryset = Ventas.objects.filter(filters).select_related(
         'cliente', 'cuenta', 'sucursal_id', 'mercado_destino', 'producto', 'agente_id'
@@ -377,16 +456,7 @@ def build_ventas_balances_context(request):
     ).aggregate(total=Sum('monto'), count=Count('id'))
 
     # Métricas de CFDI importados (vigentes) en el mismo rango de filtros
-    cfdi_filters = _build_cfdi_filters(
-        selected_cliente_id,
-        selected_periodo,
-        selected_year,
-        selected_months,
-        selected_dia,
-        selected_fecha_inicio,
-        selected_fecha_fin,
-        tipo_fecha,
-    )
+    cfdi_filters = _build_cfdi_filters(selected_cliente_id, filtros_fecha)
     cfdi_qs = DocumentoCFDI.objects.filter(cfdi_filters)
     cfdi_totals = cfdi_qs.aggregate(
         total_facturado=Sum('monto', filter=Q(tipo=DocumentoCFDI.TipoDocumento.INGRESO)),
@@ -422,7 +492,10 @@ def build_ventas_balances_context(request):
         'selected_fecha_inicio': selected_fecha_inicio,
         'selected_fecha_fin': selected_fecha_fin,
         'tipo_fecha': tipo_fecha,
-        
+        'tipo_mes': tipo_mes,
+        'selected_mes_inicio': selected_mes_inicio,
+        'selected_mes_fin': selected_mes_fin,
+
         # Datos para la tabla
         'balances': balances,
         
@@ -495,6 +568,8 @@ def ventas_balances(request):
     """Vista para mostrar balances y análisis de ventas con filtros avanzados"""
     from django.http import HttpResponse
     context = build_ventas_balances_context(request)
+    context['export_xlsx_url'] = reverse('ventas:exportar_balances_xlsx')
+    context['export_pdf_url'] = reverse('ventas:exportar_balances_pdf')
 
     results_html = render_to_string(
         'admin/ventas/partials/ventas_balances_results.html',
@@ -545,86 +620,91 @@ def ventas_balances(request):
     return render(request, 'ventas/ventas_balances.html', context)
 
 
+def describir_filtros_balances(f):
+    """Filtros activos en texto legible para la portada de los reportes."""
+    def nombre(modelo, pk, campo='nombre'):
+        obj = modelo.objects.filter(pk=pk).first() if str(pk).isdigit() else None
+        return getattr(obj, campo, pk) if obj else pk
+
+    meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio',
+             'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+    filtros = []
+    if f['cliente_id']:
+        filtros.append(('Cliente', nombre(Cliente, f['cliente_id'])))
+    if f['cuenta_id']:
+        filtros.append(('Cuenta', nombre(Cuenta, f['cuenta_id'], 'numero_cuenta')))
+    if f['sucursal_id']:
+        filtros.append(('Sucursal', nombre(Sucursal, f['sucursal_id'])))
+    if f['mercado_id']:
+        filtros.append(('Mercado', nombre(MercadoDestino, f['mercado_id'])))
+    if f['modalidad']:
+        filtros.append(('Modalidad', dict(Ventas.ModalidadPago.choices).get(f['modalidad'], f['modalidad'])))
+    if f['estado']:
+        filtros.append(('Estado', dict(Ventas.EstadoCobranza.choices).get(f['estado'], f['estado'])))
+
+    if f['periodo'] == 'diario':
+        if f['tipo_fecha'] == 'rango' and (f['fecha_inicio'] or f['fecha_fin']):
+            filtros.append(('Periodo', f"{f['fecha_inicio'] or 'inicio'} a {f['fecha_fin'] or 'hoy'}"))
+        elif f['dia']:
+            filtros.append(('Día', f['dia']))
+    elif f['periodo'] == 'mensual' and f['tipo_mes'] == 'rango' and (f['mes_inicio'] or f['mes_fin']):
+        filtros.append(('Periodo', f"{f['mes_inicio'] or 'inicio'} a {f['mes_fin'] or 'hoy'}"))
+    else:
+        texto = f['year']
+        if f['months']:
+            texto += ' · ' + ', '.join(meses[int(m) - 1] for m in f['months'])
+        filtros.append(('Año', texto))
+    filtros.append(('Agrupación', f['periodo'].capitalize()))
+    return filtros
+
+
+def _datos_reporte_balances(request):
+    from .services.reportes_export import datos_reporte_ventas
+
+    f = leer_filtros_balances(request)
+    ventas_qs = Ventas.objects.filter(q_ventas_balances(f))
+    cfdi_qs = DocumentoCFDI.objects.filter(
+        _build_cfdi_filters(f['cliente_id'], f['filtros_fecha'])
+    )
+    return datos_reporte_ventas(ventas_qs, cfdi_qs), describir_filtros_balances(f)
+
+
+def _archivo(contenido, content_type, nombre):
+    response = HttpResponse(contenido, content_type=content_type)
+    response['Content-Disposition'] = f'attachment; filename="{nombre}"'
+    return response
+
+
 @login_required
 @permission_required('ventas.view_ventas', raise_exception=True)
 def exportar_balances_xlsx(request):
-    """Exporta los balances filtrados actuales a un archivo XLSX."""
-    import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment
-    from openpyxl.utils import get_column_letter
+    """Reporte Excel del análisis de ventas con los filtros actuales.
 
-    context = build_ventas_balances_context(request)
-    balances = context['balances']
+    Hojas: resumen e indicadores, tendencia mensual, clientes ABC, antigüedad
+    de cartera, productos, sucursales, ventas sin CFDI y detalle.
+    """
+    from .services.reportes_export import reporte_ventas_xlsx
 
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Balances de Ventas"
-
-    # Encabezados
-    headers = [
-        '#', 'Cliente', 'Cuenta', 'Banco', 'Sucursal', 'Fecha',
-        'Total Ventas', 'Total Pagado', 'Saldo Pendiente',
-        'Estado Cobranza', 'Fecha Vencimiento', 'Acumulado',
-    ]
-    header_fill = PatternFill(start_color='1F4E79', end_color='1F4E79', fill_type='solid')
-    header_font = Font(color='FFFFFF', bold=True)
-
-    for col_num, header in enumerate(headers, start=1):
-        cell = ws.cell(row=1, column=col_num, value=header)
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal='center')
-
-    # Filas de datos
-    estado_colores = {
-        'Pagado': 'C6EFCE',
-        'Parcial': 'FFEB9C',
-        'Pendiente': 'FFEB9C',
-        'Vencido': 'FFC7CE',
-    }
-
-    for row_num, balance in enumerate(balances, start=2):
-        estado = balance.get('estado_cobranza', '')
-        row_fill = PatternFill(
-            start_color=estado_colores.get(estado, 'FFFFFF'),
-            end_color=estado_colores.get(estado, 'FFFFFF'),
-            fill_type='solid',
-        )
-        fila = [
-            balance.get('numero_secuencial', row_num - 1),
-            balance.get('cliente_nombre', ''),
-            balance.get('cuenta_numero', ''),
-            balance.get('banco_nombre', ''),
-            balance.get('sucursal_nombre', ''),
-            str(balance.get('fecha', '')),
-            balance.get('total_ventas', 0),
-            balance.get('total_pagado', 0),
-            balance.get('saldo_pendiente', 0),
-            estado,
-            str(balance.get('fecha_vencimiento', '') or ''),
-            balance.get('acumulado', 0),
-        ]
-        for col_num, value in enumerate(fila, start=1):
-            cell = ws.cell(row=row_num, column=col_num, value=value)
-            cell.fill = row_fill
-
-    # Ajustar anchos de columna
-    for col_num in range(1, len(headers) + 1):
-        ws.column_dimensions[get_column_letter(col_num)].auto_size = True
-
-    # Totals row
-    total_row = ws.max_row + 1
-    ws.cell(row=total_row, column=1, value='TOTAL').font = Font(bold=True)
-    ws.cell(row=total_row, column=7, value=context['total_ventas']).font = Font(bold=True)
-    ws.cell(row=total_row, column=8, value=context['total_pagado']).font = Font(bold=True)
-    ws.cell(row=total_row, column=9, value=context['saldo_pendiente_total']).font = Font(bold=True)
-
-    response = HttpResponse(
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    datos, filtros = _datos_reporte_balances(request)
+    return _archivo(
+        reporte_ventas_xlsx(datos, filtros),
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        f'analisis_ventas_{date.today():%Y%m%d}.xlsx',
     )
-    response['Content-Disposition'] = 'attachment; filename="balances_ventas.xlsx"'
-    wb.save(response)
-    return response
+
+
+@login_required
+@permission_required('ventas.view_ventas', raise_exception=True)
+def exportar_balances_pdf(request):
+    """Reporte PDF ejecutivo del análisis de ventas con los filtros actuales."""
+    from .services.reportes_export import reporte_ventas_pdf
+
+    datos, filtros = _datos_reporte_balances(request)
+    return _archivo(
+        reporte_ventas_pdf(datos, filtros),
+        'application/pdf',
+        f'analisis_ventas_{date.today():%Y%m%d}.pdf',
+    )
 
 
 @login_required

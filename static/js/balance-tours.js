@@ -98,7 +98,7 @@
       step("ventas", "actions", gettext_noop("4. Aplique los filtros"), gettext_noop("La consulta actualiza indicadores, gráficas y detalle sin recargar toda la pantalla. La dirección del navegador conserva los criterios para poder volver a la misma vista."), "top"),
       step("ventas", "metrics", gettext_noop("5. Revise la situación de cobranza"), gettext_noop("Compare Total ventas, Total pagado y Pendiente. Transacciones, Venta máxima y Promedio ayudan a dimensionar el conjunto analizado."), "bottom"),
       step("ventas", "charts", gettext_noop("6. Detecte concentraciones"), gettext_noop("Las gráficas resumen modalidad, estado de cobranza y los diez clientes con mayor monto dentro de la consulta."), "top"),
-      step("ventas", "exports", gettext_noop("7. Exporte el análisis"), gettext_noop("Exportar PDF genera la presentación visual. La tabla ofrece además Excel, PDF e Imprimir para el detalle; confirme los filtros activos antes de distribuirlo."), "bottom"),
+      step("ventas", "exports", gettext_noop("7. Exporte el análisis"), gettext_noop("Reporte Excel y Reporte PDF descargan el análisis con los filtros activos: hallazgos clave, tendencia mensual, clientes ABC, antigüedad de cartera y ventas sin CFDI. La tabla ofrece además exportaciones rápidas del detalle."), "bottom"),
       step("ventas", "detail", gettext_noop("8. Consulte el detalle"), gettext_noop("Busque y ordene las filas para revisar cliente, cuenta, fechas, total pagado, saldo pendiente, estado y acumulado."), "top"),
     ];
   }

@@ -217,7 +217,7 @@
             </select>
           </div>
 
-          <div class="filter-field">
+          <div class="filter-field" id="filtro-year-wrap">
             <label for="year" class="filter-label">Año</label>
             <select name="year" id="year" class="filter-select">
               {% for year in available_years %}
@@ -226,7 +226,7 @@
             </select>
           </div>
 
-          <div class="filter-field">
+          <div class="filter-field" id="filtro-meses-wrap">
             <span class="filter-label" id="months-label">Meses</span>
             <div class="month-select">
               <input type="hidden" name="months" id="months" value="{{ selected_months|join:',' }}">
@@ -310,6 +310,39 @@
               <div class="filter-field">
                 <label for="fecha_fin" class="filter-label">Fecha fin</label>
                 <input type="date" name="fecha_fin" id="fecha_fin" value="{{ selected_fecha_fin }}" class="filter-select">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# Opciones de filtro mensual #}
+        <div id="filtro-mensual-opciones" class="filter-subpanel {% if selected_periodo != 'mensual' %}is-hidden{% endif %}">
+          <p class="filter-subpanel-title">
+            <i class="fas fa-calendar-alt" aria-hidden="true"></i> Tipo de consulta mensual
+          </p>
+
+          <div class="filter-radios">
+            <label class="filter-radio">
+              <input type="radio" name="tipo_mes" value="anio" id="radio-anio"
+                     {% if tipo_mes != 'rango' %}checked{% endif %}>
+              <span><i class="fas fa-calendar" aria-hidden="true"></i> Año y meses</span>
+            </label>
+            <label class="filter-radio">
+              <input type="radio" name="tipo_mes" value="rango" id="radio-rango-mes"
+                     {% if tipo_mes == 'rango' %}checked{% endif %}>
+              <span><i class="fas fa-calendar-alt" aria-hidden="true"></i> Rango de meses</span>
+            </label>
+          </div>
+
+          <div id="campos-rango-meses" class="{% if tipo_mes != 'rango' %}is-hidden{% endif %}">
+            <div class="filter-fields">
+              <div class="filter-field">
+                <label for="mes_inicio" class="filter-label">Mes inicial</label>
+                <input type="month" name="mes_inicio" id="mes_inicio" value="{{ selected_mes_inicio }}" class="filter-select">
+              </div>
+              <div class="filter-field">
+                <label for="mes_fin" class="filter-label">Mes final <span style="font-weight:400;opacity:.7">(vacío = hasta hoy)</span></label>
+                <input type="month" name="mes_fin" id="mes_fin" value="{{ selected_mes_fin }}" class="filter-select">
               </div>
             </div>
           </div>
