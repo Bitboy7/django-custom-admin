@@ -140,6 +140,11 @@ JAZZMIN_SETTINGS = {
     # "Gastos" dropdown se eliminó — ya existe en la barra lateral.
     "topmenu_links": [
         {"name": "Panel de Control", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {
+            "name": "Asistente de datos",
+            "url": "asistente",
+            "icon": "fas fa-comments",
+        },
     ],
     
     #############
@@ -912,4 +917,11 @@ USE_THOUSAND_SEPARATOR = True
 NUMBER_GROUPING = 3
 DECIMAL_SEPARATOR = '.'
 THOUSAND_SEPARATOR = ','
+
+
+# ===============================
+# ASISTENTE MCP (CLIENTE DE CONSULTAS)
+# ===============================
+MCP_CHAT_TIMEOUT = float(os.getenv('MCP_CHAT_TIMEOUT', '45'))
+MCP_CHAT_MAX_STEPS = int(os.getenv('MCP_CHAT_MAX_STEPS', '5'))
 
