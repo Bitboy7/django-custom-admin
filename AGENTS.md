@@ -23,6 +23,7 @@ Django 5.1 / Python 3.12+ / MySQL 8.0 / Redis. ERP-style admin for "Agrícola de
 | `ventas/`              | Sales, clients, accounts receivable, payment tracking                                 |
 | `capital_inversiones/` | Capital and investments                                                               |
 | `reportes/`            | AI executive reports, email dispatch                                                  |
+| `mcp_server/`          | Standalone read-only MCP report server (SQLAlchemy, no Django import)                  |
 
 ## Services layer
 
@@ -54,6 +55,22 @@ make up              # docker-compose up -d
 make migrate
 make setup-roles     # python manage.py setup_roles --create-roles
 ```
+
+## MCP report server (read-only)
+
+Standalone package in `mcp_server/` (no Django import). Connects to MySQL with the
+`mcp_readonly` user (SELECT-only) + code allowlist + SQL guard.
+
+```bash
+pip install -r requirements-mcp.txt
+mysql -u root -p < scripts/create_mcp_readonly_user.sql   # once per environment
+python -m mcp_server --transport stdio                    # local clients
+python -m mcp_server --transport http                     # requires MCP_HTTP_TOKEN
+pytest mcp_server/tests -p no:django -q
+```
+
+See `mcp_server/README.md` for env vars and client configuration. Follows
+`.agents/skills/backend-dev-guidelines/SKILL.md`.
 
 ## Django admin commands
 

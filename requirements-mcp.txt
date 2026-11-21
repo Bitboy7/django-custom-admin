@@ -1,0 +1,6 @@
+mcp>=1.9,<2
+SQLAlchemy>=2.0,<3
+mysqlclient>=2.2
+sqlglot>=25
+python-dotenv>=1.0
+uvicorn>=0.30
