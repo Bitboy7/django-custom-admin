@@ -23,6 +23,8 @@ load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_API_MODEL = os.getenv("OPENROUTER_API_MODEL", "google/gemini-3.1-flash-lite-preview")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.6-luna")
 genai.configure(api_key=GOOGLE_API_KEY)
 
 def get_available_models():
@@ -57,12 +59,75 @@ def get_available_models():
     
     return modelos
 
-def get_llm_model(model_id=None):
+def _openai_chat_model(model_id=None, reasoning_effort=None):
+    """Build an OpenAI chat model. Reasoning models require temperature=1."""
+    from langchain_openai import ChatOpenAI
+
+    api_key = os.getenv("OPENAI_API_KEY") or OPENAI_API_KEY
+    if not api_key:
+        raise ValueError(
+            "OPENAI_API_KEY no está configurada. Agrégala al .env para usar OpenAI."
+        )
+
+    model = model_id or OPENAI_MODEL
+    kwargs = {
+        "model": model,
+        "api_key": api_key,
+        "timeout": float(os.getenv("OPENAI_TIMEOUT", "60")),
+        "max_retries": int(os.getenv("OPENAI_MAX_RETRIES", "2")),
+    }
+    is_reasoning = model.startswith(("gpt-5", "o1", "o3", "o4"))
+    kwargs["temperature"] = 1 if is_reasoning else 0
+    effort = reasoning_effort
+    if effort is None:
+        effort = (os.getenv("OPENAI_REASONING_EFFORT") or "").strip().lower()
+    if is_reasoning and effort:
+        kwargs["model_kwargs"] = {"reasoning_effort": effort}
+    return ChatOpenAI(**kwargs)
+
+
+def get_llm_model(model_id=None, provider=None, for_tools=False):
     """
     Factory that returns a LangChain chat model instance.
-    Models containing '/' are routed through OpenRouter (OpenAI-compatible endpoint).
-    All other model IDs are treated as Google Gemini models.
+
+    provider='openai' uses the official OpenAI API. provider='openrouter'
+    uses the OpenAI-compatible OpenRouter endpoint. provider='google' uses
+    Gemini. Without a provider, the legacy behavior is kept: model IDs
+    containing '/' go to OpenRouter, everything else to Gemini.
+
+    for_tools=True forces reasoning_effort='none' on GPT-5 reasoning models:
+    Chat Completions rejects function tools combined with a reasoning effort.
     """
+    provider = (provider or "").strip().lower()
+
+    if provider == "openai":
+        model = model_id or OPENAI_MODEL
+        effort = (
+            "none"
+            if for_tools and model.startswith(("gpt-5", "o1", "o3", "o4"))
+            else None
+        )
+        return _openai_chat_model(model, reasoning_effort=effort)
+    if provider in {"google", "gemini"}:
+        return ChatGoogleGenerativeAI(
+            model=model_id or os.getenv("GOOGLE_API_MODEL", "gemini-2.5-flash"),
+            temperature=0,
+        )
+    if provider == "openrouter":
+        from langchain_openai import ChatOpenAI
+
+        if not OPENROUTER_API_KEY:
+            raise ValueError("OPENROUTER_API_KEY no está configurada.")
+        return ChatOpenAI(
+            model=model_id or OPENROUTER_API_MODEL,
+            api_key=OPENROUTER_API_KEY,
+            base_url="https://openrouter.ai/api/v1",
+            temperature=0,
+            default_headers={"HTTP-Referer": os.getenv("SITE_URL", "https://agricola.app")},
+        )
+    if provider:
+        raise ValueError(f"Proveedor de IA no soportado: {provider}")
+
     if model_id is None:
         model_id = os.getenv("GOOGLE_API_MODEL", "gemini-2.5-flash")
 

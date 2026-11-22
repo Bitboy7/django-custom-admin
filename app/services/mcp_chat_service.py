@@ -76,6 +76,130 @@ class ChatModelError(ChatServiceError):
 
 
 @dataclass
+class UsageStats:
+    """Token usage accumulated across every model call in one question."""
+
+    llamadas: int = 0
+    entrada: int = 0
+    salida: int = 0
+    razonamiento: int = 0
+    total: int = 0
+
+    def add(self, message: Any) -> None:
+        usage = getattr(message, "usage_metadata", None)
+        if not usage:
+            return
+
+        def _tokens(key: str) -> int:
+            if isinstance(usage, dict):
+                return int(usage.get(key) or 0)
+            return int(getattr(usage, key, 0) or 0)
+
+        input_tokens = _tokens("input_tokens")
+        output_tokens = _tokens("output_tokens")
+        total_tokens = _tokens("total_tokens")
+        if input_tokens == 0 and output_tokens == 0 and total_tokens == 0:
+            return
+
+        total_tokens = max(total_tokens, input_tokens + output_tokens)
+        # Gemini reports thinking tokens in total_tokens but not in candidates.
+        reasoning_tokens = max(total_tokens - input_tokens - output_tokens, 0)
+        self.llamadas += 1
+        self.entrada += input_tokens
+        self.salida += output_tokens
+        self.razonamiento += reasoning_tokens
+        self.total += total_tokens
+
+    def as_dict(self) -> dict[str, int]:
+        return {
+            "llamadas_ia": self.llamadas,
+            "tokens_entrada": self.entrada,
+            "tokens_salida": self.salida,
+            "tokens_razonamiento": self.razonamiento,
+            "tokens_total": self.total,
+        }
+
+
+# Standard USD per 1M tokens. Override with AI_PRICE_* env vars if your
+# provider/model/tier has different pricing.
+_MODEL_PRICES = (
+    ("gpt-5.6-luna", (0.20, 1.20)),
+    ("gpt-5.6-terra", (2.00, 12.00)),
+    ("gpt-5.6-sol", (4.00, 20.00)),
+    ("gpt-5.4-mini", (0.75, 4.50)),
+    ("gpt-5.4-nano", (0.20, 1.25)),
+    ("gpt-5-mini", (0.25, 2.00)),
+    ("gpt-5-nano", (0.05, 0.40)),
+    ("gemini-2.5-flash", (0.30, 2.50)),
+)
+
+
+def default_prices_for_model(model_id: str | None) -> tuple[float, float]:
+    key = (model_id or "").lower()
+    for prefix, prices in _MODEL_PRICES:
+        if key.startswith(prefix):
+            return prices
+    return (0.30, 2.50)
+
+
+def _price_per_mtok(name: str, default: float) -> float:
+    raw = os.getenv(name)
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        logger.warning("Precio de IA inválido en %s=%r; usando %.4f", name, raw, default)
+        return default
+    if value < 0:
+        logger.warning("Precio de IA negativo en %s; usando %.4f", name, default)
+        return default
+    return value
+
+
+def estimate_cost_usd(
+    stats: UsageStats,
+    input_price_per_mtok: float,
+    output_price_per_mtok: float,
+) -> float:
+    """Estimate USD cost. Thinking tokens are billed as output tokens."""
+    billable_output = stats.salida + stats.razonamiento
+    cost = (
+        stats.entrada * input_price_per_mtok
+        + billable_output * output_price_per_mtok
+    ) / 1_000_000
+    return round(cost, 8)
+
+
+def _assistant_model_config() -> tuple[str | None, str]:
+    """Resolve provider/model. OpenAI wins automatically when its key exists."""
+    provider = (os.getenv("AI_PROVIDER") or "").strip().lower()
+    if provider:
+        if provider == "openai":
+            return "openai", os.getenv("OPENAI_MODEL", "gpt-5.6-luna")
+        if provider in {"google", "gemini"}:
+            return "google", os.getenv("GOOGLE_API_MODEL", "gemini-2.5-flash")
+        if provider == "openrouter":
+            return "openrouter", os.getenv("OPENROUTER_API_MODEL", "")
+        raise ChatConfigurationError(f"AI_PROVIDER no soportado: {provider}")
+
+    if os.getenv("OPENAI_API_KEY"):
+        return "openai", os.getenv("OPENAI_MODEL", "gpt-5.6-luna")
+
+    legacy = (
+        os.getenv("GOOGLE_API_MODEL")
+        or os.getenv("OPENROUTER_API_MODEL")
+        or "gemini-2.5-flash"
+    )
+    return None, legacy
+
+
+def modelo_activo() -> str:
+    """Model id the assistant will use, for display purposes."""
+    return _assistant_model_config()[1] or "modelo predeterminado"
+
+
+@dataclass
 class ToolTrace:
     herramienta: str
     argumentos: dict[str, Any]
@@ -337,7 +461,7 @@ async def _ask_async(question: str, history: list[dict[str, str]]) -> dict[str, 
     headers = mcp_headers()
     timeout_seconds = float(getattr(settings, "MCP_CHAT_TIMEOUT", 45))
     max_steps = int(getattr(settings, "MCP_CHAT_MAX_STEPS", 5))
-    model_id = os.getenv("GOOGLE_API_MODEL") or os.getenv("OPENROUTER_API_MODEL")
+    provider, model_id = _assistant_model_config()
 
     system = SystemMessage(
         content=SYSTEM_PROMPT.format(today=timezone.localdate().isoformat())
@@ -351,6 +475,7 @@ async def _ask_async(question: str, history: list[dict[str, str]]) -> dict[str, 
     messages.append(HumanMessage(content=question))
 
     traces: list[ToolTrace] = []
+    usage = UsageStats()
     started = time.perf_counter()
     answer = ""
 
@@ -370,7 +495,7 @@ async def _ask_async(question: str, history: list[dict[str, str]]) -> dict[str, 
                 )
 
             try:
-                llm = get_llm_model(model_id)
+                llm = get_llm_model(model_id, provider=provider, for_tools=True)
                 try:
                     from langchain_google_genai import ChatGoogleGenerativeAI
 
@@ -381,7 +506,8 @@ async def _ask_async(question: str, history: list[dict[str, str]]) -> dict[str, 
             except Exception as exc:
                 logger.exception("No se pudo preparar el modelo de lenguaje")
                 raise ChatModelError(
-                    "No se pudo preparar el modelo de IA. Revisa GOOGLE_API_KEY u OPENROUTER_API_KEY."
+                    "No se pudo preparar el modelo de IA. Revisa OPENAI_API_KEY, "
+                    "GOOGLE_API_KEY u OPENROUTER_API_KEY."
                 ) from exc
 
             for _step in range(max_steps):
@@ -399,6 +525,7 @@ async def _ask_async(question: str, history: list[dict[str, str]]) -> dict[str, 
                     ) from exc
 
                 messages.append(response)
+                usage.add(response)
                 tool_calls = list(getattr(response, "tool_calls", None) or [])
                 if not tool_calls:
                     answer = _content_text(response.content).strip()
@@ -457,6 +584,7 @@ async def _ask_async(question: str, history: list[dict[str, str]]) -> dict[str, 
                 # Tool budget exhausted: ask for a final answer without tools.
                 try:
                     final = await asyncio.to_thread(llm.invoke, messages)
+                    usage.add(final)
                     answer = _content_text(final.content).strip()
                 except Exception:
                     logger.exception("Error al cerrar la conversación con el modelo")
@@ -466,14 +594,41 @@ async def _ask_async(question: str, history: list[dict[str, str]]) -> dict[str, 
         answer = _fallback_answer(traces)
 
     elapsed_ms = int((time.perf_counter() - started) * 1000)
+    default_input_price, default_output_price = default_prices_for_model(model_id)
+    input_price = _price_per_mtok(
+        "AI_PRICE_INPUT_PER_MTOK", default_input_price
+    )
+    output_price = _price_per_mtok(
+        "AI_PRICE_OUTPUT_PER_MTOK", default_output_price
+    )
+    cost_usd = estimate_cost_usd(usage, input_price, output_price)
+    logger.info(
+        "IA proveedor=%s modelo=%s llamadas=%s tokens_in=%s tokens_out=%s "
+        "tokens_thinking=%s tokens_total=%s costo_usd=%.6f",
+        provider or "legacy",
+        model_id or "",
+        usage.llamadas,
+        usage.entrada,
+        usage.salida,
+        usage.razonamiento,
+        usage.total,
+        cost_usd,
+    )
     return {
         "respuesta": answer,
         "traza": [trace.as_dict() for trace in traces],
         "meta": {
             "modelo": model_id or "",
+            "proveedor": provider or "legacy",
             "duracion_ms": elapsed_ms,
             "herramientas_usadas": len(traces),
             "servidor": url,
+            **usage.as_dict(),
+            "costo_estimado_usd": cost_usd,
+            "precios_usd_por_mtok": {
+                "entrada": input_price,
+                "salida": output_price,
+            },
         },
     }
 
