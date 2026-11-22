@@ -140,11 +140,6 @@ JAZZMIN_SETTINGS = {
     # "Gastos" dropdown se eliminó — ya existe en la barra lateral.
     "topmenu_links": [
         {"name": "Panel de Control", "url": "admin:index", "permissions": ["auth.view_user"]},
-        {
-            "name": "Asistente de datos",
-            "url": "asistente",
-            "icon": "fas fa-comments",
-        },
     ],
     
     #############

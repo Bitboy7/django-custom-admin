@@ -531,3 +531,111 @@ body .module caption {
 .select2-container--default .select2-selection--single:focus {
   border-color: var(--border-focus) !important;
 }
+
+.ac-fab {
+  position: fixed;
+  right: max(var(--space-5), env(safe-area-inset-right));
+  bottom: max(var(--space-5), env(safe-area-inset-bottom));
+  z-index: 1025;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 1px solid rgba(184, 219, 217, 0.28);
+  border-radius: var(--radius-lg);
+  background: var(--action-primary);
+  color: var(--light-blue);
+  box-shadow: 0 10px 24px rgba(7, 19, 25, 0.26), 0 2px 6px rgba(7, 19, 25, 0.16);
+  text-decoration: none;
+  view-transition-name: asistente-launch;
+  transition:
+    background-color var(--duration-fast) var(--ease-default),
+    border-color var(--duration-fast) var(--ease-default),
+    box-shadow var(--duration-normal) var(--ease-default),
+    color var(--duration-fast) var(--ease-default),
+    transform var(--duration-normal) var(--ease-spring);
+}
+.ac-fab svg {
+  width: 26px;
+  height: 26px;
+}
+.ac-fab__label {
+  position: absolute;
+  right: calc(100% + 12px);
+  top: 50%;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  background: var(--charcoal-blue-dark);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(6px, -50%);
+  pointer-events: none;
+  transition:
+    opacity var(--duration-fast) var(--ease-default),
+    transform var(--duration-normal) var(--ease-spring);
+}
+.ac-fab:hover {
+  background: var(--action-primary-hover);
+  border-color: rgba(184, 219, 217, 0.46);
+  box-shadow: 0 14px 30px rgba(7, 19, 25, 0.3), 0 3px 8px rgba(7, 19, 25, 0.18);
+  color: #fff;
+  transform: translateY(-2px);
+}
+.ac-fab:hover .ac-fab__label,
+.ac-fab:focus-visible .ac-fab__label {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+.ac-fab:focus-visible {
+  outline: 2px solid var(--action-primary);
+  outline-offset: 3px;
+  background: var(--action-primary-hover);
+  color: #fff;
+}
+.ac-fab:active {
+  transform: translateY(0) scale(0.97);
+}
+[data-theme="dark"] .ac-fab {
+  background: var(--charcoal-blue);
+  border-color: rgba(184, 219, 217, 0.36);
+}
+[data-theme="dark"] .ac-fab:hover {
+  background: var(--blue-slate);
+}
+[data-theme="dark"] .ac-fab:focus-visible {
+  outline-color: var(--light-blue);
+}
+
+@media (max-width: 575.98px) {
+/* Cross-document morph from the admin floating button into the assistant header. */
+@view-transition {
+  navigation: auto;
+}
+
+.ac-fab {
+    right: max(14px, env(safe-area-inset-right));
+    bottom: max(14px, env(safe-area-inset-bottom));
+    width: 52px;
+    height: 52px;
+  }
+}
+@media (hover: none) {
+  .ac-fab__label { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-fab,
+  .ac-fab__label { transition: none; }
+  .ac-fab:hover,
+  .ac-fab:active { transform: none; }
+  ::view-transition-group(asistente-launch),
+  ::view-transition-old(asistente-launch),
+  ::view-transition-new(asistente-launch) {
+    animation-duration: 0.01ms !important;
+  }
+}
