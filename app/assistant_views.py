@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 
 from django.contrib import admin
 from django.contrib.admin.views.decorators import staff_member_required
@@ -15,12 +14,21 @@ from django.shortcuts import render
 from django.views.decorators.http import require_POST
 from django_otp.decorators import otp_required
 
+from app.services.asistente_history_service import (
+    ConversacionNoEncontrada,
+    load_history,
+    resolve_conversation,
+    save_assistant_message,
+    save_error_message,
+    save_user_message,
+)
 from app.services.mcp_chat_service import (
     ChatConfigurationError,
     ChatConnectionError,
     ChatModelError,
     ChatServiceError,
     estado_servicio,
+    modelo_activo,
     preguntar,
 )
 
@@ -55,9 +63,7 @@ def asistente_view(request):
         "title": "Asistente de datos",
         "subtitle": "Consultas MCP de solo lectura",
         "estado_mcp": estado_servicio(),
-        "modelo_ia": os.getenv("GOOGLE_API_MODEL")
-        or os.getenv("OPENROUTER_API_MODEL")
-        or "modelo predeterminado",
+        "modelo_ia": modelo_activo(),
         "sugerencias": [
             {
                 "titulo": "Cartera vencida",
@@ -128,20 +134,56 @@ def asistente_chat_api(request):
         return JsonResponse({"error": "Escribe una consulta para el asistente."}, status=400)
 
     try:
-        result = preguntar(message, payload.get("historial"))
+        conversation = resolve_conversation(
+            request.user, payload.get("conversacion_id"), message
+        )
+        history = load_history(conversation)
+        save_user_message(conversation, message)
+    except ConversacionNoEncontrada as exc:
+        return JsonResponse({"error": str(exc)}, status=404)
+    except Exception:
+        logger.exception("No se pudo preparar la conversación del asistente")
+        return JsonResponse(
+            {"error": "No se pudo guardar la conversación. Intenta de nuevo."},
+            status=500,
+        )
+
+    try:
+        result = preguntar(message, history)
     except ChatConfigurationError as exc:
+        save_error_message(conversation, str(exc))
         return JsonResponse({"error": str(exc)}, status=503)
     except ChatConnectionError as exc:
+        save_error_message(conversation, str(exc))
         return JsonResponse({"error": str(exc)}, status=502)
     except ChatModelError as exc:
+        save_error_message(conversation, str(exc))
         return JsonResponse({"error": str(exc)}, status=502)
     except ChatServiceError as exc:
+        save_error_message(conversation, str(exc))
         return JsonResponse({"error": str(exc)}, status=400)
     except Exception:
         logger.exception("Error no controlado en el asistente MCP")
+        save_error_message(conversation, "Error no controlado en el asistente MCP")
         return JsonResponse(
             {"error": "Ocurrió un error al consultar al asistente. Intenta de nuevo."},
             status=500,
         )
 
+    try:
+        save_assistant_message(conversation, result)
+    except Exception:
+        logger.exception("No se pudo guardar la respuesta del asistente")
+
+    meta = result.get("meta", {})
+    logger.info(
+        "Asistente MCP user=%s conversacion=%s costo_usd=%s tokens=%s herramientas=%s",
+        request.user.pk,
+        conversation.pk,
+        meta.get("costo_estimado_usd"),
+        meta.get("tokens_total"),
+        meta.get("herramientas_usadas"),
+    )
+    result["conversacion_id"] = str(conversation.pk)
+    result["titulo"] = conversation.titulo
     return JsonResponse(result, json_dumps_params={"ensure_ascii": False})

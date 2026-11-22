@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.contrib.admin.models import LogEntry, ADDITION, CHANGE, DELETION
 from django.utils.html import format_html
 from .models import LogActividad, SiteConfiguration
+from . import admin_asistente  # noqa: F401  (registra el asistente MCP)
 
 
 @admin.register(LogActividad)

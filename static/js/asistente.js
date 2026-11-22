@@ -751,14 +751,6 @@
       return;
     }
 
-    var history = state.messages
-      .filter(function (message) {
-        return (message.role === "user" || message.role === "assistant") && !message.error;
-      })
-      .map(function (message) {
-        return { role: message.role, content: message.content };
-      });
-
     state.messages.push({ role: "user", content: text });
     renderMessages();
     if (el.input) {
@@ -776,7 +768,10 @@
           "X-CSRFToken": csrfToken(),
           "X-Requested-With": "XMLHttpRequest",
         },
-        body: JSON.stringify({ mensaje: text, historial: history.slice(-12) }),
+        body: JSON.stringify({
+          mensaje: text,
+          conversacion_id: state.conversationId,
+        }),
       });
       var data = null;
       try {
@@ -794,6 +789,10 @@
         });
         renderMessages();
         return;
+      }
+
+      if (data.conversacion_id) {
+        state.conversationId = data.conversacion_id;
       }
 
       var assistant = {

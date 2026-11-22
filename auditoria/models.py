@@ -1,3 +1,6 @@
+import uuid
+
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
@@ -204,3 +207,107 @@ class SiteConfiguration(models.Model):
     @property
     def company_logo_url(self):
         return safe_file_url(self.company_logo)
+
+
+class ConversacionAsistente(models.Model):
+    """Conversación del asistente MCP, propiedad de un usuario."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="conversaciones_asistente",
+        verbose_name=_("Usuario"),
+    )
+    titulo = models.CharField(max_length=160, blank=True, default="", verbose_name=_("Título"))
+    creada_en = models.DateTimeField(auto_now_add=True, verbose_name=_("Creada en"))
+    actualizada_en = models.DateTimeField(auto_now=True, db_index=True, verbose_name=_("Actualizada en"))
+    archivada = models.BooleanField(default=False, verbose_name=_("Archivada"))
+
+    class Meta:
+        verbose_name = _("Conversación del asistente")
+        verbose_name_plural = _("Conversaciones del asistente")
+        ordering = ["-actualizada_en"]
+        indexes = [
+            models.Index(fields=["usuario", "-actualizada_en"], name="asist_conv_user_fecha_idx"),
+        ]
+
+    def __str__(self):
+        return self.titulo or f"Conversación {self.pk}"
+
+
+class MensajeAsistente(models.Model):
+    """Turno de la conversación: pregunta del usuario o respuesta del asistente."""
+
+    class Rol(models.TextChoices):
+        USUARIO = "user", _("Usuario")
+        ASISTENTE = "assistant", _("Asistente")
+
+    conversacion = models.ForeignKey(
+        ConversacionAsistente,
+        on_delete=models.CASCADE,
+        related_name="mensajes",
+        verbose_name=_("Conversación"),
+    )
+    rol = models.CharField(max_length=12, choices=Rol.choices, verbose_name=_("Rol"))
+    contenido = models.TextField(blank=True, default="", verbose_name=_("Contenido"))
+    orden = models.PositiveIntegerField(verbose_name=_("Orden"))
+    modelo = models.CharField(max_length=80, blank=True, default="", verbose_name=_("Modelo"))
+    tokens_entrada = models.PositiveIntegerField(default=0, verbose_name=_("Tokens de entrada"))
+    tokens_salida = models.PositiveIntegerField(default=0, verbose_name=_("Tokens de salida"))
+    tokens_razonamiento = models.PositiveIntegerField(default=0, verbose_name=_("Tokens de razonamiento"))
+    tokens_total = models.PositiveIntegerField(default=0, verbose_name=_("Tokens totales"))
+    costo_estimado_usd = models.DecimalField(
+        max_digits=14,
+        decimal_places=8,
+        default=0,
+        verbose_name=_("Costo estimado (USD)"),
+    )
+    duracion_ms = models.PositiveIntegerField(default=0, verbose_name=_("Duración (ms)"))
+    error = models.TextField(blank=True, default="", verbose_name=_("Error"))
+    creado_en = models.DateTimeField(auto_now_add=True, verbose_name=_("Creado en"))
+
+    class Meta:
+        verbose_name = _("Mensaje del asistente")
+        verbose_name_plural = _("Mensajes del asistente")
+        ordering = ["orden"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["conversacion", "orden"],
+                name="asist_mensaje_conv_orden_uniq",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["conversacion", "orden"], name="asist_msg_conv_orden_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.get_rol_display()} #{self.orden}"
+
+
+class TrazaHerramientaAsistente(models.Model):
+    """Herramienta MCP ejecutada durante una respuesta, para auditoría y reapertura."""
+
+    mensaje = models.ForeignKey(
+        MensajeAsistente,
+        on_delete=models.CASCADE,
+        related_name="trazas",
+        verbose_name=_("Mensaje"),
+    )
+    herramienta = models.CharField(max_length=80, verbose_name=_("Herramienta"))
+    argumentos = models.JSONField(default=dict, blank=True, verbose_name=_("Argumentos"))
+    num_filas = models.PositiveIntegerField(default=0, verbose_name=_("Filas"))
+    columnas = models.JSONField(default=list, blank=True, verbose_name=_("Columnas"))
+    duracion_ms = models.PositiveIntegerField(default=0, verbose_name=_("Duración (ms)"))
+    error = models.TextField(blank=True, default="", verbose_name=_("Error"))
+    resultado = models.JSONField(default=dict, blank=True, verbose_name=_("Resultado (recortado)"))
+    creado_en = models.DateTimeField(auto_now_add=True, verbose_name=_("Creado en"))
+
+    class Meta:
+        verbose_name = _("Traza de herramienta")
+        verbose_name_plural = _("Trazas de herramientas")
+        ordering = ["id"]
+
+    def __str__(self):
+        return self.herramienta
+
