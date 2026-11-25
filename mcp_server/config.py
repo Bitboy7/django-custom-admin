@@ -39,6 +39,17 @@ def _env_int(name: str, default: int) -> int:
     return value
 
 
+LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+
+
+def log_level_from_env() -> str:
+    """MCP_LOG_LEVEL validated against the standard level names (INFO by default)."""
+    level = (os.getenv("MCP_LOG_LEVEL") or "INFO").strip().upper()
+    if level not in LOG_LEVELS:
+        raise ConfigError(f"MCP_LOG_LEVEL debe ser uno de: {', '.join(LOG_LEVELS)}")
+    return level
+
+
 @dataclass(frozen=True)
 class Settings:
     db_host: str
@@ -53,6 +64,7 @@ class Settings:
     max_rows: int = 500
     query_timeout_ms: int = 10000
     allow_no_auth: bool = False
+    log_level: str = "INFO"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -81,6 +93,7 @@ class Settings:
             query_timeout_ms=_env_int("MCP_QUERY_TIMEOUT_MS", 10000),
             allow_no_auth=os.getenv("MCP_ALLOW_NO_AUTH", "false").strip().lower()
             in {"1", "true", "yes"},
+            log_level=log_level_from_env(),
         )
 
     @property

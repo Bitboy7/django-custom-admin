@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime as _dt
 import decimal
 import logging
+import time
 from typing import Any
 
 from sqlalchemy import create_engine, event, inspect, text
@@ -13,6 +14,7 @@ from sqlalchemy.engine import Engine
 from .allowlist import ALLOWED_TABLES, BLOCKED_COLUMNS
 from .config import Settings
 from .guard import assert_allowlisted, validate_select
+from .logutil import short_sql
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,14 @@ class ReadOnlyDatabase:
             future=True,
         )
         self._configure_session(self.engine)
+        logger.info(
+            "MySQL configurado: %s@%s:%s/%s (solo lectura, %s filas máx.)",
+            settings.db_user,
+            settings.db_host,
+            settings.db_port,
+            settings.db_name,
+            settings.max_rows,
+        )
 
     def _configure_session(self, engine: Engine) -> None:
         timeout = int(self.settings.query_timeout_ms)
@@ -87,22 +97,40 @@ class ReadOnlyDatabase:
 
     def _execute(self, sql: str, params: dict[str, Any] | None) -> dict[str, Any]:
         max_rows = self.settings.max_rows
-        logger.info("Ejecutando consulta de solo lectura (%s filas máx.)", max_rows)
-        with self.engine.connect() as connection:
-            result = connection.execute(text(sql), params or {})
-            columns = list(result.keys())
-            rows = result.fetchmany(max_rows + 1)
-            truncated = len(rows) > max_rows
-            rows = rows[:max_rows]
-            return {
-                "columnas": columns,
-                "filas": [
-                    {column: _jsonable(value) for column, value in zip(columns, row)}
-                    for row in rows
-                ],
-                "num_filas": len(rows),
-                "truncado": truncated,
-            }
+        started = time.perf_counter()
+        try:
+            with self.engine.connect() as connection:
+                result = connection.execute(text(sql), params or {})
+                columns = list(result.keys())
+                rows = result.fetchmany(max_rows + 1)
+        except Exception:
+            elapsed = (time.perf_counter() - started) * 1000
+            logger.exception(
+                "Consulta de solo lectura falló tras %.0f ms: %s",
+                elapsed,
+                short_sql(sql),
+            )
+            raise
+
+        elapsed = (time.perf_counter() - started) * 1000
+        truncated = len(rows) > max_rows
+        rows = rows[:max_rows]
+        logger.info(
+            "Consulta de solo lectura OK en %.0f ms: %d fila(s)%s",
+            elapsed,
+            len(rows),
+            " (truncada)" if truncated else "",
+        )
+        logger.debug("SQL ejecutado: %s", short_sql(sql))
+        return {
+            "columnas": columns,
+            "filas": [
+                {column: _jsonable(value) for column, value in zip(columns, row)}
+                for row in rows
+            ],
+            "num_filas": len(rows),
+            "truncado": truncated,
+        }
 
     def close(self) -> None:
         self.engine.dispose()

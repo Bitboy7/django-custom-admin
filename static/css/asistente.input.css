@@ -213,6 +213,13 @@
     color: var(--as-text-2);
   }
 
+  /* El texto oscuro de [data-theme="dark"] .ac-btn es para el botón relleno
+     (acento claro); el fantasma va sobre fondo oscuro y necesita texto claro. */
+  [data-theme="dark"] .ac-btn--ghost {
+    color: var(--as-text-2);
+    border-color: var(--as-border-strong);
+  }
+
   .ac-btn--ghost:hover {
     background: var(--as-mist-soft);
     border-color: var(--as-mist);

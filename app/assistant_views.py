@@ -11,6 +11,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.urls import NoReverseMatch, reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django_otp.decorators import otp_required
 
@@ -38,8 +40,12 @@ RATE_LIMIT_REQUESTS = 30
 RATE_LIMIT_WINDOW_SECONDS = 600
 
 
+def _rate_key(user_id: int) -> str:
+    return f"asistente:mcp:rate:{user_id}"
+
+
 def _rate_limited(user_id: int) -> bool:
-    key = f"asistente:mcp:rate:{user_id}"
+    key = _rate_key(user_id)
     try:
         current = cache.get(key, 0)
         if current >= RATE_LIMIT_REQUESTS:
@@ -52,6 +58,56 @@ def _rate_limited(user_id: int) -> bool:
     except Exception:
         # A cache outage must not take the assistant down.
         return False
+
+
+def _retry_after_seconds(user_id: int) -> int:
+    """Seconds until the rate-limit window resets (django-redis exposes ttl)."""
+    ttl = getattr(cache, "ttl", None)
+    if callable(ttl):
+        try:
+            remaining = ttl(_rate_key(user_id))
+            if isinstance(remaining, int) and remaining > 0:
+                return remaining
+        except Exception:
+            pass
+    return RATE_LIMIT_WINDOW_SECONDS
+
+
+def _safe_reverse(name: str) -> str | None:
+    try:
+        return reverse(name)
+    except NoReverseMatch:
+        return None
+
+
+def _error(
+    status: int,
+    codigo: str,
+    mensaje: str,
+    *,
+    reintentable: bool = False,
+    detalle: str | None = None,
+    accion: dict | None = None,
+    reintentar_en: int | None = None,
+) -> JsonResponse:
+    """Uniform error payload for the chat UI.
+
+    ``error`` is plain language for the person using the ERP; ``detalle`` keeps
+    the technical cause (env vars, commands) for whoever administers it, and the
+    UI shows it folded away. ``reintentable`` tells the UI whether retrying can
+    help; ``accion`` is an optional link (label + url) that fixes the cause.
+    """
+    payload: dict = {"error": mensaje, "codigo": codigo, "reintentable": reintentable}
+    if detalle:
+        payload["detalle"] = detalle
+    if accion and accion.get("url"):
+        payload["accion"] = accion
+    if reintentar_en:
+        payload["reintentar_en"] = reintentar_en
+    response = JsonResponse(payload, status=status)
+    if reintentar_en:
+        response["Retry-After"] = str(reintentar_en)
+    return response
 
 
 @login_required
@@ -103,35 +159,53 @@ def asistente_view(request):
 @require_POST
 def asistente_chat_api(request):
     if not request.user.is_authenticated:
-        return JsonResponse(
-            {"error": "Tu sesión expiró. Vuelve a iniciar sesión."}, status=401
+        return _error(
+            401,
+            "sesion_expirada",
+            "Tu sesión expiró. Inicia sesión de nuevo; tu pregunta seguirá en pantalla.",
+            accion={
+                "etiqueta": "Iniciar sesión",
+                "url": _safe_reverse("two_factor:login"),
+                "nueva_pestana": True,
+            },
         )
     if not request.user.is_staff:
-        return JsonResponse(
-            {"error": "No tienes permiso para usar el asistente."}, status=403
+        return _error(
+            403,
+            "sin_permiso",
+            "Tu usuario no tiene acceso al asistente. Pide a un administrador que te lo habilite.",
         )
     if not request.user.is_verified():
-        return JsonResponse(
-            {"error": "Completa la verificación en dos pasos para usar el asistente."},
-            status=403,
+        return _error(
+            403,
+            "requiere_2fa",
+            "Para usar el asistente necesitas activar la verificación en dos pasos.",
+            accion={"etiqueta": "Activar verificación", "url": _safe_reverse("two_factor:setup")},
         )
     if _rate_limited(request.user.pk):
-        return JsonResponse(
-            {"error": "Demasiadas consultas seguidas. Espera unos minutos e intenta de nuevo."},
-            status=429,
+        return _error(
+            429,
+            "limite_consultas",
+            "Hiciste muchas preguntas seguidas. Podrás volver a preguntar cuando termine la cuenta regresiva.",
+            reintentable=True,
+            reintentar_en=_retry_after_seconds(request.user.pk),
         )
 
     try:
         payload = json.loads(request.body or b"{}")
     except (json.JSONDecodeError, UnicodeDecodeError):
-        return JsonResponse({"error": "La solicitud no es válida."}, status=400)
+        payload = None
 
     if not isinstance(payload, dict):
-        return JsonResponse({"error": "La solicitud no es válida."}, status=400)
+        return _error(
+            400,
+            "solicitud_invalida",
+            "No pude leer la consulta. Recarga la página e intenta de nuevo.",
+        )
 
     message = payload.get("mensaje")
     if not isinstance(message, str) or not message.strip():
-        return JsonResponse({"error": "Escribe una consulta para el asistente."}, status=400)
+        return _error(400, "consulta_vacia", "Escribe una pregunta antes de enviarla.")
 
     try:
         conversation = resolve_conversation(
@@ -140,34 +214,61 @@ def asistente_chat_api(request):
         history = load_history(conversation)
         save_user_message(conversation, message)
     except ConversacionNoEncontrada as exc:
-        return JsonResponse({"error": str(exc)}, status=404)
+        return _error(
+            404,
+            "conversacion_no_encontrada",
+            "Esa conversación ya no está disponible. Empieza una consulta nueva.",
+            detalle=str(exc),
+        )
     except Exception:
         logger.exception("No se pudo preparar la conversación del asistente")
-        return JsonResponse(
-            {"error": "No se pudo guardar la conversación. Intenta de nuevo."},
-            status=500,
+        return _error(
+            500,
+            "error_guardado",
+            "No pude guardar la conversación. Intenta de nuevo.",
+            reintentable=True,
         )
 
     try:
         result = preguntar(message, history)
     except ChatConfigurationError as exc:
         save_error_message(conversation, str(exc))
-        return JsonResponse({"error": str(exc)}, status=503)
+        return _error(
+            503,
+            "no_configurado",
+            "El asistente todavía no está listo en este servidor. Avisa al administrador del sistema.",
+            detalle=str(exc),
+        )
     except ChatConnectionError as exc:
         save_error_message(conversation, str(exc))
-        return JsonResponse({"error": str(exc)}, status=502)
+        return _error(
+            502,
+            "sin_conexion_datos",
+            "No pude conectarme con el servicio de reportes. Intenta de nuevo en un momento.",
+            reintentable=True,
+            detalle=str(exc),
+        )
     except ChatModelError as exc:
         save_error_message(conversation, str(exc))
-        return JsonResponse({"error": str(exc)}, status=502)
+        return _error(
+            502,
+            "ia_no_disponible",
+            "El servicio de IA no respondió. Intenta de nuevo en un momento.",
+            reintentable=True,
+            detalle=str(exc),
+        )
     except ChatServiceError as exc:
         save_error_message(conversation, str(exc))
-        return JsonResponse({"error": str(exc)}, status=400)
+        # The service's validation messages are already written for the user.
+        return _error(400, "consulta_invalida", str(exc))
     except Exception:
         logger.exception("Error no controlado en el asistente MCP")
         save_error_message(conversation, "Error no controlado en el asistente MCP")
-        return JsonResponse(
-            {"error": "Ocurrió un error al consultar al asistente. Intenta de nuevo."},
-            status=500,
+        return _error(
+            500,
+            "error_inesperado",
+            "Ocurrió un error inesperado al consultar al asistente. Intenta de nuevo.",
+            reintentable=True,
         )
 
     try:
@@ -186,4 +287,7 @@ def asistente_chat_api(request):
     )
     result["conversacion_id"] = str(conversation.pk)
     result["titulo"] = conversation.titulo
+    # Fecha de corte de los datos en la zona del ERP (no el reloj del navegador):
+    # la UI la muestra como "saldos al ..." y la conserva al reabrir.
+    result.setdefault("meta", {})["consultado_en"] = timezone.localdate().isoformat()
     return JsonResponse(result, json_dumps_params={"ensure_ascii": False})

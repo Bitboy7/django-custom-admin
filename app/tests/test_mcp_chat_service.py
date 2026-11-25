@@ -161,3 +161,12 @@ def test_openai_factory_for_tools_forces_reasoning_none(monkeypatch):
     monkeypatch.setenv("OPENAI_REASONING_EFFORT", "low")
     llm = invoice.get_llm_model("gpt-5.6-luna", provider="openai", for_tools=True)
     assert llm.model_kwargs.get("reasoning_effort") == "none"
+
+
+def test_system_prompt_guards_partial_results_and_jargon():
+    from app.services.mcp_chat_service import SYSTEM_PROMPT
+
+    assert '"truncado": true' in SYSTEM_PROMPT
+    assert "NO afirmes conteos" in SYSTEM_PROMPT
+    assert "No menciones nombres técnicos de herramientas" in SYSTEM_PROMPT
+    assert "Cita el nombre de la herramienta" not in SYSTEM_PROMPT

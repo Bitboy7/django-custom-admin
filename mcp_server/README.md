@@ -48,6 +48,7 @@ Antes de ejecutarlo cambia `CHANGE_ME` por una contraseña larga.
 | `MCP_HTTP_PATH` | no | `/mcp` | Ruta del endpoint MCP |
 | `MCP_HTTP_TOKEN` | sí para HTTP | — | Bearer token (mín. 32 chars) |
 | `MCP_ALLOW_NO_AUTH` | no | `false` | Solo para redes privadas de confianza |
+| `MCP_LOG_LEVEL` | no | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` o `CRITICAL`. Logs a stderr con formato `fecha nivel logger: mensaje`; en `DEBUG` también se registra el SQL ejecutado |
 
 ## Uso local (stdio)
 

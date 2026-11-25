@@ -49,12 +49,19 @@ REGLAS DE DATOS
 - El saldo pendiente es monto - monto_pagado.
 - Si una herramienta devuelve un error, corrige la consulta o explica qué falta.
 - Si no hay datos, dilo con claridad y sugiere un rango o filtro distinto.
-- Cita el nombre de la herramienta que usaste entre paréntesis cuando aporte confianza.
+- Si un resultado trae "truncado": true, NO afirmes conteos, totales, máximos ni \
+rankings como si fueran completos. Empieza diciendo que el resultado es parcial y \
+propón un periodo o filtro más corto concreto (por ejemplo, un mes en lugar de un año).
+- No menciones nombres técnicos de herramientas ni de columnas; la interfaz ya muestra \
+la fuente y la tabla. Usa términos contables (saldo pendiente, vencido, pagado).
 
 FORMATO
 - Responde en 2 a 5 oraciones y, si ayuda, hasta 4 viñetas cortas.
 - No uses tablas Markdown: la interfaz muestra las tablas de datos citadas al costado.
-- Destaca cifras clave en **negritas**. No uses encabezados ni bloques de código.
+- Cada cifra que menciones va con su monto y moneda en **negritas** \
+(por ejemplo, **$120,000.00 MXN**), para poder ubicarla en la tabla.
+- Indica el periodo o la fecha de corte de los datos en una frase corta.
+- No uses encabezados ni bloques de código.
 - Si la pregunta es ambigua, elige el rango más razonable, dilo en una frase y responde.
 """
 

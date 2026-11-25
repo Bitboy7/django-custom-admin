@@ -7,7 +7,8 @@ import dataclasses
 import logging
 import sys
 
-from .config import ConfigError, Settings
+from .config import ConfigError, Settings, log_level_from_env
+from .logutil import configure_logging
 from .server import run
 
 
@@ -26,11 +27,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--port", type=int, help="Sobrescribe MCP_HTTP_PORT")
     args = parser.parse_args(argv)
 
-    logging.basicConfig(
-        level=logging.INFO,
-        stream=sys.stderr,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
+    try:
+        configure_logging(log_level_from_env())
+    except ConfigError as exc:
+        configure_logging("INFO")
+        logging.getLogger("mcp_server").error("Configuración inválida: %s", exc)
+        return 2
 
     try:
         settings = Settings.from_env()
