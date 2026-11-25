@@ -32,6 +32,8 @@
     input: root.querySelector("[data-input]"),
     composer: root.querySelector("[data-composer]"),
     send: root.querySelector("[data-send]"),
+    mic: root.querySelector("[data-mic]"),
+    micStatus: root.querySelector("[data-mic-status]"),
     threadTitle: root.querySelector("[data-thread-title]"),
     threadMeta: root.querySelector("[data-thread-meta]"),
     suggestionsList: root.querySelector("[data-suggestions-list]"),
@@ -172,6 +174,155 @@
     if (el.input) {
       el.input.readOnly = sending;
     }
+    if (el.mic) {
+      el.mic.disabled = sending || !CONFIGURED;
+    }
+  }
+
+  // ---- Dictado por voz (Web Speech API nativa; sin dependencias) ----
+  // Chrome/Edge/Safari la soportan; en Firefox no existe y el botón queda oculto.
+  // Requiere contexto seguro (HTTPS o localhost) y permiso de micrófono.
+  var SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var dictation = {
+    rec: null,
+    active: false,
+    base: "", // texto que ya había en el cuadro al empezar a dictar
+    finalText: "", // frases ya confirmadas por el reconocedor
+    discard: false,
+  };
+
+  function dictationLang() {
+    var lang = (document.documentElement.lang || "es").toLowerCase();
+    if (lang.indexOf("en") === 0) return "en-US";
+    if (lang.indexOf("pt") === 0) return "pt-BR";
+    if (lang.indexOf("de") === 0) return "de-DE";
+    if (lang.indexOf("fr") === 0) return "fr-FR";
+    return "es-MX";
+  }
+
+  function joinDictated(base, extra) {
+    extra = extra.replace(/\s+/g, " ").trim();
+    if (!extra) return base;
+    if (!base) return extra.charAt(0).toUpperCase() + extra.slice(1);
+    return base + (/\s$/.test(base) ? "" : " ") + extra;
+  }
+
+  function renderDictation(interim) {
+    if (!el.input) return;
+    el.input.value = joinDictated(dictation.base, dictation.finalText + " " + (interim || ""));
+    autoGrow();
+    el.input.scrollTop = el.input.scrollHeight;
+  }
+
+  function setDictationUi(active) {
+    dictation.active = active;
+    if (el.mic) {
+      el.mic.setAttribute("aria-pressed", active ? "true" : "false");
+      var label = active ? "Detener dictado" : "Dictar pregunta por voz";
+      el.mic.setAttribute("aria-label", label);
+      el.mic.title = active ? "Detener dictado (Alt+V)" : "Dictar por voz (Alt+V)";
+    }
+    if (el.micStatus) el.micStatus.hidden = !active;
+  }
+
+  function stopDictation() {
+    if (dictation.rec && dictation.active) {
+      try {
+        dictation.rec.stop();
+      } catch (error) {
+        /* ya detenido */
+      }
+    }
+  }
+
+  function startDictation() {
+    if (!SpeechRecognitionCtor || dictation.active || state.loading || !CONFIGURED) return;
+    var rec = new SpeechRecognitionCtor();
+    rec.lang = dictationLang();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+
+    dictation.rec = rec;
+    dictation.base = el.input ? el.input.value.replace(/\s+$/, "") : "";
+    dictation.finalText = "";
+
+    rec.onstart = function () {
+      setDictationUi(true);
+      announce("Dictado activado. Habla ahora.");
+    };
+
+    rec.onresult = function (event) {
+      var interim = "";
+      for (var i = event.resultIndex; i < event.results.length; i += 1) {
+        var chunk = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          dictation.finalText += " " + chunk;
+        } else {
+          interim += chunk;
+        }
+      }
+      renderDictation(interim);
+    };
+
+    rec.onerror = function (event) {
+      var messages = {
+        "not-allowed": "Permite el acceso al micrófono para dictar.",
+        "service-not-allowed": "El navegador bloqueó el dictado. Revisa los permisos del micrófono.",
+        "audio-capture": "No se detectó ningún micrófono.",
+        network: "El dictado necesita conexión a internet.",
+        "no-speech": "No se escuchó nada. Intenta de nuevo.",
+      };
+      if (event.error !== "aborted") {
+        toast(messages[event.error] || "No se pudo usar el dictado (" + event.error + ").");
+      }
+    };
+
+    rec.onend = function () {
+      if (!dictation.discard) renderDictation("");
+      dictation.discard = false;
+      setDictationUi(false);
+      dictation.rec = null;
+      announce("Dictado detenido.");
+      if (el.input && !state.loading) {
+        el.input.focus();
+        var end = el.input.value.length;
+        el.input.setSelectionRange(end, end);
+      }
+    };
+
+    try {
+      rec.start();
+    } catch (error) {
+      dictation.rec = null;
+      toast("No se pudo iniciar el dictado.");
+    }
+  }
+
+  // Al enviar mientras se dicta: se corta el reconocimiento sin volver a
+  // escribir en el cuadro (que send() ya vació).
+  function cancelDictation() {
+    if (!dictation.rec || !dictation.active) return;
+    dictation.discard = true;
+    try {
+      dictation.rec.abort();
+    } catch (error) {
+      /* ya detenido */
+    }
+  }
+
+  function toggleDictation() {
+    if (dictation.active) stopDictation();
+    else startDictation();
+  }
+
+  function initDictation() {
+    if (!el.mic || !SpeechRecognitionCtor || !window.isSecureContext) return;
+    el.mic.hidden = false;
+    el.mic.addEventListener("click", function (event) {
+      event.preventDefault();
+      toggleDictation();
+    });
   }
 
   // Única región viva: el feed ya no es aria-live, así que el lector de pantalla
@@ -1188,6 +1339,7 @@
   }
 
   function newConversation() {
+    cancelDictation();
     if (state.messages.length > 1) saveConversation();
     state.messages = [];
     state.conversationId = null;
@@ -1215,6 +1367,8 @@
       toast("El asistente no está disponible en este servidor.");
       return;
     }
+
+    cancelDictation();
 
     if (!retry) {
       state.messages.push({ role: "user", content: text });
@@ -1631,6 +1785,10 @@
     }
 
     document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && dictation.active) {
+        stopDictation();
+        return;
+      }
       if (event.key === "Escape" && drawer.pane) {
         closeDrawers();
         return;
@@ -1646,7 +1804,10 @@
       }
       if (!event.altKey || event.ctrlKey || event.metaKey) return;
       var key = String(event.key || "").toLowerCase();
-      if (key === "d") {
+      if (key === "v" && el.mic && !el.mic.hidden) {
+        event.preventDefault();
+        toggleDictation();
+      } else if (key === "d") {
         event.preventDefault();
         goToCitedData();
       } else if (key === "n") {
@@ -1895,6 +2056,7 @@
   renderMessages();
   renderDataPanel();
   wireEvents();
+  initDictation();
   initLayout();
   autoGrow();
 })();
